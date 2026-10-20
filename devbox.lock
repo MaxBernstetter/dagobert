@@ -1,0 +1,47 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "github:NixOS/nixpkgs/nixpkgs-unstable": {
+      "last_modified": "2026-10-20T09:20:32Z",
+      "resolved": "github:NixOS/nixpkgs/e513db7b0a65def6f6e17bb55195dfe510871944?lastModified=1792488032&narHash=sha256-RkAXQ3%2Ba5rHMiP97Er7AawR1kvEXX9tK1mhiWedOPTc%3D"
+    },
+    "go-task@latest": {
+      "last_modified": "2026-10-19T15:20:57Z",
+      "resolved": "github:NixOS/nixpkgs/682ba80136e2c8dacd6b8900f578a72329458901#go-task",
+      "source": "devbox-search",
+      "version": "3.53.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/rm9ygmdvyjwgy3gw8sab1qcc2sdkxhbv-go-task-3.53.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/rm9ygmdvyjwgy3gw8sab1qcc2sdkxhbv-go-task-3.53.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/sylfrx3dckq40rsxv25mp3494cl9jzbz-go-task-3.53.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/sylfrx3dckq40rsxv25mp3494cl9jzbz-go-task-3.53.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/x59cxcrphv1wgxr1bgkqrcz7ryd62ifq-go-task-3.53.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/x59cxcrphv1wgxr1bgkqrcz7ryd62ifq-go-task-3.53.1"
+        }
+      }
+    }
+  }
+}

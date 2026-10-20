@@ -1,0 +1,23 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build the Compose images
+    cmds:
+      - docker compose build
+
+  up:
+    desc: Run one candle window, then serve the app on port 3000
+    cmds:
+      - mkdir -p data
+      - docker compose up --build
+
+  down:
+    desc: Stop the stack and remove its containers
+    cmds:
+      - docker compose down
+
+  test:
+    desc: System-test the four job images
+    cmds:
+      - go test ./test/system/ingest ./test/system/process ./test/system/strategy ./test/system/execution -count=1 -timeout 20m

@@ -1,0 +1,51 @@
+meta {
+  name: klines
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://data-api.binance.vision/api/v3/klines
+  body: none
+  auth: none
+}
+
+params:query {
+  symbol: BTCUSDT
+  interval: 1h
+  limit: 2
+}
+
+docs {
+  Example response for one public BTCUSDT 1h kline. Checked live values are open time 1792508400000, close 82409.43000000, volume 1069.70305000, and close time 1792511999999. Open, high, and low were not recorded from that call; this example fills those three fields with the close. It is an example, not a live capture of open, high, and low.
+}
+
+example {
+  name: one closed hour
+
+  request: {
+    url: https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=2
+    method: GET
+  }
+
+  response: {
+    status: {
+      code: 200
+      text: OK
+    }
+    headers: [
+      {
+        name: Content-Type
+        value: application/json
+      }
+    ]
+    body: {
+      type: json
+      content: '''
+      [
+        [1792508400000, "82409.43000000", "82409.43000000", "82409.43000000", "82409.43000000", "1069.70305000", 1792511999999, "0", 0, "0", "0", "0"]
+      ]
+      '''
+    }
+  }
+}

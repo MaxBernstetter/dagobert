@@ -1,0 +1,93 @@
+# One candle window, then the web app. Jobs exit; the app stays up.
+# Defaults: 2023-11-14 20:00–23:00 UTC. Override SYMBOL, FROM_MS, TO_MS, BAR_OPEN_MS, CANDLE_CLOSE_MS.
+
+services:
+  ingest:
+    build:
+      context: .
+      dockerfile: docker/ingest/Dockerfile
+    image: trading-copilot-ingest
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    command:
+      - -from
+      - ${FROM_MS:-1699995600000}
+      - -to
+      - ${TO_MS:-1700006400000}
+      - -symbol
+      - ${SYMBOL:-BTCUSDT}
+    restart: "no"
+
+  process:
+    build:
+      context: .
+      dockerfile: docker/process/Dockerfile
+    image: trading-copilot-process
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    command:
+      - ${SYMBOL:-BTCUSDT}
+      - ${BAR_OPEN_MS:-1699995600000}
+    depends_on:
+      ingest:
+        condition: service_completed_successfully
+    restart: "no"
+
+  strategy:
+    build:
+      context: .
+      dockerfile: docker/strategy/Dockerfile
+    image: trading-copilot-strategy
+    environment:
+      DATA_DIR: /data
+      PLAYBOOK: /playbooks/ma-cross.yaml
+    volumes:
+      - ./data:/data
+      - ./playbooks:/playbooks:ro
+    command:
+      - ${SYMBOL:-BTCUSDT}
+      - ${CANDLE_CLOSE_MS:-1700006400000}
+    depends_on:
+      process:
+        condition: service_completed_successfully
+    restart: "no"
+
+  execution:
+    build:
+      context: .
+      dockerfile: docker/execution/Dockerfile
+    image: trading-copilot-execution
+    env_file:
+      - .secrets
+    environment:
+      DATA_DIR: /data
+      PLAYBOOK: ma-cross.yaml
+    volumes:
+      - ./data:/data
+    command:
+      - ${SYMBOL:-BTCUSDT}
+      - ${CANDLE_CLOSE_MS:-1700006400000}
+    depends_on:
+      strategy:
+        condition: service_completed_successfully
+    restart: "no"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: trading-copilot-web
+    environment:
+      DATA_DIR: /data
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      execution:
+        condition: service_completed_successfully
+    restart: "no"
