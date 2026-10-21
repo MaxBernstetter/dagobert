@@ -2,7 +2,7 @@
 
 A personal copilot for systematic crypto spot swing trades on 3-hour UTC candles. It loads public Binance klines, computes one indicator record per closed candle, runs a single YAML playbook, and sends the resulting action to the Bybit EU spot demo. A Next.js app shows balances, past decisions and why they fired, and the fill or rejection.
 
-The pipeline is four stateless Go containers, in order:
+The orchestrator is the long-running process. The pipeline is four stateless Go containers, started by the orchestrator when a candle closes:
 
 1. **Ingest** writes closed 1-hour klines to Parquet.
 2. **Process** writes one KPI record per symbol and 3-hour bar.
@@ -40,7 +40,7 @@ Ingest reads public klines from `https://data-api.binance.vision` unless `BINANC
 
 ## Development
 
-Workflow, GitHub issues, and the agent harness live in [docs/development](docs/development/README.md). Milestone notes are in [docs/grooming](docs/grooming). Venue and kline contracts are in [docs/ingest/binance-public-klines.md](docs/ingest/binance-public-klines.md) and [docs/execution/bybit-eu-demo.md](docs/execution/bybit-eu-demo.md).
+Workflow, GitHub issues, and the agent harness live in [docs/development](docs/development/README.md). How the local stack runs is in [docs/architecture/local-stack.md](docs/architecture/local-stack.md). Closed milestone notes are in [docs/grooming/archive](docs/grooming/archive). Venue and kline contracts are in [docs/ingest/binance-public-klines.md](docs/ingest/binance-public-klines.md) and [docs/execution/bybit-eu-demo.md](docs/execution/bybit-eu-demo.md).
 
 `devbox shell` installs Task (`go-task`). From that shell:
 
@@ -52,4 +52,4 @@ task test    # system tests for the four job containers
     task down
 ```
 
-The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. `npm run build` in `web/` typechecks the app. There is no browser test suite.
+The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. `npm run build` in `frontend/` typechecks the app. There is no browser test suite.

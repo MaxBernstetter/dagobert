@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MaxBernstetter/trading-copilot/strategy/schema/playbook.schema.json",
+  "type": "object",
+  "required": ["name", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "$defs": {
+    "indicatorDef": {
+      "type": "object",
+      "required": ["type", "method", "time_frame_hr"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["MovingAverage"]
+        },
+        "method": {
+          "enum": ["sma", "ema"]
+        },
+        "time_frame_hr": {
+          "type": "integer",
+          "minimum": 3,
+          "multipleOf": 3
+        }
+      }
+    },
+    "when": {
+      "type": "object",
+      "required": ["def", "op", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "def": {
+          "$ref": "#/$defs/indicatorDef"
+        },
+        "op": {
+          "enum": ["gt", "gte", "lt", "lte", "eq"]
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "required": ["kind", "bars"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["time"]
+        },
+        "bars": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tradeRule": {
+      "type": "object",
+      "required": ["id", "when", "decision", "size", "exit"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "decision": {
+          "enum": ["buy", "sell"]
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "exit": {
+          "$ref": "#/$defs/exit"
+        }
+      }
+    },
+    "noTradeRule": {
+      "type": "object",
+      "required": ["id", "when", "decision"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "decision": {
+          "const": "no-trade"
+        }
+      }
+    },
+    "rule": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/tradeRule"
+        },
+        {
+          "$ref": "#/$defs/noTradeRule"
+        }
+      ]
+    }
+  }
+}

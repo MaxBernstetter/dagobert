@@ -40,4 +40,4 @@ tasks:
   test:
     desc: System-test the four job images
     cmds:
-      - go test ./test/system/ingest ./test/system/process ./test/system/strategy ./test/system/execution -count=1 -timeout 20m
+      - go test ./tests/system/ingest ./tests/system/process ./tests/system/strategy ./tests/system/execution -count=1 -timeout 20m

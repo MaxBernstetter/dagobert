@@ -38,11 +38,11 @@ services:
       - floci
     restart: unless-stopped
 
-  web:
+  frontend:
     build:
-      context: ./web
+      context: ./frontend
       dockerfile: Dockerfile
-    image: trading-copilot-web
+    image: trading-copilot-frontend
     environment:
       DATA_DIR: /data
       ORCHESTRATOR_URL: http://orchestrator:8090

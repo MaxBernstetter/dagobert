@@ -3,9 +3,9 @@ FROM golang:1.24-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY services/execution ./services/execution
+COPY execution ./execution
 ENV CGO_ENABLED=0
-RUN go build -trimpath -ldflags="-s -w" -o /out/execution ./services/execution/cmd/execution
+RUN go build -trimpath -ldflags="-s -w" -o /out/execution ./execution/cmd/execution
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /out/execution /execution
