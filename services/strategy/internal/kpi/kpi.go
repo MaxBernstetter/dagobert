@@ -34,9 +34,15 @@ func Read(dataDir, symbol string, barOpen int64) ([]playbook.KPIResult, error) {
 
 	var body string
 	err = db.QueryRow(
-		`SELECT body FROM kpi WHERE symbol = ? AND bar_open = ?`,
+		`SELECT body FROM kpi_revision WHERE symbol = ? AND bar_open = ? AND algo = 'v1'`,
 		symbol, barOpen,
 	).Scan(&body)
+	if err != nil {
+		err = db.QueryRow(
+			`SELECT body FROM kpi WHERE symbol = ? AND bar_open = ?`,
+			symbol, barOpen,
+		).Scan(&body)
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

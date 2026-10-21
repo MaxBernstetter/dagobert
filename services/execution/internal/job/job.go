@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,6 +36,8 @@ type KeyFields struct {
 	CumExecQty   string `json:"cumExecQty,omitempty"`
 	CumExecValue string `json:"cumExecValue,omitempty"`
 	AvgPrice     string `json:"avgPrice,omitempty"`
+	CumExecFee   string `json:"cumExecFee,omitempty"`
+	FeeCurrency  string `json:"feeCurrency,omitempty"`
 	MarketUnit   string `json:"marketUnit,omitempty"`
 	RetCode      int    `json:"retCode,omitempty"`
 	RetMsg       string `json:"retMsg,omitempty"`
@@ -152,6 +155,7 @@ func pollPending(ctx context.Context, st *store.DB, existing store.OrderResult, 
 		if err := st.UpdateOrderResult(body.OrderLinkID, store.KindFill, fillBody); err != nil {
 			return 1, 30
 		}
+		_ = st.UpsertJournal(journalFrom(fillBody))
 		if err := refreshBalance(ctx, client, st); err != nil {
 			if errors.Is(err, bybit.ErrRetryExhausted) {
 				return 1, 30
@@ -159,6 +163,28 @@ func pollPending(ctx context.Context, st *store.DB, existing store.OrderResult, 
 			return 1, 30
 		}
 		return 0, 0
+	}
+	return 2, 31
+}
+
+func settle(ctx context.Context, client *bybit.Client, st *store.DB, key KeyFields, item bybit.OrderHistoryItem) (int, int) {
+	if item.OrderStatus == "Filled" {
+		fillBody := mergeFill(key, item)
+		if err := st.InsertOrderResult(key.OrderLinkID, store.KindFill, fillBody); err != nil {
+			return 1, 30
+		}
+		_ = st.UpsertJournal(journalFrom(fillBody))
+		if err := refreshBalance(ctx, client, st); err != nil {
+			fmt.Fprintf(os.Stderr, "execution: balance: %s\n", err.Error())
+			return 1, 30
+		}
+		return 0, 0
+	}
+	pendingBody := key
+	pendingBody.OrderID = item.OrderID
+	pendingBody.OrderStatus = item.OrderStatus
+	if err := st.InsertOrderResult(key.OrderLinkID, store.KindPending, pendingBody); err != nil {
+		return 1, 30
 	}
 	return 2, 31
 }
@@ -176,6 +202,7 @@ func placeOrder(
 	}
 	client, err := bybit.NewClient(config.BaseURL(), retryCfg)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "execution: %s\n", err.Error())
 		return 1, 30
 	}
 
@@ -204,53 +231,44 @@ func placeOrder(
 	created, err := client.CreateSpotOrder(ctx, req)
 	var reject *bybit.OrderRejectError
 	if errors.As(err, &reject) {
+		if reject.Code == 170141 {
+			item, lookupErr := client.OrderByLink(ctx, orderLinkID)
+			if lookupErr == nil {
+				return settle(ctx, client, st, key, item)
+			}
+		}
 		rejBody := key
 		rejBody.RetCode = reject.Code
 		rejBody.RetMsg = reject.Msg
 		if err := st.InsertOrderResult(orderLinkID, store.KindRejection, rejBody); err != nil {
 			return 1, 30
 		}
+		fmt.Fprintf(os.Stderr, "execution: %s\n", reject.Error())
 		if err := refreshBalance(ctx, client, st); err != nil && !errors.Is(err, bybit.ErrRetryExhausted) {
-			// balance refresh failure after rejection still counts as rejection stored
+			fmt.Fprintf(os.Stderr, "execution: balance: %s\n", err.Error())
 		}
 		return 1, 40
 	}
-	if errors.Is(err, bybit.ErrRetryExhausted) {
-		return 1, 30
-	}
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "execution: %s\n", err.Error())
 		return 1, 30
 	}
 
 	item, err := client.OrderHistory(ctx, created.OrderID)
-	if errors.Is(err, bybit.ErrRetryExhausted) {
-		return 1, 30
-	}
 	if err != nil {
-		return 1, 30
-	}
-
-	if item.OrderStatus == "Filled" {
-		fillBody := mergeFill(key, item)
-		if err := st.InsertOrderResult(orderLinkID, store.KindFill, fillBody); err != nil {
+		fmt.Fprintf(os.Stderr, "execution: %s\n", err.Error())
+		pending := key
+		pending.OrderID = created.OrderID
+		pending.Side = req.Side
+		pending.Qty = req.Qty
+		pending.MarketUnit = req.MarketUnit
+		pending.OrderStatus = "Created"
+		if insertErr := st.InsertOrderResult(orderLinkID, store.KindPending, pending); insertErr != nil {
 			return 1, 30
 		}
-		if err := refreshBalance(ctx, client, st); err != nil {
-			if errors.Is(err, bybit.ErrRetryExhausted) {
-				return 1, 30
-			}
-			return 1, 30
-		}
-		return 0, 0
+		return 2, 31
 	}
-
-	pendingBody := key
-	pendingBody.OrderID = item.OrderID
-	pendingBody.OrderStatus = item.OrderStatus
-	if err := st.InsertOrderResult(orderLinkID, store.KindPending, pendingBody); err != nil {
-		return 1, 30
-	}
-	return 2, 31
+	return settle(ctx, client, st, key, item)
 }
 
 func mergeFill(key KeyFields, item bybit.OrderHistoryItem) KeyFields {
@@ -262,7 +280,27 @@ func mergeFill(key KeyFields, item bybit.OrderHistoryItem) KeyFields {
 	key.CumExecValue = item.CumExecValue
 	key.AvgPrice = item.AvgPrice
 	key.MarketUnit = item.MarketUnit
+	key.CumExecFee = item.CumExecFee
+	if strings.HasSuffix(key.VenueSymbol, "USDC") {
+		key.FeeCurrency = "USDC"
+	}
 	return key
+}
+
+func journalFrom(key KeyFields) store.Journal {
+	return store.Journal{
+		OrderLinkID:     key.OrderLinkID,
+		Venue:           "bybit",
+		VenueSymbol:     key.VenueSymbol,
+		Side:            key.Side,
+		BaseQty:         key.CumExecQty,
+		QuoteQty:        key.CumExecValue,
+		Price:           key.AvgPrice,
+		Fee:             key.CumExecFee,
+		FeeCurrency:     key.FeeCurrency,
+		ExchangeOrderID: key.OrderID,
+		PriceSource:     "binance",
+	}
 }
 
 func refreshBalance(ctx context.Context, client *bybit.Client, st *store.DB) error {
@@ -276,7 +314,7 @@ func refreshBalance(ctx context.Context, client *bybit.Client, st *store.DB) err
 		balRows = append(balRows, store.BalanceRow{
 			Currency:        r.Currency,
 			CashBalance:     r.CashBalance,
-			TransactionTime: r.TransactionTime,
+			TransactionTime: int64(r.TransactionTime),
 		})
 	}
 	return st.ReplaceBalances(balRows)

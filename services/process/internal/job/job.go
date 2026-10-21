@@ -3,6 +3,7 @@ package job
 import (
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -42,6 +43,9 @@ type kpiBody struct {
 // Run executes one process invocation. detail is the M2 code. code is the
 // process status: 0 succeeded, 1 failed, 2 aborted.
 func Run(args []string, dataDir string, nowMS int64, nowInvalid bool) (detail int, code int) {
+	if len(args) == 3 {
+		return runRange(args, dataDir, nowMS, nowInvalid)
+	}
 	symbol, barOpen, ok := parseArgs(args, dataDir, nowInvalid)
 	if !ok {
 		return detailInvalid, exitCode(detailInvalid)
@@ -101,13 +105,98 @@ func Run(args []string, dataDir string, nowMS int64, nowInvalid bool) (detail in
 		return detailFailed, exitCode(detailFailed)
 	}
 
-	if err := db.Insert(symbol, barOpen, string(encoded)); err != nil {
+	if err := db.Insert(symbol, barOpen, string(encoded), barSource("live")); err != nil {
 		if errors.Is(err, store.ErrExists) {
 			return detailExists, exitCode(detailExists)
 		}
 		return detailFailed, exitCode(detailFailed)
 	}
 	return detailWritten, exitCode(detailWritten)
+}
+
+func runRange(args []string, dataDir string, nowMS int64, nowInvalid bool) (detail int, code int) {
+	if nowInvalid || dataDir == "" {
+		return detailInvalid, exitCode(detailInvalid)
+	}
+	symbol := args[0]
+	if _, ok := symbols[symbol]; !ok {
+		return detailInvalid, exitCode(detailInvalid)
+	}
+	from, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return detailInvalid, exitCode(detailInvalid)
+	}
+	to, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil || from >= to {
+		return detailInvalid, exitCode(detailInvalid)
+	}
+	if rem := from % bars.BarMS; rem != 0 {
+		from += bars.BarMS - rem
+	}
+
+	db, err := store.Open(filepath.Join(dataDir, "process.sqlite"))
+	if err != nil {
+		return detailFailed, exitCode(detailFailed)
+	}
+	defer db.Close()
+
+	candles, err := lake.Read(filepath.Join(dataDir, "parquet", symbol+".parquet"))
+	if err != nil {
+		if errors.Is(err, lake.ErrMissing) {
+			return detailMissing, exitCode(detailMissing)
+		}
+		if errors.Is(err, lake.ErrSchema) {
+			return detailSchema, exitCode(detailSchema)
+		}
+		return detailFailed, exitCode(detailFailed)
+	}
+
+	ordered := bars.Ordered(candles)
+	window := indicators.Window()
+	rows := make([]store.Row, 0, len(ordered))
+	for i, bar := range ordered {
+		if bar.OpenTime < from || bar.OpenTime+bars.BarMS > to || bar.OpenTime+bars.BarMS > nowMS {
+			continue
+		}
+		start := i - window + 1
+		if start < 0 {
+			start = 0
+		}
+		results, err := indicators.Results(ordered[start : i+1])
+		if err != nil {
+			return detailFailed, exitCode(detailFailed)
+		}
+		encoded, err := json.Marshal(kpiBody{
+			Open:      bar.Open,
+			High:      bar.High,
+			Low:       bar.Low,
+			Close:     bar.Close,
+			Volume:    bar.Volume,
+			OpenTime:  bar.OpenTime,
+			CloseTime: bar.CloseTime,
+			Results:   results,
+		})
+		if err != nil {
+			return detailFailed, exitCode(detailFailed)
+		}
+		rows = append(rows, store.Row{Symbol: symbol, BarOpen: bar.OpenTime, Body: string(encoded), Source: barSource("backfill")})
+	}
+	if len(rows) == 0 {
+		return detailMissing, exitCode(detailMissing)
+	}
+	if err := db.UpsertAll(rows); err != nil {
+		return detailFailed, exitCode(detailFailed)
+	}
+	return detailWritten, exitCode(detailWritten)
+}
+
+func barSource(fallback string) string {
+	switch os.Getenv("SOURCE") {
+	case "live", "backfill":
+		return os.Getenv("SOURCE")
+	default:
+		return fallback
+	}
 }
 
 func parseArgs(args []string, dataDir string, nowInvalid bool) (string, int64, bool) {

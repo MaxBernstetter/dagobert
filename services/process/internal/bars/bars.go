@@ -72,6 +72,34 @@ func Series(candles []Candle, barOpen int64) ([]Bar, bool) {
 	return series, true
 }
 
+// Ordered returns every complete 3h bar in the candles, oldest first.
+func Ordered(candles []Candle) []Bar {
+	if len(candles) == 0 {
+		return nil
+	}
+	byOpen := make(map[int64]Candle, len(candles))
+	minOpen := candles[0].OpenTime
+	maxOpen := candles[0].OpenTime
+	for _, candle := range candles {
+		byOpen[candle.OpenTime] = candle
+		if candle.OpenTime < minOpen {
+			minOpen = candle.OpenTime
+		}
+		if candle.OpenTime > maxOpen {
+			maxOpen = candle.OpenTime
+		}
+	}
+	start := minOpen - minOpen%BarMS
+	out := make([]Bar, 0, (maxOpen-start)/BarMS+1)
+	for open := start; open <= maxOpen; open += BarMS {
+		bar, ok := build(byOpen, open)
+		if ok {
+			out = append(out, bar)
+		}
+	}
+	return out
+}
+
 func build(byOpen map[int64]Candle, open int64) (Bar, bool) {
 	first, ok0 := byOpen[open]
 	second, ok1 := byOpen[open+HourMS]

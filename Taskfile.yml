@@ -1,21 +1,41 @@
 version: "3"
 
+vars:
+  HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
+  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/playbooks"
+  HOST_SECRETS_FILE: "{{.ROOT_DIR}}/.secrets"
+
+env:
+  HOST_DATA_DIR: "{{.HOST_DATA_DIR}}"
+  HOST_PLAYBOOKS_DIR: "{{.HOST_PLAYBOOKS_DIR}}"
+  HOST_SECRETS_FILE: "{{.HOST_SECRETS_FILE}}"
+
 tasks:
   build:
-    desc: Build the Compose images
+    desc: Build the job images and the long-running stack
     cmds:
+      - docker build -f docker/ingest/Dockerfile -t trading-copilot-ingest .
+      - docker build -f docker/process/Dockerfile -t trading-copilot-process .
+      - docker build -f docker/strategy/Dockerfile -t trading-copilot-strategy .
+      - docker build -f docker/execution/Dockerfile -t trading-copilot-execution .
       - docker compose build
 
   up:
-    desc: Run one candle window, then serve the app on port 3000
+    desc: Start Floci, the orchestrator, and the web app
     cmds:
       - mkdir -p data
-      - docker compose up --build
+      - task: build
+      - docker compose up
 
   down:
-    desc: Stop the stack and remove its containers
+    desc: Stop the stack. Leaves ./data in place
     cmds:
       - docker compose down
+
+  run:
+    desc: Start one state-machine execution for CANDLE_CLOSE_MS
+    cmds:
+      - docker compose exec -T -e CANDLE_CLOSE_MS={{.CANDLE_CLOSE_MS | default "1700006400000"}} orchestrator /orchestrator run
 
   test:
     desc: System-test the four job images

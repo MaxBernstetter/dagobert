@@ -23,7 +23,14 @@ var symbolPattern = regexp.MustCompile(`^[A-Z0-9]{2,20}$`)
 func main() {
 	exitCode, detail := run()
 	fmt.Printf("DETAIL=%d\n", detail)
-	os.Exit(exitCode)
+	os.Exit(composeExit(exitCode))
+}
+
+func composeExit(code int) int {
+	if code == 2 && os.Getenv("COMPOSE_OK_ON_ABORT") == "1" {
+		return 0
+	}
+	return code
 }
 
 func run() (exitCode int, detail int) {

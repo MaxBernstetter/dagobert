@@ -1,80 +1,42 @@
-# One candle window, then the web app. Jobs exit; the app stays up.
-# Defaults: 2023-11-14 20:00–23:00 UTC. Override SYMBOL, FROM_MS, TO_MS, BAR_OPEN_MS, CANDLE_CLOSE_MS.
+# Long-running stack: Floci, the orchestrator, and the web app.
+# Job images are started by the orchestrator. They are not services here.
+# HOST_DATA_DIR, HOST_PLAYBOOKS_DIR, and HOST_SECRETS_FILE are host paths
+# because the orchestrator talks to the host Docker socket.
 
 services:
-  ingest:
-    build:
-      context: .
-      dockerfile: docker/ingest/Dockerfile
-    image: trading-copilot-ingest
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "127.0.0.1:4566:4566"
     environment:
-      DATA_DIR: /data
-    volumes:
-      - ./data:/data
-    command:
-      - -from
-      - ${FROM_MS:-1699995600000}
-      - -to
-      - ${TO_MS:-1700006400000}
-      - -symbol
-      - ${SYMBOL:-BTCUSDT}
-    restart: "no"
+      FLOCI_HOSTNAME: floci
+    restart: unless-stopped
 
-  process:
+  orchestrator:
     build:
       context: .
-      dockerfile: docker/process/Dockerfile
-    image: trading-copilot-process
+      dockerfile: docker/orchestrator/Dockerfile
+    image: trading-copilot-orchestrator
     environment:
-      DATA_DIR: /data
+      SFN_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      HOST_DATA_DIR: ${HOST_DATA_DIR:?set HOST_DATA_DIR}
+      HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:?set HOST_PLAYBOOKS_DIR}
+      HOST_SECRETS_FILE: ${HOST_SECRETS_FILE:?set HOST_SECRETS_FILE}
+      SECRETS_FILE: /secrets/.secrets
+      BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://data-api.binance.vision}
+      LIVE_DIR: /data
+    ports:
+      - "127.0.0.1:8090:8090"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOST_SECRETS_FILE}:/secrets/.secrets:ro
       - ./data:/data
-    command:
-      - ${SYMBOL:-BTCUSDT}
-      - ${BAR_OPEN_MS:-1699995600000}
     depends_on:
-      ingest:
-        condition: service_completed_successfully
-    restart: "no"
-
-  strategy:
-    build:
-      context: .
-      dockerfile: docker/strategy/Dockerfile
-    image: trading-copilot-strategy
-    environment:
-      DATA_DIR: /data
-      PLAYBOOK: /playbooks/ma-cross.yaml
-    volumes:
-      - ./data:/data
-      - ./playbooks:/playbooks:ro
-    command:
-      - ${SYMBOL:-BTCUSDT}
-      - ${CANDLE_CLOSE_MS:-1700006400000}
-    depends_on:
-      process:
-        condition: service_completed_successfully
-    restart: "no"
-
-  execution:
-    build:
-      context: .
-      dockerfile: docker/execution/Dockerfile
-    image: trading-copilot-execution
-    env_file:
-      - .secrets
-    environment:
-      DATA_DIR: /data
-      PLAYBOOK: ma-cross.yaml
-    volumes:
-      - ./data:/data
-    command:
-      - ${SYMBOL:-BTCUSDT}
-      - ${CANDLE_CLOSE_MS:-1700006400000}
-    depends_on:
-      strategy:
-        condition: service_completed_successfully
-    restart: "no"
+      - floci
+    restart: unless-stopped
 
   web:
     build:
@@ -83,11 +45,9 @@ services:
     image: trading-copilot-web
     environment:
       DATA_DIR: /data
+      ORCHESTRATOR_URL: http://orchestrator:8090
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3001}:3000"
     volumes:
       - ./data:/data
-    depends_on:
-      execution:
-        condition: service_completed_successfully
-    restart: "no"
+    restart: unless-stopped

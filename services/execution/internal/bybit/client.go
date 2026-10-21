@@ -24,6 +24,7 @@ import (
 var (
 	ErrPermanentReject = errors.New("permanent order rejection")
 	ErrRetryExhausted  = errors.New("retries exhausted")
+	errEmptyHistory    = errors.New("empty order history")
 )
 
 type Client struct {
@@ -72,14 +73,41 @@ type OrderHistoryItem struct {
 	Qty          string `json:"qty"`
 	CumExecQty   string `json:"cumExecQty"`
 	CumExecValue string `json:"cumExecValue"`
+	CumExecFee   string `json:"cumExecFee"`
 	AvgPrice     string `json:"avgPrice"`
 	MarketUnit   string `json:"marketUnit"`
 }
 
 type TransactionLogRow struct {
-	Currency        string `json:"currency"`
-	CashBalance     string `json:"cashBalance"`
-	TransactionTime int64  `json:"transactionTime"`
+	Currency        string  `json:"currency"`
+	CashBalance     string  `json:"cashBalance"`
+	TransactionTime FlexInt `json:"transactionTime"`
+}
+
+type FlexInt int64
+
+func (f *FlexInt) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
+	if len(b) > 0 && b[0] == '"' {
+		var s string
+		if err := json.Unmarshal(b, &s); err != nil {
+			return err
+		}
+		n, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return err
+		}
+		*f = FlexInt(n)
+		return nil
+	}
+	var n int64
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+	*f = FlexInt(n)
+	return nil
 }
 
 func (c *Client) CreateSpotOrder(ctx context.Context, req CreateOrderRequest) (CreateResult, error) {
@@ -130,9 +158,24 @@ func (e *OrderRejectError) Error() string {
 }
 
 func (c *Client) OrderHistory(ctx context.Context, orderID string) (OrderHistoryItem, error) {
-	query := "category=spot&orderId=" + url.QueryEscape(orderID)
+	return c.orderByQuery(ctx, "category=spot&orderId="+url.QueryEscape(orderID))
+}
+
+func (c *Client) OrderByLink(ctx context.Context, orderLinkID string) (OrderHistoryItem, error) {
+	item, err := c.orderByQuery(ctx, "category=spot&orderLinkId="+url.QueryEscape(orderLinkID))
+	if err == nil {
+		return item, nil
+	}
+	return c.orderByQuery(ctx, "category=spot&openOnly=0&orderLinkId="+url.QueryEscape(orderLinkID))
+}
+
+func (c *Client) orderByQuery(ctx context.Context, query string) (OrderHistoryItem, error) {
 	var resp apiResponse
-	if err := c.doWithRetry(ctx, http.MethodGet, "/v5/order/history", query, nil, &resp, false); err != nil {
+	path := "/v5/order/history"
+	if strings.Contains(query, "openOnly=") {
+		path = "/v5/order/realtime"
+	}
+	if err := c.doWithRetry(ctx, http.MethodGet, path, query, nil, &resp, false); err != nil {
 		return OrderHistoryItem{}, err
 	}
 	if resp.RetCode != 0 {
@@ -145,7 +188,7 @@ func (c *Client) OrderHistory(ctx context.Context, orderID string) (OrderHistory
 		return OrderHistoryItem{}, err
 	}
 	if len(wrapper.List) == 0 {
-		return OrderHistoryItem{}, fmt.Errorf("empty order history")
+		return OrderHistoryItem{}, errEmptyHistory
 	}
 	return wrapper.List[0], nil
 }
@@ -209,7 +252,7 @@ func (c *Client) doWithRetry(ctx context.Context, method, path, query string, bo
 		resp, err := c.http.Do(req)
 		if err != nil {
 			if try >= c.retry.MaxRetries || !retryableHTTP(0, err) {
-				return ErrRetryExhausted
+				return fmt.Errorf("%w: %s", ErrRetryExhausted, err.Error())
 			}
 			wait = c.backoff(try)
 			continue
@@ -227,7 +270,7 @@ func (c *Client) doWithRetry(ctx context.Context, method, path, query string, bo
 		var parsed apiResponse
 		if err := json.Unmarshal(respBody, &parsed); err != nil {
 			if try >= c.retry.MaxRetries {
-				return ErrRetryExhausted
+				return fmt.Errorf("%w: HTTP %d body %s", ErrRetryExhausted, resp.StatusCode, clip(respBody))
 			}
 			wait = c.backoff(try)
 			continue
@@ -235,14 +278,14 @@ func (c *Client) doWithRetry(ctx context.Context, method, path, query string, bo
 
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			if try >= c.retry.MaxRetries {
-				return ErrRetryExhausted
+				return fmt.Errorf("%w: HTTP %d body %s", ErrRetryExhausted, resp.StatusCode, clip(respBody))
 			}
 			wait = c.backoff(try)
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("bybit HTTP %d", resp.StatusCode)
+			return fmt.Errorf("bybit HTTP %d body %s", resp.StatusCode, clip(respBody))
 		}
 
 		if parsed.RetCode != 0 {
@@ -262,6 +305,14 @@ func (c *Client) doWithRetry(ctx context.Context, method, path, query string, bo
 		*out = parsed
 		return nil
 	}
+}
+
+func clip(b []byte) string {
+	s := strings.TrimSpace(string(b))
+	if len(s) > 180 {
+		s = s[:180]
+	}
+	return s
 }
 
 func sign(secret, timestamp, apiKey string, recvWindow int, body string) string {
@@ -304,7 +355,7 @@ func LatestBalances(rows []TransactionLogRow) []BalanceSnapshot {
 	latest := make(map[string]TransactionLogRow)
 	for _, row := range rows {
 		cur, ok := latest[row.Currency]
-		if !ok || row.TransactionTime > cur.TransactionTime {
+		if !ok || int64(row.TransactionTime) > int64(cur.TransactionTime) {
 			latest[row.Currency] = row
 		}
 	}
@@ -313,7 +364,7 @@ func LatestBalances(rows []TransactionLogRow) []BalanceSnapshot {
 		out = append(out, BalanceSnapshot{
 			Currency:        row.Currency,
 			CashBalance:     row.CashBalance,
-			TransactionTime: row.TransactionTime,
+			TransactionTime: int64(row.TransactionTime),
 		})
 	}
 	return out

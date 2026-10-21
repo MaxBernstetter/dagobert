@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -35,9 +36,14 @@ func openStore(dataDir string) (*store, error) {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS stored (
 		symbol TEXT NOT NULL,
 		open_time INTEGER NOT NULL,
+		provider TEXT NOT NULL DEFAULT 'binance',
 		PRIMARY KEY (symbol, open_time)
 	)`)
 	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	if _, err = db.Exec(`ALTER TABLE stored ADD COLUMN provider TEXT NOT NULL DEFAULT 'binance'`); err != nil && !strings.Contains(err.Error(), "duplicate column") {
 		db.Close()
 		return nil, err
 	}
@@ -76,7 +82,7 @@ func (s *store) insert(symbol string, times []int64) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare(`INSERT INTO stored(symbol, open_time) VALUES (?, ?)`)
+	stmt, err := tx.Prepare(`INSERT INTO stored(symbol, open_time, provider) VALUES (?, ?, 'binance')`)
 	if err != nil {
 		tx.Rollback()
 		return err

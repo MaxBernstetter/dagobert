@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Trading Copilot",
-  description: "Overview, activity, and pipeline status",
+  description: "Overview of balances, decisions, and fills",
 };
 
 export default function RootLayout({
@@ -36,13 +36,25 @@ export default function RootLayout({
                 href="/"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Overview
+                Portfolio
               </Link>
               <Link
-                href="/pipeline"
+                href="/orders"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Pipeline
+                Orders
+              </Link>
+              <Link
+                href="/data"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Data
+              </Link>
+              <Link
+                href="/processing"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Processing
               </Link>
             </nav>
           </div>

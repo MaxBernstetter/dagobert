@@ -1,4 +1,6 @@
 .secrets
-data/
+/data/
+.tmp/
+.cursorignore
 node_modules/
 .next/

@@ -1,28 +1,37 @@
-import { ActivityView } from "@/components/activity-view";
 import { BalanceCards } from "@/components/balance-cards";
-import { readActivity, readBalances } from "@/lib/read";
+import { readBalances, readPositions } from "@/lib/read";
 
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const balances = readBalances();
-  const activity = readActivity();
+  const positions = readPositions();
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm text-muted-foreground">
-            Balances and trading activity, newest candle first.
-          </p>
-        </div>
-        <BalanceCards balances={balances} />
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Portfolio</h1>
+        <p className="text-sm text-muted-foreground">
+          Cash is the latest snapshot. Positions are quantity and cost rebuilt from fills.
+        </p>
+      </div>
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Positions</h2>
+        {positions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No open quantity.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {positions.map((position) => (
+              <li key={position.venueSymbol}>
+                {position.quantity} {position.base} ({position.venueSymbol}). Cost {position.costQuote} USDC. Average {position.avgPrice}.
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">Activity</h2>
-        <ActivityView rows={activity} />
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium">Cash</h2>
+        <BalanceCards balances={balances} />
       </section>
     </div>
   );

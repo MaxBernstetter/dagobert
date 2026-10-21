@@ -17,6 +17,11 @@ const (
 	longHours  = 6
 )
 
+// Window is the number of trailing bars Results reads.
+func Window() int {
+	return longHours / 3
+}
+
 // Result is one graph node stored on the KPI row.
 type Result struct {
 	Def   json.RawMessage `json:"def"`

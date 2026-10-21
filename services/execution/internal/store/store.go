@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -29,6 +30,19 @@ CREATE TABLE IF NOT EXISTS balance (
   cash_balance TEXT NOT NULL,
   transaction_time INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS fill_journal (
+  order_link_id TEXT PRIMARY KEY,
+  venue TEXT NOT NULL,
+  venue_symbol TEXT NOT NULL,
+  side TEXT NOT NULL,
+  base_qty TEXT NOT NULL,
+  quote_qty TEXT NOT NULL,
+  price TEXT NOT NULL,
+  fee TEXT NOT NULL,
+  fee_currency TEXT NOT NULL,
+  exchange_order_id TEXT NOT NULL,
+  price_source TEXT NOT NULL
+);
 `
 
 type OrderResult struct {
@@ -41,6 +55,40 @@ type BalanceRow struct {
 	Currency        string
 	CashBalance     string
 	TransactionTime int64
+}
+
+type Journal struct {
+	OrderLinkID     string
+	Venue           string
+	VenueSymbol     string
+	Side            string
+	BaseQty         string
+	QuoteQty        string
+	Price           string
+	Fee             string
+	FeeCurrency     string
+	ExchangeOrderID string
+	PriceSource     string
+}
+
+func (s *DB) UpsertJournal(j Journal) error {
+	db, err := sql.Open("sqlite", s.path)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(`INSERT INTO fill_journal (
+		order_link_id, venue, venue_symbol, side, base_qty, quote_qty, price, fee, fee_currency, exchange_order_id, price_source
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(order_link_id) DO UPDATE SET
+		base_qty = excluded.base_qty,
+		quote_qty = excluded.quote_qty,
+		price = excluded.price,
+		fee = excluded.fee,
+		fee_currency = excluded.fee_currency`,
+		j.OrderLinkID, j.Venue, j.VenueSymbol, j.Side, j.BaseQty, j.QuoteQty, j.Price, j.Fee, j.FeeCurrency, j.ExchangeOrderID, j.PriceSource,
+	)
+	return err
 }
 
 type DB struct {
@@ -57,8 +105,54 @@ func Open(dataDir string) (*DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := backfillJournals(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	db.Close()
 	return &DB{path: path}, nil
+}
+
+func backfillJournals(db *sql.DB) error {
+	rows, err := db.Query(`SELECT body FROM order_result WHERE kind = 'fill'`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return err
+		}
+		var body struct {
+			OrderLinkID  string `json:"orderLinkId"`
+			VenueSymbol  string `json:"venueSymbol"`
+			Side         string `json:"side"`
+			CumExecQty   string `json:"cumExecQty"`
+			CumExecValue string `json:"cumExecValue"`
+			AvgPrice     string `json:"avgPrice"`
+			CumExecFee   string `json:"cumExecFee"`
+			FeeCurrency  string `json:"feeCurrency"`
+			OrderID      string `json:"orderId"`
+		}
+		if err := json.Unmarshal([]byte(raw), &body); err != nil {
+			return err
+		}
+		feeCurrency := body.FeeCurrency
+		if feeCurrency == "" && strings.HasSuffix(body.VenueSymbol, "USDC") {
+			feeCurrency = "USDC"
+		}
+		_, err := db.Exec(`INSERT INTO fill_journal (
+			order_link_id, venue, venue_symbol, side, base_qty, quote_qty, price, fee, fee_currency, exchange_order_id, price_source
+		) VALUES (?, 'bybit', ?, ?, ?, ?, ?, ?, ?, ?, 'binance')
+		ON CONFLICT(order_link_id) DO NOTHING`,
+			body.OrderLinkID, body.VenueSymbol, body.Side, body.CumExecQty, body.CumExecValue, body.AvgPrice, body.CumExecFee, feeCurrency, body.OrderID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
 func (s *DB) GetOrderResult(orderLinkID string) (OrderResult, error) {

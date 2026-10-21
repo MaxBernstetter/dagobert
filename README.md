@@ -34,11 +34,9 @@ devbox shell
 task up
 ```
 
-`task up` builds the images and runs one candle window: ingest, process, strategy, then the Bybit EU demo order. The app stays on [http://localhost:3000](http://localhost:3000). Overview is the balances and the activity. Pipeline is the other route. `task down` stops the stack.
+`task up` builds the job images and starts the stack: Floci, the orchestrator, and the app at [http://localhost:3001](http://localhost:3001). Set `WEB_PORT` to publish it on another host port. The four jobs are not part of that stack. The orchestrator starts them when a 3-hour UTC candle closes. `task run` starts one execution now. `CANDLE_CLOSE_MS` defaults to `1700006400000` (2023-11-14 23:00 UTC). A second `task run` for the same close does not place a second order. The overview can also backfill hourly candles, or recalculate indicators, for a UTC from/to range. Those two steps do not place orders. `task down` stops the stack and leaves `data/` in place.
 
-The default window is 2023-11-14 20:00–23:00 UTC (`FROM_MS` `1699995600000`, `TO_MS` and `CANDLE_CLOSE_MS` `1700006400000`, `BAR_OPEN_MS` `1699995600000`, `SYMBOL` `BTCUSDT`). Export a different value before `task up` to change it. A second `task up` for the same window does not place a second order.
-
-Ingest also accepts `ETHUSDT` and `USDCUSDT`. Process, strategy, and execution accept `BTCUSDT` and `ETHUSDT`. Execution trades `BTCUSDC` and `ETHUSDC` on `https://api-demo.bybit.eu`.
+Ingest reads public klines from `https://data-api.binance.vision` unless `BINANCE_BASE_URL` is set. It also accepts `ETHUSDT` and `USDCUSDT`. Process, strategy, and execution accept `BTCUSDT` and `ETHUSDT`. Execution trades `BTCUSDC` and `ETHUSDC` on `https://api-demo.bybit.eu`.
 
 ## Development
 
@@ -49,8 +47,9 @@ Workflow, GitHub issues, and the agent harness live in [docs/development](docs/d
 ```bash
 task build   # images only
 task test    # system tests for the four job containers
-task up      # one candle window and the app
-task down
+    task up      # Floci, the orchestrator, and the app
+    task run     # one candle close, CANDLE_CLOSE_MS optional
+    task down
 ```
 
-The system tests build each job image and run it. They do not import the service packages. Go 1.23 must be on `PATH` for `task test`. `npm run build` in `web/` typechecks the app. There is no browser test suite.
+The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. `npm run build` in `web/` typechecks the app. There is no browser test suite.

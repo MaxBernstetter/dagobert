@@ -16,9 +16,9 @@ Images live in ECR. Ingest reads and writes Parquet on S3. Process, strategy, an
 
 **Local**
 
-Floci on `localhost:4566` stands in for Step Functions, EventBridge Scheduler, Lambda, DynamoDB, and S3. The four service containers are the same images.
+Floci on `localhost:4566` is the Step Functions endpoint. The orchestrator container registers the state machine and polls its activity. It starts the four job images with the host Docker socket and waits until each exits. Exit `2` is success. The clock lives in that orchestrator, at the eight UTC boundaries. Persistence for this stack is the `./data` volume (Parquet and the four SQLite files). Floci DynamoDB and S3 are not wired.
 
-The emulated scheduler starts the same state machine with the same close instant. Each state calls the emulated Lambda, and that Lambda starts the matching container and waits until it exits. Local object and table storage are the Floci stand-ins for S3 and DynamoDB.
+The emulated scheduler in the original sketch is that orchestrator clock. Each state runs the matching container. Local object and table storage stay files on `./data`.
 
 ## Retry without redoing a finished stage
 
