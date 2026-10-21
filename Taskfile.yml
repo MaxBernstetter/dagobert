@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
-  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/playbooks"
+  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/strategy/playbooks"
   HOST_SECRETS_FILE: "{{.ROOT_DIR}}/.secrets"
 
 env:

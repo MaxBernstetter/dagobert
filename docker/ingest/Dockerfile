@@ -3,9 +3,9 @@ FROM golang:1.24-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY ingest ./ingest
+COPY src/ingest ./src/ingest
 ENV CGO_ENABLED=0
-RUN go build -trimpath -ldflags="-s -w" -o /out/ingest ./ingest/cmd/ingest
+RUN go build -trimpath -ldflags="-s -w" -o /out/ingest ./src/ingest/cmd/ingest
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /out/ingest /ingest

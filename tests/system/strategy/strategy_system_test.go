@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	repoRoot = root
-	playbookPath = filepath.Join(repoRoot, "playbooks", "ma-cross.yaml")
+	playbookPath = filepath.Join(repoRoot, "src", "strategy", "playbooks", "ma-cross.yaml")
 
 	if exec.Command("docker", "version").Run() == nil {
 		build := exec.Command(
@@ -393,7 +393,7 @@ func TestInvalidPlaybookFailsSchema(t *testing.T) {
 	})
 
 	invalidPath := filepath.Join(newDataDir(t), "invalid-playbook.yaml")
-	content := `# yaml-language-server: $schema=../strategy/schema/playbook.schema.json
+	content := `# yaml-language-server: $schema=../src/strategy/schema/playbook.schema.json
 name: invalid
 rules:
   - id: bad

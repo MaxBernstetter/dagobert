@@ -52,4 +52,4 @@ task test    # system tests for the four job containers
     task down
 ```
 
-The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. `npm run build` in `frontend/` typechecks the app. There is no browser test suite.
+The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. Application code lives under `src/` (jobs, `internal/instruments`, and `frontend/`). `npm run build` in `src/frontend/` typechecks the app. There is no browser test suite.
