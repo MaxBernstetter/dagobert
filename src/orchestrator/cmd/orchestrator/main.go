@@ -85,6 +85,15 @@ func serve() int {
 	}
 	fmt.Printf("orchestrator: state machine %s\n", arn)
 	clearStaleBackfill()
+	dataDir, err := hostDataDirForJobs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrator: data dir: %s\n", err)
+		return 1
+	}
+	if err := ensureJobDataLayout(dataDir); err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrator: data layout: %s\n", err)
+		return 1
+	}
 
 	go clock(ctx, api, arn)
 	go serveBackfill(ctx)
@@ -320,11 +329,16 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 		return 1, fmt.Errorf("missing candle or symbol")
 	}
 	barOpen := in.CandleClose - int64(threeHours/time.Millisecond)
-	data := os.Getenv("HOST_DATA_DIR")
-	if data == "" {
-		return 1, fmt.Errorf("HOST_DATA_DIR is required")
+	data, err := hostDataDirForJobs()
+	if err != nil {
+		return 1, err
 	}
-	args := []string{"run", "--rm", "-e", "DATA_DIR=/data", "-v", data + ":/data"}
+	if err := ensureJobDataLayout(data); err != nil {
+		return 1, err
+	}
+	args := []string{"run", "--rm"}
+	args = append(args, dockerJobUserArgs()...)
+	args = append(args, "-e", "DATA_DIR=/data", "-v", data+":/data")
 	switch in.Stage {
 	case "ingest":
 		from := in.From
@@ -338,22 +352,32 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 			"-to", strconv.FormatInt(in.CandleClose, 10),
 			"-symbol", in.Symbol,
 		)
-	case "process":
-		args = append(args, "-e", "SOURCE=live", "trading-copilot-process", in.Symbol, strconv.FormatInt(barOpen, 10))
+	case "process", "calculation-technical-indicator":
+		args = append(args, "-e", "SOURCE=live", "trading-copilot-calculation-technical-indicator", in.Symbol, strconv.FormatInt(barOpen, 10))
 	case "indicators":
 		args = append(args,
 			"-e", "SOURCE=backfill",
-			"trading-copilot-process",
+			"trading-copilot-calculation-technical-indicator",
 			in.Symbol,
 			strconv.FormatInt(in.From, 10),
 			strconv.FormatInt(in.CandleClose, 10),
 		)
-	case "strategy":
-		books := os.Getenv("HOST_PLAYBOOKS_DIR")
+	case "strategy", "calculation-signal":
 		args = append(args,
-			"-e", "PLAYBOOK=/playbooks/ma-cross.yaml",
-			"-v", books+":/playbooks:ro",
-			"trading-copilot-strategy",
+			"-e", "PLAYBOOK=ma-cross",
+			"trading-copilot-calculation-signal",
+			in.Symbol, strconv.FormatInt(in.CandleClose, 10),
+		)
+	case "calculation-market-action":
+		envFile, err := plainEnvFile(env("SECRETS_FILE", "/secrets/.secrets"))
+		if err != nil {
+			return 1, err
+		}
+		defer os.Remove(envFile)
+		args = append(args,
+			"--env-file", envFile,
+			"-e", "PLAYBOOK=ma-cross.yaml",
+			"trading-copilot-calculation-market-action",
 			in.Symbol, strconv.FormatInt(in.CandleClose, 10),
 		)
 	case "execution":
@@ -376,7 +400,7 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	code := 0
 	if err == nil {
 		writeLive(in, false, 0)
@@ -510,19 +534,26 @@ const definition = `{
       "Resource": "ACTIVITY_ARN",
       "Parameters": {"stage": "ingest", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
       "Retry": [{"ErrorEquals": ["JobFailed"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}],
-      "Next": "Process"
+      "Next": "TechnicalIndicator"
     },
-    "Process": {
+    "TechnicalIndicator": {
       "Type": "Task",
       "Resource": "ACTIVITY_ARN",
-      "Parameters": {"stage": "process", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
+      "Parameters": {"stage": "calculation-technical-indicator", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
       "Retry": [{"ErrorEquals": ["JobFailed"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}],
-      "Next": "Strategy"
+      "Next": "CalculationSignal"
     },
-    "Strategy": {
+    "CalculationSignal": {
       "Type": "Task",
       "Resource": "ACTIVITY_ARN",
-      "Parameters": {"stage": "strategy", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
+      "Parameters": {"stage": "calculation-signal", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
+      "Retry": [{"ErrorEquals": ["JobFailed"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}],
+      "Next": "MarketAction"
+    },
+    "MarketAction": {
+      "Type": "Task",
+      "Resource": "ACTIVITY_ARN",
+      "Parameters": {"stage": "calculation-market-action", "candleClose.$": "$.candleClose", "symbol.$": "$.symbol"},
       "Retry": [{"ErrorEquals": ["JobFailed"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}],
       "Next": "Execution"
     },

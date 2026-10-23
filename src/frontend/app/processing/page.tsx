@@ -8,7 +8,7 @@ export default function ProcessingPage() {
   const live = readLive();
 
   return (
-    <div className="space-y-8">
+    <div className="min-h-0 flex-1 space-y-8 overflow-y-auto">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Processing</h1>
         <p className="text-sm text-muted-foreground">

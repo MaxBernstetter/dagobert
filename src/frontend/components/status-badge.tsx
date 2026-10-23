@@ -4,15 +4,17 @@ import type { ActivityRow } from "@/lib/read";
 function statusLabel(kind: ActivityRow["kind"]): string {
   switch (kind) {
     case "fill":
-      return "Filled";
+      return "filled";
     case "rejection":
       return "rejected";
     case "no-trade":
       return "no-trade";
     case "pending":
+      return "pending";
     case "not-yet-filled":
-    default:
       return "not-yet-filled";
+    default:
+      return "—";
   }
 }
 
@@ -26,6 +28,8 @@ function statusVariant(
       return "destructive";
     case "no-trade":
       return "secondary";
+    case "pending":
+      return "outline";
     default:
       return "outline";
   }
@@ -35,18 +39,13 @@ export function StatusBadge({ kind }: { kind: ActivityRow["kind"] }) {
   return <Badge variant={statusVariant(kind)}>{statusLabel(kind)}</Badge>;
 }
 
-export function rowStatusLine(row: ActivityRow): string {
+/** Exchange order status when execution has touched the venue; otherwise em dash. */
+export function rowVenueStatus(row: ActivityRow): string {
+  if (row.kind === "fill" || row.kind === "pending") {
+    return row.orderStatus ?? (row.kind === "fill" ? "Filled" : "Pending");
+  }
   if (row.kind === "rejection" && row.retMsg) {
     return row.retMsg;
   }
-  if (row.kind === "fill") {
-    return row.orderStatus ?? "Filled";
-  }
-  if (row.kind === "no-trade") {
-    return row.decision ?? "no-trade";
-  }
-  if (row.kind === "pending") {
-    return row.orderStatus ?? "Pending";
-  }
-  return row.decision ?? "—";
+  return "—";
 }

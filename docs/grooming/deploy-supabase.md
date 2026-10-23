@@ -37,7 +37,7 @@ One Supabase project is one database. One-store-per-job maps to four schemas in 
 | Store today | Supabase feature |
 |---|---|
 | `ingest.sqlite` / ingest DynamoDB table | Schema `ingest`. Key: symbol plus open time. Parquet stays the candle body. |
-| `process.sqlite` / process table | Schema `process`. One row per symbol and 3-hour bar open. Bar columns plus one `jsonb` value holding the indicator parameter objects and their results. Not a table per indicator. |
+| `technical_indicator.sqlite` / process table | Schema `process`. One row per symbol and 3-hour bar open. Bar columns plus one `jsonb` value holding the indicator parameter objects and their results. Not a table per indicator. |
 | `strategy.sqlite` / strategy table | Schema `strategy`. Actions only. Key: playbook, symbol, candle close. |
 | `execution.sqlite` / execution table | Schema `execution`. Key: `orderLinkId`. Item is the fill, the rejection, or the settled no-trade. |
 

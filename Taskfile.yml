@@ -2,30 +2,80 @@ version: "3"
 
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
-  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/strategy/playbooks"
+  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/calculation-signal/playbooks"
   HOST_SECRETS_FILE: "{{.ROOT_DIR}}/.secrets"
 
 env:
+  DOCKER_BUILDKIT: "1"
+  COMPOSE_BAKE: "true"
   HOST_DATA_DIR: "{{.HOST_DATA_DIR}}"
   HOST_PLAYBOOKS_DIR: "{{.HOST_PLAYBOOKS_DIR}}"
   HOST_SECRETS_FILE: "{{.HOST_SECRETS_FILE}}"
+  HOST_UID:
+    sh: id -u
+  HOST_GID:
+    sh: id -g
 
 tasks:
-  build:
-    desc: Build the job images and the long-running stack
+  build:jobs:
+    desc: Build the four pipeline job images (orchestrator starts these)
     cmds:
       - docker build -f docker/ingest/Dockerfile -t trading-copilot-ingest .
-      - docker build -f docker/process/Dockerfile -t trading-copilot-process .
-      - docker build -f docker/strategy/Dockerfile -t trading-copilot-strategy .
+      - docker build -f docker/calculation-technical-indicator/Dockerfile -t trading-copilot-calculation-technical-indicator .
+      - docker build -f docker/calculation-signal/Dockerfile -t trading-copilot-calculation-signal .
+      - docker build -f docker/calculation-market-action/Dockerfile -t trading-copilot-calculation-market-action .
       - docker build -f docker/execution/Dockerfile -t trading-copilot-execution .
+      - docker build -f docker/backtest/Dockerfile -t trading-copilot-backtest .
+
+  build:stack:
+    desc: Build compose images (orchestrator + production frontend)
+    cmds:
       - docker compose build
 
-  up:
-    desc: Start Floci, the orchestrator, and the web app
+  build:
+    desc: Build job images and the compose stack
     cmds:
-      - mkdir -p data
+      - task: build:jobs
+      - task: build:stack
+
+  up:
+    desc: Start Floci, the orchestrator, and the web app (run task build once for job images)
+    cmds:
+      - mkdir -p data/parquet
+      - docker compose up
+
+  up:build:
+    desc: Build everything, then start the stack (production frontend)
+    cmds:
+      - mkdir -p data/parquet
       - task: build
       - docker compose up
+
+  up:prod:
+    desc: Stack without compose.override.yaml (production Next.js build in frontend image)
+    env:
+      COMPOSE_FILE: compose.yaml
+    cmds:
+      - mkdir -p data/parquet
+      - docker compose build frontend
+      - docker compose up
+
+  dev:
+    desc: Same as task up but runs compose file watch (sync/rebuild rules)
+    cmds:
+      - mkdir -p data/parquet
+      - docker compose up --watch
+
+  frontend:clean:
+    desc: Delete root-owned src/frontend/.next from old Docker bind mounts
+    cmds:
+      - docker run --rm -v "{{.ROOT_DIR}}/src/frontend:/app" alpine rm -rf /app/.next
+      - docker volume rm trading-copilot_frontend_next 2>/dev/null || true
+
+  frontend:deps:
+    desc: Sync package-lock into the frontend container node_modules volume (after new npm deps)
+    cmds:
+      - docker compose exec -T frontend npm ci
 
   down:
     desc: Stop the stack. Leaves ./data in place
@@ -38,6 +88,17 @@ tasks:
       - docker compose exec -T -e CANDLE_CLOSE_MS={{.CANDLE_CLOSE_MS | default "1700006400000"}} orchestrator /orchestrator run
 
   test:
-    desc: System-test the four job images
+    desc: System-test the job images
     cmds:
-      - go test ./tests/system/ingest ./tests/system/process ./tests/system/strategy ./tests/system/execution -count=1 -timeout 20m
+      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/calculation-signal ./tests/system/execution ./tests/system/backtest -count=1 -timeout 20m
+
+  seed-demo-year:
+    desc: Wipe data/, backfill 1y BTC, run ma-cross pipeline with simulated venue (no Bybit)
+    cmds:
+      - mkdir -p data/parquet
+      - go run ./src/cmd/seed-demo-year
+
+  backtest-run:
+    desc: Run one catalogued backtest (BACKTEST_ID=uuid, uses trading-copilot-backtest image)
+    cmds:
+      - docker run --rm -e DATA_DIR=/data -e BACKTEST_ID={{.BACKTEST_ID}} -e VENUE_SIMULATE=1 -v "{{.HOST_DATA_DIR}}:/data" trading-copilot-backtest

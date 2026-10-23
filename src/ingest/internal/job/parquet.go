@@ -6,6 +6,9 @@ import (
 	"sort"
 
 	"github.com/parquet-go/parquet-go"
+
+	"github.com/MaxBernstetter/trading-copilot/src/internal/parquetmeta"
+	"github.com/MaxBernstetter/trading-copilot/src/shared"
 )
 
 // Candle is the on-disk row. Column order is the struct field order.
@@ -61,6 +64,12 @@ func writeCandles(path string, rows []Candle) error {
 		return err
 	}
 	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	if err := parquetmeta.Write(path, parquetmeta.Meta{
+		IntervalMS: hourMS,
+		DataSource: shared.DataSourceBinance,
+	}); err != nil {
 		return err
 	}
 	ok = true

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -30,6 +31,19 @@ type backfillStatus struct {
 	Error    string `json:"error"`
 	Finished string `json:"finished"`
 }
+
+type backtestRunRequest struct {
+	ID string `json:"id"`
+}
+
+type backtestRunStatus struct {
+	ID       string `json:"id"`
+	Running  bool   `json:"running"`
+	Error    string `json:"error"`
+	Finished string `json:"finished"`
+}
+
+var backtestJob backtestRunStatus
 
 func serveBackfill(ctx context.Context) {
 	mux := http.NewServeMux()
@@ -79,6 +93,29 @@ func serveBackfill(ctx context.Context) {
 		jobMu.Unlock()
 		go runBackfill(context.Background(), req)
 		writeJSON(w, http.StatusAccepted, status)
+	})
+	mux.HandleFunc("GET /backtest/run", func(w http.ResponseWriter, r *http.Request) {
+		jobMu.Lock()
+		st := backtestJob
+		jobMu.Unlock()
+		writeJSON(w, http.StatusOK, st)
+	})
+	mux.HandleFunc("POST /backtest/run", func(w http.ResponseWriter, r *http.Request) {
+		var req backtestRunRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+			http.Error(w, "id required", http.StatusBadRequest)
+			return
+		}
+		jobMu.Lock()
+		if backtestJob.Running {
+			jobMu.Unlock()
+			http.Error(w, "a backtest job is already running", http.StatusConflict)
+			return
+		}
+		backtestJob = backtestRunStatus{ID: req.ID, Running: true}
+		jobMu.Unlock()
+		go runBacktestJob(context.Background(), req.ID)
+		writeJSON(w, http.StatusAccepted, backtestJob)
 	})
 	srv := &http.Server{Addr: backfillAddr, Handler: mux}
 	go func() {
@@ -193,4 +230,52 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func runBacktestJob(ctx context.Context, id string) {
+	code, err := runBacktestDocker(ctx, id)
+	jobMu.Lock()
+	backtestJob.Running = false
+	backtestJob.Finished = time.Now().UTC().Format(time.RFC3339)
+	if err != nil {
+		backtestJob.Error = err.Error()
+	} else if code != 0 {
+		backtestJob.Error = fmt.Sprintf("backtest exit %d", code)
+	} else {
+		backtestJob.Error = ""
+	}
+	jobMu.Unlock()
+}
+
+func runBacktestDocker(ctx context.Context, id string) (int, error) {
+	data, err := hostDataDirForJobs()
+	if err != nil {
+		return 1, err
+	}
+	if err := ensureJobDataLayout(data); err != nil {
+		return 1, err
+	}
+	// Do not pass dockerJobUserArgs: the catalog DB and workspace are often root-owned
+	// (frontend container) and the job must update progress in backtests.sqlite.
+	args := []string{"run", "--rm"}
+	args = append(args,
+		"-e", "DATA_DIR=/data",
+		"-e", "BACKTEST_ID="+id,
+		"-e", "VENUE_SIMULATE=1",
+		"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
+		"-v", data+":/data",
+		"trading-copilot-backtest",
+	)
+	fmt.Printf("orchestrator: backtest %s\n", id)
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err == nil {
+		return 0, nil
+	}
+	if exit, ok := err.(*exec.ExitError); ok {
+		return exit.ExitCode(), nil
+	}
+	return 1, err
 }

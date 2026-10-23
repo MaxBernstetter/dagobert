@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/bybit"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/config"
+	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
+	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/bybit"
+	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/config"
+	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
 	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
 	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/strategyaction"
 )
@@ -74,6 +76,7 @@ func Run(args []string) (exitCode int, detail int) {
 	if err != nil {
 		return 1, 30
 	}
+	defer st.Close()
 
 	existing, err := st.GetOrderResult(orderLinkID)
 	if err == nil {
@@ -99,6 +102,17 @@ func Run(args []string) (exitCode int, detail int) {
 
 	switch action.Decision {
 	case "no-trade":
+		body := KeyFields{
+			OrderLinkID: orderLinkID,
+			Playbook:    playbookID,
+			Symbol:      symbol,
+			VenueSymbol: venueSymbol,
+			CandleClose: candleClose,
+			Decision:    "no-trade",
+		}
+		if paper.Enabled() {
+			return runSimulatedNoTrade(st, dataDir, body)
+		}
 		client, err := bybit.NewClient(config.BaseURL(), retryCfg)
 		if err != nil {
 			return 1, 30
@@ -109,20 +123,15 @@ func Run(args []string) (exitCode int, detail int) {
 			}
 			return 1, 30
 		}
-		body := KeyFields{
-			OrderLinkID: orderLinkID,
-			Playbook:    playbookID,
-			Symbol:      symbol,
-			VenueSymbol: venueSymbol,
-			CandleClose: candleClose,
-			Decision:    "no-trade",
-		}
 		if err := st.InsertOrderResult(orderLinkID, store.KindNoTrade, body); err != nil {
 			return 1, 30
 		}
 		return 0, 2
 
 	case "buy", "sell":
+		if paper.Enabled() {
+			return placeOrderSimulated(st, dataDir, action, orderLinkID, playbookID, symbol, venueSymbol, candleClose)
+		}
 		return placeOrder(ctx, st, retryCfg, action, orderLinkID, playbookID, symbol, venueSymbol, candleClose)
 
 	default:
@@ -304,11 +313,10 @@ func journalFrom(key KeyFields) store.Journal {
 }
 
 func refreshBalance(ctx context.Context, client *bybit.Client, st *store.DB) error {
-	rows, err := client.TransactionLog(ctx)
+	latest, err := client.AccountBalances(ctx, instruments.WalletCoins())
 	if err != nil {
 		return err
 	}
-	latest := bybit.LatestBalances(rows)
 	balRows := make([]store.BalanceRow, 0, len(latest))
 	for _, r := range latest {
 		balRows = append(balRows, store.BalanceRow{

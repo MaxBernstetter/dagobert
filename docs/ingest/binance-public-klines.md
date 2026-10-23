@@ -85,7 +85,7 @@ Fetching is one client. These settings come from the environment: `max_retries`,
 1. Start with `From`, `To`, and `Symbol`.
 2. Skip every open time in that range that is already stored.
 3. Fetch the missing closed `1h` klines. Drop a row whose close time is still in the future.
-4. Write the seven stored fields to Parquet, partitioned by symbol.
+4. Write the seven stored fields to Parquet, partitioned by symbol. Beside each `symbol.parquet` file, write `symbol.parquet.meta.json` with `interval_ms` (here `3600000` for `1h`) and `data_source` (`binance`, see `src/shared/datasource.go`).
 5. Do not compute indicators. Do not write the database. Do not call Bybit.
 
 `USDCUSDT` is ingested because the execution service converts a USDT close into USDC with `usdc_price = usdt_close / usdcusdt_close`.

@@ -22,9 +22,11 @@ services:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
-      HOST_DATA_DIR: ${HOST_DATA_DIR:?set HOST_DATA_DIR}
-      HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:?set HOST_PLAYBOOKS_DIR}
-      HOST_SECRETS_FILE: ${HOST_SECRETS_FILE:?set HOST_SECRETS_FILE}
+      HOST_DATA_DIR: ${HOST_DATA_DIR:-./data}
+      HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:-./src/calculation-signal/playbooks}
+      HOST_SECRETS_FILE: ${HOST_SECRETS_FILE:-./.secrets}
+      HOST_UID: ${HOST_UID:-0}
+      HOST_GID: ${HOST_GID:-0}
       SECRETS_FILE: /secrets/.secrets
       BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://data-api.binance.vision}
       LIVE_DIR: /data
@@ -32,8 +34,8 @@ services:
       - "127.0.0.1:8090:8090"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOST_SECRETS_FILE}:/secrets/.secrets:ro
-      - ./data:/data
+      - ${HOST_SECRETS_FILE:-./.secrets}:/secrets/.secrets:ro
+      - ${HOST_DATA_DIR:-./data}:/data
     depends_on:
       - floci
     restart: unless-stopped
@@ -42,12 +44,18 @@ services:
     build:
       context: ./src/frontend
       dockerfile: Dockerfile
+      target: prod
     image: trading-copilot-frontend
     environment:
       DATA_DIR: /data
       ORCHESTRATOR_URL: http://orchestrator:8090
+      WIKI_CATALOG_DIR: /wiki/calculation-technical-indicator/internal/indicators
+      WIKI_PLAYBOOKS_DIR: /wiki/playbooks
     ports:
       - "${WEB_PORT:-3001}:3000"
     volumes:
       - ./data:/data
+      - ./src/calculation-technical-indicator/internal/indicators:/wiki/calculation-technical-indicator/internal/indicators:ro
+      - ./src/calculation-technical-indicator/internal/indicators:/wiki/calculation-technical-indicator/indicators:ro
+      - ./src/calculation-signal/playbooks:/wiki/playbooks:ro
     restart: unless-stopped

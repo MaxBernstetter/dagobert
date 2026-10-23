@@ -1,5 +1,7 @@
 package instruments
 
+import "github.com/MaxBernstetter/trading-copilot/src/shared"
+
 // Instrument is one traded series and the venue pair orders use.
 // PriceSource is the candle provider. Venue is where orders go.
 // Those are different markets today: Binance USDT klines, Bybit EU USDC spot.
@@ -14,9 +16,9 @@ type Instrument struct {
 }
 
 var all = []Instrument{
-	{Series: "BTCUSDT", Venue: "bybit", VenueSymbol: "BTCUSDC", Base: "BTC", Quote: "USDC", PriceSource: "binance", Position: true},
-	{Series: "ETHUSDT", Venue: "bybit", VenueSymbol: "ETHUSDC", Base: "ETH", Quote: "USDC", PriceSource: "binance", Position: true},
-	{Series: "USDCUSDT", Venue: "", VenueSymbol: "", Base: "USDC", Quote: "USDT", PriceSource: "binance", Position: false},
+	{Series: "BTCUSDT", Venue: "bybit", VenueSymbol: "BTCUSDC", Base: "BTC", Quote: "USDC", PriceSource: shared.DataSourceBinance.String(), Position: true},
+	{Series: "ETHUSDT", Venue: "bybit", VenueSymbol: "ETHUSDC", Base: "ETH", Quote: "USDC", PriceSource: shared.DataSourceBinance.String(), Position: true},
+	{Series: "USDCUSDT", Venue: "", VenueSymbol: "", Base: "USDC", Quote: "USDT", PriceSource: shared.DataSourceBinance.String(), Position: false},
 }
 
 // BySeries returns the instrument for a lake symbol such as BTCUSDT.
@@ -27,6 +29,11 @@ func BySeries(series string) (Instrument, bool) {
 		}
 	}
 	return Instrument{}, false
+}
+
+// WalletCoins are uppercase coins passed to GET /v5/account/wallet-balance.
+func WalletCoins() []string {
+	return []string{"USDC", "USDT", "BTC", "ETH"}
 }
 
 // Positions are the series the portfolio treats as holdings.

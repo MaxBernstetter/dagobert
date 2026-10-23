@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/MaxBernstetter/trading-copilot/src/shared"
 )
 
 type store struct {
@@ -36,14 +38,14 @@ func openStore(dataDir string) (*store, error) {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS stored (
 		symbol TEXT NOT NULL,
 		open_time INTEGER NOT NULL,
-		provider TEXT NOT NULL DEFAULT 'binance',
+		provider TEXT NOT NULL DEFAULT '`+shared.DataSourceBinance.String()+`',
 		PRIMARY KEY (symbol, open_time)
 	)`)
 	if err != nil {
 		db.Close()
 		return nil, err
 	}
-	if _, err = db.Exec(`ALTER TABLE stored ADD COLUMN provider TEXT NOT NULL DEFAULT 'binance'`); err != nil && !strings.Contains(err.Error(), "duplicate column") {
+	if _, err = db.Exec(`ALTER TABLE stored ADD COLUMN provider TEXT NOT NULL DEFAULT '` + shared.DataSourceBinance.String() + `'`); err != nil && !strings.Contains(err.Error(), "duplicate column") {
 		db.Close()
 		return nil, err
 	}
@@ -82,14 +84,14 @@ func (s *store) insert(symbol string, times []int64) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare(`INSERT INTO stored(symbol, open_time, provider) VALUES (?, ?, 'binance')`)
+	stmt, err := tx.Prepare(`INSERT OR REPLACE INTO stored(symbol, open_time, provider) VALUES (?, ?, ?)`)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 	for _, t := range times {
-		if _, err := stmt.Exec(symbol, t); err != nil {
+		if _, err := stmt.Exec(symbol, t, shared.DataSourceBinance.String()); err != nil {
 			tx.Rollback()
 			return err
 		}

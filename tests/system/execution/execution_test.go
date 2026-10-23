@@ -52,6 +52,7 @@ func newFakeBybit() *fakeBybit {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v5/order/create", f.handleCreate)
 	mux.HandleFunc("/v5/order/history", f.handleHistory)
+	mux.HandleFunc("/v5/account/wallet-balance", f.handleWalletBalance)
 	mux.HandleFunc("/v5/account/transaction-log", f.handleTransactionLog)
 	f.server = httptest.NewServer(mux)
 	return f
@@ -106,6 +107,14 @@ func (f *fakeBybit) handleHistory(w http.ResponseWriter, r *http.Request) {
 		"avgPrice":"50000",
 		"marketUnit":"quoteCoin"
 	}]}}`, r.URL.Query().Get("orderId"), status)))
+}
+
+func (f *fakeBybit) handleWalletBalance(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"retCode":0,"retMsg":"OK","result":{"list":[{"accountType":"UNIFIED","coin":[
+		{"coin":"USDC","walletBalance":"49995","equity":"49995"},
+		{"coin":"BTC","walletBalance":"1.001","equity":"1.001"}
+	]}]}}`))
 }
 
 func (f *fakeBybit) handleTransactionLog(w http.ResponseWriter, _ *http.Request) {
@@ -233,7 +242,7 @@ func newDataDir(t *testing.T) string {
 
 func seedAction(t *testing.T, dataDir, decision string, size *float64) {
 	t.Helper()
-	path := filepath.Join(dataDir, "strategy.sqlite")
+	path := filepath.Join(dataDir, "calculation_signal.sqlite")
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
@@ -380,6 +389,8 @@ func TestSellBaseCoin(t *testing.T) {
 				"orderId":"oid-sell","orderLinkId":"x","symbol":"BTCUSDC","side":"Sell","orderType":"Market",
 				"orderStatus":"Filled","qty":"0.001","cumExecQty":"0.001","cumExecValue":"50","avgPrice":"50000","marketUnit":"baseCoin"
 			}]}}`))
+		case "/v5/account/wallet-balance":
+			fake.handleWalletBalance(w, r)
 		case "/v5/account/transaction-log":
 			fake.handleTransactionLog(w, r)
 		default:

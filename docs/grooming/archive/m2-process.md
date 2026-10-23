@@ -105,7 +105,7 @@ The container exits with one general code. That is the only process status. The 
 
 ## Persistence
 
-M2 owns its own store and does not open another job's. Locally that is `process.sqlite`. On AWS it is one DynamoDB on-demand table. The runner only reads by key and writes if that key is absent. The key is `Symbol` plus `BarOpen`. A hit is exit `2` with detail `1`: no recompute and no second row. The item is one general record for that symbol and bar. It holds the bar and every indicator value. M3 does not define a store per indicator.
+M2 owns its own store and does not open another job's. Locally that is `technical_indicator.sqlite`. On AWS it is one DynamoDB on-demand table. The runner only reads by key and writes if that key is absent. The key is `Symbol` plus `BarOpen`. A hit is exit `2` with detail `1`: no recompute and no second row. The item is one general record for that symbol and bar. It holds the bar and every indicator value. M3 does not define a store per indicator.
 
 ## Acceptance
 

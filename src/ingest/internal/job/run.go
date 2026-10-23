@@ -6,6 +6,8 @@ import (
 	"math"
 	"os"
 	"time"
+
+	"github.com/MaxBernstetter/trading-copilot/src/shared"
 )
 
 // Run executes one ingest. It returns a process status of 0, 1, or 2 and a detail code.
@@ -18,6 +20,10 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	}
 	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
 		log.Printf("data dir: %v", err)
+		return 1, 40
+	}
+	if err := shared.EnsureDataLayout(cfg.DataDir); err != nil {
+		log.Printf("data layout: %v", err)
 		return 1, 40
 	}
 	st, err := openStore(cfg.DataDir)
@@ -72,6 +78,13 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	}
 	var missing []int64
 	for _, open := range expected {
+		if cfg.Force {
+			missing = append(missing, open)
+			continue
+		}
+		if _, ok := have[open]; ok {
+			continue
+		}
 		if _, ok := storedSet[open]; !ok {
 			missing = append(missing, open)
 		}

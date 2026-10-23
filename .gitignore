@@ -1,5 +1,6 @@
 .secrets
 /data/
+.cache/
 .tmp/
 .cursorignore
 node_modules/

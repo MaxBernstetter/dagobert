@@ -2,7 +2,7 @@
 
 Paper orders only. No deposit. The key is a demo key for a Bybit EU account.
 
-Checked on 2026-10-20. A market buy of 5 USDC of `BTCUSDC` filled.
+Checked on 2026-10-20 (order flow) and **2026-10-21** (balance endpoints; see `scripts/probe-bybit`). A market buy of 5 USDC of `BTCUSDC` filled.
 
 ## Host
 
@@ -49,10 +49,12 @@ A response with `retCode` `0` and `retMsg` `OK` is success. Any other `retCode` 
 | Confirm the key | `GET /v5/account/info` | HTTP 200, `retCode` 0 |
 | Place a spot order | `POST /v5/order/create` | HTTP 200, `retCode` 0 |
 | Read the fill | `GET /v5/order/history?category=spot&orderId=...` | HTTP 200, `retCode` 0 |
-| Current balance | `GET /v5/account/transaction-log?accountType=UNIFIED` | HTTP 200, `retCode` 0 |
-| Wallet snapshot | `GET /v5/account/wallet-balance` | HTTP 404, empty body |
+| Current balance (preferred) | `GET /v5/account/wallet-balance?accountType=UNIFIED&coin=USDC,BTC,ETH,USDT` | HTTP 404, empty body on this host |
+| Balance fallback | `GET /v5/account/transaction-log?accountType=UNIFIED` | HTTP 200, `retCode` 0 — used when wallet-balance is not routed |
+| Per-coin asset balance | `GET /v5/asset/transfer/query-account-coins-balance` | HTTP 404, empty body (`UNIFIED`, `SPOT`, `FUND`) |
+| Withdrawable amount | `GET /v5/asset/withdraw/withdrawable-amount` | HTTP 404, empty body |
 
-`GET /v5/account/wallet-balance` is not routed on `api-demo.bybit.eu`. It 404s for `UNIFIED`, `SPOT`, and `CONTRACT`. The balance is the `cashBalance` field on `GET /v5/account/transaction-log`.
+Execution and market-action call **wallet-balance first** (per [Bybit docs](https://bybit-exchange.github.io/docs/v5/account/wallet-balance)). On `api-demo.bybit.eu`, that route still returns HTTP 404 (re-checked 2026-10-21), so the client logs a warning and falls back to `transaction-log` `cashBalance` on the newest row per currency.
 
 ```http
 GET /v5/account/transaction-log?accountType=UNIFIED&limit=50

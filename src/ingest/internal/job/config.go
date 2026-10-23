@@ -35,6 +35,7 @@ type Config struct {
 	From          int64
 	To            int64
 	Symbol        string
+	Force         bool
 	DataDir       string
 	BaseURL       string
 	Endpoint      string
@@ -52,6 +53,7 @@ func parseConfig(args []string, getenv func(string) string) (Config, error) {
 	fromStr := fs.String("from", "", "first open time inclusive, ms UTC")
 	toStr := fs.String("to", "", "last open time exclusive, ms UTC")
 	symbol := fs.String("symbol", "", "BTCUSDT, ETHUSDT, or USDCUSDT")
+	force := fs.Bool("force", false, "re-fetch all closed hours in range (replace parquet rows)")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, fmt.Errorf("flags: %w", err)
 	}
@@ -112,6 +114,7 @@ func parseConfig(args []string, getenv func(string) string) (Config, error) {
 		From:          from,
 		To:            to,
 		Symbol:        *symbol,
+		Force:         *force,
 		DataDir:       dataDir,
 		BaseURL:       baseURL,
 		Endpoint:      endpoint,

@@ -71,46 +71,45 @@ type Journal struct {
 	PriceSource     string
 }
 
-func (s *DB) UpsertJournal(j Journal) error {
-	db, err := sql.Open("sqlite", s.path)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	_, err = db.Exec(`INSERT INTO fill_journal (
-		order_link_id, venue, venue_symbol, side, base_qty, quote_qty, price, fee, fee_currency, exchange_order_id, price_source
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	ON CONFLICT(order_link_id) DO UPDATE SET
-		base_qty = excluded.base_qty,
-		quote_qty = excluded.quote_qty,
-		price = excluded.price,
-		fee = excluded.fee,
-		fee_currency = excluded.fee_currency`,
-		j.OrderLinkID, j.Venue, j.VenueSymbol, j.Side, j.BaseQty, j.QuoteQty, j.Price, j.Fee, j.FeeCurrency, j.ExchangeOrderID, j.PriceSource,
-	)
-	return err
-}
-
 type DB struct {
-	path string
+	sql *sql.DB
 }
 
 func Open(dataDir string) (*DB, error) {
 	path := filepath.Join(dataDir, "execution.sqlite")
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
+	var last error
+	for attempt := 0; attempt < 3; attempt++ {
+		db, err := sql.Open("sqlite", path)
+		if err != nil {
+			last = err
+			continue
+		}
+		db.SetMaxOpenConns(1)
+		if _, err := db.Exec(`PRAGMA busy_timeout = 5000`); err != nil {
+			db.Close()
+			last = err
+			continue
+		}
+		if _, err := db.Exec(schemaSQL); err != nil {
+			db.Close()
+			last = err
+			continue
+		}
+		if err := backfillJournals(db); err != nil {
+			db.Close()
+			last = err
+			continue
+		}
+		return &DB{sql: db}, nil
 	}
-	if _, err := db.Exec(schemaSQL); err != nil {
-		db.Close()
-		return nil, err
+	return nil, last
+}
+
+func (s *DB) Close() error {
+	if s.sql == nil {
+		return nil
 	}
-	if err := backfillJournals(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	db.Close()
-	return &DB{path: path}, nil
+	return s.sql.Close()
 }
 
 func backfillJournals(db *sql.DB) error {
@@ -119,11 +118,20 @@ func backfillJournals(db *sql.DB) error {
 		return err
 	}
 	defer rows.Close()
+
+	var bodies []string
 	for rows.Next() {
 		var raw string
 		if err := rows.Scan(&raw); err != nil {
 			return err
 		}
+		bodies = append(bodies, raw)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, raw := range bodies {
 		var body struct {
 			OrderLinkID  string `json:"orderLinkId"`
 			VenueSymbol  string `json:"venueSymbol"`
@@ -152,19 +160,28 @@ func backfillJournals(db *sql.DB) error {
 			return err
 		}
 	}
-	return rows.Err()
+	return nil
+}
+
+func (s *DB) UpsertJournal(j Journal) error {
+	_, err := s.sql.Exec(`INSERT INTO fill_journal (
+		order_link_id, venue, venue_symbol, side, base_qty, quote_qty, price, fee, fee_currency, exchange_order_id, price_source
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(order_link_id) DO UPDATE SET
+		base_qty = excluded.base_qty,
+		quote_qty = excluded.quote_qty,
+		price = excluded.price,
+		fee = excluded.fee,
+		fee_currency = excluded.fee_currency`,
+		j.OrderLinkID, j.Venue, j.VenueSymbol, j.Side, j.BaseQty, j.QuoteQty, j.Price, j.Fee, j.FeeCurrency, j.ExchangeOrderID, j.PriceSource,
+	)
+	return err
 }
 
 func (s *DB) GetOrderResult(orderLinkID string) (OrderResult, error) {
-	db, err := sql.Open("sqlite", s.path)
-	if err != nil {
-		return OrderResult{}, err
-	}
-	defer db.Close()
-
 	var r OrderResult
 	var body string
-	err = db.QueryRow(
+	err := s.sql.QueryRow(
 		`SELECT order_link_id, kind, body FROM order_result WHERE order_link_id = ?`,
 		orderLinkID,
 	).Scan(&r.OrderLinkID, &r.Kind, &body)
@@ -183,13 +200,7 @@ func (s *DB) InsertOrderResult(orderLinkID, kind string, body any) error {
 	if err != nil {
 		return err
 	}
-	db, err := sql.Open("sqlite", s.path)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	_, err = db.Exec(
+	_, err = s.sql.Exec(
 		`INSERT INTO order_result (order_link_id, kind, body) VALUES (?, ?, ?)`,
 		orderLinkID, kind, string(bodyJSON),
 	)
@@ -201,13 +212,7 @@ func (s *DB) UpdateOrderResult(orderLinkID, kind string, body any) error {
 	if err != nil {
 		return err
 	}
-	db, err := sql.Open("sqlite", s.path)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	_, err = db.Exec(
+	_, err = s.sql.Exec(
 		`UPDATE order_result SET kind = ?, body = ? WHERE order_link_id = ?`,
 		kind, string(bodyJSON), orderLinkID,
 	)
@@ -215,13 +220,7 @@ func (s *DB) UpdateOrderResult(orderLinkID, kind string, body any) error {
 }
 
 func (s *DB) ReplaceBalances(rows []BalanceRow) error {
-	db, err := sql.Open("sqlite", s.path)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	tx, err := db.Begin()
+	tx, err := s.sql.Begin()
 	if err != nil {
 		return err
 	}

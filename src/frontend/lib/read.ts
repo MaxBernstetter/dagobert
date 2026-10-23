@@ -4,10 +4,21 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 
-// DATA_DIR defaults to ./data under the web app working directory; absolute paths are used as-is.
+import {
+  type PlaybookChartIndicator,
+  indicatorValuesFromKpiBody,
+} from "@/lib/playbook-indicators";
+
+import { resolveDataDir } from "@/lib/data-dir";
+
 function dataDir(): string {
-  const raw = process.env.DATA_DIR ?? "./data";
-  return path.isAbsolute(raw) ? raw : path.join(process.cwd(), raw);
+  return resolveDataDir();
+}
+
+function openSqliteReadonly(dbPath: string): Database.Database {
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  db.pragma("busy_timeout = 5000");
+  return db;
 }
 
 const EXECUTION_SCHEMA = `
@@ -36,8 +47,8 @@ export type JournalRow = {
   priceSource: string;
 };
 
-export function readJournals(): JournalRow[] {
-  const filePath = path.join(dataDir(), "execution.sqlite");
+export function readJournals(workspaceDir?: string): JournalRow[] {
+  const filePath = path.join(workspaceDir ?? dataDir(), "execution.sqlite");
   if (!fs.existsSync(filePath)) return [];
   const db = new Database(filePath, { readonly: true, fileMustExist: true });
   try {
@@ -126,6 +137,10 @@ export type ActivityRow = {
   symbol: string;
   candleClose: number;
   kind: OrderKind | "not-yet-filled";
+  /** Layer-1 signal (calculation-signal). */
+  signalDecision: string | null;
+  signalRule: string | null;
+  /** Layer-2 sized market action. */
   decision: string | null;
   rule: string | null;
   size: number | null;
@@ -149,7 +164,13 @@ export type ActionBody = {
   size?: number | null;
   exit?: unknown;
   rule?: string;
+  signal_rule?: string;
   written_at?: string;
+};
+
+export type SignalBody = {
+  decision?: string;
+  rule?: string;
 };
 
 type OrderBody = Record<string, unknown>;
@@ -162,12 +183,24 @@ function openExecutionDb(dir: string): Database.Database {
   return db;
 }
 
+function signalSqlitePath(dir: string): string | null {
+  const current = path.join(dir, "calculation_signal.sqlite");
+  if (fs.existsSync(current)) return current;
+  const legacy = path.join(dir, "strategy.sqlite");
+  if (fs.existsSync(legacy)) return legacy;
+  return null;
+}
+
 function openStrategyDbReadonly(dir: string): Database.Database | null {
-  const dbPath = path.join(dir, "strategy.sqlite");
-  if (!fs.existsSync(dbPath)) {
+  const dbPath = signalSqlitePath(dir);
+  if (!dbPath) {
     return null;
   }
-  return new Database(dbPath, { readonly: true });
+  try {
+    return openSqliteReadonly(dbPath);
+  } catch {
+    return null;
+  }
 }
 
 function parseOrderLinkId(orderLinkId: string): {
@@ -193,6 +226,41 @@ function actionKey(playbook: string, symbol: string, candleClose: number): strin
   return `${playbook}\0${symbol}\0${candleClose}`;
 }
 
+function readSignals(
+  db: Database.Database | null
+): Map<string, SignalBody & { playbook: string; symbol: string; candleClose: number }> {
+  const map = new Map<
+    string,
+    SignalBody & { playbook: string; symbol: string; candleClose: number }
+  >();
+  if (!db) return map;
+  let rows: { playbook: string; symbol: string; candle_close: number; body: string }[] = [];
+  try {
+    rows = db
+      .prepare(
+        `SELECT playbook, symbol, candle_close, body FROM signal ORDER BY candle_close DESC`
+      )
+      .all() as { playbook: string; symbol: string; candle_close: number; body: string }[];
+  } catch {
+    return map;
+  }
+  for (const row of rows) {
+    let body: SignalBody = {};
+    try {
+      body = JSON.parse(row.body) as SignalBody;
+    } catch {
+      body = {};
+    }
+    map.set(actionKey(row.playbook, row.symbol, row.candle_close), {
+      ...body,
+      playbook: row.playbook,
+      symbol: row.symbol,
+      candleClose: row.candle_close,
+    });
+  }
+  return map;
+}
+
 function readActions(
   db: Database.Database | null
 ): Map<string, ActionBody & { playbook: string; symbol: string; candleClose: number }> {
@@ -201,11 +269,16 @@ function readActions(
     ActionBody & { playbook: string; symbol: string; candleClose: number }
   >();
   if (!db) return map;
-  const rows = db
-    .prepare(
-      `SELECT playbook, symbol, candle_close, body FROM action ORDER BY candle_close DESC`
-    )
-    .all() as { playbook: string; symbol: string; candle_close: number; body: string }[];
+  let rows: { playbook: string; symbol: string; candle_close: number; body: string }[] = [];
+  try {
+    rows = db
+      .prepare(
+        `SELECT playbook, symbol, candle_close, body FROM action ORDER BY candle_close DESC`
+      )
+      .all() as { playbook: string; symbol: string; candle_close: number; body: string }[];
+  } catch {
+    return map;
+  }
 
   for (const row of rows) {
     let body: ActionBody = {};
@@ -246,12 +319,15 @@ function mergeActivity(
   body: OrderBody,
   action:
     | (ActionBody & { playbook: string; symbol: string; candleClose: number })
+    | undefined,
+  signal:
+    | (SignalBody & { playbook: string; symbol: string; candleClose: number })
     | undefined
 ): ActivityRow {
   const keys = keysFromBody(body, orderLinkId);
-  const playbook = keys.playbook || action?.playbook || "";
-  const symbol = keys.symbol || action?.symbol || "";
-  const candleClose = keys.candleClose || action?.candleClose || 0;
+  const playbook = keys.playbook || action?.playbook || signal?.playbook || "";
+  const symbol = keys.symbol || action?.symbol || signal?.symbol || "";
+  const candleClose = keys.candleClose || action?.candleClose || signal?.candleClose || 0;
 
   return {
     orderLinkId,
@@ -259,6 +335,8 @@ function mergeActivity(
     symbol,
     candleClose,
     kind,
+    signalDecision: signal?.decision ?? null,
+    signalRule: signal?.rule ?? null,
     decision: action?.decision ?? (body.decision != null ? String(body.decision) : null),
     rule: action?.rule ?? null,
     size: action?.size ?? (body.size != null ? Number(body.size) : null),
@@ -306,17 +384,22 @@ export function readBalances(): BalanceRow[] {
   }
 }
 
-export function readActivity(): ActivityRow[] {
-  const dir = dataDir();
+export function readActivity(workspaceDir?: string): ActivityRow[] {
+  const dir = workspaceDir ?? dataDir();
   const strategyDb = openStrategyDbReadonly(dir);
+  const signals = readSignals(strategyDb);
   const actions = readActions(strategyDb);
   if (strategyDb) strategyDb.close();
 
   const byLink = new Map<string, ActivityRow>();
-  const seenActions = new Set<string>();
+  const seenKeys = new Set<string>();
 
+  const execPath = path.join(dir, "execution.sqlite");
   try {
-    const execDb = openExecutionDb(dir);
+    if (!fs.existsSync(execPath)) {
+      throw new Error("no execution store");
+    }
+    const execDb = openSqliteReadonly(execPath);
     try {
       const orders = execDb
         .prepare(`SELECT order_link_id, kind, body FROM order_result`)
@@ -332,10 +415,10 @@ export function readActivity(): ActivityRow[] {
         const kind = row.kind as OrderKind;
         const keys = keysFromBody(body, row.order_link_id);
         const ak = actionKey(keys.playbook, keys.symbol, keys.candleClose);
-        seenActions.add(ak);
+        seenKeys.add(ak);
         byLink.set(
           row.order_link_id,
-          mergeActivity(row.order_link_id, kind, body, actions.get(ak))
+          mergeActivity(row.order_link_id, kind, body, actions.get(ak), signals.get(ak))
         );
       }
     } finally {
@@ -346,11 +429,22 @@ export function readActivity(): ActivityRow[] {
   }
 
   for (const [ak, action] of actions) {
-    if (seenActions.has(ak)) continue;
+    if (seenKeys.has(ak)) continue;
+    seenKeys.add(ak);
     const orderLinkId = `${action.playbook}:${action.symbol}:${action.candleClose}`;
     byLink.set(
       orderLinkId,
-      mergeActivity(orderLinkId, "not-yet-filled", {}, action)
+      mergeActivity(orderLinkId, "not-yet-filled", {}, action, signals.get(ak))
+    );
+  }
+
+  for (const [ak, signal] of signals) {
+    if (seenKeys.has(ak)) continue;
+    seenKeys.add(ak);
+    const orderLinkId = `${signal.playbook}:${signal.symbol}:${signal.candleClose}`;
+    byLink.set(
+      orderLinkId,
+      mergeActivity(orderLinkId, "not-yet-filled", {}, undefined, signal)
     );
   }
 
@@ -367,17 +461,24 @@ export type LiveState = {
   lastFinished: string | null;
 };
 
-export type LakeStats = {
+export type DataLakeStats = {
   hours: number;
   newestHour: number | null;
   symbols: number;
   kpiRows: number;
   newestBar: number | null;
-  actions: number;
-  fills: number;
   parquetBytes: number;
   parquetUpdated: string | null;
 };
+
+export type StrategyLakeStats = {
+  signals: number;
+  actions: number;
+  fills: number;
+  playbooks: number;
+};
+
+export type LakeStats = DataLakeStats & StrategyLakeStats;
 
 export function readLive(): LiveState {
   const empty: LiveState = {
@@ -427,10 +528,17 @@ export function readLake(): LakeStats {
     "SELECT COUNT(*) AS n, MAX(open_time) AS newest, COUNT(DISTINCT symbol) AS symbols FROM stored"
   );
   const kpi = countQuery(
-    "process.sqlite",
+    "technical_indicator.sqlite",
     "SELECT COUNT(*) AS n, MAX(bar_open) AS newest FROM kpi"
   );
-  const actions = countQuery("strategy.sqlite", "SELECT COUNT(*) AS n, MAX(candle_close) AS newest FROM action");
+  const signalFile = signalSqlitePath(dataDir());
+  const signals = signalFile
+    ? countQuery(path.basename(signalFile), "SELECT COUNT(*) AS n, MAX(candle_close) AS newest FROM signal")
+    : { n: 0, newest: null, symbols: 0 };
+  const actions = signalFile
+    ? countQuery(path.basename(signalFile), "SELECT COUNT(*) AS n, MAX(candle_close) AS newest FROM action")
+    : { n: 0, newest: null, symbols: 0 };
+  const playbooks = signalFile ? countDistinctPlaybooks(path.basename(signalFile)) : 0;
   const fills = countQuery(
     "execution.sqlite",
     "SELECT COUNT(*) AS n, NULL AS newest FROM order_result WHERE kind = 'fill'"
@@ -453,14 +561,168 @@ export function readLake(): LakeStats {
     symbols: hours.symbols,
     kpiRows: kpi.n,
     newestBar: kpi.newest,
+    signals: signals.n,
     actions: actions.n,
     fills: fills.n,
+    playbooks,
     parquetBytes,
     parquetUpdated,
   };
 }
 
+export function readDataLake(): DataLakeStats {
+  const lake = readLake();
+  return {
+    hours: lake.hours,
+    newestHour: lake.newestHour,
+    symbols: lake.symbols,
+    kpiRows: lake.kpiRows,
+    newestBar: lake.newestBar,
+    parquetBytes: lake.parquetBytes,
+    parquetUpdated: lake.parquetUpdated,
+  };
+}
+
+function countDistinctPlaybooks(sqliteFile: string): number {
+  const filePath = path.join(dataDir(), sqliteFile);
+  if (!fs.existsSync(filePath)) return 0;
+  const db = new Database(filePath, { readonly: true, fileMustExist: true });
+  try {
+    const row = db.prepare("SELECT COUNT(DISTINCT playbook) AS n FROM action").get() as { n: number };
+    return row?.n ?? 0;
+  } catch {
+    return 0;
+  } finally {
+    db.close();
+  }
+}
+
+export function readStrategyLake(): StrategyLakeStats {
+  const lake = readLake();
+  return {
+    signals: lake.signals,
+    actions: lake.actions,
+    fills: lake.fills,
+    playbooks: lake.playbooks,
+  };
+}
+
 const BAR_MS = 10_800_000;
+const MAX_BAR_MS = 48 * 60 * 60 * 1000;
+
+function barDurationMsFromKpiBody(body: string): number {
+  try {
+    const parsed = JSON.parse(body) as { open_time?: number; close_time?: number };
+    if (
+      parsed.open_time != null &&
+      parsed.close_time != null &&
+      parsed.close_time >= parsed.open_time
+    ) {
+      return parsed.close_time - parsed.open_time + 1;
+    }
+  } catch {
+    /* legacy bodies */
+  }
+  return BAR_MS;
+}
+
+/** Unix seconds at bar close — prefers KPI `close_time` (works for 3h, 6h, etc.). */
+function barCloseSecFromKpi(barOpenMs: number, body: string): number {
+  try {
+    const parsed = JSON.parse(body) as { close_time?: number };
+    if (parsed.close_time != null && parsed.close_time > 0) {
+      return Math.floor(parsed.close_time / 1000);
+    }
+  } catch {
+    /* fall through */
+  }
+  const dur = barDurationMsFromKpiBody(body);
+  return Math.floor((barOpenMs + dur) / 1000);
+}
+
+export type PlaybookChartBar = {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  indicators: Record<string, number | null>;
+};
+
+/** KPI bars for strategy charts (price + playbook technical indicators) in a unix-second range. */
+export function readPlaybookChartBars(
+  symbol: string,
+  algo: string,
+  fromSec: number,
+  toSec: number,
+  indicators: PlaybookChartIndicator[],
+  backtestId?: string,
+): PlaybookChartBar[] {
+  const fromMs = fromSec * 1000;
+  const toMs = toSec * 1000;
+  const kpiPath = backtestId
+    ? path.join(dataDir(), "backtests.sqlite")
+    : path.join(dataDir(), "technical_indicator.sqlite");
+  if (!fs.existsSync(kpiPath) || fromSec > toSec) return [];
+
+  const db = new Database(kpiPath, { readonly: true, fileMustExist: true });
+  const out: PlaybookChartBar[] = [];
+  try {
+    const openMin = fromMs - MAX_BAR_MS;
+    const openMax = toMs;
+    let rows: { bar_open: number; body: string }[] = [];
+    if (backtestId) {
+      rows = db
+        .prepare(
+          `SELECT bar_open, body FROM backtest_kpi
+           WHERE backtest_id = ? AND symbol = ? AND algo = ? AND bar_open >= ? AND bar_open <= ?
+           ORDER BY bar_open ASC`,
+        )
+        .all(backtestId, symbol, algo, openMin, openMax) as { bar_open: number; body: string }[];
+    } else {
+      try {
+        rows = db
+          .prepare(
+            `SELECT bar_open, body FROM kpi_revision
+             WHERE symbol = ? AND algo = ? AND bar_open >= ? AND bar_open <= ?
+             ORDER BY bar_open ASC`,
+          )
+          .all(symbol, algo, openMin, openMax) as { bar_open: number; body: string }[];
+      } catch {
+        rows = db
+          .prepare(
+            `SELECT bar_open, body FROM kpi
+             WHERE symbol = ? AND bar_open >= ? AND bar_open <= ?
+             ORDER BY bar_open ASC`,
+          )
+          .all(symbol, openMin, openMax) as { bar_open: number; body: string }[];
+      }
+    }
+    for (const row of rows) {
+      const body = JSON.parse(row.body) as {
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+      };
+      const time = barCloseSecFromKpi(row.bar_open, row.body);
+      if (time < fromSec || time > toSec) continue;
+      out.push({
+        time,
+        open: body.open,
+        high: body.high,
+        low: body.low,
+        close: body.close,
+        indicators: indicatorValuesFromKpiBody(row.body, indicators),
+      });
+    }
+  } catch {
+    return [];
+  } finally {
+    db.close();
+  }
+  return out;
+}
 
 export type PositionView = {
   symbol: string;
@@ -482,7 +744,7 @@ export type PositionView = {
 };
 
 export function readAlgos(): string[] {
-  const filePath = path.join(dataDir(), "process.sqlite");
+  const filePath = path.join(dataDir(), "technical_indicator.sqlite");
   if (!fs.existsSync(filePath)) return ["v1"];
   const db = new Database(filePath, { readonly: true, fileMustExist: true });
   try {
@@ -498,7 +760,7 @@ export function readAlgos(): string[] {
 
 export function readPosition(symbol: string, label: string, algo = "v1"): PositionView {
   const empty: PositionView = { symbol, label, provider: "binance", algo, start: 0, cells: "", bars: [] };
-  const kpiPath = path.join(dataDir(), "process.sqlite");
+  const kpiPath = path.join(dataDir(), "technical_indicator.sqlite");
   const ingestPath = path.join(dataDir(), "ingest.sqlite");
   if (!fs.existsSync(kpiPath) && !fs.existsSync(ingestPath)) return empty;
 
@@ -580,5 +842,14 @@ function barPoint(open: number, body: string): PositionView["bars"][number] {
     if (def.type === "MovingAverage" && def.method === "sma" && def.time_frame_hr === 6) sma6 = result.value;
     if (def.type === "Rsi") rsi = result.value;
   }
-  return { time: Math.floor(open / 1000), open: row.open, high: row.high, low: row.low, close: row.close, sma3, sma6, rsi };
+  return {
+    time: barCloseSecFromKpi(open, body),
+    open: row.open,
+    high: row.high,
+    low: row.low,
+    close: row.close,
+    sma3,
+    sma6,
+    rsi,
+  };
 }

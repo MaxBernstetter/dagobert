@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/MaxBernstetter/trading-copilot/src/internal/signalstore"
 )
 
 var ErrNotFound = errors.New("action not found")
@@ -27,14 +29,13 @@ type bodyRecord struct {
 
 func Read(dataDir, playbookPath, symbol string, candleClose int64) (Action, error) {
 	playbookID := filepath.Base(playbookPath)
-	path := filepath.Join(dataDir, "strategy.sqlite")
+	path := signalstore.SQLitePath(dataDir)
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return Action{}, ErrNotFound
 		}
 		return Action{}, err
 	}
-
 	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
 	if err != nil {
 		return Action{}, err

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,48 +18,31 @@ export const metadata: Metadata = {
   description: "Overview of balances, decisions, and fills",
 };
 
+const themeInit = `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} flex h-dvh flex-col overflow-hidden antialiased bg-background text-foreground`}
       >
-        <header className="border-b">
-          <div className="mx-auto flex max-w-6xl items-center gap-8 px-4 py-4">
-            <span className="font-semibold tracking-tight">Trading Copilot</span>
-            <nav className="flex gap-4 text-sm">
-              <Link
-                href="/"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Portfolio
-              </Link>
-              <Link
-                href="/orders"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Orders
-              </Link>
-              <Link
-                href="/data"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Data
-              </Link>
-              <Link
-                href="/processing"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Processing
-              </Link>
-            </nav>
+        <SiteHeader />
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 lg:px-6">
+          {children}
+        </main>
+        <footer className="shrink-0 border-t bg-background">
+          <div className="flex w-full items-center justify-between gap-4 px-4 py-2 text-xs text-muted-foreground lg:px-6">
+            <span>Local stack · data under ./data</span>
+            <span>Trading Copilot</span>
           </div>
-        </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        </footer>
       </body>
     </html>
   );

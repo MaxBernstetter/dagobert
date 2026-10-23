@@ -6,9 +6,12 @@ import type { LiveState } from "@/lib/read";
 
 const STAGE_LABEL: Record<string, string> = {
   ingest: "Ingesting",
-  process: "Processing",
+  process: "Indicators",
+  "calculation-technical-indicator": "Indicators",
   indicators: "Recalculating",
-  strategy: "Deciding",
+  strategy: "Signals",
+  "calculation-signal": "Signals",
+  "calculation-market-action": "Sizing",
   execution: "Filling",
 };
 

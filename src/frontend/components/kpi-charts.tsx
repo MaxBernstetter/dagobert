@@ -13,10 +13,14 @@ export function KpiCharts({ bars }: { bars: PositionView["bars"] }) {
     const rsiNode = rsiRef.current;
     if (!priceNode || !rsiNode || bars.length === 0) return;
 
+    const dark = document.documentElement.classList.contains("dark");
+    const textColor = dark ? "#a1a1aa" : "#71717a";
+    const gridColor = dark ? "#27272a" : "#e4e4e7";
+
     const price = createChart(priceNode, {
       height: 280,
-      layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#a1a1aa" },
-      grid: { vertLines: { color: "#27272a" }, horzLines: { color: "#27272a" } },
+      layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor },
+      grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
       timeScale: { timeVisible: true },
     });
     const candles = price.addSeries(CandlestickSeries, {
@@ -35,8 +39,8 @@ export function KpiCharts({ bars }: { bars: PositionView["bars"] }) {
 
     const rsi = createChart(rsiNode, {
       height: 140,
-      layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#a1a1aa" },
-      grid: { vertLines: { color: "#27272a" }, horzLines: { color: "#27272a" } },
+      layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor },
+      grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
       timeScale: { timeVisible: true },
     });
     const rsiLine = rsi.addSeries(LineSeries, { color: "#c084fc", lineWidth: 2, priceLineVisible: false });
