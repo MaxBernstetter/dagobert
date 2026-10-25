@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+import "tradingcopilot/v1/experiment_activity.proto";
+import "tradingcopilot/v1/experiment_instance.proto";
+
+// Binary stdout payload from a strategy backtest run.
+message RunReport {
+  uint32 schema_version = 1;
+  string label = 2;
+  InstanceMetrics metrics = 3;
+  repeated ExperimentInstancePeriodStat period_stats = 4;
+  repeated ExperimentInstanceAction actions = 5;
+  repeated ExperimentInstanceFill fills = 6;
+}
