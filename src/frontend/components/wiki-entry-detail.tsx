@@ -35,11 +35,12 @@ export function WikiIndicatorDetail({
 }
 
 export function WikiPlaybookDetail({ entry }: { entry: WikiEntry }) {
+  const kicker = entry.meta.kind === "method" ? "Position sizing" : "Playbook";
   return (
     <article className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{entry.meta.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Playbook · {entry.meta.slug}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{kicker} · {entry.meta.slug}</p>
       </div>
       <WikiMetaTable meta={entry.meta} />
       <Card className="bg-card shadow-md ring-1 ring-foreground/10">
