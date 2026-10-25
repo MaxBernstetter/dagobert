@@ -15,7 +15,7 @@ Invoking the target of the other preset fails with a message naming the right pr
 
 Add a strategy by calling `dagobert_register_strategy_run(<exe> <fixture-config.json>)` in its `CMakeLists.txt` (see `strategies/sma-cross`).
 
-# C++ calculation build
+## C++ dependency build
 
 ## Builds never compile dependencies
 
