@@ -10,7 +10,20 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Ccache.cmake)
+
 project(dagobert_calculation LANGUAGES C CXX)
+
+# Arrow/Parquet/protobuf come from the shared prefix built by `task cpp:deps`.
+set(DAGOBERT_CALC_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/DepsKey.cmake)
+if(NOT EXISTS "${DAGOBERT_DEPS_PREFIX}/.complete")
+  message(
+    FATAL_ERROR
+    "Dependencies are not built: missing ${DAGOBERT_DEPS_PREFIX}\n"
+    "Builds never compile dependencies. Run once:  task cpp:deps PRESET=${DAGOBERT_MODE}")
+endif()
+list(PREPEND CMAKE_PREFIX_PATH "${DAGOBERT_DEPS_PREFIX}")
 
 if(DAGOBERT_MODE STREQUAL "debug")
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
