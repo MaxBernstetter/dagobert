@@ -128,8 +128,8 @@ Fill Position::record(const Bar &bar, Side side, double qty, double weight_pct,
 template <typename Rule>
 Fill Position::buy_notional(const Bar &bar, double notional, double stop,
                             Rule rule) {
-  if (!(notional > 0.0) || notional > cash_ * (1.0 + 1e-9) || !(stop > 0.0) ||
-      !(stop < bar.close)) {
+  if (!(notional > 0.0) || notional > cash_ * (1.0 + 1e-9) ||
+      !(stop < bar.close)) { // a stop <= 0 is valid: it never triggers
     std::cerr << "buy_notional invalid notional=" << notional
               << " stop=" << stop << " at bar_open_ms=" << bar.open_ms
               << " side=buy\n";

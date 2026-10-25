@@ -81,7 +81,7 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
     }
     const double n = sizing::notional(equity, atr, close, cfg);
     const double stop = sizing::stop_price(close, atr, cfg);
-    if (!(n > 0.0) || !(stop > 0.0)) {
+    if (!(n > 0.0) || sizing::below_min_order(n, cfg)) {
       return std::nullopt;
     }
     plan_ = Plan{.notional = n, .stop = stop};
@@ -108,15 +108,18 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
   }
   if (const double q = sizing::excess_base_for_heat(held, atr, equity, cfg);
       q > 0.0) {
+    if (sizing::below_min_order(q * close, cfg)) {
+      return std::nullopt;
+    }
     plan_ = Plan{.qty = q};
     return ConsensusRule::vol_cut;
   }
   if (const auto n = sizing::pyramid_allowed(units_, units_.back().fill, close,
                                              equity, atr, cfg)) {
-    const double new_stop = sizing::stop_price(close, atr, cfg);
-    if (!(new_stop > 0.0)) {
+    if (sizing::below_min_order(*n, cfg)) {
       return std::nullopt;
     }
+    const double new_stop = sizing::stop_price(close, atr, cfg);
     plan_ = Plan{.notional = *n,
                  .stop = new_stop,
                  .raise_by = std::max(0.0, cfg.add_mult() * atr)};
@@ -202,6 +205,9 @@ std::optional<ConsensusRule> ConsensusSignal::apply(const ConsensusSample &in,
 void ConsensusSignal::buy_unit(Position &account, const Bar &bar,
                                ConsensusRule rule) {
   const double spend = std::min(plan_.notional, account.cash());
+  if (!(spend > 0.0) || sizing::below_min_order(spend, *sizing_)) {
+    return;
+  }
   const Fill fill = account.buy_notional(bar, spend, plan_.stop, rule);
   for (sizing::Unit &u : units_) {
     u.stop += plan_.raise_by;

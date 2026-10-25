@@ -157,6 +157,14 @@ TEST(Sizing, ValidateRanges) {
   bad = {};
   bad.max_weight_pct = 101;
   EXPECT_NE(validate(bad), "");
+  bad = {};
+  bad.min_order_quote = -0.01;
+  EXPECT_NE(validate(bad), "");
+  bad.min_order_quote = 0.0;
+  EXPECT_EQ(validate(bad), "");
+  EXPECT_EQ(SizingConfig{}.min_order(), 1.0);
+  EXPECT_TRUE(below_min_order(0.99, {}));
+  EXPECT_FALSE(below_min_order(1.0, {}));
 }
 
 TEST(SizingPosition, BuyNotionalAndSellBase) {

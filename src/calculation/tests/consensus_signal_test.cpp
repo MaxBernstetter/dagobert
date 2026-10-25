@@ -181,6 +181,7 @@ struct GoFixture {
     cfg.heat_pct = m.at("heatPct").number_value();
     cfg.max_units = static_cast<int>(m.at("maxUnits").number_value());
     cfg.add_atr_mult = m.at("addAtrMult").number_value();
+    cfg.min_order_quote = 0.0; // Go sizing has no minimum
     for (const auto &e : root.fields().at("expected").list_value().values()) {
       expected.push_back(e.struct_value());
     }
@@ -244,6 +245,30 @@ TEST(ConsensusSizing, UsesEveryRuleAndSizesFromTheStop) {
   // Entry: 0.5% of 100000 over a 2.5 * 2 ATR stop at 101.
   EXPECT_NEAR(account.fills().front().qty * 101.0, 10100.0, 1e-6);
   EXPECT_NEAR(actions.front().stop, 96.0, 1e-9);
+}
+
+TEST(ConsensusSizing, BuyBelowMinOrderIsSkipped) {
+  Fixture f = crossing();
+  sizing::SizingConfig cfg;
+  cfg.min_order_quote = 1e12;
+  const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns());
+  Position account{Quote::require(1000.0)};
+  EXPECT_TRUE(ConsensusSignal::actions_from(account, f.bars, mask, cfg).empty());
+  cfg.min_order_quote = 0.0;
+  Position again{Quote::require(1000.0)};
+  EXPECT_FALSE(ConsensusSignal::actions_from(again, f.bars, mask, cfg).empty());
+}
+
+TEST(ConsensusSizing, NonPositiveStopStillBuysLikeGo) {
+  Fixture f = crossing();
+  f.atr.samples.assign(f.atr.samples.size(), 100.0); // stop = 101 - 250 < 0
+  sizing::SizingConfig cfg;
+  const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns());
+  Position account{Quote::require(100000.0)};
+  const auto actions = ConsensusSignal::actions_from(account, f.bars, mask, cfg);
+  ASSERT_FALSE(actions.empty());
+  EXPECT_EQ(actions.front().reason, "consensus_buy");
+  EXPECT_LT(actions.front().stop, 0.0);
 }
 
 TEST(ConsensusSizing, WithoutSizingKeepsWholePositionTrades) {

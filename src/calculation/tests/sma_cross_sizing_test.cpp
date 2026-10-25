@@ -70,6 +70,7 @@ sizing::SizingConfig sizing_of(const Struct &root) {
   cfg.max_units = static_cast<int>(num(s, "maxUnits"));
   cfg.stop_atr_mult = num(s, "stopAtrMult");
   cfg.add_atr_mult = num(s, "addAtrMult");
+  cfg.min_order_quote = 0.0; // Go sizing has no minimum; allocate enforces it
   return cfg;
 }
 
@@ -145,6 +146,18 @@ TEST(SmaCrossSizing, LiveMatchesGoAndBacktest) {
     last = strategy.calc_live(bar);
   }
   expect_matches_go(root, last);
+}
+
+TEST(SmaCrossSizing, OrdersBelowMinOrderAreSkipped) {
+  const Struct root = load_fixture();
+  sizing::SizingConfig cfg = sizing_of(root);
+  cfg.min_order_quote = 1e12;
+  SmaCrossStrategy strategy{envelope_of(root),
+                            static_cast<std::int64_t>(num(root, "barMs")),
+                            cfg};
+  const StrategyResult got = strategy.calc_backtest(bars_of(root));
+  EXPECT_TRUE(got.actions.empty());
+  EXPECT_TRUE(got.fills.empty());
 }
 
 TEST(SmaCrossSizing, FixtureCoversEveryRule) {
