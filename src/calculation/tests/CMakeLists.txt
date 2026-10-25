@@ -1,5 +1,6 @@
 add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.cpp
-                                   sma_test.cpp ema_rsi_test.cpp atr_test.cpp)
+                                   sma_test.cpp ema_rsi_test.cpp atr_test.cpp
+                                   macd_test.cpp)
 target_include_directories(
   dagobert-tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models
