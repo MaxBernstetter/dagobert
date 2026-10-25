@@ -10,9 +10,10 @@ target_include_directories(dagobert_bars_parquet SYSTEM PRIVATE
 target_link_libraries(dagobert_bars_parquet PUBLIC dagobert_data_models
                                                   parquet_static arrow_static)
 dagobert_strict_warnings(dagobert_bars_parquet)
+target_compile_options(dagobert_bars_parquet PRIVATE -Wno-c2y-extensions
+                                                    -Wno-deprecated-declarations)
 if(DAGOBERT_MODE STREQUAL "debug")
   target_compile_options(
     dagobert_bars_parquet
-    PRIVATE -O1 -Wno-\#warnings -Wno-nullability-extension -Wno-gcc-compat
-            -Wno-c2y-extensions -Wno-deprecated-declarations)
+    PRIVATE -O1 -Wno-\#warnings -Wno-nullability-extension -Wno-gcc-compat)
 endif()
