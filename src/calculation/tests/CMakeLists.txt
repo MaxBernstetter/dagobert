@@ -1,5 +1,6 @@
 add_executable(dagobert-tests magic_enum_test.cpp)
 target_link_libraries(dagobert-tests PRIVATE GTest::gtest_main magic_enum::magic_enum)
+dagobert_strict_warnings(dagobert-tests)
 target_link_options(dagobert-tests PRIVATE -static-libstdc++ -static-libgcc)
 if(DAGOBERT_MODE STREQUAL "debug")
   target_compile_options(dagobert-tests PRIVATE -O1)

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// Strategy configs map to experiment_instance.cfg_* columns (no jsonb).
+// Field numbers 1–99 reserved for ma-cross; 100–199 signal-consensus; 200+ future playbooks.
+
+message MaCrossConfig {
+  int32 fast_hr = 1;
+  int32 slow_hr = 2;
+}
+
+message SignalConsensusConfig {
+  double rsi_bull = 100;
+  double rsi_bear = 101;
+  double vol_ratio_bull = 102;
+  double vol_ratio_bear = 103;
+  double atr_stop_mult = 104;
+  int32 min_bars_flat_after_sell = 105;
+  int32 min_bars_long_before_sell = 106;
+}
