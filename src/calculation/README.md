@@ -61,4 +61,18 @@ truncated `libarrow.a` before). `task cpp:build` takes `flock` on
 
 ## Measured times
 
-TIMINGS_PLACEHOLDER
+Machine: 22 cores, Ninja/Make defaults, clang 22.1.8. Before (issue #109):
+about 25 minutes per fresh worktree build, Arrow compiled in every build dir.
+
+| Step | Time |
+| --- | --- |
+| `task cpp:deps` debug, ccache warm from earlier attempts, once | 4m21s |
+| `task cpp:deps` optimized, `CCACHE_DISABLE=1` (cold), once | 4m01s |
+| fresh worktree: configure + build `dagobert-tests` and `strategy-sma-cross` + ctest (51 tests), debug, ccache off | 1m44s |
+| same, ccache cold-ish (28 of 46 compiles hit) | 1m07s |
+| same, ccache fully warm (46 of 46 hit) | 7s (build only) |
+| fresh worktree, optimized, ccache cold | 1m41s |
+| rebuild after a CMake-only change (`touch CMakeLists.txt`) | 1s |
+
+Timings were taken on a machine that was running other builds, so treat them
+as upper bounds.
