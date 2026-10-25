@@ -1,7 +1,11 @@
-import type { ActivityRow } from "@/lib/read";
+import type { ActivityRow } from "@/types/read";
+import { DEFAULT_MARKET_PROVIDER } from "@/lib/market-providers";
 
 export type BacktestSettings = {
-  symbol: string;
+  /** Market-data lake provider (parquet partition). */
+  provider: string;
+  base: string;
+  quote: string;
   playbook: string;
   fromMs: number;
   toMs: number;
@@ -25,9 +29,9 @@ export type BacktestRecord = {
   status: string;
   settings: BacktestSettings;
   workspaceRelPath: string;
-  createdAt: number;
-  startedAt: number | null;
-  finishedAt: number | null;
+  createdAtMs: number;
+  startedAtMs: number | null;
+  finishedAtMs: number | null;
   error: string;
   progressDone: number;
   progressTotal: number;
@@ -36,22 +40,22 @@ export type BacktestRecord = {
   progressStageLabel: string;
 };
 
-export const BACKTEST_STAGE_TOTAL = 4;
-
 export function defaultBacktestSettings(): BacktestSettings {
   const now = Date.now();
   const to = now - (now % (60 * 60 * 1000));
   const from = to - 365 * 24 * 60 * 60 * 1000;
   return {
-    symbol: "BTCUSDT",
+    provider: DEFAULT_MARKET_PROVIDER,
+    base: "BTC",
+    quote: "USDT",
     playbook: "ma-cross",
     fromMs: from,
     toMs: to,
     initialUsdc: 100_000,
     initialUsdt: 0,
     initialBase: 0,
-    targetWeightPct: 95,
-    cashReserveQuote: 100,
+    targetWeightPct: 100,
+    cashReserveQuote: 0,
     minOrderQuote: 1,
     redownloadMissing: false,
     algo: "v1",
@@ -61,9 +65,14 @@ export function defaultBacktestSettings(): BacktestSettings {
   };
 }
 
-/** Starting quote cash for KPI replay (USDC sleeve for BTCUSDT / ETHUSDT). */
+/** Starting book for KPI replay. The run places this whole sum in the venue quote. */
 export function backtestStartCash(settings: BacktestSettings): number {
   return settings.initialUsdc + settings.initialUsdt;
+}
+
+/** Pipeline / KPI series id (Binance concat). */
+export function backtestPipelineSymbol(settings: Pick<BacktestSettings, "base" | "quote">): string {
+  return `${(settings.base || "BTC").toUpperCase()}${(settings.quote || "USDT").toUpperCase()}`;
 }
 
 export function normalizePlaybookSlug(playbook: string): string {
@@ -79,50 +88,6 @@ export type PlaybookOption = {
   id: string;
   label: string;
 };
-
-/** Overall run progress 0–100 while status is running. */
-export function backtestProgressPercent(rec: {
-  status: string;
-  progressStage: number;
-  progressStages: number;
-  progressDone: number;
-  progressTotal: number;
-}): number | null {
-  if (rec.status !== "running") return null;
-  const stages = rec.progressStages > 0 ? rec.progressStages : BACKTEST_STAGE_TOTAL;
-  const stage = rec.progressStage > 0 ? rec.progressStage : 1;
-  const stageWeight = 100 / stages;
-  const stageBase = (stage - 1) * stageWeight;
-  if (rec.progressTotal > 0) {
-    const within = Math.min(1, rec.progressDone / rec.progressTotal);
-    return Math.min(100, Math.round(stageBase + within * stageWeight));
-  }
-  return Math.min(100, Math.round(stageBase + stageWeight * 0.15));
-}
-
-export function backtestStatusLabel(rec: {
-  status: string;
-  progressStage: number;
-  progressStages: number;
-  progressStageLabel: string;
-  progressDone: number;
-  progressTotal: number;
-}): string {
-  if (rec.status !== "running") {
-    return rec.status.charAt(0).toUpperCase() + rec.status.slice(1);
-  }
-  const stages = rec.progressStages > 0 ? rec.progressStages : BACKTEST_STAGE_TOTAL;
-  const stage = rec.progressStage > 0 ? rec.progressStage : 1;
-  const label = rec.progressStageLabel.trim();
-  const pct = backtestProgressPercent(rec);
-  const head = label
-    ? `Running (${stage}/${stages} · ${label})`
-    : `Running (${stage}/${stages})`;
-  if (pct != null) {
-    return `${head} · ${pct}%`;
-  }
-  return head;
-}
 
 export type BacktestOutcome = {
   decisions: number;

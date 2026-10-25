@@ -1,6 +1,9 @@
 ### Ingest and execution
 Lookup for the services: [Binance public klines](../ingest/binance-public-klines.md), [Bybit EU spot demo](../execution/bybit-eu-demo.md).
 
+### Development principles
+How to plan and implement a piece, and the Definition of done: [principles](principles/README.md).
+
 ### Coding principles
 System tests, audit, and HTTP checks: [04-coding-principles](04-coding-principles.md).
 

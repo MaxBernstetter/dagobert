@@ -6,13 +6,15 @@ Add a **Backtesting** area where users define, run, and compare **multiple store
 
 This extends the ideas in `task seed-demo-year` into a first-class, repeatable workflow with configuration, persistence, and efficiency (reuse Parquet + optional indicator cache).
 
+**Experiments (shipped):** multi-instance ma-cross experiments share one lake coverage gate, one in-memory KPI window, and persist `experiment_kpi` once at finalize. See `docs/architecture/backtesting.md`. Experiment-ready strategy listing (allowlist vs Go registry) is groomed in `docs/grooming/experiments-ready-strategies.md`.
+
 ---
 
 ## What exists today (baseline)
 
 | Piece | Role |
 |--------|------|
-| `ingest` | Writes `parquet/<symbol>.parquet` + `ingest.sqlite` keys; skips already-stored hours |
+| `ingest` | Writes `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` + provider-aware `ingest.sqlite` keys; skips already-stored hours |
 | `calculation-technical-indicator` | Reads **Parquet**, aggregates to 3h bars, writes `technical_indicator.sqlite` (`kpi_revision`) |
 | `calculation-signal` → `calculation-market-action` → `execution` | Per **candle close**: signal, sized action, simulated fill (`VENUE_SIMULATE=1`, `paper_venue.json`) |
 | `seed-demo-year` | Wipes `data/`, ingest 1y, TI range backfill, ~3k in-process bar loop |
@@ -69,7 +71,7 @@ Grouped by when they matter for implementation. **MVP** = minimum for a useful v
 
 | Setting | MVP | Notes |
 |---------|-----|--------|
-| KPI set | Same 5 as Strategy | CAGR, max DD, Sharpe, vs B&H, Sortino (`strategy-kpi`) |
+| KPI set | Same as Strategy | CAGR, max DD, Sharpe, vs B&H, Sortino, win rate (`strategy-kpi`) |
 | Benchmark | Buy-and-hold same symbol | Already in KPI engine |
 | Custom KPI window | v2+ | Sub-range on report |
 
@@ -112,7 +114,7 @@ Advanced section (collapsed): workspace id (read-only after create), created at,
 | **Backtest indicators** | Single store: `data/backtests.sqlite` table `backtest_kpi` (name TBD) with **`backtest_id`** on every row. All backtests share this table; rows are keyed by `(backtest_id, symbol, bar_open, algo, …)`. |
 | **Catalog** | Same file: `backtests` table (or equivalent) for id, name, status, settings JSON, workspace path, timestamps. |
 | **Strategy page** | **Live only** — running strategies from prod `calculation_signal` + `execution`. No backtest selector. |
-| **Run executor** | **Docker job** (`trading-copilot-backtest`), same pattern as ingest/execution. API sets status `running` and starts container; UI polls catalog. |
+| **Run executor** | **Docker job** (`dagobert-backtest`), same pattern as ingest/execution. API sets status `running` and starts container; UI polls catalog. |
 | **Performance SLO** | **&lt; 1 minute** for a typical 1y / ~3k-bar run when candles are already in Parquet (no network ingest). Optimize TI batch + in-process bar loop accordingly. |
 | **Backtesting UI** | **`backtests.sqlite`-backed list** — repeater or table (like Strategy / Data pages). **Details in a side sheet** (create, edit settings, report) — not a separate full-page-only flow. |
 
@@ -124,7 +126,7 @@ Advanced section (collapsed): workspace id (read-only after create), created at,
 
 ```text
 data/
-  parquet/                         # shared lake (unchanged)
+  parquet/provider=*/base=*/quote=*/year=*/     # shared Hive lake
   ingest.sqlite
   technical_indicator.sqlite       # prod / live only — backtests never write here
   calculation_signal.sqlite        # live strategy
@@ -163,7 +165,7 @@ Signal and execution jobs during a run use `DATA_DIR=.../backtests/<id>` and rea
 3. **Bar loop** — In one container process: for each 3h close, `signal` → `market-action` → `execution` with workspace `DATA_DIR`, `BACKTEST_ID`, `VENUE_SIMULATE=1`, playbook from settings snapshot.
 4. **Finalize** — KPIs into catalog or `report` fields; `status = completed`.
 
-New Go package: `src/backtest/` + image `docker/backtest/Dockerfile` → `trading-copilot-backtest`:
+New Go package: `src/backtest/` + image `docker/backtest/Dockerfile` → `dagobert-backtest`:
 
 - `Run(backtestID string) error` — entrypoint for job container.
 - Extend TI store + `kpi.BarClose` (or parallel) to read **backtest_kpi** when `BACKTEST_ID` is set.
@@ -196,7 +198,7 @@ New Go package: `src/backtest/` + image `docker/backtest/Dockerfile` → `tradin
    - **Draft / edit:** full settings form (all fields adjustable; defaults from table above).
    - **Running:** progress (bars done / total) from catalog or `progress.json`.
    - **Completed:** report panel — reuse Strategy components (`ActivityView`, portfolio chart, KPI tags) via backtest-scoped APIs; read-only.
-3. **Run** — Button in sheet → `POST /api/backtests/[id]/run` → starts **Docker backtest job**; sheet stays open or user returns from list poll.
+3. **Run** — Button in sheet → `POST /api/v1/backtests/[id]/run` → starts **Docker backtest job**; sheet stays open or user returns from list poll.
 
 **Strategy page** is unchanged: live playbooks only.
 
@@ -204,13 +206,13 @@ New Go package: `src/backtest/` + image `docker/backtest/Dockerfile` → `tradin
 
 | Route | Purpose |
 |--------|---------|
-| `GET /api/backtests` | List catalog |
-| `POST /api/backtests` | Create draft |
-| `PATCH /api/backtests/[id]` | Update settings |
-| `POST /api/backtests/[id]/run` | Start run (async) |
-| `GET /api/backtests/[id]` | Manifest + status |
-| `GET /api/backtests/[id]/activity` | Same shape as `/api/activity` |
-| `GET /api/backtests/[id]/kpis` | Same shape as `/api/strategy/kpis` |
+| `GET /api/v1/backtests` | List catalog |
+| `POST /api/v1/backtests` | Create draft |
+| `PATCH /api/v1/backtests/[id]` | Update settings |
+| `POST /api/v1/backtests/[id]/run` | Start run (async) |
+| `GET /api/v1/backtests/[id]` | Manifest + status |
+| `GET /api/v1/backtests/[id]/activity` | Same shape as `/api/v1/activity` |
+| `GET /api/v1/backtests/[id]/kpis` | Same shape as `/api/v1/strategy/kpis` |
 
 `resolveDataDir()` gains a branch: `BACKTEST_ID` or path from catalog.
 
@@ -223,10 +225,10 @@ New Go package: `src/backtest/` + image `docker/backtest/Dockerfile` → `tradin
 
 ## How runs are triggered
 
-1. UI → `POST /api/backtests/[id]/run` updates `status = running`.
-2. API (or orchestrator helper) runs **`docker run`** / compose job: image `trading-copilot-backtest`, env `DATA_DIR=/data`, `BACKTEST_ID=<uuid>`, mount host `./data`.
+1. UI → `POST /api/v1/backtests/[id]/run` updates `status = running`.
+2. API (or orchestrator helper) runs **`docker run`** / compose job: image `dagobert-backtest`, env `DATA_DIR=/data`, `BACKTEST_ID=<uuid>`, mount host `./data`.
 3. Job exits 0 → `completed`; non-zero → `failed` + log snippet in `error`.
-4. UI polls `GET /api/backtests` or `GET /api/backtests/[id]` every few seconds while `running`.
+4. UI polls `GET /api/v1/backtests` or `GET /api/v1/backtests/[id]` every few seconds while `running`.
 
 Local dev: `task backtest-run ID=…` wraps the same image for debugging without the UI.
 
@@ -251,7 +253,7 @@ Keep each PR reviewable (~400 lines). Suggested epic issues:
 |---|--------|---------|
 | 1 | **`backtests.sqlite` + `backtest_kpi` schema** | Catalog table + TI table with `backtest_id`; workspace dirs |
 | 2 | **TI writer/reader for backtest** | Batch from Parquet into `backtest_kpi`; `kpi.BarClose` backtest mode |
-| 3 | **Backtest Docker job + runner** | `trading-copilot-backtest`; &lt;60s system test with warm Parquet |
+| 3 | **Backtest Docker job + runner** | `dagobert-backtest`; &lt;60s system test with warm Parquet |
 | 4 | **Parquet coverage helper** | Ingest ensure-range; skip network when covered |
 | 5 | **API: CRUD + run (docker) + status** | Next routes spawn job via socket helper |
 | 6 | **UI: list + side sheet** | Repeater/table + create/edit/report in sheet |

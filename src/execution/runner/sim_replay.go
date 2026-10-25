@@ -3,12 +3,12 @@ package runner
 import (
 	"fmt"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/job"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/sim"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 )
 
 // SimBarResult is one simulated execution step for batched replay.
@@ -20,8 +20,13 @@ type SimBarResult struct {
 
 // SimulateBar applies one sized decision at bar close using in-memory paper wallet.
 func SimulateBar(wallet *paper.Wallet, playbookID, symbol string, candleClose int64, decision string, size *float64, price float64, position string) (SimBarResult, error) {
-	costs := sim.FromEnv()
-	inst, ok := instruments.BySeries(symbol)
+	return SimulateBarWithModel(wallet, playbookID, symbol, candleClose, decision, size, price, position, sim.FromEnv(), false)
+}
+
+// SimulateBarWithModel is SimulateBar with a preloaded cost model.
+// When skipNoTrade is true, no-trade bars produce empty Orders (slim experiment path).
+func SimulateBarWithModel(wallet *paper.Wallet, playbookID, symbol string, candleClose int64, decision string, size *float64, price float64, position string, costs sim.Model, skipNoTrade bool) (SimBarResult, error) {
+	inst, ok := instruments.Resolve(symbol)
 	if !ok {
 		return SimBarResult{}, fmt.Errorf("unknown symbol %s", symbol)
 	}
@@ -42,7 +47,9 @@ func SimulateBar(wallet *paper.Wallet, playbookID, symbol string, candleClose in
 
 	switch decision {
 	case "no-trade":
-		out.Orders = []store.OrderResultRow{{OrderLinkID: link, Kind: store.KindNoTrade, Body: key}}
+		if !skipNoTrade {
+			out.Orders = []store.OrderResultRow{{OrderLinkID: link, Kind: store.KindNoTrade, Body: key}}
+		}
 		return out, nil
 	case "buy", "sell":
 		if size == nil {

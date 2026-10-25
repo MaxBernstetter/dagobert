@@ -1,16 +1,17 @@
 package playbooks
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/retry"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/retry"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 )
 
 // Run executes one strategy invocation for symbol at candleCloseMs (layer-1 signal only).
@@ -72,6 +73,7 @@ func Run(dataDir, playbookEnv, symbol string, candleCloseMs int64) (detail int, 
 		return 30, err
 	}
 
+	gapFromPrevious := !hasPreviousBar && prevBarOpen > 0
 	ctx := framework.Context{
 		Symbol:           symbol,
 		CandleClose:      candleCloseMs,
@@ -85,6 +87,8 @@ func Run(dataDir, playbookEnv, symbol string, candleCloseMs int64) (detail int, 
 		Results:          results,
 		PreviousResults:  prevResults,
 		HasPreviousBar:   hasPreviousBar,
+		PreviousBarOpen:  prevBarOpen,
+		GapFromPrevious:  gapFromPrevious,
 	}
 
 	dec, err := entry.Strategy.Evaluate(ctx)
@@ -107,8 +111,16 @@ func Run(dataDir, playbookEnv, symbol string, candleCloseMs int64) (detail int, 
 }
 
 func encodeSignal(entry framework.Entry, symbol string, dec framework.Decision) ([]byte, error) {
-	inst, _ := instruments.BySeries(symbol)
-	hash := sha256.Sum256([]byte(entry.Strategy.Slug() + ":" + entry.Strategy.LogicVersion()))
+	return encodeSignalWithConfig(entry, symbol, dec, nil)
+}
+
+func encodeSignalWithConfig(entry framework.Entry, symbol string, dec framework.Decision, configJSON []byte) ([]byte, error) {
+	inst, _ := instruments.Resolve(symbol)
+	hashInput := entry.Strategy.Slug() + ":" + entry.Strategy.LogicVersion()
+	if len(bytes.TrimSpace(configJSON)) > 0 {
+		hashInput += ":" + string(configJSON)
+	}
+	hash := sha256.Sum256([]byte(hashInput))
 	body := map[string]any{
 		"decision":      dec.Decision,
 		"exit":          dec.Exit,

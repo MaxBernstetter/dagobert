@@ -3,8 +3,8 @@ package runner
 import (
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 )
 
 // ReplaceSimulatedExecution persists batched order results, fills, balances, and paper wallet.

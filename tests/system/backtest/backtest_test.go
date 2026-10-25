@@ -11,9 +11,9 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 
-	"github.com/MaxBernstetter/trading-copilot/src/backtest"
-	"github.com/MaxBernstetter/trading-copilot/src/backtest/store"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/backtest"
+	"github.com/MaxBernstetter/dagobert/src/backtest/store"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 	_ "modernc.org/sqlite"
 )
 
@@ -47,7 +47,7 @@ func TestBacktestRunCorrectness(t *testing.T) {
 	defer cat.Close()
 
 	settings := store.DefaultSettings()
-	settings.Symbol = symbol
+	settings.Base = "BTC"; settings.Quote = "USDT"
 	settings.Playbook = "ma-cross"
 	settings.FromMs = 0
 	settings.ToMs = endMs
@@ -113,17 +113,24 @@ func TestSignalConsensusLakeChurn(t *testing.T) {
 	if lake == "" {
 		t.Skip("DATA_DIR not set")
 	}
-	src := filepath.Join(lake, "parquet", symbol+".parquet")
-	if _, err := os.Stat(src); err != nil {
+	srcPaths, err := shared.ListCandleParquetPaths(lake, "binance", "BTC", "USDT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(srcPaths) == 0 {
 		t.Skip("no lake parquet")
 	}
 	dataDir := tempDataDir(t)
-	if err := copyFile(src, filepath.Join(dataDir, "parquet", symbol+".parquet")); err != nil {
-		t.Fatal(err)
-	}
-	meta := src + ".meta.json"
-	if _, err := os.Stat(meta); err == nil {
-		_ = copyFile(meta, filepath.Join(dataDir, "parquet", symbol+".parquet.meta.json"))
+	for _, src := range srcPaths {
+		yearName := filepath.Base(filepath.Dir(src)) // year=YYYY
+		destDir := filepath.Join(dataDir, "parquet", "provider=binance", "base=BTC", "quote=USDT", yearName)
+		if err := os.MkdirAll(destDir, 0o777); err != nil {
+			t.Fatal(err)
+		}
+		dest := filepath.Join(destDir, shared.CandlesParquetFile)
+		if err := copyFile(src, dest); err != nil {
+			t.Fatal(err)
+		}
 	}
 	cat, err := store.Open(dataDir)
 	if err != nil {
@@ -131,7 +138,7 @@ func TestSignalConsensusLakeChurn(t *testing.T) {
 	}
 	defer cat.Close()
 	settings := store.DefaultSettings()
-	settings.Symbol = symbol
+	settings.Base = "BTC"; settings.Quote = "USDT"
 	settings.Playbook = "signal-consensus"
 	settings.RedownloadMissing = false
 	rec, err := cat.CreateDraft("churn-cap", "", settings)
@@ -167,7 +174,7 @@ func TestBacktestSignalConsensusEmitsFills(t *testing.T) {
 	defer cat.Close()
 
 	settings := store.DefaultSettings()
-	settings.Symbol = symbol
+	settings.Base = "BTC"; settings.Quote = "USDT"
 	settings.Playbook = "signal-consensus"
 	settings.FromMs = 480 * hour
 	settings.ToMs = endMs
@@ -194,7 +201,7 @@ func TestBacktestSignalConsensusEmitsFills(t *testing.T) {
 	ws := store.WorkspaceDir(dataDir, rec)
 	buys := countSignalsWithDecision(t, ws, "buy")
 	fills := countFills(t, ws)
-	t.Logf("signal-consensus v9: buys=%d fills=%d", buys, fills)
+	t.Logf("signal-consensus v10: buys=%d fills=%d", buys, fills)
 	if buys >= 1 && fills < 1 {
 		t.Fatalf("expected fill after buy, got fills=%d", fills)
 	}
@@ -211,7 +218,7 @@ func TestTwoBacktestsDifferentKPIRanges(t *testing.T) {
 	defer cat.Close()
 
 	short := store.DefaultSettings()
-	short.Symbol = symbol
+	short.Base = "BTC"; short.Quote = "USDT"
 	short.FromMs = 0
 	short.ToMs = 48 * hour
 	short.RedownloadMissing = false
@@ -324,13 +331,22 @@ func writeHourlyParquet(t *testing.T, dataDir, sym string, endMs int64) {
 
 func writeHourlyParquetRows(t *testing.T, dataDir, sym string, rows []hourCandle) {
 	t.Helper()
-	parquetDir := filepath.Join(dataDir, "parquet")
-	if err := os.MkdirAll(parquetDir, 0o777); err != nil {
-		t.Fatal(err)
+	byYear := map[int][]hourCandle{}
+	for _, r := range rows {
+		y := shared.YearUTC(r.OpenTime)
+		byYear[y] = append(byYear[y], r)
 	}
-	pqPath := filepath.Join(parquetDir, sym+".parquet")
-	if err := parquet.WriteFile(pqPath, rows); err != nil {
-		t.Fatal(err)
+	for y, part := range byYear {
+		pqPath, err := shared.ParquetPath(dataDir, "binance", "BTC", "USDT", y)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(pqPath), 0o777); err != nil {
+			t.Fatal(err)
+		}
+		if err := parquet.WriteFile(pqPath, part); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

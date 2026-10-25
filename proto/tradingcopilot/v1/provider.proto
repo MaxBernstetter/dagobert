@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+message MarketPair {
+  string symbol = 1;
+  string base = 2;
+  string quote = 3;
+  string status = 4;
+}
+
+message ListPairsResponse {
+  string provider_id = 1;
+  repeated MarketPair pairs = 2;
+}

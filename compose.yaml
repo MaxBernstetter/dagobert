@@ -1,4 +1,4 @@
-# Long-running stack: Floci, the orchestrator, and the web app.
+# Long-running stack: Floci, Postgres, the orchestrator, and the web app.
 # Job images are started by the orchestrator. They are not services here.
 # HOST_DATA_DIR, HOST_PLAYBOOKS_DIR, and HOST_SECRETS_FILE are host paths
 # because the orchestrator talks to the host Docker socket.
@@ -7,21 +7,50 @@ services:
   floci:
     image: floci/floci:latest
     ports:
-      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:${FLOCI_PORT:-4566}:4566"
     environment:
       FLOCI_HOSTNAME: floci
+    restart: unless-stopped
+
+  # Control plane (experiments / stats / activity). Floci does not emulate Postgres.
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trading}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trading}
+      POSTGRES_DB: ${POSTGRES_DB:-trading}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trading} -d ${POSTGRES_DB:-trading}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
   orchestrator:
     build:
       context: .
       dockerfile: docker/orchestrator/Dockerfile
-    image: trading-copilot-orchestrator
+    image: dagobert-orchestrator
     environment:
       SFN_ENDPOINT: http://floci:4566
+      AWS_ENDPOINT_URL: http://floci:4566
       AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+      SSM_PREFIX: ${SSM_PREFIX:-/dagobert/local}
+      LAKE_BUCKET: ${LAKE_BUCKET:-dagobert-local-lake}
+      EXPERIMENT_ARTIFACTS: ${EXPERIMENT_ARTIFACTS:-fs}
+      EXPERIMENTS_TABLE: ${EXPERIMENTS_TABLE:-dagobert-local-experiments}
+      EXPERIMENT_CATALOG: ${EXPERIMENT_CATALOG:-postgres}
+      LAKE_BACKEND: ${LAKE_BACKEND:-fs}
+      LAKE_DUAL_WRITE: ${LAKE_DUAL_WRITE:-0}
+      SECRETS_BACKEND: ${SECRETS_BACKEND:-auto}
       HOST_DATA_DIR: ${HOST_DATA_DIR:-./data}
       HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:-./src/calculation-signal/playbooks}
       HOST_SECRETS_FILE: ${HOST_SECRETS_FILE:-./.secrets}
@@ -29,33 +58,44 @@ services:
       HOST_GID: ${HOST_GID:-0}
       SECRETS_FILE: /secrets/.secrets
       BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://data-api.binance.vision}
+      EXPERIMENT_SIM_WORKERS: ${EXPERIMENT_SIM_WORKERS:-4}
+      EXPERIMENT_RUN_BACKEND: ${EXPERIMENT_RUN_BACKEND:-docker}
+      EXPERIMENT_BATCH_SIZE: ${EXPERIMENT_BATCH_SIZE:-64}
+      EXPERIMENT_MAP_MAX_CONCURRENCY: ${EXPERIMENT_MAP_MAX_CONCURRENCY:-8}
+      EXPERIMENT_SFN_ARN: ${EXPERIMENT_SFN_ARN:-}
+      EXPERIMENT_RUN_HEAVY: ${EXPERIMENT_RUN_HEAVY:-0}
+      # Always use Compose DNS name — do not inherit host DATABASE_URL (127.0.0.1).
+      DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@postgres:5432/${POSTGRES_DB:-trading}?sslmode=disable&search_path=public
       LIVE_DIR: /data
     ports:
-      - "127.0.0.1:8090:8090"
+      - "127.0.0.1:${ORCHESTRATOR_PORT:-8090}:8090"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_SECRETS_FILE:-./.secrets}:/secrets/.secrets:ro
       - ${HOST_DATA_DIR:-./data}:/data
     depends_on:
-      - floci
+      floci:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
+  # Published UI is the Vite SPA (src/frontend).
   frontend:
     build:
-      context: ./src/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/frontend/Dockerfile
       target: prod
-    image: trading-copilot-frontend
+    image: dagobert-spa
     environment:
-      DATA_DIR: /data
-      ORCHESTRATOR_URL: http://orchestrator:8090
-      WIKI_CATALOG_DIR: /wiki/calculation-technical-indicator/internal/indicators
-      WIKI_PLAYBOOKS_DIR: /wiki/playbooks
+      VITE_EXPERIMENT_API_URL: ${VITE_EXPERIMENT_API_URL:-}
+      VITE_DEV_API_PROXY: ${VITE_DEV_API_PROXY:-http://orchestrator:8090}
     ports:
       - "${WEB_PORT:-3001}:3000"
-    volumes:
-      - ./data:/data
-      - ./src/calculation-technical-indicator/internal/indicators:/wiki/calculation-technical-indicator/internal/indicators:ro
-      - ./src/calculation-technical-indicator/internal/indicators:/wiki/calculation-technical-indicator/indicators:ro
-      - ./src/calculation-signal/playbooks:/wiki/playbooks:ro
+    depends_on:
+      orchestrator:
+        condition: service_started
     restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/job"
 )
 
 func main() {

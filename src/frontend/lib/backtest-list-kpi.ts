@@ -72,4 +72,8 @@ export const BACKTEST_TABLE_STAT_COLUMNS: {
   { id: "yr-ret-med", header: "Yr ret med", format: "percent", pick: (s) => s.yearlyReturnMed },
   { id: "trades-mo-avg", header: "Trades/mo μ", format: "rate", pick: (s) => s.tradesPerMonthAvg },
   { id: "trades-mo-med", header: "Trades/mo med", format: "rate", pick: (s) => s.tradesPerMonthMed },
+  { id: "mo-wr-avg", header: "Mo win μ", format: "percent", pick: (s) => s.monthlyWinRateAvg ?? null },
+  { id: "mo-wr-med", header: "Mo win med", format: "percent", pick: (s) => s.monthlyWinRateMed ?? null },
+  { id: "yr-wr-avg", header: "Yr win μ", format: "percent", pick: (s) => s.yearlyWinRateAvg ?? null },
+  { id: "yr-wr-med", header: "Yr win med", format: "percent", pick: (s) => s.yearlyWinRateMed ?? null },
 ];

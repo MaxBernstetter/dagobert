@@ -3,7 +3,7 @@ package paper
 import (
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
 )
 
 func TestApplySellNeverExceedsBalance(t *testing.T) {

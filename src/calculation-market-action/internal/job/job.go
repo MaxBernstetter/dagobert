@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/bybit"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/signalstore"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/config"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-market-action/internal/allocate"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/config"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/calculation-market-action/internal/allocate"
 )
 
 // Run sizes a stored signal into an executable action using live venue balances.
@@ -52,7 +52,7 @@ func Run(args []string) (exitCode int, detail int) {
 		return 1, 30
 	}
 
-	inst, ok := instruments.BySeries(symbol)
+	inst, ok := instruments.Resolve(symbol)
 	if !ok {
 		return 1, 10
 	}
@@ -147,7 +147,7 @@ func markPrice(dataDir, symbol string, barOpen int64) (float64, error) {
 }
 
 func encodeAction(playbookID, symbol, decision string, size *float64, rule, signalRule string) ([]byte, error) {
-	inst, _ := instruments.BySeries(symbol)
+	inst, _ := instruments.Resolve(symbol)
 	unit, unitKind := "", ""
 	switch decision {
 	case "buy":

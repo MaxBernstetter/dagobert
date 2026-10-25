@@ -108,11 +108,12 @@ The container exits with one general code. That is the only process status. The 
 
 | Detail | General | Outcome |
 |---|---|---|
-| 0 | 0 | The missing closed hours were written on this run. |
-| 1 | 2 | Aborted. Every closed hour in `[From, To)` is already stored. No Binance call and no write. |
+| 0 | 0 | The missing closed hours were written on this run (may also record `unavailable` holes). |
+| 1 | 2 | Aborted. Every closed hour in `[From, To)` is already stored or unavailable. No Binance call and no write. |
 | 10 | 1 | `From`, `To`, or `Symbol` is missing or invalid. |
 | 20 | 2 | A candle in the range is still open, so the range cannot be finished. |
-| 30 | 1 | Binance failed after the configured retries. |
+| 30 | 1 | Binance **transport** failed after the configured retries. |
+| 32 | 0 | No new candles; requested holes confirmed empty and recorded in `unavailable`. |
 | 40 | 1 | A stored object for an hour in the range is partial and cannot be trusted. |
 
 ## Persistence

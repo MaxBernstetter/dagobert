@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import {
   Sheet,
@@ -9,10 +10,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { FilterableTable, type FilterableColumnDef } from "@/components/filterable-table";
-import { StrategyPortfolioChart } from "@/components/strategy-portfolio-chart";
+import { StrategyCharts } from "@/components/strategy-charts";
 import { BacktestDetailSection } from "@/components/backtest-detail-section";
+import { Badge } from "@/components/ui/badge";
 import { StrategyKpiTags } from "@/components/strategy-kpi-tags";
-import type { ActivityRow, JournalRow, LiveState } from "@/lib/read";
+import type { ActivityRow, JournalRow, LiveState } from "@/types/read";
 import { portfolioSeriesForPlaybook, tradeMarkersFromActivity } from "@/lib/portfolio-series";
 import type { StrategyGroup } from "@/lib/strategy-groups";
 import { groupActivityByPlaybook } from "@/lib/strategy-groups";
@@ -22,10 +24,11 @@ import {
 } from "@/lib/execution-guidance";
 import { STRATEGY_COLUMN_HELP } from "@/lib/strategy-help";
 import { HelpTip } from "@/components/help-tip";
-import { StatusBadge, rowVenueStatus } from "@/components/status-badge";
+import { useViewportHeight } from "@/hooks/use-viewport-height";
+import { StatusBadge, rowVenueStatus, venueStatusAddsDetail } from "@/components/status-badge";
 import { CandleDetail } from "@/components/candle-detail";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -35,6 +38,9 @@ import {
 } from "@/components/ui/card";
 
 const PAGE_SIZE = 20;
+/** Instance report: performance stays in the left track from the first paint. */
+const reportColumnsClass =
+  "flex min-h-0 flex-1 flex-col gap-3 xl:grid xl:h-full xl:min-h-0 xl:grid-cols-[minmax(40rem,48rem)_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:gap-4";
 const BAR_SEC = 10_800;
 
 function primarySymbol(rows: ActivityRow[]): string {
@@ -84,6 +90,7 @@ const activityColumns = (
     header: <HelpTip label="Candle" tip={STRATEGY_COLUMN_HELP.candle} />,
     filter: "text",
     filterValue: (row) => formatCandleClose(row.candleClose),
+    sortValue: (row) => row.candleClose,
     cell: (row) => (
       <span className="whitespace-nowrap text-xs">{formatCandleClose(row.candleClose)}</span>
     ),
@@ -93,6 +100,7 @@ const activityColumns = (
     header: <HelpTip label="Symbol" tip={STRATEGY_COLUMN_HELP.symbol} />,
     filter: "select",
     filterValue: (row) => row.symbol,
+    sortValue: (row) => row.symbol,
     cell: (row) => row.symbol,
   },
   {
@@ -100,6 +108,7 @@ const activityColumns = (
     header: <HelpTip label="Signal" tip={STRATEGY_COLUMN_HELP.signal} />,
     filter: "select",
     filterValue: (row) => row.signalDecision ?? "",
+    sortValue: (row) => row.signalDecision ?? "",
     cell: (row) => row.signalDecision ?? "—",
   },
   {
@@ -107,6 +116,7 @@ const activityColumns = (
     header: <HelpTip label="Action" tip={STRATEGY_COLUMN_HELP.action} />,
     filter: "select",
     filterValue: (row) => row.decision ?? "",
+    sortValue: (row) => row.decision ?? "",
     cell: (row) => row.decision ?? "—",
   },
   {
@@ -119,6 +129,7 @@ const activityColumns = (
     ),
     filter: "text",
     filterValue: (row) => (row.size != null ? String(row.size) : ""),
+    sortValue: (row) => row.size,
     className: "tabular-nums",
     cell: (row) => (row.size != null ? String(row.size) : "—"),
   },
@@ -127,6 +138,7 @@ const activityColumns = (
     header: <HelpTip label="Execution" tip={STRATEGY_COLUMN_HELP.execution} />,
     filter: "select",
     filterValue: (row) => row.kind,
+    sortValue: (row) => row.kind,
     cell: (row) => {
       const execTip = executionTooltip(row, live);
       return (
@@ -141,6 +153,7 @@ const activityColumns = (
     header: <HelpTip label="Venue status" tip={STRATEGY_COLUMN_HELP.venue} />,
     filter: "text",
     filterValue: (row) => rowVenueStatus(row),
+    sortValue: (row) => rowVenueStatus(row),
     className: "text-xs text-muted-foreground max-w-[10rem]",
     cell: (row) => {
       const venue = rowVenueStatus(row);
@@ -153,6 +166,19 @@ const activityColumns = (
   },
 ];
 
+/** Instance runs share one asset and often omit signal, size, and a distinct venue status. */
+function columnsForRows(live: LiveState, rows: ActivityRow[], compact: boolean) {
+  const cols = activityColumns(live);
+  if (!compact || rows.length === 0) return cols;
+  const drop = new Set<string>();
+  const symbol = rows[0]?.symbol;
+  if (symbol && rows.every((row) => row.symbol === symbol)) drop.add("symbol");
+  if (rows.every((row) => !row.signalDecision)) drop.add("signal");
+  if (rows.every((row) => row.size == null)) drop.add("size");
+  if (rows.every((row) => !venueStatusAddsDetail(row))) drop.add("venue");
+  return cols.filter((col) => !drop.has(col.id));
+}
+
 function playbookWikiSlug(playbook: string): string {
   return playbook.replace(/\.ya?ml$/i, "");
 }
@@ -161,6 +187,8 @@ type ReportApiScope = {
   backtestId: string;
   fromMs: number;
   toMs: number;
+  /** Experiment/instance chart-series API path (query params appended). */
+  chartSeriesPath: string;
 };
 
 function StrategyRepeaterItem({
@@ -170,7 +198,11 @@ function StrategyRepeaterItem({
   defaultOpen,
   selectedId,
   onSelect,
+  selectedRow,
   reportApi,
+  chartsExtra,
+  chartsHold,
+  leading,
 }: {
   group: StrategyGroup;
   live: LiveState;
@@ -178,9 +210,112 @@ function StrategyRepeaterItem({
   defaultOpen: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Row shown in the action popup. */
+  selectedRow: ActivityRow | null;
   reportApi?: ReportApiScope;
+  /** Extra charts rendered inside "Charts & decisions" (e.g. monthly returns). */
+  chartsExtra?: ReactNode;
+  /** Spinner only, until the extra chart series is settled. */
+  chartsHold?: boolean;
+  /** Rendered above the actions table in the report layout (first group only). */
+  leading?: ReactNode;
 }) {
-  const columns = useMemo(() => activityColumns(live), [live]);
+  const [actionOpen, setActionOpen] = useState(false);
+  const [rangeToolbar, setRangeToolbar] = useState<ReactNode>(null);
+  const columns = useMemo(
+    () => columnsForRows(live, group.rows, Boolean(reportApi)),
+    [live, group.rows, reportApi],
+  );
+  const chartHeight = useViewportHeight(260, 520, 0.4);
+  const chartsPaneRef = useRef<HTMLDivElement>(null);
+  const [plotHeight, setPlotHeight] = useState(chartHeight);
+  const measureRef = useRef<(flip?: HTMLDetailsElement) => void>(() => {});
+  const revealCharts = useCallback(() => {
+    measureRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (!reportApi) return;
+    const pane = chartsPaneRef.current;
+    if (!pane) return;
+    let frame = 0;
+    const measure = (flip?: HTMLDetailsElement) => {
+      const containerH = pane.clientHeight;
+      if (containerH < 80) return;
+      const sections = [...pane.querySelectorAll("details")];
+      const willOpen = (section: HTMLDetailsElement) => (section === flip ? !section.open : section.open);
+      const openCount = sections.filter((section) => willOpen(section)).length;
+      if (openCount === 0) return;
+      const gap = Number.parseFloat(getComputedStyle(pane).rowGap) || 0;
+      const box = (el: Element) => {
+        const style = getComputedStyle(el);
+        return (
+          Number.parseFloat(style.paddingTop) +
+          Number.parseFloat(style.paddingBottom) +
+          Number.parseFloat(style.borderTopWidth) +
+          Number.parseFloat(style.borderBottomWidth)
+        );
+      };
+      let chrome = Math.max(0, sections.length - 1) * gap;
+      for (const section of sections) {
+        const summary = section.querySelector(":scope > summary");
+        if (summary) chrome += summary.getBoundingClientRect().height;
+        chrome += box(section);
+        if (!willOpen(section)) continue;
+        const body = [...section.children].find((el) => el.tagName !== "SUMMARY");
+        if (!(body instanceof HTMLElement)) continue;
+        chrome += box(body);
+        for (const child of body.children) {
+          if (!(child instanceof HTMLElement)) continue;
+          const style = getComputedStyle(child);
+          chrome += Number.parseFloat(style.marginTop) + Number.parseFloat(style.marginBottom);
+          const plot = child.hasAttribute("data-chart-plot")
+            ? child
+            : child.querySelector("[data-chart-plot]");
+          if (plot) {
+            chrome += Math.max(0, child.getBoundingClientRect().height - plot.getBoundingClientRect().height);
+            continue;
+          }
+          chrome += child.getBoundingClientRect().height;
+        }
+      }
+      const next = Math.floor((containerH - chrome) / openCount);
+      if (next < 48) return;
+      setPlotHeight((prev) => (Math.abs(prev - next) < 2 ? prev : next));
+    };
+    measureRef.current = measure;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => measure());
+    });
+    ro.observe(pane);
+    const mo = new MutationObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => measure());
+    });
+    mo.observe(pane, { childList: true, subtree: true });
+    const onClick = (event: Event) => {
+      const summary = (event.target as Element | null)?.closest("summary");
+      const details = summary?.parentElement;
+      if (!(details instanceof HTMLDetailsElement) || !pane.contains(details)) return;
+      flushSync(() => measure(details));
+    };
+    pane.addEventListener("click", onClick);
+    const section = pane.closest("details");
+    const onSectionToggle = () => {
+      if (!section?.open) return;
+      flushSync(() => measure());
+    };
+    section?.addEventListener("toggle", onSectionToggle);
+    measure();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      mo.disconnect();
+      pane.removeEventListener("click", onClick);
+      section?.removeEventListener("toggle", onSectionToggle);
+    };
+  }, [reportApi, chartsExtra]);
   const { points } = useMemo(
     () => portfolioSeriesForPlaybook(journals, group.playbook),
     [journals, group.playbook]
@@ -204,8 +339,25 @@ function StrategyRepeaterItem({
       from: String(timeRange.fromSec),
       to: String(timeRange.toSec),
     });
-    return `/api/backtests/${reportApi.backtestId}/chart-series?${q}`;
+    const base = reportApi.chartSeriesPath.split("?")[0] ?? reportApi.chartSeriesPath;
+    return `${base}?${q}`;
   }, [reportApi, timeRange]);
+
+  useEffect(() => {
+    if (!actionOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      e.preventDefault();
+      setActionOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [actionOpen]);
+
+  function openAction(id: string) {
+    onSelect(id);
+    setActionOpen(true);
+  }
 
   const decisionsTable = (
     <FilterableTable
@@ -213,10 +365,10 @@ function StrategyRepeaterItem({
       columns={columns}
       rowKey={(row) => row.orderLinkId}
       emptyMessage="No decisions for this strategy yet."
-      className="min-h-[16rem] max-h-[28rem]"
+      className={reportApi ? "min-h-[16rem] max-h-[28rem] xl:max-h-none xl:min-h-[16rem] xl:flex-1" : "min-h-[16rem] max-h-[28rem]"}
       pageSize={PAGE_SIZE}
       framed={false}
-      onRowClick={(row) => onSelect(row.orderLinkId)}
+      onRowClick={(row) => (reportApi ? openAction(row.orderLinkId) : onSelect(row.orderLinkId))}
       isRowSelected={(row) => row.orderLinkId === selectedId}
       rowClassName={(row) => {
         const isLatest = row.orderLinkId === group.rows[0]?.orderLinkId;
@@ -231,22 +383,80 @@ function StrategyRepeaterItem({
 
   if (reportApi) {
     return (
-      <BacktestDetailSection title="Charts & decisions" defaultOpen={defaultOpen}>
-        <div className="flex min-h-0 flex-col gap-4">
-          {timeRange && (
-            <StrategyPortfolioChart
-              playbook={group.playbook}
-              symbol={symbol}
-              fromSec={timeRange.fromSec}
-              toSec={timeRange.toSec}
-              points={points}
-              markers={markers}
-              chartSeriesPath={chartSeriesPath}
-            />
-          )}
-          {decisionsTable}
+      <div className="contents">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip xl:h-full">
+          {leading ? <div className="shrink-0">{leading}</div> : null}
+          <BacktestDetailSection
+            title="Actions"
+            defaultOpen={defaultOpen}
+            fill
+            className="min-h-0"
+            titleExtra={
+              <Badge variant="secondary" className="font-normal tabular-nums">
+                {group.rows.length}
+              </Badge>
+            }
+          >
+            <div className="relative flex min-h-[16rem] min-w-0 flex-1 flex-col">
+              {decisionsTable}
+              {actionOpen && selectedRow && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Close action detail"
+                    className="absolute inset-0 z-10 cursor-default bg-black/25"
+                    onClick={() => setActionOpen(false)}
+                  />
+                  <div
+                    role="dialog"
+                    aria-label="Action detail"
+                    className="absolute left-1/2 top-1/2 z-20 w-[min(24rem,calc(100%-1rem))] -translate-x-1/2 -translate-y-1/2"
+                  >
+                    <CandleDetail
+                      variant="popup"
+                      row={selectedRow}
+                      live={live}
+                      onClose={() => setActionOpen(false)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </BacktestDetailSection>
         </div>
-      </BacktestDetailSection>
+        <BacktestDetailSection
+          title="Charts & decisions"
+          defaultOpen={defaultOpen}
+          fill
+          className="min-h-0 min-w-0 xl:h-full"
+          headerExtra={rangeToolbar}
+        >
+          <div ref={chartsPaneRef} className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-clip">
+            {timeRange && (
+              <StrategyCharts
+                flat
+                fill
+                playbook={group.playbook}
+                symbol={symbol}
+                fromSec={timeRange.fromSec}
+                toSec={timeRange.toSec}
+                points={points}
+                markers={markers}
+                chartSeriesPath={chartSeriesPath}
+                height={plotHeight}
+                extra={chartsExtra}
+                hold={chartsHold}
+                onReveal={revealCharts}
+                onRangeToolbar={setRangeToolbar}
+                onMarkerSelect={(time) => {
+                  const row = group.rows.find((r) => Math.floor(r.candleClose / 1000) === time);
+                  if (row) openAction(row.orderLinkId);
+                }}
+              />
+            )}
+          </div>
+        </BacktestDetailSection>
+      </div>
     );
   }
 
@@ -295,7 +505,7 @@ function StrategyRepeaterItem({
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <StrategyPortfolioChart
+              <StrategyCharts
                 playbook={group.playbook}
                 symbol={symbol}
                 fromSec={timeRange.fromSec}
@@ -330,8 +540,13 @@ export function ActivityView({
   live,
   className,
   reportApi,
+  chartsExtra,
+  chartsHold,
+  leading,
+  reportPending = false,
   headingTitle = "Active Trading Strategies",
   headingDescription = "One panel per deployed playbook. Expand to see portfolio performance and recent decisions.",
+  sectionsDefaultOpen,
 }: {
   rows: ActivityRow[];
   journals: JournalRow[];
@@ -339,9 +554,19 @@ export function ActivityView({
   live: LiveState;
   className?: string;
   reportApi?: ReportApiScope;
+  /** Rendered inside each reportApi "Charts & decisions" section (after portfolio chart). */
+  chartsExtra?: ReactNode;
+  /** Report layout only: keep the chart spinner up until the extra series is settled. */
+  chartsHold?: boolean;
+  /** Report layout only: shown above the actions table in the left column. */
+  leading?: ReactNode;
+  /** Report layout only: activity rows are still loading. Keeps the two-column shell. */
+  reportPending?: boolean;
   /** Ignored when `reportApi` is set (backtest detail embed). */
   headingTitle?: string;
   headingDescription?: string;
+  /** When set, overrides the first-group-open default for all sections. */
+  sectionsDefaultOpen?: boolean;
 }) {
   const groups = useMemo(
     () => groupActivityByPlaybook(rows, playbookTitles),
@@ -357,7 +582,43 @@ export function ActivityView({
 
   function selectRow(id: string) {
     setSelectedId(id);
-    setDetailOpen(true);
+    // The report layout shows the details beside the table, so it needs no sheet.
+    setDetailOpen(!reportApi);
+  }
+
+  if (reportApi && rows.length === 0) {
+    return (
+      <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+        <div className={reportColumnsClass}>
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip xl:h-full">
+            {leading ? <div className="shrink-0">{leading}</div> : null}
+            <BacktestDetailSection title="Actions" defaultOpen={sectionsDefaultOpen ?? true} fill className="min-h-0">
+              <div className="flex flex-1 items-center justify-center py-8" role="status">
+                {reportPending ? (
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading actions" />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No activity for this instance.</p>
+                )}
+              </div>
+            </BacktestDetailSection>
+          </div>
+          <BacktestDetailSection
+            title="Charts & decisions"
+            defaultOpen={sectionsDefaultOpen ?? true}
+            fill
+            className="min-h-0 min-w-0 xl:h-full"
+          >
+            <div className="flex min-h-40 flex-1 items-center justify-center" role="status" aria-label="Loading charts">
+              {reportPending ? (
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              ) : (
+                <p className="text-sm text-muted-foreground">No activity for this instance.</p>
+              )}
+            </div>
+          </BacktestDetailSection>
+        </div>
+      </div>
+    );
   }
 
   if (rows.length === 0) {
@@ -379,22 +640,31 @@ export function ActivityView({
             <p className="text-sm text-muted-foreground mt-0.5">{headingDescription}</p>
           </div>
         )}
-        <div className={cn("flex min-h-0 flex-1 flex-col gap-3", !reportApi && "overflow-y-auto")}>
+        <div
+          className={cn(
+            reportApi ? reportColumnsClass : "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto",
+          )}
+        >
           {groups.map((group, index) => (
             <StrategyRepeaterItem
               key={group.playbook}
               group={group}
               live={live}
               journals={journals}
-              defaultOpen={index === 0}
+              defaultOpen={sectionsDefaultOpen ?? index === 0}
               selectedId={selectedId}
               onSelect={selectRow}
+              selectedRow={selected}
               reportApi={reportApi}
+              chartsExtra={chartsExtra}
+              chartsHold={chartsHold}
+              leading={index === 0 ? leading : undefined}
             />
           ))}
         </div>
       </div>
 
+      {!reportApi && (
       <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
         <SheetContent
           side="right"
@@ -408,6 +678,7 @@ export function ActivityView({
           </div>
         </SheetContent>
       </Sheet>
+      )}
     </>
   );
 }

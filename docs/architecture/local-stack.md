@@ -6,9 +6,9 @@
 
 | Process | Role |
 |---|---|
-| Frontend | The Next.js app. Reads `./data`. Does not start jobs. |
-| Persistence | The `./data` volume: `parquet/` plus `ingest.sqlite`, `technical_indicator.sqlite`, `calculation_signal.sqlite`, `execution.sqlite`. Jobs and the app mount the same directory. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
-| Orchestrator | Floci on port 4566, and a starter process that owns the Docker socket. |
+| Frontend | The Vite SPA (`src/frontend`). Reads through the Experiment API. Does not start jobs. |
+| Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `calculation_signal.sqlite`, `execution.sqlite`. Jobs and the app mount the same directory. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
+| Orchestrator | Floci on host port `FLOCI_PORT` (default 4566), and a starter process that owns the Docker socket. |
 
 The four job images are runners. They appear when a candle close is due and exit when that stage is done.
 
@@ -30,15 +30,14 @@ Floci's Lambda cannot see the host Docker socket. The starter is the process tha
 |---|---|
 | `task build` | Job images plus compose images (orchestrator, production frontend). |
 | `task build:jobs` / `task build:stack` | Build only pipeline jobs or only compose services. |
-| `task up` | `docker compose up` with `compose.override.yaml` (dev frontend: bind-mount + `next dev`; `.next` lives in a Docker volume, not on the host). |
-| `task frontend:clean` | Removes `src/frontend/.next` when Docker left it root-owned (`rm` fails); also drops the `frontend_next` volume. |
+| `task up` | `docker compose up` with `compose.override.yaml` (dev frontend: bind-mount of `src/frontend` + Vite dev server). |
 | `task dev` | `docker compose up --watch` (same stack; Compose sync/rebuild on file changes). |
 | `task up:prod` | `COMPOSE_FILE=compose.yaml` only — production frontend image (`target: prod`). |
 | `task up:build` | `task build` then `task up` (job images + compose build). |
 | `task run` | One execution for `CANDLE_CLOSE_MS`. Default `1700006400000`. |
 | `task down` | Stops the stack. Does not delete `./data`. |
 
-Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`, Next `.next/cache`) so rebuilds reuse work when only application source changed. The frontend image splits **deps** (lockfile) from **build** (source) so lockfile edits alone do not rerun `npm run build` on unrelated layers.
+Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`, `npm ci` for the frontend) so rebuilds reuse work when only application source changed. The frontend image splits **deps** (lockfile) from **build** (source) so lockfile edits alone do not rerun `npm run build` on unrelated layers.
 
 `compose.yaml` no longer lists the four jobs, and it no longer sets `COMPOSE_OK_ON_ABORT`. The pipeline page keeps reading `pipeline.json` until a later change reads Step Functions history.
 

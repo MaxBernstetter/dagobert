@@ -1,0 +1,5 @@
+{
+  "name": "dagobert-dev",
+  "version": "0.1.0",
+  "description": "Claude Code setup for Dagobert: secret guard, Go formatting hook, worker and validator agents, and a /ready check that runs the Definition of done."
+}

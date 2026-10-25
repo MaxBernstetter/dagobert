@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/config"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/config"
 )
 
 func TestWalletBalance(t *testing.T) {

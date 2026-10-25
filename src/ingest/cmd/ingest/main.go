@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MaxBernstetter/trading-copilot/src/ingest/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/ingest/internal/job"
 )
 
 func main() {

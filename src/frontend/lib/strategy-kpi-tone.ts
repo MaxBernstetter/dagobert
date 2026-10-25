@@ -25,6 +25,10 @@ export function strategyKpiTone(slug: string, value: number): KpiTone {
       if (value > 0.02) return "good";
       if (value >= -0.05) return "okay";
       return "bad";
+    case "win-rate":
+      if (value >= 0.55) return "good";
+      if (value >= 0.45) return "okay";
+      return "bad";
     default:
       return "neutral";
   }
@@ -37,6 +41,8 @@ export function toneTextClassName(tone: KpiTone): string {
   switch (tone) {
     case "good":
       return "text-emerald-600 dark:text-emerald-400";
+    case "okay":
+      return "text-amber-700 dark:text-amber-300";
     case "bad":
       return "text-red-600 dark:text-red-400";
     default:

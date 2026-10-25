@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/job"
 )
 
 // Run backfills or updates KPIs (same as the job binary).

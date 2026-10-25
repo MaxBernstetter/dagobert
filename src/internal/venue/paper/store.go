@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/bybit"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
 )
 
 // Enabled when historical seeding or local demo should not call the venue API.

@@ -3,7 +3,7 @@ package indicators
 import (
 	"encoding/json"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/bars"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
 )
 
 const (

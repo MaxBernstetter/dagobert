@@ -4,6 +4,23 @@ export function tradeCountFromFills(fills: number): number {
 
 export type EquityPoint = { closeMs: number; value: number };
 
+export type PeriodReturnPoint = { period: string; return: number };
+
+export type OutcomeDistribution = {
+  average: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+};
+
+export type OutcomeSide = {
+  absolute?: OutcomeDistribution;
+  percentage?: OutcomeDistribution;
+};
+
 export type BacktestRunStatistics = {
   durationMonths: number;
   durationYears: number;
@@ -15,6 +32,16 @@ export type BacktestRunStatistics = {
   yearlyReturnMed: number | null;
   tradesPerMonthAvg: number | null;
   tradesPerMonthMed: number | null;
+  winRate?: number | null;
+  monthlyWinRateAvg?: number | null;
+  monthlyWinRateMed?: number | null;
+  yearlyWinRateAvg?: number | null;
+  yearlyWinRateMed?: number | null;
+  gain?: OutcomeSide | null;
+  loss?: OutcomeSide | null;
+  /** Optional series for charts (from report.json / KPI API). */
+  monthlyReturns?: PeriodReturnPoint[];
+  yearlyReturns?: PeriodReturnPoint[];
 };
 
 export function runDurationYears(fromMs: number, toMs: number): number {

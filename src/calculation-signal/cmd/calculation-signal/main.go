@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/playbooks"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/playbooks"
 )
 
 // Invocation: calculation-signal <symbol> <candle_close_ms>

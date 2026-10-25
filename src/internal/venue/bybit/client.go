@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/config"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/config"
 )
 
 var (

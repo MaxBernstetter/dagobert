@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WikiMarkdown } from "@/components/wiki-markdown";
 import { WikiMetaTable } from "@/components/wiki-meta";
 import { WikiSeriesTable } from "@/components/wiki-series-table";
-import type { StrategyKpiEntry } from "@/lib/strategy-kpi-catalog";
+import type { StrategyKpiEntry } from "@/types/strategy-kpi";
 import { formatStrategyKpiValue } from "@/lib/strategy-kpi-shared";
-import type { IndicatorSeries, WikiEntry } from "@/lib/wiki";
+import type { IndicatorSeries, WikiEntry } from "@/types/wiki";
 
 export function WikiIndicatorDetail({
   entry,
@@ -34,12 +34,12 @@ export function WikiIndicatorDetail({
   );
 }
 
-export function WikiPlaybookDetail({ entry }: { entry: WikiEntry }) {
+export function WikiPlaybookDetail({ entry, kicker = "Playbook" }: { entry: WikiEntry; kicker?: string }) {
   return (
     <article className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{entry.meta.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Playbook · {entry.meta.slug}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{kicker} · {entry.meta.slug}</p>
       </div>
       <WikiMetaTable meta={entry.meta} />
       <Card className="bg-card shadow-md ring-1 ring-foreground/10">

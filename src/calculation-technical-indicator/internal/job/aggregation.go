@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/bars"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
 )
 
 // v1 default until a deployment config validator owns this value.

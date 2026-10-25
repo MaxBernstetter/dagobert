@@ -3,7 +3,7 @@ package store
 import (
 	"fmt"
 
-	tirunner "github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/runner"
+	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 )
 
 // UpsertKPIRows writes indicator bodies for one backtest (never touches prod TI).

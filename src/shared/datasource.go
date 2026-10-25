@@ -58,7 +58,7 @@ func (d *DataSource) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// DefaultDataSource is used when lake sidecar metadata has no data_source (legacy files).
+// DefaultDataSource is used when lake footer metadata has no data_source (legacy files).
 func DefaultDataSource() DataSource {
 	return DataSourceBinance
 }

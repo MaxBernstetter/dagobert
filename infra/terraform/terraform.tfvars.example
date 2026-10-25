@@ -1,0 +1,11 @@
+environment = "local"
+aws_region  = "us-east-1"
+# floci_endpoint = "http://localhost:4566"
+# experiment_batch_size = 64
+# experiment_map_max_concurrency = 200
+# enable_experiment_lambda = false
+
+# Prod control plane only. Local applies leave the organization id empty.
+# supabase_organization_id  = "org-..."
+# supabase_region           = "eu-central-1"
+# Secrets stay in the repo .env as SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD.

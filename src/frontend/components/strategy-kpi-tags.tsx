@@ -35,13 +35,17 @@ export function StrategyKpiTags({
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({ playbook, symbol });
-    if (fromMs > 0) params.set("fromMs", String(fromMs));
-    if (toMs > 0) params.set("toMs", String(toMs));
 
     (async () => {
       try {
-        const res = await fetch(kpiApiUrl ?? `/api/strategy/kpis?${params}`);
+        if (!kpiApiUrl) {
+          if (!cancelled) {
+            setResults([]);
+            setComparison(undefined);
+          }
+          return;
+        }
+        const res = await fetch(kpiApiUrl);
         if (!res.ok) {
           if (!cancelled) {
             setResults([]);
@@ -65,7 +69,7 @@ export function StrategyKpiTags({
     return () => {
       cancelled = true;
     };
-  }, [playbook, symbol, fromMs, toMs, kpiApiUrl]);
+  }, [kpiApiUrl]);
 
   if (results === null) {
     return (

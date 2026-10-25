@@ -1,12 +1,13 @@
 package macross
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 )
 
-const logicVersion = "3"
+const logicVersion = "4"
 
-// Strategy is SMA(3h) crossing SMA(6h), long-only spot. Signals only; sizing is layer 2.
+// Strategy is SMA(fast) crossing SMA(slow), long-only spot. Signals only; sizing is layer 2.
+// Windows come from Context.StrategyConfig (defaults: 3h/6h).
 type Strategy struct{}
 
 func (Strategy) Slug() string { return "ma-cross" }
@@ -14,14 +15,22 @@ func (Strategy) Slug() string { return "ma-cross" }
 func (Strategy) LogicVersion() string { return logicVersion }
 
 func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
-	fast, okFast := ctx.MovingAverage("sma", 3)
-	slow, okSlow := ctx.MovingAverage("sma", 6)
+	cfg, err := ParseConfig(ctx.StrategyConfig)
+	if err != nil {
+		return framework.Decision{}, err
+	}
+	if err := cfg.Validate(framework.AggregationDurationMS()); err != nil {
+		return framework.Decision{}, err
+	}
+
+	fast, okFast := ctx.MovingAverage("sma", cfg.FastHr)
+	slow, okSlow := ctx.MovingAverage("sma", cfg.SlowHr)
 	if !okFast || !okSlow {
 		return noTrade("none"), nil
 	}
 
-	prevFast, okPF := ctx.PreviousMovingAverage("sma", 3)
-	prevSlow, okPS := ctx.PreviousMovingAverage("sma", 6)
+	prevFast, okPF := ctx.PreviousMovingAverage("sma", cfg.FastHr)
+	prevSlow, okPS := ctx.PreviousMovingAverage("sma", cfg.SlowHr)
 	hasPriorBar := ctx.HasPreviousBar && okPF && okPS
 
 	above := fast > slow

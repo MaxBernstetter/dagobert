@@ -13,11 +13,11 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	signalrunner "github.com/MaxBernstetter/trading-copilot/src/calculation-signal/runner"
-	tirunner "github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/runner"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	ingestrunner "github.com/MaxBernstetter/trading-copilot/src/ingest/runner"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
+	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	ingestrunner "github.com/MaxBernstetter/dagobert/src/ingest/runner"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 const (
@@ -89,7 +89,7 @@ func main() {
 		fatal(err)
 	}
 	start := time.Now()
-	if err := signalrunner.FastSimulatedPipeline(dataDir, kpiWin, "ma-cross", symbol, closes, nil); err != nil {
+	if _, err := signalrunner.FastSimulatedPipeline(dataDir, kpiWin, "ma-cross", symbol, closes, nil); err != nil {
 		fatal(err)
 	}
 	fmt.Printf("done in %s — open /strategy and /data\n", time.Since(start).Round(time.Second))

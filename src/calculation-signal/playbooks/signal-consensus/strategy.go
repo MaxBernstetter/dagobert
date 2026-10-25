@@ -1,31 +1,30 @@
 package signalconsensus
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 )
 
-const logicVersion = "9"
+const logicVersion = "10"
 
 const (
-	barHr          = 6
-	signalTrendHr  = 12
-	regimeTrendHr  = 24
-	macroTrendHr   = 48
-	atrHr          = 24
+	barHr         = 3
+	signalTrendHr = 12
+	regimeTrendHr = 24
+	macroTrendHr  = 48
+	atrHr         = 24
 
-	rsiBull      = 52.0
-	rsiBear      = 48.0
-	volRatioBull = 1.10
-	volRatioBear = 0.85
+	defaultRsiBull      = 52.0
+	defaultRsiBear      = 48.0
+	defaultVolRatioBull = 1.10
+	defaultVolRatioBear = 0.85
+	defaultAtrStopMult  = 2.5
 
-	atrStopMult = 2.5
-
-	minBarsFlatAfterSell  = 8
-	minBarsLongBeforeSell = 4
-	noCooldown            = 999
+	defaultMinBarsFlatAfterSell  = 8
+	defaultMinBarsLongBeforeSell = 4
+	noCooldown                     = 999
 )
 
-// Strategy: 6h bars, higher-level trend stack (SMA24 > SMA48), SMA12 cross + MACD entry.
+// Strategy: 3h bars, higher-level trend stack (SMA24 > SMA48), SMA12 cross + MACD entry.
 type Strategy struct{}
 
 func (Strategy) Slug() string { return "signal-consensus" }
@@ -33,6 +32,14 @@ func (Strategy) Slug() string { return "signal-consensus" }
 func (Strategy) LogicVersion() string { return logicVersion }
 
 func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
+	cfg, err := ParseConfig(ctx.StrategyConfig)
+	if err != nil {
+		return framework.Decision{}, err
+	}
+	if err := cfg.Validate(0); err != nil {
+		return framework.Decision{}, err
+	}
+
 	signal, okSignal := ctx.MovingAverage("sma", signalTrendHr)
 	prevSignal, okPS := ctx.PreviousMovingAverage("sma", signalTrendHr)
 	regime, okRegime := ctx.MovingAverage("sma", regimeTrendHr)
@@ -55,8 +62,8 @@ func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
 		sinceSell = noCooldown
 	}
 
-	momentum := momentumVote(ctx, rsi, okRSI)
-	volume := volumeVote(ctx.BarVolume, volMean, okVolMean)
+	momentum := momentumVote(ctx, rsi, okRSI, cfg)
+	volume := volumeVote(ctx.BarVolume, volMean, okVolMean, cfg)
 
 	hasPrior := ctx.HasPreviousBar && okPS && ctx.PreviousBarClose > 0
 	if !hasPrior {
@@ -70,15 +77,15 @@ func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
 	if !okHist {
 		macdOK = momentum == voteBull
 	}
-	atrStop := okATR && ctx.BarClose < signal-atrStopMult*atr
+	atrStop := okATR && ctx.BarClose < signal-cfg.AtrStopMult*atr
 
 	if ctx.Position == "flat" && crossUp && higherTrend && macdOK &&
 		momentum != voteBear && volume != voteBear &&
-		sinceSell >= minBarsFlatAfterSell {
+		sinceSell >= cfg.MinBarsFlatAfterSell {
 		return framework.Decision{Decision: "buy", RuleID: "consensus_buy"}, nil
 	}
 
-	if ctx.Position == "long" && sinceBuy >= minBarsLongBeforeSell {
+	if ctx.Position == "long" && sinceBuy >= cfg.MinBarsLongBeforeSell {
 		if crossDown {
 			return framework.Decision{Decision: "sell", RuleID: "consensus_sell"}, nil
 		}
@@ -114,29 +121,29 @@ func crossedBelow(prevClose, close, prevBaseline, baseline float64) bool {
 	return prevClose >= prevBaseline && close < baseline
 }
 
-func momentumVote(ctx framework.Context, rsi float64, ok bool) vote {
+func momentumVote(ctx framework.Context, rsi float64, ok bool, cfg Config) vote {
 	if !ok {
 		return voteNeutral
 	}
 	prev, hasPrev := ctx.PreviousRSI(barHr)
-	if rsi >= rsiBull || (rsi > 50 && hasPrev && rsi > prev) {
+	if rsi >= cfg.RsiBull || (rsi > 50 && hasPrev && rsi > prev) {
 		return voteBull
 	}
-	if rsi <= rsiBear || (rsi < 50 && hasPrev && rsi < prev) {
+	if rsi <= cfg.RsiBear || (rsi < 50 && hasPrev && rsi < prev) {
 		return voteBear
 	}
 	return voteNeutral
 }
 
-func volumeVote(barVol, meanVol float64, okMean bool) vote {
+func volumeVote(barVol, meanVol float64, okMean bool, cfg Config) vote {
 	if !okMean || barVol <= 0 || meanVol <= 0 {
 		return voteNeutral
 	}
 	ratio := barVol / meanVol
-	if ratio >= volRatioBull {
+	if ratio >= cfg.VolRatioBull {
 		return voteBull
 	}
-	if ratio <= volRatioBear {
+	if ratio <= cfg.VolRatioBear {
 		return voteBear
 	}
 	return voteNeutral

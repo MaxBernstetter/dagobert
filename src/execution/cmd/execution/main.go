@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/job"
 )
 
 // Invocation: execution <symbol> <candle_close_ms>

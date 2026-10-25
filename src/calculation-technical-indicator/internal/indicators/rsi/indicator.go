@@ -1,8 +1,8 @@
 package rsi
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/bars"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/indicators"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/indicators"
 )
 
 // Definition is the KPI JSON shape for RSI.

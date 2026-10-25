@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
-	signalrunner "github.com/MaxBernstetter/trading-copilot/src/calculation-signal/runner"
-	tirunner "github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/runner"
-	"github.com/MaxBernstetter/trading-copilot/src/backtest/store"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/signalstore"
-	ingestrunner "github.com/MaxBernstetter/trading-copilot/src/ingest/runner"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/backtest/store"
+	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
+	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
+	ingestrunner "github.com/MaxBernstetter/dagobert/src/ingest/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 // Run executes one catalogued backtest by id (DATA_DIR = repo data root).
@@ -46,8 +47,18 @@ func Run(dataDir, backtestID string) error {
 	if settings.Algo == "" {
 		settings.Algo = "v1"
 	}
+	if strings.TrimSpace(settings.Provider) == "" {
+		settings.Provider = instruments.PriceProvider(settings.PipelineSymbol())
+	}
+	if strings.TrimSpace(settings.Base) == "" {
+		settings.Base = "BTC"
+	}
+	if strings.TrimSpace(settings.Quote) == "" {
+		settings.Quote = "USDT"
+	}
+	series := settings.PipelineSymbol()
 	if err := signalrunner.ResolvePlaybook(settings.Playbook); err != nil {
-		return fail(fmt.Errorf("%w — rebuild image: docker build -f docker/backtest/Dockerfile -t trading-copilot-backtest .", err))
+		return fail(fmt.Errorf("%w — rebuild image: docker build -f docker/backtest/Dockerfile -t dagobert-backtest .", err))
 	}
 	if err := cat.MarkRunning(backtestID, 0); err != nil {
 		return fail(fmt.Errorf("catalog progress: %w", err))
@@ -80,14 +91,25 @@ func Run(dataDir, backtestID string) error {
 		args := []string{
 			"-from", fmt.Sprint(from),
 			"-to", fmt.Sprint(to),
-			"-symbol", settings.Symbol,
+			"-base", settings.Base,
+			"-quote", settings.Quote,
+			"-provider", settings.Provider,
 		}
 		if force {
 			args = append(args, "-force")
 		}
 		code, detail := ingestrunner.Run(args, os.Getenv)
 		if code != 0 && code != 2 {
-			return fmt.Errorf("ingest failed exit=%d detail=%d", code, detail)
+			hint := "see ingest logs"
+			switch detail {
+			case 30:
+				hint = "Binance transport failed after retries"
+			case 32:
+				hint = "exchange holes recorded (unexpected with exit 1)"
+			case 40:
+				hint = "lake/sqlite inconsistency"
+			}
+			return fmt.Errorf("ingest failed exit=%d detail=%d (%s)", code, detail, hint)
 		}
 		stage(2, store.StageLabelMarketData, 1, 1)
 		return nil
@@ -100,12 +122,12 @@ func Run(dataDir, backtestID string) error {
 	}
 
 	stage(3, store.StageLabelIndicators, 0, 1)
-	rows, err := tirunner.BuildKPIRange(dataDir, settings.Symbol, from, to, nowMS)
+	rows, err := tirunner.BuildKPIRange(dataDir, series, from, to, nowMS)
 	if err != nil {
 		if tirunner.IsMissingParquet(err) && !settings.RedownloadMissing {
 			_ = runIngest(false)
 			stage(3, store.StageLabelIndicators, 0, 1)
-			rows, err = tirunner.BuildKPIRange(dataDir, settings.Symbol, from, to, nowMS)
+			rows, err = tirunner.BuildKPIRange(dataDir, series, from, to, nowMS)
 		}
 		if err != nil {
 			if tirunner.IsMissingParquet(err) {
@@ -125,7 +147,7 @@ func Run(dataDir, backtestID string) error {
 	aggMS := signalstore.AggregationDurationMS()
 	minOpen := from
 	maxOpen := to - aggMS
-	barOpens, err := cat.ListBarOpens(backtestID, settings.Symbol, settings.Algo, minOpen, maxOpen)
+	barOpens, err := cat.ListBarOpens(backtestID, series, settings.Algo, minOpen, maxOpen)
 	if err != nil {
 		return err
 	}
@@ -143,7 +165,7 @@ func Run(dataDir, backtestID string) error {
 
 	stage(4, store.StageLabelSimulation, 0, len(closes))
 
-	bodies, err := cat.LoadKPIBodies(backtestID, settings.Symbol, settings.Algo, minOpen, maxOpen)
+	bodies, err := cat.LoadKPIBodies(backtestID, series, settings.Algo, minOpen, maxOpen)
 	if err != nil {
 		return fail(err)
 	}
@@ -157,7 +179,7 @@ func Run(dataDir, backtestID string) error {
 	onBar := func(done, total int) {
 		_ = cat.SetRunProgress(backtestID, 4, store.StageLabelSimulation, done, total)
 	}
-	if err := signalrunner.FastSimulatedPipeline(ws, kpiWin, playbookEnv, settings.Symbol, closes, onBar); err != nil {
+	if _, err := signalrunner.FastSimulatedPipeline(ws, kpiWin, playbookEnv, series, closes, onBar); err != nil {
 		return fail(err)
 	}
 	stage(4, store.StageLabelSimulation, totalBars, totalBars)
@@ -165,17 +187,8 @@ func Run(dataDir, backtestID string) error {
 }
 
 func writePaperWallet(ws string, s store.Settings) error {
-	base := "BTC"
-	if s.Symbol == "ETHUSDT" {
-		base = "ETH"
-	}
-	doc := map[string]map[string]float64{
-		"coins": {
-			"USDC": s.InitialUSDC,
-			"USDT": s.InitialUSDT,
-			base:   s.InitialBase,
-		},
-	}
+	coins := paperVenueCoins(s.PipelineSymbol(), s.InitialUSDC+s.InitialUSDT, s.InitialBase)
+	doc := map[string]map[string]float64{"coins": coins}
 	raw, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return err
@@ -183,20 +196,13 @@ func writePaperWallet(ws string, s store.Settings) error {
 	return os.WriteFile(filepath.Join(ws, "paper_venue.json"), raw, 0o644)
 }
 
-const signalConsensusAggMS = 6 * 60 * 60 * 1000
-
 func formatUTC(ms int64) string {
 	return time.UnixMilli(ms).UTC().Format("2006-01-02")
 }
 
 func applySettingsEnv(dataDir string, s store.Settings) {
 	_ = os.Setenv("DATA_DIR", dataDir)
-	playbook := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSpace(s.Playbook), ".yaml"), ".yml")
-	if playbook == "signal-consensus" {
-		_ = os.Setenv("AGGREGATION_DURATION_MS", strconv.FormatInt(signalConsensusAggMS, 10))
-	} else {
-		_ = os.Unsetenv("AGGREGATION_DURATION_MS")
-	}
+	_ = os.Unsetenv("AGGREGATION_DURATION_MS") // Experiment Suite / all playbooks: default 3h
 	if strings.TrimSpace(os.Getenv("BINANCE_BASE_URL")) == "" {
 		_ = os.Setenv("BINANCE_BASE_URL", "https://data-api.binance.vision")
 	}

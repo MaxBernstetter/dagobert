@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
-	macross "github.com/MaxBernstetter/trading-copilot/src/calculation-signal/playbooks/ma-cross"
-	signalconsensus "github.com/MaxBernstetter/trading-copilot/src/calculation-signal/playbooks/signal-consensus"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	macross "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/ma-cross"
+	signalconsensus "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/signal-consensus"
 )
 
 var deployed = []framework.Entry{

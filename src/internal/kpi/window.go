@@ -15,6 +15,8 @@ type BarSnapshot struct {
 	Close   float64
 	Volume  float64
 	Results []Result
+	// ByKey maps canonical indicator def keys → float (built at load).
+	ByKey map[string]float64
 }
 
 // Window holds KPI bodies keyed by bar_open for in-memory replay.
@@ -34,7 +36,12 @@ func LoadWindowBodies(bodies map[int64]string) (*Window, error) {
 		if err := json.Unmarshal([]byte(body), &parsed); err != nil {
 			return nil, fmt.Errorf("parse kpi bar_open=%d: %w", barOpen, err)
 		}
-		w.byOpen[barOpen] = BarSnapshot{Close: parsed.Close, Volume: parsed.Volume, Results: parsed.Results}
+		w.byOpen[barOpen] = BarSnapshot{
+			Close:   parsed.Close,
+			Volume:  parsed.Volume,
+			Results: parsed.Results,
+			ByKey:   IndexResults(parsed.Results),
+		}
 	}
 	if len(w.byOpen) == 0 {
 		return nil, ErrNotFound
@@ -78,9 +85,23 @@ func LoadWindow(dataDir, symbol string, minOpen, maxOpen int64) (*Window, error)
 		if err := json.Unmarshal([]byte(body), &parsed); err != nil {
 			return nil, fmt.Errorf("parse kpi bar_open=%d: %w", barOpen, err)
 		}
-		w.byOpen[barOpen] = BarSnapshot{Close: parsed.Close, Volume: parsed.Volume, Results: parsed.Results}
+		w.byOpen[barOpen] = BarSnapshot{
+			Close:   parsed.Close,
+			Volume:  parsed.Volume,
+			Results: parsed.Results,
+			ByKey:   IndexResults(parsed.Results),
+		}
 	}
 	return w, rows.Err()
+}
+
+// Snapshot returns the bar snapshot when present.
+func (w *Window) Snapshot(barOpen int64) (BarSnapshot, bool) {
+	if w == nil {
+		return BarSnapshot{}, false
+	}
+	s, ok := w.byOpen[barOpen]
+	return s, ok
 }
 
 func (w *Window) Results(barOpen int64) ([]Result, error) {

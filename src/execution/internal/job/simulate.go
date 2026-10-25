@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/strategyaction"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/sim"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/strategyaction"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 )
 
 func refreshBalanceSimulated(st *store.DB, dataDir string) error {
@@ -39,7 +39,7 @@ func placeOrderSimulated(
 	if action.Size == nil {
 		return 1, 30
 	}
-	inst, ok := instruments.BySeries(symbol)
+	inst, ok := instruments.Resolve(symbol)
 	if !ok {
 		return 1, 10
 	}

@@ -1,8 +1,8 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 // KPIAlgo is the indicator algorithm version stored with each KPI revision.

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// public.experiment_instance_period_stat
+message ExperimentInstancePeriodStat {
+  string instance_id = 1;
+  string period_kind = 2; // monthly | yearly
+  string period_key = 3;
+  optional double return_pct = 4;
+  optional int32 trade_count = 5;
+  optional int32 win_count = 6;
+}
+
+// public.experiment_instance_action
+message ExperimentInstanceAction {
+  string id = 1;
+  string experiment_id = 2;
+  string instance_id = 3;
+  string symbol = 4;
+  int64 bar_open_ms = 5;
+  string side = 6; // buy | sell | flat | other
+  optional double weight_pct = 7;
+  string reason = 8;
+}
+
+// public.experiment_instance_fill
+message ExperimentInstanceFill {
+  string id = 1;
+  string experiment_id = 2;
+  string instance_id = 3;
+  optional string action_id = 4;
+  string symbol = 5;
+  int64 ts_ms = 6;
+  string side = 7;
+  double qty = 8;
+  double price = 9;
+  double fee = 10;
+  string fee_asset = 11;
+}
+
+message ListActionsResponse {
+  repeated ExperimentInstanceAction actions = 1;
+}
+
+message ListFillsResponse {
+  repeated ExperimentInstanceFill fills = 1;
+}
+
+message ListPeriodStatsResponse {
+  repeated ExperimentInstancePeriodStat stats = 1;
+}

@@ -17,6 +17,8 @@ src/calculation-technical-indicator/internal/indicators/<formula>/
 src/calculation-signal/playbooks/<slug>/
   <slug>.yaml
   DESCRIPTION.md
+src/calculation-signal/playbooks/position-sizing/
+  DESCRIPTION.md            # symlink to docs/v2/features/position-sizing.md
 src/calculation-signal/playbooks/strategy-kpi/<slug>/
   README.md                 # strategy KPI doc (`kind: strategy-kpi` in frontmatter)
 ```
@@ -42,9 +44,10 @@ Render with **react-markdown**, **remark-gfm**, **remark-math**, **rehype-katex*
 
 | Route | Content |
 |-------|---------|
-| `/wiki` | Formulas and playbooks; cards list deployed series keys |
+| `/wiki` | Four sections in a 2×2 grid: Technical indicators, Market Action, Position Sizing, Strategy performance indicators. A narrow viewport stacks them in that order. |
 | `/wiki/indicators/[formula]` | README + table from `instances/*.json` |
-| `/wiki/playbooks/[slug]` | Playbook DESCRIPTION |
+| `/wiki/playbooks/[slug]` | Market Action playbook DESCRIPTION |
+| `/wiki/playbooks/position-sizing` | Position Sizing section. Same text as `docs/v2/features/position-sizing.md` (`kind: method`). |
 | `/wiki/strategy-kpi/[slug]` | Strategy KPI README |
 
 Strategy KPI markdown is under `playbooks/strategy-kpi/` (same volume as `WIKI_PLAYBOOKS_DIR`). Optional `STRATEGY_KPI_DIR` overrides the catalog path.

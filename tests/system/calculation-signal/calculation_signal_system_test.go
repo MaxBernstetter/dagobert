@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	imageTag     = "trading-copilot-calculation-signal:test"
+	imageTag     = "dagobert-calculation-signal:test"
 	candleClose  = int64(1700000000000)
 	threeHoursMs = int64(3 * 60 * 60 * 1000)
 	symbol       = "BTCUSDT"
@@ -70,7 +70,7 @@ func findRepoRoot() (string, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("trading-copilot repo root not found from %s", dir)
+			return "", fmt.Errorf("dagobert repo root not found from %s", dir)
 		}
 		dir = parent
 	}

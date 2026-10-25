@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/job"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
 
 	_ "modernc.org/sqlite"
 )

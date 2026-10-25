@@ -12,12 +12,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/bybit"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/config"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/strategyaction"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/config"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/strategyaction"
 )
 
 const threeHoursMs int64 = 3 * 60 * 60 * 1000
@@ -59,7 +59,12 @@ func Run(args []string) (exitCode int, detail int) {
 
 	playbookID := filepath.Base(playbookPath)
 	orderLinkID := orderLinkID(playbookID, symbol, candleClose)
-	venueSymbol, ok := venueSymbol(symbol)
+	var venueSym string
+	if paper.Enabled() {
+		venueSym, ok = paperVenueSymbol(symbol)
+	} else {
+		venueSym, ok = venueSymbol(symbol)
+	}
 	if !ok {
 		return 1, 10
 	}
@@ -106,7 +111,7 @@ func Run(args []string) (exitCode int, detail int) {
 			OrderLinkID: orderLinkID,
 			Playbook:    playbookID,
 			Symbol:      symbol,
-			VenueSymbol: venueSymbol,
+			VenueSymbol: venueSym,
 			CandleClose: candleClose,
 			Decision:    "no-trade",
 		}
@@ -130,9 +135,9 @@ func Run(args []string) (exitCode int, detail int) {
 
 	case "buy", "sell":
 		if paper.Enabled() {
-			return placeOrderSimulated(st, dataDir, action, orderLinkID, playbookID, symbol, venueSymbol, candleClose)
+			return placeOrderSimulated(st, dataDir, action, orderLinkID, playbookID, symbol, venueSym, candleClose)
 		}
-		return placeOrder(ctx, st, retryCfg, action, orderLinkID, playbookID, symbol, venueSymbol, candleClose)
+		return placeOrder(ctx, st, retryCfg, action, orderLinkID, playbookID, symbol, venueSym, candleClose)
 
 	default:
 		return 1, 30
@@ -347,14 +352,26 @@ func parseArgs(args []string) (symbol string, candleClose int64, ok bool) {
 }
 
 func venueSymbol(symbol string) (string, bool) {
-	switch symbol {
-	case "BTCUSDT":
-		return "BTCUSDC", true
-	case "ETHUSDT":
-		return "ETHUSDC", true
-	default:
+	if inst, ok := instruments.BySeries(symbol); ok && inst.VenueSymbol != "" {
+		return inst.VenueSymbol, true
+	}
+	return "", false
+}
+
+// paperVenueSymbol maps a lake series to a venue id for simulated fills.
+// Live Bybit mappings win; otherwise the pipeline symbol itself is used.
+func paperVenueSymbol(symbol string) (string, bool) {
+	if vs, ok := venueSymbol(symbol); ok {
+		return vs, true
+	}
+	inst, ok := instruments.Resolve(symbol)
+	if !ok || inst.Series == "" {
 		return "", false
 	}
+	if inst.VenueSymbol != "" {
+		return inst.VenueSymbol, true
+	}
+	return inst.Series, true
 }
 
 func orderLinkID(playbook, symbol string, candleClose int64) string {

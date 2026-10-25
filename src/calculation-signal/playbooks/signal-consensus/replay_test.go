@@ -8,10 +8,10 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
-	tirunner "github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/runner"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 const hour = int64(3_600_000)
@@ -27,7 +27,6 @@ type hourCandle struct {
 }
 
 func TestReplaySyntheticParquetEmitsBuy(t *testing.T) {
-	t.Setenv("AGGREGATION_DURATION_MS", "21600000")
 	dir := t.TempDir()
 	if err := shared.EnsureDataLayout(dir); err != nil {
 		t.Fatal(err)
@@ -153,11 +152,21 @@ func writeSyntheticParquet(t *testing.T, dataDir string, endMs int64) {
 			Close: price, Volume: vol, CloseTime: ot + hour - 1,
 		})
 	}
-	pqPath := filepath.Join(dataDir, "parquet", "BTCUSDT.parquet")
-	if err := os.MkdirAll(filepath.Dir(pqPath), 0o755); err != nil {
-		t.Fatal(err)
+	byYear := map[int][]hourCandle{}
+	for _, r := range rows {
+		y := shared.YearUTC(r.OpenTime)
+		byYear[y] = append(byYear[y], r)
 	}
-	if err := parquet.WriteFile(pqPath, rows); err != nil {
-		t.Fatal(err)
+	for y, part := range byYear {
+		pqPath, err := shared.ParquetPath(dataDir, "binance", "BTC", "USDT", y)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(pqPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := parquet.WriteFile(pqPath, part); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

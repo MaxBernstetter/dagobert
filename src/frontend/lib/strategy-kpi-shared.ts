@@ -41,6 +41,14 @@ export function defaultStrategyKpiDefs(): StrategyKpiMeta[] {
       unit: "ratio",
       format: "decimal",
     },
+    {
+      slug: "win-rate",
+      title: "Win rate",
+      label: "Win rate",
+      kind: "strategy-kpi",
+      unit: "ratio",
+      format: "percent",
+    },
   ];
 }
 

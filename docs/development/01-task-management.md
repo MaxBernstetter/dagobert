@@ -13,11 +13,11 @@ Tasks should be traceable from initial requirements through implementation, veri
 
 ## GitHub Project
 
-All epics and tasks of this repository are tracked on one user-owned GitHub Project for `MaxBernstetter/trading-copilot`. Create that project before using the board fields below, then fill in:
+All epics and tasks of this repository are tracked on one user-owned GitHub Project for `MaxBernstetter/dagobert`:
 
 - Owner: `MaxBernstetter`
-- Project number: _not set_
-- URL: _not set_
+- Project number: `5` (Dagobert)
+- URL: https://github.com/users/MaxBernstetter/projects/5
 
 ### Fields
 
@@ -97,8 +97,9 @@ Before coding:
 1. Read the relevant issue and its acceptance criteria.
 2. Inspect the existing implementation, tests, and relevant documentation.
 3. Check `AGENTS.md` and any applicable project skills.
-4. Identify the smallest implementation that satisfies the requirements.
-5. Assign the current user to the task and move its project item to `In progress`.
+4. Check applicability and the twelve-factor rules in [principles](principles/README.md) (problem, owner, need, fit).
+5. Identify the smallest implementation that satisfies the requirements.
+6. Assign the current user to the task and move its project item to `In progress`.
 
 During implementation:
 
@@ -129,7 +130,7 @@ Move the task to `In review` while review and required checks are pending.
 
 ### 5. Verify and close
 
-Before considering the task complete, address review feedback and confirm the acceptance criteria.
+Before considering the task complete, address review feedback, confirm the acceptance criteria, and check the [Definition of done](principles/README.md#definition-of-done).
 
 Merge the pull request when the required checks and reviews pass. GitHub can automatically close the linked issue when a pull request containing a supported closing keyword is merged into the repository's default branch.
 

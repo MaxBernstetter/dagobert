@@ -21,6 +21,18 @@ func TestBuyRespectsTargetWeight(t *testing.T) {
 	}
 }
 
+func TestBuyCanSpendEntireBook(t *testing.T) {
+	out := Size(Input{
+		SignalDecision: "buy",
+		QuoteCash:      100_000,
+		BaseHeld:       0,
+		MarkPrice:      80_000,
+	}, Policy{TargetWeightPct: 100, ReserveQuote: 0, MinOrderQuote: 1})
+	if out.Decision != "buy" || out.Size == nil || *out.Size != 100_000 {
+		t.Fatalf("%+v", out)
+	}
+}
+
 func TestSellAllBase(t *testing.T) {
 	out := Size(Input{
 		SignalDecision: "sell",

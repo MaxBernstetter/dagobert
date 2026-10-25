@@ -8,7 +8,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/MaxBernstetter/dagobert/src/experimentapi"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const backfillAddr = ":8090"
@@ -16,10 +20,11 @@ const backfillAddr = ":8090"
 var backfillSymbols = []string{"BTCUSDT", "ETHUSDT", "USDCUSDT"}
 
 type backfillRequest struct {
-	Kind    string   `json:"kind"`
-	From    int64    `json:"from"`
-	To      int64    `json:"to"`
-	Symbols []string `json:"symbols"`
+	Kind     string   `json:"kind"`
+	From     int64    `json:"from"`
+	To       int64    `json:"to"`
+	Symbols  []string `json:"symbols"`
+	Provider string   `json:"provider"`
 }
 
 type backfillStatus struct {
@@ -27,13 +32,15 @@ type backfillStatus struct {
 	From     int64  `json:"from"`
 	To       int64  `json:"to"`
 	Symbol   string `json:"symbol"`
+	Provider string `json:"provider"`
 	Running  bool   `json:"running"`
 	Error    string `json:"error"`
 	Finished string `json:"finished"`
 }
 
 type backtestRunRequest struct {
-	ID string `json:"id"`
+	ID          string `json:"id"`
+	RetryFailed bool   `json:"retryFailed,omitempty"`
 }
 
 type backtestRunStatus struct {
@@ -44,9 +51,47 @@ type backtestRunStatus struct {
 }
 
 var backtestJob backtestRunStatus
+var experimentJob backtestRunStatus
+var experimentJobCancel context.CancelFunc
+
+func experimentContainerName(id string) string {
+	// Docker names: [a-zA-Z0-9][a-zA-Z0-9_.-]*
+	safe := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			return r
+		default:
+			return '-'
+		}
+	}, id)
+	if len(safe) > 40 {
+		safe = safe[:40]
+	}
+	return "dagobert-experiment-" + safe
+}
+
+// stopStudyContainers stops the whole-experiment container and any prepare/simulate/finalize
+// siblings used by EXPERIMENT_RUN_BACKEND=batched.
+func stopStudyContainers(experimentID string) {
+	prefix := experimentContainerName(experimentID)
+	out, err := exec.Command("docker", "ps", "-q", "--filter", "name="+prefix).Output()
+	if err != nil {
+		_ = exec.Command("docker", "stop", "--time", "5", prefix).Run()
+		return
+	}
+	ids := strings.Fields(string(out))
+	if len(ids) == 0 {
+		_ = exec.Command("docker", "stop", "--time", "5", prefix).Run()
+		return
+	}
+	args := append([]string{"stop", "--time", "5"}, ids...)
+	_ = exec.Command("docker", args...).Run()
+}
 
 func serveBackfill(ctx context.Context) {
 	mux := http.NewServeMux()
+	mountConnectors(mux)
+	mux.HandleFunc("GET /api/v1/providers/{id}/pairs", handleProviderPairs)
 	mux.HandleFunc("GET /backfill", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, readBackfill())
 	})
@@ -81,6 +126,12 @@ func serveBackfill(ctx context.Context) {
 			return
 		}
 		req.Symbols = symbols
+		provider, err := backfillProvider(req.Provider)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		req.Provider = provider
 		jobMu.Lock()
 		cur := readBackfill()
 		if cur.Running {
@@ -88,7 +139,7 @@ func serveBackfill(ctx context.Context) {
 			http.Error(w, "a backfill is already running", http.StatusConflict)
 			return
 		}
-		status := backfillStatus{Kind: req.Kind, From: req.From, To: req.To, Running: true}
+		status := backfillStatus{Kind: req.Kind, From: req.From, To: req.To, Provider: req.Provider, Running: true}
 		writeBackfill(status)
 		jobMu.Unlock()
 		go runBackfill(context.Background(), req)
@@ -107,7 +158,7 @@ func serveBackfill(ctx context.Context) {
 			return
 		}
 		jobMu.Lock()
-		if backtestJob.Running {
+		if backtestJob.Running || experimentJob.Running {
 			jobMu.Unlock()
 			http.Error(w, "a backtest job is already running", http.StatusConflict)
 			return
@@ -116,6 +167,108 @@ func serveBackfill(ctx context.Context) {
 		jobMu.Unlock()
 		go runBacktestJob(context.Background(), req.ID)
 		writeJSON(w, http.StatusAccepted, backtestJob)
+	})
+	mux.HandleFunc("GET /experiment/run", func(w http.ResponseWriter, r *http.Request) {
+		jobMu.Lock()
+		st := experimentJob
+		jobMu.Unlock()
+		writeJSON(w, http.StatusOK, st)
+	})
+	mux.HandleFunc("POST /experiment/run", func(w http.ResponseWriter, r *http.Request) {
+		var req backtestRunRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+			http.Error(w, "id required", http.StatusBadRequest)
+			return
+		}
+		jobMu.Lock()
+		if backtestJob.Running || experimentJob.Running {
+			jobMu.Unlock()
+			http.Error(w, "a experiment job is already running", http.StatusConflict)
+			return
+		}
+		jobCtx, cancel := context.WithCancel(context.Background())
+		experimentJobCancel = cancel
+		experimentJob = backtestRunStatus{ID: req.ID, Running: true}
+		jobMu.Unlock()
+		go runStudyJob(jobCtx, req.ID, req.RetryFailed)
+		writeJSON(w, http.StatusAccepted, experimentJob)
+	})
+	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if dbURL != "" {
+		pool, err := pgxpool.New(ctx, dbURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
+		} else {
+			experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{
+				JobStatus: func(experimentID string) experimentapi.JobState {
+					jobMu.Lock()
+					defer jobMu.Unlock()
+					if experimentJob.ID != experimentID {
+						return experimentapi.JobState{}
+					}
+					return experimentapi.JobState{
+						Running:  experimentJob.Running,
+						Error:    experimentJob.Error,
+						Finished: experimentJob.Finished,
+					}
+				},
+				RunExperiment: func(jobCtx context.Context, experimentID string, retryFailed bool) {
+					jobMu.Lock()
+					if backtestJob.Running || experimentJob.Running {
+						jobMu.Unlock()
+						return
+					}
+					runCtx, cancel := context.WithCancel(jobCtx)
+					experimentJobCancel = cancel
+					experimentJob = backtestRunStatus{ID: experimentID, Running: true}
+					jobMu.Unlock()
+					go runStudyJob(runCtx, experimentID, retryFailed)
+				},
+				CancelStudy: func(experimentID string) {
+					stopStudyContainers(experimentID)
+					jobMu.Lock()
+					if experimentJob.Running && experimentJob.ID == experimentID {
+						if experimentJobCancel != nil {
+							experimentJobCancel()
+						}
+						experimentJob.Running = false
+						experimentJob.Finished = time.Now().UTC().Format(time.RFC3339)
+						experimentJob.Error = "cancelled"
+						experimentJobCancel = nil
+					}
+					jobMu.Unlock()
+				},
+			}))
+		}
+	} else {
+		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; /api/v1/experiments routes not mounted")
+	}
+
+	mux.HandleFunc("POST /experiment/cancel", func(w http.ResponseWriter, r *http.Request) {
+		var req backtestRunRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+			http.Error(w, "id required", http.StatusBadRequest)
+			return
+		}
+		jobMu.Lock()
+		running := experimentJob.Running && experimentJob.ID == req.ID
+		cancel := experimentJobCancel
+		jobMu.Unlock()
+		if !running {
+			http.Error(w, "no matching experiment job running", http.StatusConflict)
+			return
+		}
+		stopStudyContainers(req.ID)
+		if cancel != nil {
+			cancel()
+		}
+		jobMu.Lock()
+		experimentJob.Running = false
+		experimentJob.Finished = time.Now().UTC().Format(time.RFC3339)
+		experimentJob.Error = "cancelled"
+		experimentJobCancel = nil
+		jobMu.Unlock()
+		writeJSON(w, http.StatusOK, experimentJob)
 	})
 	srv := &http.Server{Addr: backfillAddr, Handler: mux}
 	go func() {
@@ -167,10 +320,21 @@ func backfillTargets(symbols []string) ([]string, error) {
 	return out, nil
 }
 
+func backfillProvider(provider string) (string, error) {
+	provider = strings.TrimSpace(provider)
+	if provider == "" {
+		return "binance", nil
+	}
+	if provider != "binance" {
+		return "", fmt.Errorf("unknown provider %s", provider)
+	}
+	return provider, nil
+}
+
 func runBackfill(ctx context.Context, req backfillRequest) {
 	jobMu.Lock()
 	defer jobMu.Unlock()
-	status := backfillStatus{Kind: req.Kind, From: req.From, To: req.To, Running: true}
+	status := backfillStatus{Kind: req.Kind, From: req.From, To: req.To, Provider: req.Provider, Running: true}
 	var failed string
 	for _, symbol := range req.Symbols {
 		status.Symbol = symbol
@@ -182,6 +346,7 @@ func runBackfill(ctx context.Context, req backfillRequest) {
 		code, err := runJobLocked(ctx, taskInput{
 			Stage:       stage,
 			Symbol:      symbol,
+			Provider:    req.Provider,
 			From:        req.From,
 			CandleClose: req.To,
 		})
@@ -248,6 +413,10 @@ func runBacktestJob(ctx context.Context, id string) {
 }
 
 func runBacktestDocker(ctx context.Context, id string) (int, error) {
+	return runCatalogDocker(ctx, "BACKTEST_ID", id, "backtest", "", false, nil)
+}
+
+func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName string, retryFailed bool, extraEnv []string) (int, error) {
 	data, err := hostDataDirForJobs()
 	if err != nil {
 		return 1, err
@@ -258,15 +427,33 @@ func runBacktestDocker(ctx context.Context, id string) (int, error) {
 	// Do not pass dockerJobUserArgs: the catalog DB and workspace are often root-owned
 	// (frontend container) and the job must update progress in backtests.sqlite.
 	args := []string{"run", "--rm"}
+	if containerName != "" {
+		args = append(args, "--name", containerName)
+	}
 	args = append(args,
 		"-e", "DATA_DIR=/data",
-		"-e", "BACKTEST_ID="+id,
+		"-e", idEnv+"="+id,
 		"-e", "VENUE_SIMULATE=1",
 		"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
-		"-v", data+":/data",
-		"trading-copilot-backtest",
 	)
-	fmt.Printf("orchestrator: backtest %s\n", id)
+	if net := strings.TrimSpace(env("COMPOSE_NETWORK", "dagobert_default")); net != "" {
+		args = append(args, "--network", net)
+	}
+	args = append(args, dockerDataPlaneEnvArgs()...)
+	if label == "experiment" {
+		args = append(args, "-e", "EXPERIMENT_SIM_WORKERS="+env("EXPERIMENT_SIM_WORKERS", "4"))
+		if retryFailed {
+			args = append(args, "-e", "EXPERIMENT_RETRY_FAILED=1")
+		}
+	}
+	if len(extraEnv) > 0 {
+		args = append(args, extraEnv...)
+	}
+	args = append(args,
+		"-v", data+":/data",
+		"dagobert-backtest",
+	)
+	fmt.Printf("orchestrator: %s %s\n", label, id)
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "hashicorp.hcl",
+        "hashicorp.terraform",
+        "bufbuild.vscode-buf"
+    ]
+}

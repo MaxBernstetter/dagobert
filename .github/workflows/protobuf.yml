@@ -1,0 +1,36 @@
+name: protobuf
+
+on:
+  pull_request:
+    paths:
+      - "proto/**"
+      - ".github/workflows/protobuf.yml"
+  push:
+    branches: [main]
+    paths:
+      - "proto/**"
+      - ".github/workflows/protobuf.yml"
+
+jobs:
+  buf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: buf lint
+        uses: bufbuild/buf-action@v1
+        with:
+          version: "1.47.2"
+          input: proto
+          lint: true
+          format: false
+          breaking: false
+      - name: buf breaking
+        continue-on-error: true
+        uses: bufbuild/buf-action@v1
+        with:
+          version: "1.47.2"
+          input: proto
+          lint: false
+          format: false
+          breaking: true
+          breaking_against: "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"

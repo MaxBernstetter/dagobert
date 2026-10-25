@@ -14,6 +14,10 @@ series:
     definition:
       type: VolumeMean
       time_frame_hr: 6
+  - key: volume-mean-12h
+    definition:
+      type: VolumeMean
+      time_frame_hr: 12
 inputs:
   - Aggregated bar volume from the process job
 ---

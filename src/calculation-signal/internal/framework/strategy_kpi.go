@@ -19,7 +19,6 @@ import (
 const (
 	strategyKPIBarMS          = 3 * 60 * 60 * 1000
 	strategyKPIPeriodsPerYear = 365.25 * 24 / 3
-	defaultStrategyStartCash  = 50_000
 )
 
 // StrategyKPIDef describes one playbook performance metric (see playbooks/strategy-kpi/*/README.md).
@@ -62,7 +61,7 @@ type StrategyKPIBar struct {
 	Close   float64
 }
 
-// StrategyKPIRegistry returns the five standard playbook KPI definitions.
+// StrategyKPIRegistry returns the standard playbook KPI definitions.
 func StrategyKPIRegistry() []StrategyKPIDef {
 	return []StrategyKPIDef{
 		{Slug: "cagr", Title: "CAGR (net)", Label: "CAGR", Unit: "ratio", Format: "percent"},
@@ -70,12 +69,16 @@ func StrategyKPIRegistry() []StrategyKPIDef {
 		{Slug: "sharpe", Title: "Sharpe ratio", Label: "Sharpe", Unit: "ratio", Format: "decimal"},
 		{Slug: "active-return", Title: "Active return vs benchmark", Label: "vs B&H", Unit: "ratio", Format: "percent-pts"},
 		{Slug: "sortino", Title: "Sortino ratio", Label: "Sortino", Unit: "ratio", Format: "decimal"},
+		{Slug: "win-rate", Title: "Win rate", Label: "Win rate", Unit: "ratio", Format: "percent"},
 	}
 }
 
 // ComputeStrategyKPIs loads fills and bar marks from dataDir and computes KPIs for [fromMs, toMs].
 // When fromMs or toMs is zero, the range spans all available fills and marks.
-func ComputeStrategyKPIs(dataDir, playbook, symbol string, fromMs, toMs int64) (StrategyKPISet, error) {
+func ComputeStrategyKPIs(dataDir, playbook, symbol string, fromMs, toMs int64, startCash float64) (StrategyKPISet, error) {
+	if startCash <= 0 {
+		return StrategyKPISet{}, errors.New("start cash required")
+	}
 	fills, err := LoadStrategyKPIFills(dataDir, playbook)
 	if err != nil {
 		return StrategyKPISet{}, err
@@ -102,7 +105,7 @@ func ComputeStrategyKPIs(dataDir, playbook, symbol string, fromMs, toMs int64) (
 		return StrategyKPISet{Playbook: playbook, Symbol: symbol, FromMs: fromMs, ToMs: toMs, Results: nil}, nil
 	}
 
-	portfolio, bench := ReplayEquityCurves(fills, bars, defaultStrategyStartCash)
+	portfolio, bench := ReplayEquityCurves(fills, bars, startCash)
 	if len(portfolio) < 2 {
 		return StrategyKPISet{Playbook: playbook, Symbol: symbol, FromMs: fromMs, ToMs: toMs, Results: nil}, nil
 	}

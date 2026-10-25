@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 func dockerJobUserArgs() []string {

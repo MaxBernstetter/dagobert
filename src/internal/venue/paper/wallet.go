@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
 )
 
 // Wallet is an in-memory paper venue (no per-fill disk I/O).
