@@ -22,7 +22,7 @@ Trivial changes (typos, docs wording) can skip the full workflow.
 
 ## Pull request size
 Every pull request must be reviewable by a human in one sitting.
-- Aim for at most ~400 changed lines, not counting lockfiles and generated files. Treat ~800 as a hard limit.
+- Aim for at most ~600 changed lines, not counting lockfiles and generated files. Treat ~800 as a hard limit.
 - One concern per pull request. Do not mix refactoring, formatting or dependency bumps with behaviour changes.
 - Check the expected size while planning. If an issue will exceed the limit, propose splitting it into smaller issues or stacked pull requests before implementing, each one independently green and reviewable.
 - Do not add scope found during implementation; propose a follow-up issue instead.
