@@ -56,3 +56,9 @@ add_subdirectory(sdk/indicators)
 add_library(dagobert INTERFACE)
 target_compile_features(dagobert INTERFACE cxx_std_23)
 target_link_libraries(dagobert INTERFACE dagobert_sdk)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MagicEnum.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GoogleTest.cmake)
+
+enable_testing()
+add_subdirectory(tests)
