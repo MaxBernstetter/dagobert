@@ -7,7 +7,7 @@ namespace dagobert {
 namespace {
 
 template <typename Series>
-Series apply_series(const Series& input, std::size_t period) {
+Series apply_series(const Series &input, std::size_t period) {
   Series output;
   const std::size_t count = input.samples.size();
   output.samples.assign(count, 0.0);
@@ -43,11 +43,11 @@ SMA::SMA(std::size_t period_bars) : period_(period_bars) {
   }
 }
 
-CloseSeries SMA::apply_indicator(const CloseSeries& close) const {
+CloseSeries SMA::apply_indicator(const CloseSeries &close) const {
   return apply_series(close, period_);
 }
 
-VolumeSeries SMA::apply_indicator(const VolumeSeries& volume) const {
+VolumeSeries SMA::apply_indicator(const VolumeSeries &volume) const {
   return apply_series(volume, period_);
 }
 

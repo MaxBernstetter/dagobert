@@ -7,7 +7,7 @@
 namespace dagobert {
 namespace {
 
-double seed_sma(const std::vector<double>& samples, std::size_t end_index,
+double seed_sma(const std::vector<double> &samples, std::size_t end_index,
                 std::size_t period) {
   double sum = 0.0;
   for (std::size_t i = 0; i < period; ++i) {
@@ -20,7 +20,7 @@ double advance_ema(double current, double prev, double multiplier) {
   return (current - prev) * multiplier + prev;
 }
 
-MacdColumns apply_macd(const CloseSeries& close, std::size_t fast_period,
+MacdColumns apply_macd(const CloseSeries &close, std::size_t fast_period,
                        std::size_t slow_period, std::size_t signal_period,
                        double fast_multiplier, double slow_multiplier,
                        double signal_multiplier) {
@@ -103,9 +103,9 @@ MacdColumns apply_macd(const CloseSeries& close, std::size_t fast_period,
 
 MACD::MACD(std::size_t fast_period, std::size_t slow_period,
            std::size_t signal_period)
-    : fast_period_(fast_period == 0U ? 1U : fast_period)
-    , slow_period_(slow_period == 0U ? 1U : slow_period)
-    , signal_period_(signal_period == 0U ? 1U : signal_period) {
+    : fast_period_(fast_period == 0U ? 1U : fast_period),
+      slow_period_(slow_period == 0U ? 1U : slow_period),
+      signal_period_(signal_period == 0U ? 1U : signal_period) {
   if (fast_period == 0U || slow_period == 0U || signal_period == 0U) {
     std::cerr << "MACD periods must be positive\n";
     std::exit(2);
@@ -115,7 +115,7 @@ MACD::MACD(std::size_t fast_period, std::size_t slow_period,
   signal_multiplier_ = 2.0 / (static_cast<double>(signal_period_) + 1.0);
 }
 
-MacdColumns MACD::apply_indicator(const CloseSeries& close) const {
+MacdColumns MACD::apply_indicator(const CloseSeries &close) const {
   return apply_macd(close, fast_period_, slow_period_, signal_period_,
                     fast_multiplier_, slow_multiplier_, signal_multiplier_);
 }

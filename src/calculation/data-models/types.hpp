@@ -42,4 +42,12 @@ struct Fill {
   std::string reason;
 };
 
+struct StrategyResult {
+  double cash{};
+  double qty{};
+  double equity{};
+  std::vector<Action> actions;
+  std::vector<Fill> fills;
+};
+
 } // namespace dagobert

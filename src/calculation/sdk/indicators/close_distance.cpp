@@ -4,7 +4,7 @@ namespace dagobert {
 
 CloseDistance::CloseDistance(std::size_t period_bars) : sma_{period_bars} {}
 
-Column CloseDistance::apply_indicator(const CloseSeries& close) const {
+Column CloseDistance::apply_indicator(const CloseSeries &close) const {
   const CloseSeries mean = sma_.apply_indicator(close);
   Column output;
   const std::size_t count = close.samples.size();

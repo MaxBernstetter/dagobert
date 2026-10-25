@@ -8,13 +8,13 @@
 namespace dagobert {
 namespace {
 
-void push_gain_loss(double change, std::deque<double>& gains,
-                    std::deque<double>& losses) {
+void push_gain_loss(double change, std::deque<double> &gains,
+                    std::deque<double> &losses) {
   gains.push_back(std::max(change, 0.0));
   losses.push_back(std::max(-change, 0.0));
 }
 
-double mean_deque(const std::deque<double>& values) {
+double mean_deque(const std::deque<double> &values) {
   double sum = 0.0;
   for (const double value : values) {
     sum += value;
@@ -33,7 +33,7 @@ std::optional<double> rsi_value(double avg_gain, double avg_loss) {
   return 100.0 - (100.0 / (1.0 + rs));
 }
 
-Column apply_rsi(const CloseSeries& close, std::size_t period) {
+Column apply_rsi(const CloseSeries &close, std::size_t period) {
   Column output;
   const std::size_t count = close.samples.size();
   output.samples.assign(count, 0.0);
@@ -90,7 +90,7 @@ RSI::RSI(std::size_t period_bars) : period_(period_bars) {
   }
 }
 
-Column RSI::apply_indicator(const CloseSeries& close) const {
+Column RSI::apply_indicator(const CloseSeries &close) const {
   return apply_rsi(close, period_);
 }
 
