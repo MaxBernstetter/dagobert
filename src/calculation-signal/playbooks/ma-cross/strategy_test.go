@@ -157,7 +157,7 @@ func TestSizedPyramid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dec.RuleID != "pyramid" || dec.Decision != "buy" || *dec.StopRaise != 1000 || *dec.StopPrice != 97000 {
+	if dec.RuleID != "pyramid" || dec.Decision != "buy" || *dec.RaiseStopsBy != 1000 || *dec.StopPrice != 97000 {
 		t.Fatalf("got %+v", dec)
 	}
 	ctx.Results = sizedCtx("long", false, false, 2000, 100500, 100000, unit).Results

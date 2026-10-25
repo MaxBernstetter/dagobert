@@ -14,8 +14,6 @@ type Decision struct {
 	QuoteNotional *float64
 	BaseQty       *float64
 	StopPrice     *float64
-	// StopRaise lifts every earlier open unit's stop by this amount (a pyramid buy).
-	StopRaise *float64
 	// RequestedRiskPct is unitRiskPct; CappedRiskPct is the risk left after the weight cap.
 	RequestedRiskPct *float64
 	CappedRiskPct    *float64

@@ -103,7 +103,7 @@ func evaluateSized(ctx framework.Context, sz sizing.Config, bullish, bearish boo
 	if n, ok := sizing.PyramidAllowed(ctx.OpenUnits, ctx.LastFill, price, ctx.Equity, atr, sz); ok {
 		dec := sizedBuy(n, price, atr, ctx.Equity, sz, "pyramid")
 		step := sizing.RaiseStops(ctx.OpenUnits[:1], atr, sz)[0].Stop - ctx.OpenUnits[0].Stop
-		dec.StopRaise = &step
+		dec.RaiseStopsBy = &step
 		return dec
 	}
 	return noTrade("none")
