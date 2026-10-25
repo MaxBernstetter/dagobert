@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MaxBernstetter/dagobert/src/calculation-market-action/internal/allocate"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
-	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/config"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
-	"github.com/MaxBernstetter/dagobert/src/calculation-market-action/internal/allocate"
 )
 
 // Run sizes a stored signal into an executable action using live venue balances.
@@ -94,6 +94,8 @@ func Run(args []string) (exitCode int, detail int) {
 		QuoteCash:      quoteCash,
 		BaseHeld:       baseHeld,
 		MarkPrice:      mark,
+		QuoteNotional:  sig.QuoteNotional,
+		BaseQty:        sig.BaseQty,
 	}, pol)
 
 	rule := sig.RuleID

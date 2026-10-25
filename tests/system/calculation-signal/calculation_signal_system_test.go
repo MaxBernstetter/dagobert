@@ -110,14 +110,24 @@ type runResult struct {
 
 func runContainer(t *testing.T, dataDir, sym string, closeMs int64) runResult {
 	t.Helper()
+	return runContainerEnv(t, dataDir, sym, closeMs)
+}
+
+func runContainerEnv(t *testing.T, dataDir, sym string, closeMs int64, env ...string) runResult {
+	t.Helper()
 	args := []string{
 		"run", "--rm",
 		"-e", "DATA_DIR=/data",
 		"-e", "PLAYBOOK=ma-cross",
-		"-v", dataDir + ":/data",
+	}
+	for _, e := range env {
+		args = append(args, "-e", e)
+	}
+	args = append(args,
+		"-v", dataDir+":/data",
 		imageTag,
 		sym, fmt.Sprintf("%d", closeMs),
-	}
+	)
 	cmd := exec.Command("docker", args...)
 	cmd.Dir = repoRoot
 	out, err := cmd.CombinedOutput()
@@ -171,6 +181,15 @@ CREATE TABLE IF NOT EXISTS kpi (
   bar_open INTEGER NOT NULL,
   body TEXT NOT NULL,
   PRIMARY KEY (symbol, bar_open)
+);
+CREATE TABLE IF NOT EXISTS kpi_revision (
+  symbol TEXT NOT NULL,
+  bar_open INTEGER NOT NULL,
+  provider TEXT NOT NULL,
+  algo TEXT NOT NULL,
+  body TEXT NOT NULL,
+  origin TEXT NOT NULL,
+  PRIMARY KEY (symbol, bar_open, algo)
 );`); err != nil {
 		t.Fatal(err)
 	}
