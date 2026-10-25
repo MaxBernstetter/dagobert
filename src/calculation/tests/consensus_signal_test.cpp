@@ -5,7 +5,14 @@
 #include "position.hpp"
 #include "quote.hpp"
 
+#include <google/protobuf/struct.pb.h>
+#include <google/protobuf/util/json_util.h>
+
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <fstream>
+#include <sstream>
 
 namespace dagobert {
 namespace {
@@ -117,6 +124,162 @@ TEST(ConsensusSignal, SeriesMatchesSample) {
     EXPECT_EQ(got[i].side, expected[i].side);
     EXPECT_EQ(got[i].reason, expected[i].reason);
   }
+}
+
+namespace {
+
+using google::protobuf::Struct;
+
+// Replays tests/fixtures/consensus_sizing.json, generated from the sized Go
+// signal-consensus playbook (see calculation-signal/.../cpp_fixture_test.go).
+struct GoFixture {
+  Fixture f;
+  sizing::SizingConfig cfg;
+  double initial_quote{};
+  std::vector<Struct> expected;
+
+  static Struct load() {
+    std::ifstream in(CONSENSUS_FIXTURE_PATH);
+    std::stringstream text;
+    text << in.rdbuf();
+    Struct root;
+    const auto status =
+        google::protobuf::util::JsonStringToMessage(text.str(), &root);
+    EXPECT_TRUE(status.ok()) << status.message();
+    return root;
+  }
+
+  static Fixture build(const Struct &root) {
+    const auto &bars = root.fields().at("bars").list_value().values();
+    std::vector<double> closes;
+    for (const auto &v : bars) {
+      closes.push_back(v.struct_value().fields().at("close").number_value());
+    }
+    Fixture f(closes);
+    for (int i = 0; i < bars.size(); ++i) {
+      const auto &b = bars[i].struct_value().fields();
+      auto num = [&b](const char *k) { return b.at(k).number_value(); };
+      const auto u = static_cast<std::size_t>(i);
+      f.volume.samples[u] = f.bars[u].volume = num("volume");
+      f.signal.samples[u] = num("signal");
+      f.regime.samples[u] = num("regime");
+      f.macro.samples[u] = num("macro");
+      f.rsi.samples[u] = num("rsi");
+      f.hist.samples[u] = num("hist");
+      f.atr.samples[u] = num("atr");
+      f.vol_mean.samples[u] = num("vol_mean");
+    }
+    return f;
+  }
+
+  explicit GoFixture(const Struct &root) : f(build(root)) {
+    initial_quote = root.fields().at("initial_quote").number_value();
+    const auto &sz =
+        root.fields().at("config").struct_value().fields().at("sizing");
+    const auto &m = sz.struct_value().fields();
+    cfg.unit_risk_pct = m.at("unitRiskPct").number_value();
+    cfg.heat_pct = m.at("heatPct").number_value();
+    cfg.max_units = static_cast<int>(m.at("maxUnits").number_value());
+    cfg.add_atr_mult = m.at("addAtrMult").number_value();
+    for (const auto &e : root.fields().at("expected").list_value().values()) {
+      expected.push_back(e.struct_value());
+    }
+  }
+};
+
+void expect_matches_go(const GoFixture &g, const Position &account,
+                       const std::vector<Action> &actions) {
+  ASSERT_EQ(actions.size(), g.expected.size());
+  ASSERT_EQ(account.fills().size(), g.expected.size());
+  for (std::size_t i = 0; i < actions.size(); ++i) {
+    const auto &e = g.expected[i].fields();
+    EXPECT_EQ(actions[i].bar_open_ms,
+              static_cast<std::int64_t>(e.at("bar_open_ms").number_value()));
+    EXPECT_EQ(actions[i].reason, e.at("reason").string_value());
+    EXPECT_EQ(account.fills()[i].side, e.at("side").string_value());
+    EXPECT_NEAR(account.fills()[i].price, e.at("price").number_value(), 1e-9);
+    EXPECT_NEAR(account.fills()[i].qty, e.at("qty").number_value(), 1e-6);
+  }
+}
+
+} // namespace
+
+TEST(ConsensusSizing, MatchesGoSizedPlaybook) {
+  const GoFixture g{GoFixture::load()};
+  const ConsensusSeries mask = ConsensusSignal::evaluate(g.f.columns());
+  Position account{Quote::require(g.initial_quote)};
+  const auto actions =
+      ConsensusSignal::actions_from(account, g.f.bars, mask, g.cfg);
+  expect_matches_go(g, account, actions);
+}
+
+TEST(ConsensusSizing, StreamingMatchesGoSizedPlaybook) {
+  const GoFixture g{GoFixture::load()};
+  ConsensusSignal live{g.cfg};
+  Position account{Quote::require(g.initial_quote)};
+  std::vector<Action> got;
+  for (std::size_t i = 0; i < g.f.bars.size(); ++i) {
+    if (const auto rule = live.apply(g.f.sample(i), account)) {
+      live.execute(account, g.f.bars[i], *rule);
+      got.push_back(account.actions().back());
+    }
+  }
+  expect_matches_go(g, account, got);
+}
+
+TEST(ConsensusSizing, UsesEveryRuleAndSizesFromTheStop) {
+  const GoFixture g{GoFixture::load()};
+  const ConsensusSeries mask = ConsensusSignal::evaluate(g.f.columns());
+  Position account{Quote::require(g.initial_quote)};
+  const auto actions =
+      ConsensusSignal::actions_from(account, g.f.bars, mask, g.cfg);
+  std::vector<std::string> reasons;
+  for (const Action &a : actions) {
+    reasons.push_back(a.reason);
+  }
+  for (const char *want :
+       {"consensus_buy", "pyramid", "vol_cut", "atr_stop", "consensus_sell"}) {
+    EXPECT_NE(std::ranges::find(reasons, want), reasons.end()) << want;
+  }
+  // Entry: 0.5% of 100000 over a 2.5 * 2 ATR stop at 101.
+  EXPECT_NEAR(account.fills().front().qty * 101.0, 10100.0, 1e-6);
+  EXPECT_NEAR(actions.front().stop, 96.0, 1e-9);
+}
+
+TEST(ConsensusSizing, WithoutSizingKeepsWholePositionTrades) {
+  const GoFixture g{GoFixture::load()};
+  const ConsensusSeries mask = ConsensusSignal::evaluate(g.f.columns());
+  Position account{Quote::require(g.initial_quote)};
+  const auto actions = ConsensusSignal::actions_from(account, g.f.bars, mask);
+  ASSERT_FALSE(actions.empty());
+  EXPECT_EQ(actions.front().reason, "consensus_buy");
+  EXPECT_NEAR(actions.front().weight_pct, 100.0, 1e-12);
+  for (const Action &a : actions) {
+    EXPECT_NE(a.reason, "pyramid");
+    EXPECT_NE(a.reason, "vol_cut");
+  }
+}
+
+TEST(ConsensusSizing, ResetClearsUnitsAndKeepsConfig) {
+  const GoFixture g{GoFixture::load()};
+  ConsensusSignal live{g.cfg};
+  Position account{Quote::require(g.initial_quote)};
+  for (std::size_t i = 0; i < 4; ++i) {
+    if (const auto rule = live.apply(g.f.sample(i), account)) {
+      live.execute(account, g.f.bars[i], *rule);
+    }
+  }
+  ASSERT_FALSE(account.flat());
+  live.reset();
+  Position fresh{Quote::require(g.initial_quote)};
+  std::vector<Action> got;
+  for (std::size_t i = 0; i < g.f.bars.size(); ++i) {
+    if (const auto rule = live.apply(g.f.sample(i), fresh)) {
+      live.execute(fresh, g.f.bars[i], *rule);
+      got.push_back(fresh.actions().back());
+    }
+  }
+  expect_matches_go(g, fresh, got);
 }
 
 } // namespace dagobert

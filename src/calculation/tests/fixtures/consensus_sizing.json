@@ -1,0 +1,376 @@
+{
+  "initial_quote": 100000,
+  "config": {
+    "sizing": {
+      "unitRiskPct": 0.5,
+      "heatPct": 2,
+      "maxUnits": 3,
+      "addAtrMult": 0.5
+    }
+  },
+  "bars": [
+    {
+      "open_ms": 0,
+      "close": 98,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 10800000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 21600000,
+      "close": 103,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 32400000,
+      "close": 105,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 43200000,
+      "close": 106,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 54000000,
+      "close": 106,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 8,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 64800000,
+      "close": 106,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 8,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 75600000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 8,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 86400000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 97200000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 108000000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 118800000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 129600000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 140400000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 151200000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 162000000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 172800000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 183600000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 194400000,
+      "close": 98,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 205200000,
+      "close": 98,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 216000000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 226800000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 237600000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 248400000,
+      "close": 101,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 259200000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    },
+    {
+      "open_ms": 270000000,
+      "close": 99,
+      "volume": 2,
+      "signal": 100,
+      "regime": 95,
+      "macro": 90,
+      "rsi": 60,
+      "hist": 1,
+      "atr": 2,
+      "vol_mean": 1
+    }
+  ],
+  "expected": [
+    {
+      "bar_open_ms": 10800000,
+      "side": "buy",
+      "reason": "consensus_buy",
+      "qty": 100,
+      "price": 101
+    },
+    {
+      "bar_open_ms": 21600000,
+      "side": "buy",
+      "reason": "pyramid",
+      "qty": 100.19999999999999,
+      "price": 103
+    },
+    {
+      "bar_open_ms": 32400000,
+      "side": "buy",
+      "reason": "pyramid",
+      "qty": 100.60039999999998,
+      "price": 105
+    },
+    {
+      "bar_open_ms": 54000000,
+      "side": "sell",
+      "reason": "vol_cut",
+      "qty": 199.89919960000003,
+      "price": 106
+    },
+    {
+      "bar_open_ms": 75600000,
+      "side": "sell",
+      "reason": "atr_stop",
+      "qty": 100.90120039999994,
+      "price": 99
+    },
+    {
+      "bar_open_ms": 216000000,
+      "side": "buy",
+      "reason": "consensus_buy",
+      "qty": 100.19489199719997,
+      "price": 101
+    },
+    {
+      "bar_open_ms": 259200000,
+      "side": "sell",
+      "reason": "consensus_sell",
+      "qty": 100.19489199719997,
+      "price": 99
+    }
+  ]
+}
