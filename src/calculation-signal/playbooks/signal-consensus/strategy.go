@@ -1,9 +1,13 @@
 package signalconsensus
 
 import (
+	"math"
+
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 )
 
+// logicVersion is unchanged: sizing is opt-in config, and the config JSON is part of the playbook hash.
 const logicVersion = "10"
 
 const (
@@ -21,7 +25,7 @@ const (
 
 	defaultMinBarsFlatAfterSell  = 8
 	defaultMinBarsLongBeforeSell = 4
-	noCooldown                     = 999
+	noCooldown                   = 999
 )
 
 // Strategy: 3h bars, higher-level trend stack (SMA24 > SMA48), SMA12 cross + MACD entry.
@@ -79,6 +83,15 @@ func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
 	}
 	atrStop := okATR && ctx.BarClose < signal-cfg.AtrStopMult*atr
 
+	if cfg.Sizing != nil {
+		if d, ok := sizedDecision(ctx, cfg, atr, okATR, crossDown, sinceBuy, atrStop, entry(ctx, crossUp, higherTrend, macdOK, momentum, volume, sinceSell, cfg)); ok {
+			return d, nil
+		}
+		if ctx.Position == "flat" || len(ctx.OpenUnits) > 0 {
+			return noTrade("none"), nil
+		}
+	}
+
 	if ctx.Position == "flat" && crossUp && higherTrend && macdOK &&
 		momentum != voteBear && volume != voteBear &&
 		sinceSell >= cfg.MinBarsFlatAfterSell {
@@ -95,6 +108,68 @@ func (Strategy) Evaluate(ctx framework.Context) (framework.Decision, error) {
 	}
 
 	return noTrade("none"), nil
+}
+
+func entry(ctx framework.Context, crossUp, higherTrend, macdOK bool, momentum, volume vote, sinceSell int, cfg Config) bool {
+	return ctx.Position == "flat" && crossUp && higherTrend && macdOK &&
+		momentum != voteBear && volume != voteBear && sinceSell >= cfg.MinBarsFlatAfterSell
+}
+
+// sizedDecision applies position-sizing.md. ok is false when nothing sized applies and
+// the legacy rules should run (long without tracked units). The stop is fill-based and
+// stopAtrMult is the playbook's atrStopMult.
+func sizedDecision(ctx framework.Context, cfg Config, atr float64, okATR, crossDown bool, sinceBuy int, legacyStop, enter bool) (framework.Decision, bool) {
+	sc := *cfg.Sizing
+	mult := cfg.AtrStopMult
+	sc.StopAtrMult = &mult
+	px := ctx.BarClose
+
+	if ctx.Position == "flat" {
+		if !enter || !okATR || ctx.Equity <= 0 {
+			return framework.Decision{}, false
+		}
+		n := sizing.Notional(ctx.Equity, atr, px, sc)
+		if n <= 0 {
+			return framework.Decision{}, false
+		}
+		return sizedBuy(n, px, atr, ctx.Equity, sc, "consensus_buy"), true
+	}
+	if len(ctx.OpenUnits) == 0 {
+		return framework.Decision{}, false
+	}
+
+	var held, stop float64
+	stop = math.Inf(-1)
+	for _, u := range ctx.OpenUnits {
+		held += u.Qty
+		stop = math.Max(stop, u.Stop)
+	}
+	if px <= stop {
+		return framework.Decision{Decision: "sell", RuleID: "atr_stop"}, true
+	}
+	if sinceBuy >= cfg.MinBarsLongBeforeSell && crossDown {
+		return framework.Decision{Decision: "sell", RuleID: "consensus_sell"}, true
+	}
+	if !okATR {
+		return framework.Decision{}, false
+	}
+	if q := sizing.ExcessBaseForHeat(held, atr, ctx.Equity, sc); q > 0 {
+		return framework.Decision{Decision: "sell", BaseQty: &q, RuleID: "vol_cut"}, true
+	}
+	if n, ok := sizing.PyramidAllowed(ctx.OpenUnits, ctx.LastFill, px, ctx.Equity, atr, sc); ok {
+		d := sizedBuy(n, px, atr, ctx.Equity, sc, "pyramid")
+		step := *sc.AddAtrMult * atr
+		d.RaiseStopsBy = &step
+		return d, true
+	}
+	return framework.Decision{}, false
+}
+
+func sizedBuy(n, px, atr, equity float64, sc sizing.Config, rule string) framework.Decision {
+	stop := sizing.StopPrice(px, atr, sc)
+	req, capped := sizing.RiskPct(n, equity, atr, px, sc)
+	return framework.Decision{Decision: "buy", RuleID: rule, QuoteNotional: &n, StopPrice: &stop,
+		RequestedRiskPct: &req, CappedRiskPct: &capped}
 }
 
 // Bullish higher-timeframe stack: price above 24h/48h SMAs and SMA24 > SMA48.

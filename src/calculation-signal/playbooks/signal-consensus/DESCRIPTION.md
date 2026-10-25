@@ -37,4 +37,17 @@ Thresholds (`rsiBull` / `rsiBear`, volume ratios, ATR stop mult, cooldowns) are 
 
 ## Position sizing
 
-The size that matches this stop is specified in [Position sizing](/wiki/playbooks/position-sizing). This playbook does not apply that spec yet. It still emits the signal only, and a run still sizes the order as one target weight of the book.
+Optional `sizing` config applies [Position sizing](/wiki/playbooks/position-sizing). Without it the rules above are unchanged: one target weight in, the whole position out. Rules stay at v10; the config JSON is part of the playbook hash, so sized runs have their own identity.
+
+With `sizing` set, `stopAtrMult` is `atrStopMult`. The entry filters and the cross-below-SMA12 sell are unchanged. The buy is sized so a fill of its stop loses `unitRiskPct` of equity, and the stop is fill-based: fill minus `atrStopMult` x ATR(24h), recorded on the buy with the requested and capped risk. A buy below the venue minimum is skipped.
+
+While long, a bar does one thing, in order:
+
+| Rule | Condition | Signal |
+|------|-----------|--------|
+| `atr_stop` | close at or below an open unit's stop (fill-based) | sell all |
+| `consensus_sell` | cross below SMA12 (after the minimum bars long) | sell all |
+| `vol_cut` | ATR implies open risk above `heatPct` | partial sell of the excess |
+| `pyramid` | `maxUnits` above 1 and the add rules pass | buy another unit, earlier stops raised |
+
+A long position without tracked units (the live job does not derive them yet) falls back to the SMA12-based `atr_stop` and full exit.

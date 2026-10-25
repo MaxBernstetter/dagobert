@@ -304,6 +304,35 @@ func writeCrossingParquet(t *testing.T, dataDir, sym string, endMs int64) {
 			Close: price, Volume: 10, CloseTime: ot + hour - 1,
 		})
 	}
+	writeRows(t, dataDir, rows)
+}
+
+// writeTrendingParquet rises with periodic sharp dips, so signal-consensus re-crosses
+// SMA12 inside an established uptrend (momentum returns after each dip).
+func writeTrendingParquet(t *testing.T, dataDir string, hours int) {
+	t.Helper()
+	rows := make([]hourCandle, 0, hours)
+	price := 100.0
+	for i := 0; i < hours; i++ {
+		switch phase := i % 60; {
+		case i < 100:
+			price -= 0.2
+		case phase >= 57:
+			price -= 5
+		case phase < 6:
+			price += 14
+		default:
+			price += 2.5
+		}
+		ot := int64(i) * hour
+		rows = append(rows, hourCandle{OpenTime: ot, Open: price, High: price + 1, Low: price - 1,
+			Close: price, Volume: 10 + float64(i%7), CloseTime: ot + hour - 1})
+	}
+	writeRows(t, dataDir, rows)
+}
+
+func writeRows(t *testing.T, dataDir string, rows []hourCandle) {
+	t.Helper()
 	byYear := map[int][]hourCandle{}
 	for _, r := range rows {
 		y := shared.YearUTC(r.OpenTime)
@@ -511,4 +540,87 @@ func portfolioEndValue(t *testing.T, workspace string) float64 {
 	var cash float64
 	_ = db.QueryRow(`SELECT SUM(CAST(cash_balance AS REAL)) FROM balance`).Scan(&cash)
 	return cash
+}
+
+func firstBuyQuote(t *testing.T, workspace string) (float64, bool) {
+	t.Helper()
+	dbPath := filepath.Join(workspace, "execution.sqlite")
+	if _, err := os.Stat(dbPath); err != nil {
+		return 0, false
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var q float64
+	err = db.QueryRow(`SELECT quote_qty FROM fill_journal WHERE side = 'Buy' ORDER BY order_link_id LIMIT 1`).Scan(&q)
+	if err != nil {
+		return 0, false
+	}
+	return q, true
+}
+
+func TestStudySignalConsensusSizing(t *testing.T) {
+	dataDir := tempDataDir(t)
+	seedLiveMarker(t, dataDir)
+	endMs := 4000 * hour
+	writeTrendingParquet(t, dataDir, int(endMs/hour))
+
+	cat, err := store.Open(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cat.Close()
+	settings := store.DefaultExperimentSettings()
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
+	settings.FromMs = 480 * hour
+	settings.ToMs = endMs
+	settings.RedownloadMissing = false
+
+	bad := []store.ExperimentInstanceSpec{{Label: "bad", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"unitRiskPct":5}}`)}}
+	if _, err := cat.CreateStudy("bad-sizing", "", settings, bad); err == nil {
+		t.Fatal("invalid sizing must be rejected")
+	}
+
+	rec, err := cat.CreateStudy("consensus-sizing", "", settings, []store.ExperimentInstanceSpec{
+		{Label: "legacy", Playbook: "signal-consensus"},
+		{Label: "sized", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"unitRiskPct":0.25}}`)},
+		{Label: "below min", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"maxWeightPct":0.0001}}`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("VENUE_SIMULATE", "1")
+	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, err := cat.GetExperiment(rec.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, inst := range got.Instances {
+		if inst.Status != store.StatusCompleted {
+			t.Fatalf("instance %s status %q error %q", inst.Label, inst.Status, inst.Error)
+		}
+	}
+	ws := map[string]string{}
+	for _, inst := range got.Instances {
+		ws[inst.Label] = store.ExperimentWorkspaceDir(dataDir, inst)
+	}
+	legacy, okL := firstBuyQuote(t, ws["legacy"])
+	sized, okS := firstBuyQuote(t, ws["sized"])
+	minQuote, okMin := firstBuyQuote(t, ws["below min"])
+	t.Logf("first buy quote: legacy=%v sized=%v belowMin=%v (%v)", legacy, sized, minQuote, okMin)
+	if !okL || !okS {
+		t.Fatal("expected a buy fill for legacy and sized instances")
+	}
+	if sized == legacy || sized <= 0 {
+		t.Fatalf("sized buy %v should differ from legacy target weight %v", sized, legacy)
+	}
+	if okMin {
+		t.Fatal("buy below the venue minimum must be skipped")
+	}
 }
