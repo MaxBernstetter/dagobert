@@ -14,3 +14,15 @@ if(DAGOBERT_MODE STREQUAL "debug")
     sma_cross_strategy
     PRIVATE -O1 -Wno-\#warnings -Wno-nullability-extension -Wno-gcc-compat)
 endif()
+
+add_executable(strategy-sma-cross main.cpp)
+target_link_libraries(strategy-sma-cross PRIVATE sma_cross_strategy
+                                                 dagobert_bars_parquet
+                                                 magic_enum::magic_enum)
+target_link_options(strategy-sma-cross PRIVATE -static-libstdc++ -static-libgcc)
+dagobert_strict_warnings(strategy-sma-cross)
+if(DAGOBERT_MODE STREQUAL "debug")
+  target_compile_options(
+    strategy-sma-cross
+    PRIVATE -O1 -Wno-\#warnings -Wno-nullability-extension -Wno-gcc-compat)
+endif()

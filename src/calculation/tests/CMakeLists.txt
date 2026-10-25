@@ -3,7 +3,8 @@ add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.c
                                    macd_test.cpp close_distance_test.cpp
                                    sma_cross_signal_test.cpp
                                    sma_cross_strategy_test.cpp
-                                   bars_parquet_test.cpp sizing_test.cpp)
+                                   bars_parquet_test.cpp sizing_test.cpp
+                                   sma_cross_exe_test.cpp)
 target_include_directories(
   dagobert-tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models
@@ -17,6 +18,9 @@ target_link_libraries(
   PRIVATE GTest::gtest_main magic_enum::magic_enum dagobert_data_models
           dagobert_indicators dagobert_signals dagobert_strategy
           sma_cross_strategy dagobert_proto dagobert_bars_parquet)
+add_dependencies(dagobert-tests strategy-sma-cross)
+target_compile_definitions(dagobert-tests
+                           PRIVATE SMA_CROSS_BIN="$<TARGET_FILE:strategy-sma-cross>")
 dagobert_strict_warnings(dagobert-tests)
 target_link_options(dagobert-tests PRIVATE -static-libstdc++ -static-libgcc)
 if(DAGOBERT_MODE STREQUAL "debug")
