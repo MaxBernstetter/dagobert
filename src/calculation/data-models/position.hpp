@@ -85,7 +85,7 @@ template <typename Rule> Fill Position::sell_all(const Bar &bar, Rule rule) {
   const double proceeds = qty_ * bar.close;
   const double sold_qty = qty_;
   qty_ = 0.0;
-  cash_ = proceeds;
+  cash_ += proceeds;
 
   Action action;
   action.bar_open_ms = bar.open_ms;

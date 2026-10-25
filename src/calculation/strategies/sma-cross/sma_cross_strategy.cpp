@@ -11,6 +11,9 @@
 namespace dagobert {
 namespace {
 
+// ATR window of the sized flow, in hours (matches the Go ma-cross playbook).
+constexpr std::int32_t kAtrWindowHr = 24;
+
 constexpr const char *kMaCrossLabel = "sma-cross";
 constexpr const char *kMaCrossTypeUrl =
     "type.googleapis.com/tradingcopilot.v1.MaCrossConfig";
@@ -38,15 +41,31 @@ unpack_ma_cross(const tradingcopilot::v1::RunEnvelope &envelope) {
 
 SmaCrossStrategy::SmaCrossStrategy(
     const tradingcopilot::v1::RunEnvelope &envelope,
-    std::int64_t bar_duration_ms)
+    std::int64_t bar_duration_ms, std::optional<sizing::SizingConfig> sizing)
     : Strategy(envelope),
       fast_(bars_for(unpack_ma_cross(envelope).fast_hr(), bar_duration_ms)),
       slow_(bars_for(unpack_ma_cross(envelope).slow_hr(), bar_duration_ms)),
+      atr_(sizing ? bars_for(kAtrWindowHr, bar_duration_ms) : 1U),
+      sizing_(sizing),
+      cross_(sizing ? SmaCrossSignal{*sizing} : SmaCrossSignal{}),
       book_(initial_quote()) {}
 
 StrategyResult SmaCrossStrategy::calc_backtest(std::span<const Bar> bars) {
   for (const Bar &bar : bars) {
     require_finite_close(bar);
+  }
+  if (sizing_) {
+    // Fresh indicators and book: the sized flow is stateful per bar.
+    SMA fast{fast_.period()};
+    SMA slow{slow_.period()};
+    ATR atr{atr_.period()};
+    SmaCrossSignal cross{*sizing_};
+    Position account{initial_quote()};
+    for (const Bar &bar : bars) {
+      cross.step_sized(account, bar, fast.push(bar.close), slow.push(bar.close),
+                       atr.push(bar.high, bar.low, bar.close));
+    }
+    return strategy_result(account, bars.empty() ? 0.0 : bars.back().close);
   }
   const CloseSeries close = closes_of(bars);
   const CloseSeries fast_mean = fast_.apply_indicator(close);
@@ -61,6 +80,11 @@ StrategyResult SmaCrossStrategy::calc_backtest(std::span<const Bar> bars) {
 
 StrategyResult SmaCrossStrategy::calc_live(const Bar &bar) {
   require_finite_close(bar);
+  if (sizing_) {
+    cross_.step_sized(book_, bar, fast_.push(bar.close), slow_.push(bar.close),
+                      atr_.push(bar.high, bar.low, bar.close));
+    return strategy_result(book_, bar.close);
+  }
   if (const auto rule = cross_.apply(fast_.push(bar.close),
                                      slow_.push(bar.close), book_.flat())) {
     cross_.execute(book_, bar, *rule);
@@ -71,6 +95,7 @@ StrategyResult SmaCrossStrategy::calc_live(const Bar &bar) {
 void SmaCrossStrategy::reset() {
   fast_.reset();
   slow_.reset();
+  atr_.reset();
   cross_.reset();
   book_ = Position{initial_quote()};
 }
