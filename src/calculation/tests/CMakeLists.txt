@@ -1,7 +1,7 @@
 add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.cpp
                                    sma_test.cpp ema_rsi_test.cpp atr_test.cpp
                                    macd_test.cpp close_distance_test.cpp
-                                   sma_cross_signal_test.cpp
+                                   sma_cross_signal_test.cpp consensus_gates_test.cpp
                                    sma_cross_strategy_test.cpp
                                    bars_parquet_test.cpp sizing_test.cpp
                                    sma_cross_exe_test.cpp)
