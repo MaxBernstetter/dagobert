@@ -61,6 +61,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Protobuf.cmake)
 
 add_subdirectory(sdk)
 add_subdirectory(strategies)
+add_subdirectory(data)
 
 add_library(dagobert INTERFACE)
 target_compile_features(dagobert INTERFACE cxx_std_23)
