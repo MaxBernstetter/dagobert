@@ -25,7 +25,7 @@ public:
   MACD(std::size_t fast_period, std::size_t slow_period,
        std::size_t signal_period);
 
-  [[nodiscard]] MacdColumns apply_indicator(const CloseSeries& close) const;
+  [[nodiscard]] MacdColumns apply_indicator(const CloseSeries &close) const;
 
   [[nodiscard]] MacdSample push(double close);
   void reset();

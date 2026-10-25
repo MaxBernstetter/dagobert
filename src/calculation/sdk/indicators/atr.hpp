@@ -14,11 +14,12 @@ public:
 
   [[nodiscard]] std::size_t period() const { return period_; }
 
-  [[nodiscard]] Column
-  apply_indicator(const std::vector<double>& high, const std::vector<double>& low,
-                  const CloseSeries& close) const;
+  [[nodiscard]] Column apply_indicator(const std::vector<double> &high,
+                                       const std::vector<double> &low,
+                                       const CloseSeries &close) const;
 
-  [[nodiscard]] std::optional<double> push(double high, double low, double close);
+  [[nodiscard]] std::optional<double> push(double high, double low,
+                                           double close);
   void reset();
 
 private:

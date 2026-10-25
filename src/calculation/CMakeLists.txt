@@ -57,11 +57,14 @@ add_subdirectory(sdk/indicators)
 add_subdirectory(sdk/signals)
 add_subdirectory(data-models)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Protobuf.cmake)
+
+add_subdirectory(sdk)
+add_subdirectory(strategies)
+
 add_library(dagobert INTERFACE)
 target_compile_features(dagobert INTERFACE cxx_std_23)
 target_link_libraries(dagobert INTERFACE dagobert_sdk)
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Protobuf.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GoogleTest.cmake)
 

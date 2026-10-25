@@ -14,8 +14,8 @@ public:
 
   [[nodiscard]] std::size_t period() const { return period_; }
 
-  [[nodiscard]] CloseSeries apply_indicator(const CloseSeries& close) const;
-  [[nodiscard]] VolumeSeries apply_indicator(const VolumeSeries& volume) const;
+  [[nodiscard]] CloseSeries apply_indicator(const CloseSeries &close) const;
+  [[nodiscard]] VolumeSeries apply_indicator(const VolumeSeries &volume) const;
 
   [[nodiscard]] std::optional<double> push(double sample);
   void reset();

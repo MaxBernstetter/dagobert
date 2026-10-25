@@ -15,8 +15,9 @@ double true_range(double high, double low, double prev_close) {
   return std::max({high_low, high_prev, low_prev});
 }
 
-Column apply_atr(const std::vector<double>& high, const std::vector<double>& low,
-                 const CloseSeries& close, std::size_t period) {
+Column apply_atr(const std::vector<double> &high,
+                 const std::vector<double> &low, const CloseSeries &close,
+                 std::size_t period) {
   Column output;
   const std::size_t count = close.samples.size();
   output.samples.assign(count, 0.0);
@@ -32,8 +33,7 @@ Column apply_atr(const std::vector<double>& high, const std::vector<double>& low
   const double period_d = static_cast<double>(period);
 
   for (std::size_t i = 1; i < count; ++i) {
-    const double tr =
-        true_range(high[i], low[i], close.samples[i - 1U]);
+    const double tr = true_range(high[i], low[i], close.samples[i - 1U]);
     if (!initialized) {
       tr_sum += tr;
       ++tr_count;
@@ -66,9 +66,9 @@ ATR::ATR(std::size_t period_bars) : period_(period_bars) {
   }
 }
 
-Column ATR::apply_indicator(const std::vector<double>& high,
-                          const std::vector<double>& low,
-                          const CloseSeries& close) const {
+Column ATR::apply_indicator(const std::vector<double> &high,
+                            const std::vector<double> &low,
+                            const CloseSeries &close) const {
   return apply_atr(high, low, close, period_);
 }
 

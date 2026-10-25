@@ -6,7 +6,8 @@
 namespace dagobert {
 namespace {
 
-Column apply_ema(const CloseSeries& close, std::size_t period, double multiplier) {
+Column apply_ema(const CloseSeries &close, std::size_t period,
+                 double multiplier) {
   Column output;
   const std::size_t count = close.samples.size();
   output.samples.assign(count, 0.0);
@@ -51,7 +52,7 @@ EMA::EMA(std::size_t period_bars) : period_(period_bars) {
   multiplier_ = 2.0 / (static_cast<double>(period_) + 1.0);
 }
 
-Column EMA::apply_indicator(const CloseSeries& close) const {
+Column EMA::apply_indicator(const CloseSeries &close) const {
   return apply_ema(close, period_, multiplier_);
 }
 

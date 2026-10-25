@@ -12,7 +12,7 @@ class CloseDistance {
 public:
   explicit CloseDistance(std::size_t period_bars);
 
-  [[nodiscard]] Column apply_indicator(const CloseSeries& close) const;
+  [[nodiscard]] Column apply_indicator(const CloseSeries &close) const;
 
   [[nodiscard]] std::optional<double> push(double close);
   void reset();

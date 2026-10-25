@@ -14,7 +14,7 @@ public:
 
   [[nodiscard]] std::size_t period() const { return period_; }
 
-  [[nodiscard]] Column apply_indicator(const CloseSeries& close) const;
+  [[nodiscard]] Column apply_indicator(const CloseSeries &close) const;
 
   [[nodiscard]] std::optional<double> push(double sample);
   void reset();
