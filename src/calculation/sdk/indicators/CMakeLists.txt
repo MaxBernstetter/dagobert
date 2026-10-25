@@ -1,5 +1,6 @@
 add_library(dagobert_indicators STATIC stratforge_smoke.cpp sma.cpp ema.cpp
-                                            rsi.cpp atr.cpp macd.cpp)
+                                            rsi.cpp atr.cpp macd.cpp
+                                            close_distance.cpp)
 target_include_directories(
   dagobert_indicators
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
