@@ -1,6 +1,17 @@
 {
-  "$schema":  "https://raw.githubusercontent.com/jetify-com/devbox/0.18.4/.schema/devbox.schema.json",
-  "packages": ["go@1.24", "go-task@latest"],
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.4/.schema/devbox.schema.json",
+  "packages": [
+    "go@1.24",
+    "go-task@latest",
+    "clang_22@22.1.8",
+    "llvmPackages_22.clang-tools@22.1.8",
+    "cmake@4.4.4",
+    "ninja@1.13.2",
+    "lld_22@22.1.8",
+    "valgrind@3.27.1",
+    "doxygen@1.17.0",
+    "pre-commit@4.7.0"
+  ],
   "shell": {
     "init_hook": [
       "echo 'Welcome to devbox!' > /dev/null"

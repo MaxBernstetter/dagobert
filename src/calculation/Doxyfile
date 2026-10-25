@@ -1,0 +1,20 @@
+# Minimal Doxygen configuration for the calculation SDK.
+
+PROJECT_NAME           = "Dagobert Calculation"
+OUTPUT_DIRECTORY       = ../../build/debug/doxygen
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_AS_ERROR          = YES
+WARN_FORMAT            = "$file:$line: $text"
+
+INPUT                  = sdk
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.h *.cpp
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO

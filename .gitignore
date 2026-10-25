@@ -1,5 +1,6 @@
 .secrets
 /data/
+/build/
 .cache/
 .tmp/
 .cursorignore
