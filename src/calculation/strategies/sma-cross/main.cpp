@@ -95,7 +95,9 @@ int main(int argc, char **argv) {
     fail(kExitRunFailed, "no bars in range");
   }
 
-  dagobert::SmaCrossStrategy strategy(envelope, bars.front().duration_ms);
+  dagobert::SmaCrossStrategy strategy(
+      envelope, bars.front().duration_ms,
+      dagobert::SmaCrossStrategy::sizing_of(envelope));
   const dagobert::StrategyResult result = strategy.calc_backtest(bars);
 
   tradingcopilot::v1::RunReport report;

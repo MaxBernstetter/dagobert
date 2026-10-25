@@ -29,6 +29,8 @@ namespace _fl = ::google::protobuf::internal::field_layout;
 namespace {
 PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
     file_reflection_data[] = {
+        // ::tradingcopilot::v1::Sizing
+        {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto, /* tracker*/ nullptr,},
         // ::tradingcopilot::v1::MaCrossConfig
         {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto, /* tracker*/ nullptr,},
         // ::tradingcopilot::v1::SignalConsensusConfig
@@ -38,6 +40,189 @@ PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
 #endif
 namespace tradingcopilot {
 namespace v1 {
+class Sizing::_Internal {
+ public:
+  using HasBits = decltype(::std::declval<Sizing>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(Sizing, _impl_._has_bits_);
+};
+
+constexpr Sizing::ParseTableT_ Sizing::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
+  return ParseTableT_{
+    {
+      PROTOBUF_FIELD_OFFSET(Sizing, _impl_._has_bits_),
+      0, // no _extensions_
+      7, 56,  // max_field_number, fast_idx_mask
+      offsetof(ParseTableT_, field_lookup_table),
+      4294967168,  // skipmap
+      offsetof(ParseTableT_, field_entries),
+      7,  // num_field_entries
+      0,  // num_aux_entries
+      offsetof(ParseTableT_, field_names),  // no aux_entries
+      class_data,
+      nullptr,  // post_loop_handler
+      ::_pbi::TcParser::MpUnknownFields,  // fallback
+      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::Sizing>(),  // to_prefetch
+      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+    }, {{
+      {::_pbi::TcParser::MiniParse, {}},
+      // optional double unit_risk_pct = 1 [json_name = "unitRiskPct"];
+      {::_pbi::TcParser::FastF64S1,
+       {9, 0, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.unit_risk_pct_)}},
+      // optional double heat_pct = 2 [json_name = "heatPct"];
+      {::_pbi::TcParser::FastF64S1,
+       {17, 1, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.heat_pct_)}},
+      // optional int32 max_units = 3 [json_name = "maxUnits"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(Sizing, _impl_.max_units_), 6>(),
+       {24, 6, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.max_units_)}},
+      // optional double stop_atr_mult = 4 [json_name = "stopAtrMult"];
+      {::_pbi::TcParser::FastF64S1,
+       {33, 2, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.stop_atr_mult_)}},
+      // optional double add_atr_mult = 5 [json_name = "addAtrMult"];
+      {::_pbi::TcParser::FastF64S1,
+       {41, 3, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.add_atr_mult_)}},
+      // optional double max_weight_pct = 6 [json_name = "maxWeightPct"];
+      {::_pbi::TcParser::FastF64S1,
+       {49, 4, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.max_weight_pct_)}},
+      // optional double min_order_quote = 7 [json_name = "minOrderQuote"];
+      {::_pbi::TcParser::FastF64S1,
+       {57, 5, 0,
+        PROTOBUF_FIELD_OFFSET(Sizing, _impl_.min_order_quote_)}},
+    }}, {{
+      65535, 65535
+    }}, {{
+      // optional double unit_risk_pct = 1 [json_name = "unitRiskPct"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.unit_risk_pct_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double heat_pct = 2 [json_name = "heatPct"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.heat_pct_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional int32 max_units = 3 [json_name = "maxUnits"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.max_units_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional double stop_atr_mult = 4 [json_name = "stopAtrMult"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.stop_atr_mult_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double add_atr_mult = 5 [json_name = "addAtrMult"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.add_atr_mult_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double max_weight_pct = 6 [json_name = "maxWeightPct"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.max_weight_pct_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double min_order_quote = 7 [json_name = "minOrderQuote"];
+      {PROTOBUF_FIELD_OFFSET(Sizing, _impl_.min_order_quote_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    }},
+    // no aux_entries
+    {{
+    }},
+  };
+}
+
+
+inline constexpr Sizing::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    ::_pbi::ConstantInitialized) noexcept
+      : unit_risk_pct_{0},
+        heat_pct_{0},
+        stop_atr_mult_{0},
+        add_atr_mult_{0},
+        max_weight_pct_{0},
+        min_order_quote_{0},
+        max_units_{0} {}
+
+template <typename>
+constexpr Sizing::Sizing(::_pbi::ConstantInitialized,
+                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
+    : Super_(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          class_data
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          ),
+      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
+}
+inline void* PROTOBUF_NONNULL Sizing::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) Sizing(arena);
+}
+constexpr auto Sizing::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::ZeroInit(sizeof(Sizing), alignof(Sizing));
+}
+constexpr auto Sizing::InternalGenerateClassData_(
+    const MessageLite& prototype,
+    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
+  return ::google::protobuf::internal::ClassDataFull{
+      ::google::protobuf::internal::ClassData{
+          &prototype,
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+          &_table_.header,
+#else
+          tc_table,
+#endif
+          nullptr,  // IsInitialized
+          &Sizing::MergeImpl,
+          Super_::GetNewImpl<Sizing>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &Sizing::SharedDtor,
+          Super_::GetClearImpl<Sizing>(), &Sizing::ByteSizeLong,
+              &Sizing::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(Sizing, _impl_._cached_size_),
+          false,
+      },
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+      &file_reflection_data[0],
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+      &::_pbi::kDescriptorMethods,
+      &descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto,
+      nullptr,  // tracker
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  };
+}
+struct SizingGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
+  constexpr SizingGlobalsTypeInternal()
+      :
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+        _default(::_pbi::ConstantInitialized{},
+                 Sizing_class_data_.base())
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+        MessageGlobalsBase(Sizing::InternalGenerateClassData_(
+            _default, &Sizing_globals_._table.header)),
+        _default(::_pbi::ConstantInitialized{}, GetClassData()),
+        _table(::_pbi::PrivateAccess::GenerateParseTable<Sizing>(
+            GetClassData()))
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  {
+  }
+  ~SizingGlobalsTypeInternal() {}
+  union {
+    alignas(::_pbi::kMaxMessageAlignment) Sizing _default;
+  };
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  decltype(::_pbi::PrivateAccess::GenerateParseTable<Sizing>(
+      ::std::declval<const ::_pbi::ClassData*>())) _table;
+#endif
+};
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+static_assert(PROTOBUF_FIELD_OFFSET(SizingGlobalsTypeInternal, _default) ==
+              ::_pbi::MessageGlobalsBase::OffsetToDefault());
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST SizingGlobalsTypeInternal Sizing_globals_
+        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+namespace {
+const ::_pbi::ClassData* Sizing_get_class_data() {
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  return Sizing_globals_.GetClassData();
+#else
+  return Sizing_class_data_.base();
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+}
+}  // namespace
+#endif  // PROTOBUF_CUSTOM_VTABLE
 class SignalConsensusConfig::_Internal {
  public:
   using HasBits = decltype(::std::declval<SignalConsensusConfig>()._impl_._has_bits_);
@@ -50,13 +235,13 @@ constexpr SignalConsensusConfig::ParseTableT_ SignalConsensusConfig::InternalGen
     {
       PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_._has_bits_),
       0, // no _extensions_
-      106, 56,  // max_field_number, fast_idx_mask
+      107, 56,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
       4294967295,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      7,  // num_field_entries
-      0,  // num_aux_entries
-      offsetof(ParseTableT_, field_names),  // no aux_entries
+      8,  // num_field_entries
+      1,  // num_aux_entries
+      offsetof(ParseTableT_, aux_entries),
       class_data,
       nullptr,  // post_loop_handler
       ::_pbi::TcParser::MpUnknownFields,  // fallback
@@ -66,54 +251,65 @@ constexpr SignalConsensusConfig::ParseTableT_ SignalConsensusConfig::InternalGen
     }, {{
       // double atr_stop_mult = 104 [json_name = "atrStopMult"];
       {::_pbi::TcParser::FastF64S2,
-       {1729, 4, 0,
+       {1729, 5, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.atr_stop_mult_)}},
       // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
       {::_pbi::TcParser::FastV32S2,
-       {1736, 5, 0,
+       {1736, 6, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_flat_after_sell_)}},
       // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
       {::_pbi::TcParser::FastV32S2,
-       {1744, 6, 0,
+       {1744, 7, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_)}},
-      {::_pbi::TcParser::MiniParse, {}},
+      // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
+      {::_pbi::TcParser::FastMtS2,
+       {1754, 0, 0,
+        PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.sizing_)}},
       // double rsi_bull = 100 [json_name = "rsiBull"];
       {::_pbi::TcParser::FastF64S2,
-       {1697, 0, 0,
+       {1697, 1, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bull_)}},
       // double rsi_bear = 101 [json_name = "rsiBear"];
       {::_pbi::TcParser::FastF64S2,
-       {1705, 1, 0,
+       {1705, 2, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bear_)}},
       // double vol_ratio_bull = 102 [json_name = "volRatioBull"];
       {::_pbi::TcParser::FastF64S2,
-       {1713, 2, 0,
+       {1713, 3, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bull_)}},
       // double vol_ratio_bear = 103 [json_name = "volRatioBear"];
       {::_pbi::TcParser::FastF64S2,
-       {1721, 3, 0,
+       {1721, 4, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bear_)}},
     }}, {{
       100, 0, 1,
-      65408, 0,
+      65280, 0,
       65535, 65535
     }}, {{
       // double rsi_bull = 100 [json_name = "rsiBull"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bull_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bull_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double rsi_bear = 101 [json_name = "rsiBear"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bear_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bear_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double vol_ratio_bull = 102 [json_name = "volRatioBull"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bull_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bull_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double vol_ratio_bear = 103 [json_name = "volRatioBear"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bear_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bear_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double atr_stop_mult = 104 [json_name = "atrStopMult"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.atr_stop_mult_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.atr_stop_mult_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_flat_after_sell_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_flat_after_sell_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
-      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
+      {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.sizing_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     }},
-    // no aux_entries
+    {{
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::Sizing>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::Sizing_globals_},
+        #endif
+    }},
     {{
     }},
   };
@@ -123,7 +319,8 @@ constexpr SignalConsensusConfig::ParseTableT_ SignalConsensusConfig::InternalGen
 inline constexpr SignalConsensusConfig::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
     ::_pbi::ConstantInitialized) noexcept
-      : rsi_bull_{0},
+      : sizing_{nullptr},
+        rsi_bull_{0},
         rsi_bear_{0},
         vol_ratio_bull_{0},
         vol_ratio_bear_{0},
@@ -172,7 +369,7 @@ constexpr auto SignalConsensusConfig::InternalGenerateClassData_(
           false,
       },
 #ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[1],
+      &file_reflection_data[2],
 #else   // !PROTOBUF_MESSAGE_GLOBALS
       &::_pbi::kDescriptorMethods,
       &descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto,
@@ -235,13 +432,13 @@ constexpr MaCrossConfig::ParseTableT_ MaCrossConfig::InternalGenerateParseTable_
     {
       PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_._has_bits_),
       0, // no _extensions_
-      2, 8,  // max_field_number, fast_idx_mask
+      3, 24,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967292,  // skipmap
+      4294967288,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      2,  // num_field_entries
-      0,  // num_aux_entries
-      offsetof(ParseTableT_, field_names),  // no aux_entries
+      3,  // num_field_entries
+      1,  // num_aux_entries
+      offsetof(ParseTableT_, aux_entries),
       class_data,
       nullptr,  // post_loop_handler
       ::_pbi::TcParser::MpUnknownFields,  // fallback
@@ -249,23 +446,36 @@ constexpr MaCrossConfig::ParseTableT_ MaCrossConfig::InternalGenerateParseTable_
       ::_pbi::TcParser::GetTable<::tradingcopilot::v1::MaCrossConfig>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // int32 slow_hr = 2 [json_name = "slowHr"];
-      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(MaCrossConfig, _impl_.slow_hr_), 1>(),
-       {16, 1, 0,
-        PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.slow_hr_)}},
+      {::_pbi::TcParser::MiniParse, {}},
       // int32 fast_hr = 1 [json_name = "fastHr"];
-      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(MaCrossConfig, _impl_.fast_hr_), 0>(),
-       {8, 0, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(MaCrossConfig, _impl_.fast_hr_), 1>(),
+       {8, 1, 0,
         PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.fast_hr_)}},
+      // int32 slow_hr = 2 [json_name = "slowHr"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(MaCrossConfig, _impl_.slow_hr_), 2>(),
+       {16, 2, 0,
+        PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.slow_hr_)}},
+      // optional .tradingcopilot.v1.Sizing sizing = 3 [json_name = "sizing"];
+      {::_pbi::TcParser::FastMtS1,
+       {26, 0, 0,
+        PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.sizing_)}},
     }}, {{
       65535, 65535
     }}, {{
       // int32 fast_hr = 1 [json_name = "fastHr"];
-      {PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.fast_hr_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.fast_hr_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // int32 slow_hr = 2 [json_name = "slowHr"];
-      {PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.slow_hr_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.slow_hr_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional .tradingcopilot.v1.Sizing sizing = 3 [json_name = "sizing"];
+      {PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.sizing_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     }},
-    // no aux_entries
+    {{
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::Sizing>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::Sizing_globals_},
+        #endif
+    }},
     {{
     }},
   };
@@ -275,7 +485,8 @@ constexpr MaCrossConfig::ParseTableT_ MaCrossConfig::InternalGenerateParseTable_
 inline constexpr MaCrossConfig::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
     ::_pbi::ConstantInitialized) noexcept
-      : fast_hr_{0},
+      : sizing_{nullptr},
+        fast_hr_{0},
         slow_hr_{0} {}
 
 template <typename>
@@ -319,7 +530,7 @@ constexpr auto MaCrossConfig::InternalGenerateClassData_(
           false,
       },
 #ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[0],
+      &file_reflection_data[1],
 #else   // !PROTOBUF_MESSAGE_GLOBALS
       &::_pbi::kDescriptorMethods,
       &descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto,
@@ -380,15 +591,34 @@ const ::uint32_t
     TableStruct_tradingcopilot_2fv1_2fstrategy_2eproto::offsets[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
         protodesc_cold) = {
         0x081, // bitmap
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_._has_bits_),
-        5, // hasbit index offset
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_.fast_hr_),
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_.slow_hr_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_._has_bits_),
+        10, // hasbit index offset
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.unit_risk_pct_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.heat_pct_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.max_units_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.stop_atr_mult_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.add_atr_mult_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.max_weight_pct_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Sizing, _impl_.min_order_quote_),
         0,
         1,
+        6,
+        2,
+        3,
+        4,
+        5,
+        0x081, // bitmap
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_._has_bits_),
+        6, // hasbit index offset
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_.fast_hr_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_.slow_hr_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::MaCrossConfig, _impl_.sizing_),
+        1,
+        2,
+        0,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_._has_bits_),
-        10, // hasbit index offset
+        11, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.rsi_bull_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.rsi_bear_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.vol_ratio_bull_),
@@ -396,56 +626,73 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.atr_stop_mult_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.min_bars_flat_after_sell_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.min_bars_long_before_sell_),
-        0,
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::SignalConsensusConfig, _impl_.sizing_),
         1,
         2,
         3,
         4,
         5,
         6,
+        7,
+        0,
 };
 
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-        {0, sizeof(::tradingcopilot::v1::MaCrossConfig)},
-        {7, sizeof(::tradingcopilot::v1::SignalConsensusConfig)},
+        {0, sizeof(::tradingcopilot::v1::Sizing)},
+        {17, sizeof(::tradingcopilot::v1::MaCrossConfig)},
+        {26, sizeof(::tradingcopilot::v1::SignalConsensusConfig)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
+        &::tradingcopilot::v1::Sizing_globals_,
         &::tradingcopilot::v1::MaCrossConfig_globals_,
         &::tradingcopilot::v1::SignalConsensusConfig_globals_,
 };
 const char descriptor_table_protodef_tradingcopilot_2fv1_2fstrategy_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n tradingcopilot/v1/strategy.proto\022\021trad"
-    "ingcopilot.v1\"A\n\rMaCrossConfig\022\027\n\007fast_h"
-    "r\030\001 \001(\005R\006fastHr\022\027\n\007slow_hr\030\002 \001(\005R\006slowHr"
-    "\"\257\002\n\025SignalConsensusConfig\022\031\n\010rsi_bull\030d"
-    " \001(\001R\007rsiBull\022\031\n\010rsi_bear\030e \001(\001R\007rsiBear"
-    "\022$\n\016vol_ratio_bull\030f \001(\001R\014volRatioBull\022$"
-    "\n\016vol_ratio_bear\030g \001(\001R\014volRatioBear\022\"\n\r"
-    "atr_stop_mult\030h \001(\001R\013atrStopMult\0226\n\030min_"
-    "bars_flat_after_sell\030i \001(\005R\024minBarsFlatA"
-    "fterSell\0228\n\031min_bars_long_before_sell\030j "
-    "\001(\005R\025minBarsLongBeforeSellB\332\001\n\025com.tradi"
-    "ngcopilot.v1B\rStrategyProtoP\001ZMgithub.co"
-    "m/MaxBernstetter/dagobert/src/gen/tradin"
-    "gcopilot/v1;tradingcopilotv1\242\002\003TXX\252\002\021Tra"
-    "dingcopilot.V1\312\002\021Tradingcopilot\\V1\342\002\035Tra"
-    "dingcopilot\\V1\\GPBMetadata\352\002\022Tradingcopi"
-    "lot::V1b\006proto3"
+    "ingcopilot.v1\"\222\003\n\006Sizing\022\'\n\runit_risk_pc"
+    "t\030\001 \001(\001H\000R\013unitRiskPct\210\001\001\022\036\n\010heat_pct\030\002 "
+    "\001(\001H\001R\007heatPct\210\001\001\022 \n\tmax_units\030\003 \001(\005H\002R\010"
+    "maxUnits\210\001\001\022\'\n\rstop_atr_mult\030\004 \001(\001H\003R\013st"
+    "opAtrMult\210\001\001\022%\n\014add_atr_mult\030\005 \001(\001H\004R\nad"
+    "dAtrMult\210\001\001\022)\n\016max_weight_pct\030\006 \001(\001H\005R\014m"
+    "axWeightPct\210\001\001\022+\n\017min_order_quote\030\007 \001(\001H"
+    "\006R\rminOrderQuote\210\001\001B\020\n\016_unit_risk_pctB\013\n"
+    "\t_heat_pctB\014\n\n_max_unitsB\020\n\016_stop_atr_mu"
+    "ltB\017\n\r_add_atr_multB\021\n\017_max_weight_pctB\022"
+    "\n\020_min_order_quote\"\204\001\n\rMaCrossConfig\022\027\n\007"
+    "fast_hr\030\001 \001(\005R\006fastHr\022\027\n\007slow_hr\030\002 \001(\005R\006"
+    "slowHr\0226\n\006sizing\030\003 \001(\0132\031.tradingcopilot."
+    "v1.SizingH\000R\006sizing\210\001\001B\t\n\007_sizing\"\362\002\n\025Si"
+    "gnalConsensusConfig\022\031\n\010rsi_bull\030d \001(\001R\007r"
+    "siBull\022\031\n\010rsi_bear\030e \001(\001R\007rsiBear\022$\n\016vol"
+    "_ratio_bull\030f \001(\001R\014volRatioBull\022$\n\016vol_r"
+    "atio_bear\030g \001(\001R\014volRatioBear\022\"\n\ratr_sto"
+    "p_mult\030h \001(\001R\013atrStopMult\0226\n\030min_bars_fl"
+    "at_after_sell\030i \001(\005R\024minBarsFlatAfterSel"
+    "l\0228\n\031min_bars_long_before_sell\030j \001(\005R\025mi"
+    "nBarsLongBeforeSell\0226\n\006sizing\030k \001(\0132\031.tr"
+    "adingcopilot.v1.SizingH\000R\006sizing\210\001\001B\t\n\007_"
+    "sizingB\332\001\n\025com.tradingcopilot.v1B\rStrate"
+    "gyProtoP\001ZMgithub.com/MaxBernstetter/dag"
+    "obert/src/gen/tradingcopilot/v1;tradingc"
+    "opilotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tra"
+    "dingcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMe"
+    "tadata\352\002\022Tradingcopilot::V1b\006proto3"
 };
 static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto = {
     false,
     false,
-    655,
+    1195,
     descriptor_table_protodef_tradingcopilot_2fv1_2fstrategy_2eproto,
     "tradingcopilot/v1/strategy.proto",
     &descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto_once,
     nullptr,
     0,
-    2,
+    3,
     schemas,
     file_message_globals,
     TableStruct_tradingcopilot_2fv1_2fstrategy_2eproto::offsets,
@@ -454,6 +701,267 @@ PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot
 };
 namespace tradingcopilot {
 namespace v1 {
+// ===================================================================
+
+Sizing::Sizing(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : Super_(arena, Sizing_get_class_data()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : Super_(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.Sizing)
+}
+Sizing::Sizing(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Sizing& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : Super_(arena, Sizing_get_class_data()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : Super_(arena),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(from._impl_) {
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+}
+PROTOBUF_NDEBUG_INLINE Sizing::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+     {}
+
+inline void Sizing::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  ::memset(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, unit_risk_pct_),
+           0,
+           offsetof(Impl_, max_units_) -
+               offsetof(Impl_, unit_risk_pct_) +
+               sizeof(Impl_::max_units_));
+}
+Sizing::~Sizing() {
+  // @@protoc_insertion_point(destructor:tradingcopilot.v1.Sizing)
+  SharedDtor(*this);
+}
+inline void Sizing::SharedDtor(MessageLite& self) {
+  Sizing& this_ = static_cast<Sizing&>(self);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.~Impl_();
+}
+
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
+    ::google::protobuf::internal::ClassDataFull Sizing_class_data_ =
+        Sizing::InternalGenerateClassData_(Sizing_globals_._default);
+
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+Sizing::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&Sizing_class_data_);
+  ::google::protobuf::internal::PrefetchToLocalCache(Sizing_class_data_.tc_table);
+  return Sizing_class_data_.base();
+}
+#else
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+Sizing::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&Sizing_globals_);
+  ::google::protobuf::internal::PrefetchToLocalCache(
+      ::google::protobuf::internal::MessageGlobalsBase::ToParseTableBase(&Sizing_globals_));
+  return Sizing_globals_.GetClassData();
+}
+#endif  // !PROTOBUF_MESSAGE_GLOBALS
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_CONSTINIT
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const Sizing::ParseTableT_
+    Sizing::_table_ =
+        Sizing::InternalGenerateParseTable_(Sizing_class_data_.base());
+#endif  // !PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_NOINLINE void Sizing::Clear() {
+  auto& this_ [[maybe_unused]] = *this;
+  // @@protoc_insertion_point(message_clear_start:tradingcopilot.v1.Sizing)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+    ::memset(&this_._impl_.unit_risk_pct_, 0,
+             static_cast<::size_t>(
+                 reinterpret_cast<char*>(&this_._impl_.max_units_) -
+                 reinterpret_cast<char*>(&this_._impl_.unit_risk_pct_)) +
+                 sizeof(_impl_.max_units_));
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL Sizing::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const Sizing& this_ = static_cast<const Sizing&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL Sizing::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const Sizing& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(serialize_to_array_start:tradingcopilot.v1.Sizing)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // optional double unit_risk_pct = 1 [json_name = "unitRiskPct"];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        1, this_._internal_unit_risk_pct(), target);
+  }
+
+  // optional double heat_pct = 2 [json_name = "heatPct"];
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        2, this_._internal_heat_pct(), target);
+  }
+
+  // optional int32 max_units = 3 [json_name = "maxUnits"];
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    target =
+        ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<3>(
+            stream, this_._internal_max_units(), target);
+  }
+
+  // optional double stop_atr_mult = 4 [json_name = "stopAtrMult"];
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        4, this_._internal_stop_atr_mult(), target);
+  }
+
+  // optional double add_atr_mult = 5 [json_name = "addAtrMult"];
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        5, this_._internal_add_atr_mult(), target);
+  }
+
+  // optional double max_weight_pct = 6 [json_name = "maxWeightPct"];
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        6, this_._internal_max_weight_pct(), target);
+  }
+
+  // optional double min_order_quote = 7 [json_name = "minOrderQuote"];
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        7, this_._internal_min_order_quote(), target);
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tradingcopilot.v1.Sizing)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t Sizing::ByteSizeLong(const MessageLite& base) {
+  const Sizing& this_ = static_cast<const Sizing&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t Sizing::ByteSizeLong() const {
+  const Sizing& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:tradingcopilot.v1.Sizing)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  total_size += ::absl::popcount(0x0000003fU & cached_has_bits) * 9;
+   {
+    // optional int32 max_units = 3 [json_name = "maxUnits"];
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this_._internal_max_units());
+    }
+  }
+  return this_.MaybeComputeUnknownFieldsSize(total_size,
+                                             &this_._impl_._cached_size_);
+}
+
+void Sizing::MergeImpl(::google::protobuf::MessageLite& to_msg,
+                      const ::google::protobuf::MessageLite& from_msg) {
+   auto* const _this = static_cast<Sizing*>(&to_msg);
+  auto& from = static_cast<const Sizing&>(from_msg);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    from.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.Sizing)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      _this->_impl_.unit_risk_pct_ = from._impl_.unit_risk_pct_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      _this->_impl_.heat_pct_ = from._impl_.heat_pct_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      _this->_impl_.stop_atr_mult_ = from._impl_.stop_atr_mult_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      _this->_impl_.add_atr_mult_ = from._impl_.add_atr_mult_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      _this->_impl_.max_weight_pct_ = from._impl_.max_weight_pct_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      _this->_impl_.min_order_quote_ = from._impl_.min_order_quote_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      _this->_impl_.max_units_ = from._impl_.max_units_;
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+}
+
+void Sizing::CopyFrom(const Sizing& from) {
+  // @@protoc_insertion_point(class_specific_copy_from_start:tradingcopilot.v1.Sizing)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void Sizing::InternalSwap(Sizing* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using ::std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(Sizing, _impl_.max_units_)
+      + sizeof(Sizing::_impl_.max_units_)
+      - PROTOBUF_FIELD_OFFSET(Sizing, _impl_.unit_risk_pct_)>(
+          reinterpret_cast<char*>(&_impl_.unit_risk_pct_),
+          reinterpret_cast<char*>(&other->_impl_.unit_risk_pct_));
+}
+
+::google::protobuf::Metadata Sizing::GetMetadata() const {
+  return Super_::GetMetadataImpl(GetClassData()->full());
+}
 // ===================================================================
 
 MaCrossConfig::MaCrossConfig(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
@@ -465,16 +973,39 @@ MaCrossConfig::MaCrossConfig(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
   SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.MaCrossConfig)
 }
+PROTOBUF_NDEBUG_INLINE MaCrossConfig::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    [[maybe_unused]] const ::tradingcopilot::v1::MaCrossConfig& from_msg)
+      : _has_bits_{from._has_bits_} {}
+
 MaCrossConfig::MaCrossConfig(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const MaCrossConfig& from)
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const MaCrossConfig& from)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, MaCrossConfig_get_class_data()),
+    : Super_(arena, MaCrossConfig_get_class_data()) {
+
 #else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena),
+    : Super_(arena) {
 #endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(from._impl_) {
+  MaCrossConfig* const _this = this;
+  (void)_this;
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.sizing_ = (CheckHasBit(cached_has_bits, 0x00000001U))
+                 ? Super_::CopyConstruct(arena, *from._impl_.sizing_)
+                 : nullptr;
+  ::memcpy(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, fast_hr_),
+           reinterpret_cast<const char*>(&from._impl_) +
+               offsetof(Impl_, fast_hr_),
+           offsetof(Impl_, slow_hr_) -
+               offsetof(Impl_, fast_hr_) +
+               sizeof(Impl_::slow_hr_));
+
+  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.MaCrossConfig)
 }
 PROTOBUF_NDEBUG_INLINE MaCrossConfig::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
@@ -484,10 +1015,10 @@ PROTOBUF_NDEBUG_INLINE MaCrossConfig::Impl_::Impl_(
 inline void MaCrossConfig::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
   ::memset(reinterpret_cast<char*>(&_impl_) +
-               offsetof(Impl_, fast_hr_),
+               offsetof(Impl_, sizing_),
            0,
            offsetof(Impl_, slow_hr_) -
-               offsetof(Impl_, fast_hr_) +
+               offsetof(Impl_, sizing_) +
                sizeof(Impl_::slow_hr_));
 }
 MaCrossConfig::~MaCrossConfig() {
@@ -501,6 +1032,7 @@ inline void MaCrossConfig::SharedDtor(MessageLite& self) {
   }
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
+  delete this_._impl_.sizing_;
   this_._impl_.~Impl_();
 }
 
@@ -537,7 +1069,11 @@ PROTOBUF_NOINLINE void MaCrossConfig::Clear() {
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    ABSL_DCHECK(this_._impl_.sizing_ != nullptr);
+    this_._impl_.sizing_->Clear();
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00000006U)) {
     ::memset(&this_._impl_.fast_hr_, 0,
              static_cast<::size_t>(
                  reinterpret_cast<char*>(&this_._impl_.slow_hr_) -
@@ -568,7 +1104,7 @@ PROTOBUF_NOINLINE void MaCrossConfig::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // int32 fast_hr = 1 [json_name = "fastHr"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
     if (this_._internal_fast_hr() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<1>(
@@ -577,12 +1113,19 @@ PROTOBUF_NOINLINE void MaCrossConfig::Clear() {
   }
 
   // int32 slow_hr = 2 [json_name = "slowHr"];
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
     if (this_._internal_slow_hr() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<2>(
               stream, this_._internal_slow_hr(), target);
     }
+  }
+
+  // optional .tradingcopilot.v1.Sizing sizing = 3 [json_name = "sizing"];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        3, *this_._impl_.sizing_, this_._impl_.sizing_->GetCachedSize(), target,
+        stream);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -608,16 +1151,21 @@ PROTOBUF_NOINLINE void MaCrossConfig::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
-    // int32 fast_hr = 1 [json_name = "fastHr"];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
+    // optional .tradingcopilot.v1.Sizing sizing = 3 [json_name = "sizing"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.sizing_);
+    }
+    // int32 fast_hr = 1 [json_name = "fastHr"];
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       if (this_._internal_fast_hr() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_fast_hr());
       }
     }
     // int32 slow_hr = 2 [json_name = "slowHr"];
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (this_._internal_slow_hr() != 0) {
         total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
             this_._internal_slow_hr());
@@ -635,19 +1183,28 @@ void MaCrossConfig::MergeImpl(::google::protobuf::MessageLite& to_msg,
   if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
     from.CheckHasBitConsistency();
   }
+  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.MaCrossConfig)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      ABSL_DCHECK(from._impl_.sizing_ != nullptr);
+      if (_this->_impl_.sizing_ == nullptr) {
+        _this->_impl_.sizing_ = Super_::CopyConstruct(arena, *from._impl_.sizing_);
+      } else {
+        _this->_impl_.sizing_->MergeFrom(*from._impl_.sizing_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       if (from._internal_fast_hr() != 0) {
         _this->_impl_.fast_hr_ = from._impl_.fast_hr_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (from._internal_slow_hr() != 0) {
         _this->_impl_.slow_hr_ = from._impl_.slow_hr_;
       }
@@ -673,9 +1230,9 @@ void MaCrossConfig::InternalSwap(MaCrossConfig* PROTOBUF_RESTRICT PROTOBUF_NONNU
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.slow_hr_)
       + sizeof(MaCrossConfig::_impl_.slow_hr_)
-      - PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.fast_hr_)>(
-          reinterpret_cast<char*>(&_impl_.fast_hr_),
-          reinterpret_cast<char*>(&other->_impl_.fast_hr_));
+      - PROTOBUF_FIELD_OFFSET(MaCrossConfig, _impl_.sizing_)>(
+          reinterpret_cast<char*>(&_impl_.sizing_),
+          reinterpret_cast<char*>(&other->_impl_.sizing_));
 }
 
 ::google::protobuf::Metadata MaCrossConfig::GetMetadata() const {
@@ -692,16 +1249,39 @@ SignalConsensusConfig::SignalConsensusConfig(::google::protobuf::Arena* PROTOBUF
   SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.SignalConsensusConfig)
 }
+PROTOBUF_NDEBUG_INLINE SignalConsensusConfig::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    [[maybe_unused]] const ::tradingcopilot::v1::SignalConsensusConfig& from_msg)
+      : _has_bits_{from._has_bits_} {}
+
 SignalConsensusConfig::SignalConsensusConfig(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const SignalConsensusConfig& from)
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const SignalConsensusConfig& from)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, SignalConsensusConfig_get_class_data()),
+    : Super_(arena, SignalConsensusConfig_get_class_data()) {
+
 #else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena),
+    : Super_(arena) {
 #endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(from._impl_) {
+  SignalConsensusConfig* const _this = this;
+  (void)_this;
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.sizing_ = (CheckHasBit(cached_has_bits, 0x00000001U))
+                 ? Super_::CopyConstruct(arena, *from._impl_.sizing_)
+                 : nullptr;
+  ::memcpy(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, rsi_bull_),
+           reinterpret_cast<const char*>(&from._impl_) +
+               offsetof(Impl_, rsi_bull_),
+           offsetof(Impl_, min_bars_long_before_sell_) -
+               offsetof(Impl_, rsi_bull_) +
+               sizeof(Impl_::min_bars_long_before_sell_));
+
+  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.SignalConsensusConfig)
 }
 PROTOBUF_NDEBUG_INLINE SignalConsensusConfig::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
@@ -711,10 +1291,10 @@ PROTOBUF_NDEBUG_INLINE SignalConsensusConfig::Impl_::Impl_(
 inline void SignalConsensusConfig::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
   ::memset(reinterpret_cast<char*>(&_impl_) +
-               offsetof(Impl_, rsi_bull_),
+               offsetof(Impl_, sizing_),
            0,
            offsetof(Impl_, min_bars_long_before_sell_) -
-               offsetof(Impl_, rsi_bull_) +
+               offsetof(Impl_, sizing_) +
                sizeof(Impl_::min_bars_long_before_sell_));
 }
 SignalConsensusConfig::~SignalConsensusConfig() {
@@ -728,6 +1308,7 @@ inline void SignalConsensusConfig::SharedDtor(MessageLite& self) {
   }
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
+  delete this_._impl_.sizing_;
   this_._impl_.~Impl_();
 }
 
@@ -764,7 +1345,11 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    ABSL_DCHECK(this_._impl_.sizing_ != nullptr);
+    this_._impl_.sizing_->Clear();
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x000000feU)) {
     ::memset(&this_._impl_.rsi_bull_, 0,
              static_cast<::size_t>(
                  reinterpret_cast<char*>(&this_._impl_.min_bars_long_before_sell_) -
@@ -795,7 +1380,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // double rsi_bull = 100 [json_name = "rsiBull"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_rsi_bull()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -804,7 +1389,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // double rsi_bear = 101 [json_name = "rsiBear"];
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_rsi_bear()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -813,7 +1398,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // double vol_ratio_bull = 102 [json_name = "volRatioBull"];
-  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_vol_ratio_bull()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -822,7 +1407,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // double vol_ratio_bear = 103 [json_name = "volRatioBear"];
-  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_vol_ratio_bear()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -831,7 +1416,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // double atr_stop_mult = 104 [json_name = "atrStopMult"];
-  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_atr_stop_mult()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -840,7 +1425,7 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
-  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
     if (this_._internal_min_bars_flat_after_sell() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt32ToArray(
@@ -849,12 +1434,19 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
   }
 
   // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
-  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
     if (this_._internal_min_bars_long_before_sell() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt32ToArray(
           106, this_._internal_min_bars_long_before_sell(), target);
     }
+  }
+
+  // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        107, *this_._impl_.sizing_, this_._impl_.sizing_->GetCachedSize(), target,
+        stream);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -880,46 +1472,51 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
-    // double rsi_bull = 100 [json_name = "rsiBull"];
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
+    // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      total_size += 2 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.sizing_);
+    }
+    // double rsi_bull = 100 [json_name = "rsiBull"];
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_rsi_bull()) != 0) {
         total_size += 10;
       }
     }
     // double rsi_bear = 101 [json_name = "rsiBear"];
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_rsi_bear()) != 0) {
         total_size += 10;
       }
     }
     // double vol_ratio_bull = 102 [json_name = "volRatioBull"];
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_vol_ratio_bull()) != 0) {
         total_size += 10;
       }
     }
     // double vol_ratio_bear = 103 [json_name = "volRatioBear"];
-    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_vol_ratio_bear()) != 0) {
         total_size += 10;
       }
     }
     // double atr_stop_mult = 104 [json_name = "atrStopMult"];
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_atr_stop_mult()) != 0) {
         total_size += 10;
       }
     }
     // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (this_._internal_min_bars_flat_after_sell() != 0) {
         total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
                                         this_._internal_min_bars_flat_after_sell());
       }
     }
     // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       if (this_._internal_min_bars_long_before_sell() != 0) {
         total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
                                         this_._internal_min_bars_long_before_sell());
@@ -937,44 +1534,53 @@ void SignalConsensusConfig::MergeImpl(::google::protobuf::MessageLite& to_msg,
   if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
     from.CheckHasBitConsistency();
   }
+  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.SignalConsensusConfig)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      ABSL_DCHECK(from._impl_.sizing_ != nullptr);
+      if (_this->_impl_.sizing_ == nullptr) {
+        _this->_impl_.sizing_ = Super_::CopyConstruct(arena, *from._impl_.sizing_);
+      } else {
+        _this->_impl_.sizing_->MergeFrom(*from._impl_.sizing_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_rsi_bull()) != 0) {
         _this->_impl_.rsi_bull_ = from._impl_.rsi_bull_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_rsi_bear()) != 0) {
         _this->_impl_.rsi_bear_ = from._impl_.rsi_bear_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_vol_ratio_bull()) != 0) {
         _this->_impl_.vol_ratio_bull_ = from._impl_.vol_ratio_bull_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_vol_ratio_bear()) != 0) {
         _this->_impl_.vol_ratio_bear_ = from._impl_.vol_ratio_bear_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_atr_stop_mult()) != 0) {
         _this->_impl_.atr_stop_mult_ = from._impl_.atr_stop_mult_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (from._internal_min_bars_flat_after_sell() != 0) {
         _this->_impl_.min_bars_flat_after_sell_ = from._impl_.min_bars_flat_after_sell_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       if (from._internal_min_bars_long_before_sell() != 0) {
         _this->_impl_.min_bars_long_before_sell_ = from._impl_.min_bars_long_before_sell_;
       }
@@ -1000,9 +1606,9 @@ void SignalConsensusConfig::InternalSwap(SignalConsensusConfig* PROTOBUF_RESTRIC
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_)
       + sizeof(SignalConsensusConfig::_impl_.min_bars_long_before_sell_)
-      - PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.rsi_bull_)>(
-          reinterpret_cast<char*>(&_impl_.rsi_bull_),
-          reinterpret_cast<char*>(&other->_impl_.rsi_bull_));
+      - PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.sizing_)>(
+          reinterpret_cast<char*>(&_impl_.sizing_),
+          reinterpret_cast<char*>(&other->_impl_.sizing_));
 }
 
 ::google::protobuf::Metadata SignalConsensusConfig::GetMetadata() const {

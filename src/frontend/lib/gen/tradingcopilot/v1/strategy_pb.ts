@@ -10,7 +10,61 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tradingcopilot/v1/strategy.proto.
  */
 export const file_tradingcopilot_v1_strategy: GenFile = /*@__PURE__*/
-  fileDesc("CiB0cmFkaW5nY29waWxvdC92MS9zdHJhdGVneS5wcm90bxIRdHJhZGluZ2NvcGlsb3QudjEiMQoNTWFDcm9zc0NvbmZpZxIPCgdmYXN0X2hyGAEgASgFEg8KB3Nsb3dfaHIYAiABKAUixwEKFVNpZ25hbENvbnNlbnN1c0NvbmZpZxIQCghyc2lfYnVsbBhkIAEoARIQCghyc2lfYmVhchhlIAEoARIWCg52b2xfcmF0aW9fYnVsbBhmIAEoARIWCg52b2xfcmF0aW9fYmVhchhnIAEoARIVCg1hdHJfc3RvcF9tdWx0GGggASgBEiAKGG1pbl9iYXJzX2ZsYXRfYWZ0ZXJfc2VsbBhpIAEoBRIhChltaW5fYmFyc19sb25nX2JlZm9yZV9zZWxsGGogASgFQtoBChVjb20udHJhZGluZ2NvcGlsb3QudjFCDVN0cmF0ZWd5UHJvdG9QAVpNZ2l0aHViLmNvbS9NYXhCZXJuc3RldHRlci9kYWdvYmVydC9zcmMvZ2VuL3RyYWRpbmdjb3BpbG90L3YxO3RyYWRpbmdjb3BpbG90djGiAgNUWFiqAhFUcmFkaW5nY29waWxvdC5WMcoCEVRyYWRpbmdjb3BpbG90XFYx4gIdVHJhZGluZ2NvcGlsb3RcVjFcR1BCTWV0YWRhdGHqAhJUcmFkaW5nY29waWxvdDo6VjFiBnByb3RvMw");
+  fileDesc("CiB0cmFkaW5nY29waWxvdC92MS9zdHJhdGVneS5wcm90bxIRdHJhZGluZ2NvcGlsb3QudjEivAIKBlNpemluZxIaCg11bml0X3Jpc2tfcGN0GAEgASgBSACIAQESFQoIaGVhdF9wY3QYAiABKAFIAYgBARIWCgltYXhfdW5pdHMYAyABKAVIAogBARIaCg1zdG9wX2F0cl9tdWx0GAQgASgBSAOIAQESGQoMYWRkX2F0cl9tdWx0GAUgASgBSASIAQESGwoObWF4X3dlaWdodF9wY3QYBiABKAFIBYgBARIcCg9taW5fb3JkZXJfcXVvdGUYByABKAFIBogBAUIQCg5fdW5pdF9yaXNrX3BjdEILCglfaGVhdF9wY3RCDAoKX21heF91bml0c0IQCg5fc3RvcF9hdHJfbXVsdEIPCg1fYWRkX2F0cl9tdWx0QhEKD19tYXhfd2VpZ2h0X3BjdEISChBfbWluX29yZGVyX3F1b3RlImwKDU1hQ3Jvc3NDb25maWcSDwoHZmFzdF9ochgBIAEoBRIPCgdzbG93X2hyGAIgASgFEi4KBnNpemluZxgDIAEoCzIZLnRyYWRpbmdjb3BpbG90LnYxLlNpemluZ0gAiAEBQgkKB19zaXppbmciggIKFVNpZ25hbENvbnNlbnN1c0NvbmZpZxIQCghyc2lfYnVsbBhkIAEoARIQCghyc2lfYmVhchhlIAEoARIWCg52b2xfcmF0aW9fYnVsbBhmIAEoARIWCg52b2xfcmF0aW9fYmVhchhnIAEoARIVCg1hdHJfc3RvcF9tdWx0GGggASgBEiAKGG1pbl9iYXJzX2ZsYXRfYWZ0ZXJfc2VsbBhpIAEoBRIhChltaW5fYmFyc19sb25nX2JlZm9yZV9zZWxsGGogASgFEi4KBnNpemluZxhrIAEoCzIZLnRyYWRpbmdjb3BpbG90LnYxLlNpemluZ0gAiAEBQgkKB19zaXppbmdC2gEKFWNvbS50cmFkaW5nY29waWxvdC52MUINU3RyYXRlZ3lQcm90b1ABWk1naXRodWIuY29tL01heEJlcm5zdGV0dGVyL2RhZ29iZXJ0L3NyYy9nZW4vdHJhZGluZ2NvcGlsb3QvdjE7dHJhZGluZ2NvcGlsb3R2MaICA1RYWKoCEVRyYWRpbmdjb3BpbG90LlYxygIRVHJhZGluZ2NvcGlsb3RcVjHiAh1UcmFkaW5nY29waWxvdFxWMVxHUEJNZXRhZGF0YeoCElRyYWRpbmdjb3BpbG90OjpWMWIGcHJvdG8z");
+
+/**
+ * Position sizing options (docs/v2/features/position-sizing.md). Every field
+ * is optional: an unset field takes its documented default, an explicit value
+ * (including 0) is validated. The strategy executables exit 2 on an invalid
+ * value.
+ *
+ * @generated from message tradingcopilot.v1.Sizing
+ */
+export type Sizing = Message<"tradingcopilot.v1.Sizing"> & {
+  /**
+   * @generated from field: optional double unit_risk_pct = 1;
+   */
+  unitRiskPct?: number | undefined;
+
+  /**
+   * @generated from field: optional double heat_pct = 2;
+   */
+  heatPct?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 max_units = 3;
+   */
+  maxUnits?: number | undefined;
+
+  /**
+   * @generated from field: optional double stop_atr_mult = 4;
+   */
+  stopAtrMult?: number | undefined;
+
+  /**
+   * @generated from field: optional double add_atr_mult = 5;
+   */
+  addAtrMult?: number | undefined;
+
+  /**
+   * @generated from field: optional double max_weight_pct = 6;
+   */
+  maxWeightPct?: number | undefined;
+
+  /**
+   * Smallest order in quote currency; full exits ignore it.
+   *
+   * @generated from field: optional double min_order_quote = 7;
+   */
+  minOrderQuote?: number | undefined;
+};
+
+/**
+ * Describes the message tradingcopilot.v1.Sizing.
+ * Use `create(SizingSchema)` to create a new message.
+ */
+export const SizingSchema: GenMessage<Sizing> = /*@__PURE__*/
+  messageDesc(file_tradingcopilot_v1_strategy, 0);
 
 /**
  * @generated from message tradingcopilot.v1.MaCrossConfig
@@ -25,6 +79,13 @@ export type MaCrossConfig = Message<"tradingcopilot.v1.MaCrossConfig"> & {
    * @generated from field: int32 slow_hr = 2;
    */
   slowHr: number;
+
+  /**
+   * Unset keeps buy_all/sell_all.
+   *
+   * @generated from field: optional tradingcopilot.v1.Sizing sizing = 3;
+   */
+  sizing?: Sizing | undefined;
 };
 
 /**
@@ -32,7 +93,7 @@ export type MaCrossConfig = Message<"tradingcopilot.v1.MaCrossConfig"> & {
  * Use `create(MaCrossConfigSchema)` to create a new message.
  */
 export const MaCrossConfigSchema: GenMessage<MaCrossConfig> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_strategy, 0);
+  messageDesc(file_tradingcopilot_v1_strategy, 1);
 
 /**
  * @generated from message tradingcopilot.v1.SignalConsensusConfig
@@ -72,6 +133,13 @@ export type SignalConsensusConfig = Message<"tradingcopilot.v1.SignalConsensusCo
    * @generated from field: int32 min_bars_long_before_sell = 106;
    */
   minBarsLongBeforeSell: number;
+
+  /**
+   * Unset keeps buy_all/sell_all.
+   *
+   * @generated from field: optional tradingcopilot.v1.Sizing sizing = 107;
+   */
+  sizing?: Sizing | undefined;
 };
 
 /**
@@ -79,5 +147,5 @@ export type SignalConsensusConfig = Message<"tradingcopilot.v1.SignalConsensusCo
  * Use `create(SignalConsensusConfigSchema)` to create a new message.
  */
 export const SignalConsensusConfigSchema: GenMessage<SignalConsensusConfig> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_strategy, 1);
+  messageDesc(file_tradingcopilot_v1_strategy, 2);
 

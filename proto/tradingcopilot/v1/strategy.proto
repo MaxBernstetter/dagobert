@@ -5,9 +5,26 @@ package tradingcopilot.v1;
 // Strategy configs map to experiment_instance.cfg_* columns (no jsonb).
 // Field numbers 1–99 reserved for ma-cross; 100–199 signal-consensus; 200+ future playbooks.
 
+// Position sizing options (docs/v2/features/position-sizing.md). Every field
+// is optional: an unset field takes its documented default, an explicit value
+// (including 0) is validated. The strategy executables exit 2 on an invalid
+// value.
+message Sizing {
+  optional double unit_risk_pct = 1;
+  optional double heat_pct = 2;
+  optional int32 max_units = 3;
+  optional double stop_atr_mult = 4;
+  optional double add_atr_mult = 5;
+  optional double max_weight_pct = 6;
+  // Smallest order in quote currency; full exits ignore it.
+  optional double min_order_quote = 7;
+}
+
 message MaCrossConfig {
   int32 fast_hr = 1;
   int32 slow_hr = 2;
+  // Unset keeps buy_all/sell_all.
+  optional Sizing sizing = 3;
 }
 
 message SignalConsensusConfig {
@@ -18,4 +35,6 @@ message SignalConsensusConfig {
   double atr_stop_mult = 104;
   int32 min_bars_flat_after_sell = 105;
   int32 min_bars_long_before_sell = 106;
+  // Unset keeps buy_all/sell_all.
+  optional Sizing sizing = 107;
 }
