@@ -5,3 +5,4 @@
 .cursorignore
 node_modules/
 .next/
+/worktree/

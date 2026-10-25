@@ -30,7 +30,8 @@ Every pull request must be reviewable by a human in one sitting.
 ## Worktrees
 Issue, pull request and worktree relate 1:1:1. An issue split into stacked pull requests gets one worktree per pull request.
 - Work on one pull request only in its own git worktree, on its own branch. Never let two pull requests, issues or agents share a worktree, and never edit a worktree you did not create.
-- Name the worktree after its branch.
+- Worktrees live in the gitignored `worktree/` folder at the repo root. Name each worktree after its branch, for example `worktree/feat-89-go-sizing-core` for `feat/89-go-sizing-core`.
+- After the pull request is merged, remove its worktree (`git worktree remove`) and its local branch (`git branch -d`).
 - Before creating a worktree or starting an agent, check that no other session or agent already owns the issue. If one does, ask it instead of starting in parallel.
 - Remove the worktree (`git worktree remove`) once its branch is pushed and work stops: pull request in review, merged, closed, superseded or paused. The pushed branch is the durable state; to rework, create a fresh worktree from it. Never remove a worktree with uncommitted changes without saving them first.
 
