@@ -1,0 +1,3 @@
+StratForge (https://github.com/StratCraftsAI/StratForge)
+Pinned via CMake FetchContent; see cmake/StratForge.cmake for the commit SHA.
+Licensed under the terms in LICENSE in this directory.

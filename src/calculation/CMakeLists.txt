@@ -46,8 +46,12 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
       "-flto=thin -fuse-ld=lld -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
 endif()
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StratForge.cmake)
+
 add_library(dagobert_sdk OBJECT sdk/dagobert.cpp)
 target_include_directories(dagobert_sdk PUBLIC sdk)
+
+add_subdirectory(sdk/indicators)
 
 add_library(dagobert INTERFACE)
 target_compile_features(dagobert INTERFACE cxx_std_23)
