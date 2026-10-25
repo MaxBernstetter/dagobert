@@ -58,11 +58,11 @@ constexpr ExperimentInstancePeriodStat::ParseTableT_ ExperimentInstancePeriodSta
     {
       PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_._has_bits_),
       0, // no _extensions_
-      5, 56,  // max_field_number, fast_idx_mask
+      6, 56,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967264,  // skipmap
+      4294967232,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      5,  // num_field_entries
+      6,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -93,7 +93,10 @@ constexpr ExperimentInstancePeriodStat::ParseTableT_ ExperimentInstancePeriodSta
       {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ExperimentInstancePeriodStat, _impl_.trade_count_), 4>(),
        {40, 4, 0,
         PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.trade_count_)}},
-      {::_pbi::TcParser::MiniParse, {}},
+      // optional int32 win_count = 6 [json_name = "winCount"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(ExperimentInstancePeriodStat, _impl_.win_count_), 5>(),
+       {48, 5, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.win_count_)}},
       {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
@@ -108,6 +111,8 @@ constexpr ExperimentInstancePeriodStat::ParseTableT_ ExperimentInstancePeriodSta
       {PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.return_pct_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // optional int32 trade_count = 5 [json_name = "tradeCount"];
       {PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.trade_count_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional int32 win_count = 6 [json_name = "winCount"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.win_count_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     }},
     // no aux_entries
     {{
@@ -134,7 +139,8 @@ inline constexpr ExperimentInstancePeriodStat::Impl_::Impl_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         return_pct_{0},
-        trade_count_{0} {}
+        trade_count_{0},
+        win_count_{0} {}
 
 template <typename>
 constexpr ExperimentInstancePeriodStat::ExperimentInstancePeriodStat(::_pbi::ConstantInitialized,
@@ -1136,17 +1142,19 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_._has_bits_),
-        8, // hasbit index offset
+        9, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.instance_id_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.period_kind_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.period_key_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.return_pct_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.trade_count_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstancePeriodStat, _impl_.win_count_),
         0,
         1,
         2,
         3,
         4,
+        5,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_._has_bits_),
         11, // hasbit index offset
@@ -1211,11 +1219,11 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::tradingcopilot::v1::ExperimentInstancePeriodStat)},
-        {13, sizeof(::tradingcopilot::v1::ExperimentInstanceAction)},
-        {32, sizeof(::tradingcopilot::v1::ExperimentInstanceFill)},
-        {57, sizeof(::tradingcopilot::v1::ListActionsResponse)},
-        {62, sizeof(::tradingcopilot::v1::ListFillsResponse)},
-        {67, sizeof(::tradingcopilot::v1::ListPeriodStatsResponse)},
+        {15, sizeof(::tradingcopilot::v1::ExperimentInstanceAction)},
+        {34, sizeof(::tradingcopilot::v1::ExperimentInstanceFill)},
+        {59, sizeof(::tradingcopilot::v1::ListActionsResponse)},
+        {64, sizeof(::tradingcopilot::v1::ListFillsResponse)},
+        {69, sizeof(::tradingcopilot::v1::ListPeriodStatsResponse)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -1229,46 +1237,48 @@ static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
 const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n+tradingcopilot/v1/experiment_activity."
-    "proto\022\021tradingcopilot.v1\"\350\001\n\034ExperimentI"
+    "proto\022\021tradingcopilot.v1\"\230\002\n\034ExperimentI"
     "nstancePeriodStat\022\037\n\013instance_id\030\001 \001(\tR\n"
     "instanceId\022\037\n\013period_kind\030\002 \001(\tR\nperiodK"
     "ind\022\035\n\nperiod_key\030\003 \001(\tR\tperiodKey\022\"\n\nre"
     "turn_pct\030\004 \001(\001H\000R\treturnPct\210\001\001\022$\n\013trade_"
-    "count\030\005 \001(\005H\001R\ntradeCount\210\001\001B\r\n\013_return_"
-    "pctB\016\n\014_trade_count\"\207\002\n\030ExperimentInstan"
-    "ceAction\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexperiment_i"
-    "d\030\002 \001(\tR\014experimentId\022\037\n\013instance_id\030\003 \001"
-    "(\tR\ninstanceId\022\026\n\006symbol\030\004 \001(\tR\006symbol\022\036"
-    "\n\013bar_open_ms\030\005 \001(\003R\tbarOpenMs\022\022\n\004side\030\006"
-    " \001(\tR\004side\022\"\n\nweight_pct\030\007 \001(\001H\000R\tweight"
-    "Pct\210\001\001\022\026\n\006reason\030\010 \001(\tR\006reasonB\r\n\013_weigh"
-    "t_pct\"\266\002\n\026ExperimentInstanceFill\022\016\n\002id\030\001"
-    " \001(\tR\002id\022#\n\rexperiment_id\030\002 \001(\tR\014experim"
-    "entId\022\037\n\013instance_id\030\003 \001(\tR\ninstanceId\022 "
-    "\n\taction_id\030\004 \001(\tH\000R\010actionId\210\001\001\022\026\n\006symb"
-    "ol\030\005 \001(\tR\006symbol\022\023\n\005ts_ms\030\006 \001(\003R\004tsMs\022\022\n"
-    "\004side\030\007 \001(\tR\004side\022\020\n\003qty\030\010 \001(\001R\003qty\022\024\n\005p"
-    "rice\030\t \001(\001R\005price\022\020\n\003fee\030\n \001(\001R\003fee\022\033\n\tf"
-    "ee_asset\030\013 \001(\tR\010feeAssetB\014\n\n_action_id\"\\"
-    "\n\023ListActionsResponse\022E\n\007actions\030\001 \003(\0132+"
-    ".tradingcopilot.v1.ExperimentInstanceAct"
-    "ionR\007actions\"T\n\021ListFillsResponse\022\?\n\005fil"
-    "ls\030\001 \003(\0132).tradingcopilot.v1.ExperimentI"
-    "nstanceFillR\005fills\"`\n\027ListPeriodStatsRes"
-    "ponse\022E\n\005stats\030\001 \003(\0132/.tradingcopilot.v1"
-    ".ExperimentInstancePeriodStatR\005statsB\344\001\n"
-    "\025com.tradingcopilot.v1B\027ExperimentActivi"
-    "tyProtoP\001ZMgithub.com/MaxBernstetter/dag"
-    "obert/src/gen/tradingcopilot/v1;tradingc"
-    "opilotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tra"
-    "dingcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMe"
-    "tadata\352\002\022Tradingcopilot::V1b\006proto3"
+    "count\030\005 \001(\005H\001R\ntradeCount\210\001\001\022 \n\twin_coun"
+    "t\030\006 \001(\005H\002R\010winCount\210\001\001B\r\n\013_return_pctB\016\n"
+    "\014_trade_countB\014\n\n_win_count\"\207\002\n\030Experime"
+    "ntInstanceAction\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexpe"
+    "riment_id\030\002 \001(\tR\014experimentId\022\037\n\013instanc"
+    "e_id\030\003 \001(\tR\ninstanceId\022\026\n\006symbol\030\004 \001(\tR\006"
+    "symbol\022\036\n\013bar_open_ms\030\005 \001(\003R\tbarOpenMs\022\022"
+    "\n\004side\030\006 \001(\tR\004side\022\"\n\nweight_pct\030\007 \001(\001H\000"
+    "R\tweightPct\210\001\001\022\026\n\006reason\030\010 \001(\tR\006reasonB\r"
+    "\n\013_weight_pct\"\266\002\n\026ExperimentInstanceFill"
+    "\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexperiment_id\030\002 \001(\tR"
+    "\014experimentId\022\037\n\013instance_id\030\003 \001(\tR\ninst"
+    "anceId\022 \n\taction_id\030\004 \001(\tH\000R\010actionId\210\001\001"
+    "\022\026\n\006symbol\030\005 \001(\tR\006symbol\022\023\n\005ts_ms\030\006 \001(\003R"
+    "\004tsMs\022\022\n\004side\030\007 \001(\tR\004side\022\020\n\003qty\030\010 \001(\001R\003"
+    "qty\022\024\n\005price\030\t \001(\001R\005price\022\020\n\003fee\030\n \001(\001R\003"
+    "fee\022\033\n\tfee_asset\030\013 \001(\tR\010feeAssetB\014\n\n_act"
+    "ion_id\"\\\n\023ListActionsResponse\022E\n\007actions"
+    "\030\001 \003(\0132+.tradingcopilot.v1.ExperimentIns"
+    "tanceActionR\007actions\"T\n\021ListFillsRespons"
+    "e\022\?\n\005fills\030\001 \003(\0132).tradingcopilot.v1.Exp"
+    "erimentInstanceFillR\005fills\"`\n\027ListPeriod"
+    "StatsResponse\022E\n\005stats\030\001 \003(\0132/.tradingco"
+    "pilot.v1.ExperimentInstancePeriodStatR\005s"
+    "tatsB\344\001\n\025com.tradingcopilot.v1B\027Experime"
+    "ntActivityProtoP\001ZMgithub.com/MaxBernste"
+    "tter/dagobert/src/gen/tradingcopilot/v1;"
+    "tradingcopilotv1\242\002\003TXX\252\002\021Tradingcopilot."
+    "V1\312\002\021Tradingcopilot\\V1\342\002\035Tradingcopilot\\"
+    "V1\\GPBMetadata\352\002\022Tradingcopilot::V1b\006pro"
+    "to3"
 };
 static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto = {
     false,
     false,
-    1395,
+    1443,
     descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto,
     "tradingcopilot/v1/experiment_activity.proto",
     &descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto_once,
@@ -1321,9 +1331,9 @@ ExperimentInstancePeriodStat::ExperimentInstancePeriodStat(
                offsetof(Impl_, return_pct_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, return_pct_),
-           offsetof(Impl_, trade_count_) -
+           offsetof(Impl_, win_count_) -
                offsetof(Impl_, return_pct_) +
-               sizeof(Impl_::trade_count_));
+               sizeof(Impl_::win_count_));
 
   // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ExperimentInstancePeriodStat)
 }
@@ -1339,9 +1349,9 @@ inline void ExperimentInstancePeriodStat::SharedCtor(::_pb::Arena* PROTOBUF_NULL
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, return_pct_),
            0,
-           offsetof(Impl_, trade_count_) -
+           offsetof(Impl_, win_count_) -
                offsetof(Impl_, return_pct_) +
-               sizeof(Impl_::trade_count_));
+               sizeof(Impl_::win_count_));
 }
 ExperimentInstancePeriodStat::~ExperimentInstancePeriodStat() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.ExperimentInstancePeriodStat)
@@ -1404,12 +1414,12 @@ PROTOBUF_NOINLINE void ExperimentInstancePeriodStat::Clear() {
       this_._impl_.period_key_.ClearNonDefaultToEmpty();
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000018U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000038U)) {
     ::memset(&this_._impl_.return_pct_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.trade_count_) -
+                 reinterpret_cast<char*>(&this_._impl_.win_count_) -
                  reinterpret_cast<char*>(&this_._impl_.return_pct_)) +
-                 sizeof(_impl_.trade_count_));
+                 sizeof(_impl_.win_count_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -1478,6 +1488,13 @@ PROTOBUF_NOINLINE void ExperimentInstancePeriodStat::Clear() {
             stream, this_._internal_trade_count(), target);
   }
 
+  // optional int32 win_count = 6 [json_name = "winCount"];
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    target =
+        ::google::protobuf::internal::WireFormatLite::WriteInt32ToArrayWithField<6>(
+            stream, this_._internal_win_count(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -1502,7 +1519,7 @@ PROTOBUF_NOINLINE void ExperimentInstancePeriodStat::Clear() {
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
   total_size += static_cast<bool>(0x00000008U & cached_has_bits) * 9;
-  if (BatchCheckHasBit(cached_has_bits, 0x00000017U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00000037U)) {
     // string instance_id = 1 [json_name = "instanceId"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_instance_id().empty()) {
@@ -1529,6 +1546,11 @@ PROTOBUF_NOINLINE void ExperimentInstancePeriodStat::Clear() {
       total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
           this_._internal_trade_count());
     }
+    // optional int32 win_count = 6 [json_name = "winCount"];
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this_._internal_win_count());
+    }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
                                              &this_._impl_._cached_size_);
@@ -1547,7 +1569,7 @@ void ExperimentInstancePeriodStat::MergeImpl(::google::protobuf::MessageLite& to
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!from._internal_instance_id().empty()) {
         _this->_internal_set_instance_id(from._internal_instance_id());
@@ -1581,6 +1603,9 @@ void ExperimentInstancePeriodStat::MergeImpl(::google::protobuf::MessageLite& to
     if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       _this->_impl_.trade_count_ = from._impl_.trade_count_;
     }
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      _this->_impl_.win_count_ = from._impl_.win_count_;
+    }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
@@ -1605,8 +1630,8 @@ void ExperimentInstancePeriodStat::InternalSwap(ExperimentInstancePeriodStat* PR
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.period_kind_, &other->_impl_.period_kind_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.period_key_, &other->_impl_.period_key_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.trade_count_)
-      + sizeof(ExperimentInstancePeriodStat::_impl_.trade_count_)
+      PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.win_count_)
+      + sizeof(ExperimentInstancePeriodStat::_impl_.win_count_)
       - PROTOBUF_FIELD_OFFSET(ExperimentInstancePeriodStat, _impl_.return_pct_)>(
           reinterpret_cast<char*>(&_impl_.return_pct_),
           reinterpret_cast<char*>(&other->_impl_.return_pct_));

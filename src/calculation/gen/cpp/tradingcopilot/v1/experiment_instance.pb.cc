@@ -266,11 +266,11 @@ constexpr InstanceMetrics::ParseTableT_ InstanceMetrics::InternalGenerateParseTa
     {
       PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_._has_bits_),
       0, // no _extensions_
-      11, 120,  // max_field_number, fast_idx_mask
+      19, 248,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294965248,  // skipmap
+      4294443008,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      11,  // num_field_entries
+      19,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -325,6 +325,46 @@ constexpr InstanceMetrics::ParseTableT_ InstanceMetrics::InternalGenerateParseTa
       {::_pbi::TcParser::FastF64S1,
        {89, 10, 0,
         PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.trades_per_month_med_)}},
+      // optional float win_rate = 12 [json_name = "winRate"];
+      {::_pbi::TcParser::FastF32S1,
+       {101, 11, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.win_rate_)}},
+      // optional float monthly_win_rate_avg = 13 [json_name = "monthlyWinRateAvg"];
+      {::_pbi::TcParser::FastF32S1,
+       {109, 12, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.monthly_win_rate_avg_)}},
+      // optional float monthly_win_rate_med = 14 [json_name = "monthlyWinRateMed"];
+      {::_pbi::TcParser::FastF32S1,
+       {117, 13, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.monthly_win_rate_med_)}},
+      // optional float yearly_win_rate_avg = 15 [json_name = "yearlyWinRateAvg"];
+      {::_pbi::TcParser::FastF32S1,
+       {125, 14, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.yearly_win_rate_avg_)}},
+      // optional float yearly_win_rate_med = 16 [json_name = "yearlyWinRateMed"];
+      {::_pbi::TcParser::FastF32S2,
+       {389, 15, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.yearly_win_rate_med_)}},
+      // optional int32 wins = 17 [json_name = "wins"];
+      {::_pbi::TcParser::FastV32S2,
+       {392, 16, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.wins_)}},
+      // optional int32 losses = 18 [json_name = "losses"];
+      {::_pbi::TcParser::FastV32S2,
+       {400, 17, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.losses_)}},
+      // optional int32 breakeven = 19 [json_name = "breakeven"];
+      {::_pbi::TcParser::FastV32S2,
+       {408, 18, 0,
+        PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.breakeven_)}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
       {::_pbi::TcParser::MiniParse, {}},
       {::_pbi::TcParser::MiniParse, {}},
       {::_pbi::TcParser::MiniParse, {}},
@@ -354,6 +394,22 @@ constexpr InstanceMetrics::ParseTableT_ InstanceMetrics::InternalGenerateParseTa
       {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.trades_per_month_avg_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // optional double trades_per_month_med = 11 [json_name = "tradesPerMonthMed"];
       {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.trades_per_month_med_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional float win_rate = 12 [json_name = "winRate"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.win_rate_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+      // optional float monthly_win_rate_avg = 13 [json_name = "monthlyWinRateAvg"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.monthly_win_rate_avg_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+      // optional float monthly_win_rate_med = 14 [json_name = "monthlyWinRateMed"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.monthly_win_rate_med_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+      // optional float yearly_win_rate_avg = 15 [json_name = "yearlyWinRateAvg"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.yearly_win_rate_avg_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+      // optional float yearly_win_rate_med = 16 [json_name = "yearlyWinRateMed"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.yearly_win_rate_med_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+      // optional int32 wins = 17 [json_name = "wins"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.wins_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional int32 losses = 18 [json_name = "losses"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.losses_), _Internal::kHasBitsOffset + 17, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      // optional int32 breakeven = 19 [json_name = "breakeven"];
+      {PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.breakeven_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     }},
     // no aux_entries
     {{
@@ -375,7 +431,15 @@ inline constexpr InstanceMetrics::Impl_::Impl_(
         yearly_return_avg_{0},
         yearly_return_med_{0},
         trades_per_month_avg_{0},
-        trades_per_month_med_{0} {}
+        trades_per_month_med_{0},
+        win_rate_{0},
+        monthly_win_rate_avg_{0},
+        monthly_win_rate_med_{0},
+        yearly_win_rate_avg_{0},
+        yearly_win_rate_med_{0},
+        wins_{0},
+        losses_{0},
+        breakeven_{0} {}
 
 template <typename>
 constexpr InstanceMetrics::InstanceMetrics(::_pbi::ConstantInitialized,
@@ -1012,7 +1076,7 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_._has_bits_),
-        14, // hasbit index offset
+        22, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.duration_ms_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.cagr_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.max_drawdown_),
@@ -1024,6 +1088,14 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.yearly_return_med_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.trades_per_month_avg_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.trades_per_month_med_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.win_rate_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.monthly_win_rate_avg_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.monthly_win_rate_med_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.yearly_win_rate_avg_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.yearly_win_rate_med_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.wins_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.losses_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceMetrics, _impl_.breakeven_),
         0,
         1,
         2,
@@ -1035,6 +1107,14 @@ const ::uint32_t
         8,
         9,
         10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstance, _impl_._has_bits_),
         27, // hasbit index offset
@@ -1121,9 +1201,9 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::tradingcopilot::v1::InstanceMetrics)},
-        {25, sizeof(::tradingcopilot::v1::ExperimentInstance)},
-        {76, sizeof(::tradingcopilot::v1::ListInstancesRequest)},
-        {95, sizeof(::tradingcopilot::v1::ListInstancesResponse)},
+        {41, sizeof(::tradingcopilot::v1::ExperimentInstance)},
+        {92, sizeof(::tradingcopilot::v1::ListInstancesRequest)},
+        {111, sizeof(::tradingcopilot::v1::ListInstancesResponse)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -1136,7 +1216,7 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5finstance
     protodesc_cold) = {
     "\n+tradingcopilot/v1/experiment_instance."
     "proto\022\021tradingcopilot.v1\032 tradingcopilot"
-    "/v1/strategy.proto\"\265\005\n\017InstanceMetrics\022$"
+    "/v1/strategy.proto\"\223\t\n\017InstanceMetrics\022$"
     "\n\013duration_ms\030\001 \001(\003H\000R\ndurationMs\210\001\001\022\027\n\004"
     "cagr\030\002 \001(\001H\001R\004cagr\210\001\001\022&\n\014max_drawdown\030\003 "
     "\001(\001H\002R\013maxDrawdown\210\001\001\022\033\n\006sharpe\030\004 \001(\001H\003R"
@@ -1148,60 +1228,72 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5finstance
     "ly_return_med\030\t \001(\001H\010R\017yearlyReturnMed\210\001"
     "\001\0224\n\024trades_per_month_avg\030\n \001(\001H\tR\021trade"
     "sPerMonthAvg\210\001\001\0224\n\024trades_per_month_med\030"
-    "\013 \001(\001H\nR\021tradesPerMonthMed\210\001\001B\016\n\014_durati"
-    "on_msB\007\n\005_cagrB\017\n\r_max_drawdownB\t\n\007_shar"
-    "peB\n\n\010_sortinoB\025\n\023_monthly_return_avgB\025\n"
-    "\023_monthly_return_medB\024\n\022_yearly_return_a"
-    "vgB\024\n\022_yearly_return_medB\027\n\025_trades_per_"
-    "month_avgB\027\n\025_trades_per_month_med\"\373\t\n\022E"
-    "xperimentInstance\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexp"
-    "eriment_id\030\002 \001(\tR\014experimentId\022\024\n\005label\030"
-    "\003 \001(\tR\005label\022\032\n\010playbook\030\004 \001(\tR\010playbook"
-    "\022\026\n\006symbol\030\005 \001(\tR\006symbol\022\037\n\013config_hash\030"
-    "\006 \001(\tR\nconfigHash\022!\n\014playbook_key\030\007 \001(\tR"
-    "\013playbookKey\022,\n\022workspace_rel_path\030\010 \001(\t"
-    "R\020workspaceRelPath\022\026\n\006status\030\t \001(\tR\006stat"
-    "us\022\024\n\005error\030\n \001(\tR\005error\022\'\n\rstarted_at_m"
-    "s\030\013 \001(\003H\000R\013startedAtMs\210\001\001\022)\n\016finished_at"
-    "_ms\030\014 \001(\003H\001R\014finishedAtMs\210\001\001\022#\n\013cfg_fast"
-    "_hr\030\024 \001(\005H\002R\tcfgFastHr\210\001\001\022#\n\013cfg_slow_hr"
-    "\030\025 \001(\005H\003R\tcfgSlowHr\210\001\001\022%\n\014cfg_rsi_bull\030\026"
-    " \001(\001H\004R\ncfgRsiBull\210\001\001\022%\n\014cfg_rsi_bear\030\027 "
-    "\001(\001H\005R\ncfgRsiBear\210\001\001\0220\n\022cfg_vol_ratio_bu"
-    "ll\030\030 \001(\001H\006R\017cfgVolRatioBull\210\001\001\0220\n\022cfg_vo"
-    "l_ratio_bear\030\031 \001(\001H\007R\017cfgVolRatioBear\210\001\001"
-    "\022.\n\021cfg_atr_stop_mult\030\032 \001(\001H\010R\016cfgAtrSto"
-    "pMult\210\001\001\022B\n\034cfg_min_bars_flat_after_sell"
-    "\030\033 \001(\005H\tR\027cfgMinBarsFlatAfterSell\210\001\001\022D\n\035"
-    "cfg_min_bars_long_before_sell\030\034 \001(\005H\nR\030c"
-    "fgMinBarsLongBeforeSell\210\001\001\022<\n\007metrics\030( "
-    "\001(\0132\".tradingcopilot.v1.InstanceMetricsR"
-    "\007metrics\022;\n\010ma_cross\0302 \001(\0132 .tradingcopi"
-    "lot.v1.MaCrossConfigR\007maCross\022S\n\020signal_"
-    "consensus\0303 \001(\0132(.tradingcopilot.v1.Sign"
-    "alConsensusConfigR\017signalConsensusB\020\n\016_s"
-    "tarted_at_msB\021\n\017_finished_at_msB\016\n\014_cfg_"
-    "fast_hrB\016\n\014_cfg_slow_hrB\017\n\r_cfg_rsi_bull"
-    "B\017\n\r_cfg_rsi_bearB\025\n\023_cfg_vol_ratio_bull"
-    "B\025\n\023_cfg_vol_ratio_bearB\024\n\022_cfg_atr_stop"
-    "_multB\037\n\035_cfg_min_bars_flat_after_sellB "
-    "\n\036_cfg_min_bars_long_before_sell\"\321\001\n\024Lis"
-    "tInstancesRequest\022#\n\rexperiment_id\030\001 \001(\t"
-    "R\014experimentId\022\026\n\006cursor\030\002 \001(\tR\006cursor\022\024"
-    "\n\005limit\030\003 \001(\005R\005limit\022\026\n\006status\030\004 \001(\tR\006st"
-    "atus\022\026\n\006symbol\030\005 \001(\tR\006symbol\022\014\n\001q\030\006 \001(\tR"
-    "\001q\022\022\n\004sort\030\007 \001(\tR\004sort\022\024\n\005order\030\010 \001(\tR\005o"
-    "rder\"\276\001\n\025ListInstancesResponse\022C\n\tinstan"
-    "ces\030\001 \003(\0132%.tradingcopilot.v1.Experiment"
-    "InstanceR\tinstances\022\024\n\005total\030\002 \001(\003R\005tota"
-    "l\022$\n\013next_cursor\030\003 \001(\tH\000R\nnextCursor\210\001\001\022"
-    "\024\n\005limit\030\004 \001(\005R\005limitB\016\n\014_next_cursorB\344\001"
-    "\n\025com.tradingcopilot.v1B\027ExperimentInsta"
-    "nceProtoP\001ZMgithub.com/MaxBernstetter/da"
-    "gobert/src/gen/tradingcopilot/v1;trading"
-    "copilotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tr"
-    "adingcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBM"
-    "etadata\352\002\022Tradingcopilot::V1b\006proto3"
+    "\013 \001(\001H\nR\021tradesPerMonthMed\210\001\001\022\036\n\010win_rat"
+    "e\030\014 \001(\002H\013R\007winRate\210\001\001\0224\n\024monthly_win_rat"
+    "e_avg\030\r \001(\002H\014R\021monthlyWinRateAvg\210\001\001\0224\n\024m"
+    "onthly_win_rate_med\030\016 \001(\002H\rR\021monthlyWinR"
+    "ateMed\210\001\001\0222\n\023yearly_win_rate_avg\030\017 \001(\002H\016"
+    "R\020yearlyWinRateAvg\210\001\001\0222\n\023yearly_win_rate"
+    "_med\030\020 \001(\002H\017R\020yearlyWinRateMed\210\001\001\022\027\n\004win"
+    "s\030\021 \001(\005H\020R\004wins\210\001\001\022\033\n\006losses\030\022 \001(\005H\021R\006lo"
+    "sses\210\001\001\022!\n\tbreakeven\030\023 \001(\005H\022R\tbreakeven\210"
+    "\001\001B\016\n\014_duration_msB\007\n\005_cagrB\017\n\r_max_draw"
+    "downB\t\n\007_sharpeB\n\n\010_sortinoB\025\n\023_monthly_"
+    "return_avgB\025\n\023_monthly_return_medB\024\n\022_ye"
+    "arly_return_avgB\024\n\022_yearly_return_medB\027\n"
+    "\025_trades_per_month_avgB\027\n\025_trades_per_mo"
+    "nth_medB\013\n\t_win_rateB\027\n\025_monthly_win_rat"
+    "e_avgB\027\n\025_monthly_win_rate_medB\026\n\024_yearl"
+    "y_win_rate_avgB\026\n\024_yearly_win_rate_medB\007"
+    "\n\005_winsB\t\n\007_lossesB\014\n\n_breakeven\"\373\t\n\022Exp"
+    "erimentInstance\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexper"
+    "iment_id\030\002 \001(\tR\014experimentId\022\024\n\005label\030\003 "
+    "\001(\tR\005label\022\032\n\010playbook\030\004 \001(\tR\010playbook\022\026"
+    "\n\006symbol\030\005 \001(\tR\006symbol\022\037\n\013config_hash\030\006 "
+    "\001(\tR\nconfigHash\022!\n\014playbook_key\030\007 \001(\tR\013p"
+    "laybookKey\022,\n\022workspace_rel_path\030\010 \001(\tR\020"
+    "workspaceRelPath\022\026\n\006status\030\t \001(\tR\006status"
+    "\022\024\n\005error\030\n \001(\tR\005error\022\'\n\rstarted_at_ms\030"
+    "\013 \001(\003H\000R\013startedAtMs\210\001\001\022)\n\016finished_at_m"
+    "s\030\014 \001(\003H\001R\014finishedAtMs\210\001\001\022#\n\013cfg_fast_h"
+    "r\030\024 \001(\005H\002R\tcfgFastHr\210\001\001\022#\n\013cfg_slow_hr\030\025"
+    " \001(\005H\003R\tcfgSlowHr\210\001\001\022%\n\014cfg_rsi_bull\030\026 \001"
+    "(\001H\004R\ncfgRsiBull\210\001\001\022%\n\014cfg_rsi_bear\030\027 \001("
+    "\001H\005R\ncfgRsiBear\210\001\001\0220\n\022cfg_vol_ratio_bull"
+    "\030\030 \001(\001H\006R\017cfgVolRatioBull\210\001\001\0220\n\022cfg_vol_"
+    "ratio_bear\030\031 \001(\001H\007R\017cfgVolRatioBear\210\001\001\022."
+    "\n\021cfg_atr_stop_mult\030\032 \001(\001H\010R\016cfgAtrStopM"
+    "ult\210\001\001\022B\n\034cfg_min_bars_flat_after_sell\030\033"
+    " \001(\005H\tR\027cfgMinBarsFlatAfterSell\210\001\001\022D\n\035cf"
+    "g_min_bars_long_before_sell\030\034 \001(\005H\nR\030cfg"
+    "MinBarsLongBeforeSell\210\001\001\022<\n\007metrics\030( \001("
+    "\0132\".tradingcopilot.v1.InstanceMetricsR\007m"
+    "etrics\022;\n\010ma_cross\0302 \001(\0132 .tradingcopilo"
+    "t.v1.MaCrossConfigR\007maCross\022S\n\020signal_co"
+    "nsensus\0303 \001(\0132(.tradingcopilot.v1.Signal"
+    "ConsensusConfigR\017signalConsensusB\020\n\016_sta"
+    "rted_at_msB\021\n\017_finished_at_msB\016\n\014_cfg_fa"
+    "st_hrB\016\n\014_cfg_slow_hrB\017\n\r_cfg_rsi_bullB\017"
+    "\n\r_cfg_rsi_bearB\025\n\023_cfg_vol_ratio_bullB\025"
+    "\n\023_cfg_vol_ratio_bearB\024\n\022_cfg_atr_stop_m"
+    "ultB\037\n\035_cfg_min_bars_flat_after_sellB \n\036"
+    "_cfg_min_bars_long_before_sell\"\321\001\n\024ListI"
+    "nstancesRequest\022#\n\rexperiment_id\030\001 \001(\tR\014"
+    "experimentId\022\026\n\006cursor\030\002 \001(\tR\006cursor\022\024\n\005"
+    "limit\030\003 \001(\005R\005limit\022\026\n\006status\030\004 \001(\tR\006stat"
+    "us\022\026\n\006symbol\030\005 \001(\tR\006symbol\022\014\n\001q\030\006 \001(\tR\001q"
+    "\022\022\n\004sort\030\007 \001(\tR\004sort\022\024\n\005order\030\010 \001(\tR\005ord"
+    "er\"\276\001\n\025ListInstancesResponse\022C\n\tinstance"
+    "s\030\001 \003(\0132%.tradingcopilot.v1.ExperimentIn"
+    "stanceR\tinstances\022\024\n\005total\030\002 \001(\003R\005total\022"
+    "$\n\013next_cursor\030\003 \001(\tH\000R\nnextCursor\210\001\001\022\024\n"
+    "\005limit\030\004 \001(\005R\005limitB\016\n\014_next_cursorB\344\001\n\025"
+    "com.tradingcopilot.v1B\027ExperimentInstanc"
+    "eProtoP\001ZMgithub.com/MaxBernstetter/dago"
+    "bert/src/gen/tradingcopilot/v1;tradingco"
+    "pilotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Trad"
+    "ingcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMet"
+    "adata\352\002\022Tradingcopilot::V1b\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_tradingcopilot_2fv1_2fexperiment_5finstance_2eproto_deps[1] = {
@@ -1211,7 +1303,7 @@ static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fexperiment_5fins
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fexperiment_5finstance_2eproto = {
     false,
     false,
-    2716,
+    3194,
     descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5finstance_2eproto,
     "tradingcopilot/v1/experiment_instance.proto",
     &descriptor_table_tradingcopilot_2fv1_2fexperiment_5finstance_2eproto_once,
@@ -1258,9 +1350,9 @@ inline void InstanceMetrics::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, duration_ms_),
            0,
-           offsetof(Impl_, trades_per_month_med_) -
+           offsetof(Impl_, breakeven_) -
                offsetof(Impl_, duration_ms_) +
-               sizeof(Impl_::trades_per_month_med_));
+               sizeof(Impl_::breakeven_));
 }
 InstanceMetrics::~InstanceMetrics() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.InstanceMetrics)
@@ -1316,12 +1408,19 @@ PROTOBUF_NOINLINE void InstanceMetrics::Clear() {
                  reinterpret_cast<char*>(&this_._impl_.duration_ms_)) +
                  sizeof(_impl_.yearly_return_avg_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000700U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     ::memset(&this_._impl_.yearly_return_med_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.trades_per_month_med_) -
+                 reinterpret_cast<char*>(&this_._impl_.yearly_win_rate_med_) -
                  reinterpret_cast<char*>(&this_._impl_.yearly_return_med_)) +
-                 sizeof(_impl_.trades_per_month_med_));
+                 sizeof(_impl_.yearly_win_rate_med_));
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00070000U)) {
+    ::memset(&this_._impl_.wins_, 0,
+             static_cast<::size_t>(
+                 reinterpret_cast<char*>(&this_._impl_.breakeven_) -
+                 reinterpret_cast<char*>(&this_._impl_.wins_)) +
+                 sizeof(_impl_.breakeven_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -1423,6 +1522,62 @@ PROTOBUF_NOINLINE void InstanceMetrics::Clear() {
         11, this_._internal_trades_per_month_med(), target);
   }
 
+  // optional float win_rate = 12 [json_name = "winRate"];
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        12, this_._internal_win_rate(), target);
+  }
+
+  // optional float monthly_win_rate_avg = 13 [json_name = "monthlyWinRateAvg"];
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        13, this_._internal_monthly_win_rate_avg(), target);
+  }
+
+  // optional float monthly_win_rate_med = 14 [json_name = "monthlyWinRateMed"];
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        14, this_._internal_monthly_win_rate_med(), target);
+  }
+
+  // optional float yearly_win_rate_avg = 15 [json_name = "yearlyWinRateAvg"];
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        15, this_._internal_yearly_win_rate_avg(), target);
+  }
+
+  // optional float yearly_win_rate_med = 16 [json_name = "yearlyWinRateMed"];
+  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        16, this_._internal_yearly_win_rate_med(), target);
+  }
+
+  // optional int32 wins = 17 [json_name = "wins"];
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        17, this_._internal_wins(), target);
+  }
+
+  // optional int32 losses = 18 [json_name = "losses"];
+  if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        18, this_._internal_losses(), target);
+  }
+
+  // optional int32 breakeven = 19 [json_name = "breakeven"];
+  if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        19, this_._internal_breakeven(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -1447,11 +1602,30 @@ PROTOBUF_NOINLINE void InstanceMetrics::Clear() {
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
   total_size += ::absl::popcount(0x000007feU & cached_has_bits) * 9;
+  total_size += static_cast<bool>(0x00008000U & cached_has_bits) * 6;
+  total_size += ::absl::popcount(0x00007800U & cached_has_bits) * 5;
    {
     // optional int64 duration_ms = 1 [json_name = "durationMs"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
           this_._internal_duration_ms());
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00070000U)) {
+    // optional int32 wins = 17 [json_name = "wins"];
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_wins());
+    }
+    // optional int32 losses = 18 [json_name = "losses"];
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_losses());
+    }
+    // optional int32 breakeven = 19 [json_name = "breakeven"];
+    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_breakeven());
     }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -1497,7 +1671,7 @@ void InstanceMetrics::MergeImpl(::google::protobuf::MessageLite& to_msg,
       _this->_impl_.yearly_return_avg_ = from._impl_.yearly_return_avg_;
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000700U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       _this->_impl_.yearly_return_med_ = from._impl_.yearly_return_med_;
     }
@@ -1506,6 +1680,32 @@ void InstanceMetrics::MergeImpl(::google::protobuf::MessageLite& to_msg,
     }
     if (CheckHasBit(cached_has_bits, 0x00000400U)) {
       _this->_impl_.trades_per_month_med_ = from._impl_.trades_per_month_med_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+      _this->_impl_.win_rate_ = from._impl_.win_rate_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      _this->_impl_.monthly_win_rate_avg_ = from._impl_.monthly_win_rate_avg_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      _this->_impl_.monthly_win_rate_med_ = from._impl_.monthly_win_rate_med_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      _this->_impl_.yearly_win_rate_avg_ = from._impl_.yearly_win_rate_avg_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+      _this->_impl_.yearly_win_rate_med_ = from._impl_.yearly_win_rate_med_;
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00070000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+      _this->_impl_.wins_ = from._impl_.wins_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+      _this->_impl_.losses_ = from._impl_.losses_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00040000U)) {
+      _this->_impl_.breakeven_ = from._impl_.breakeven_;
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -1526,8 +1726,8 @@ void InstanceMetrics::InternalSwap(InstanceMetrics* PROTOBUF_RESTRICT PROTOBUF_N
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.trades_per_month_med_)
-      + sizeof(InstanceMetrics::_impl_.trades_per_month_med_)
+      PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.breakeven_)
+      + sizeof(InstanceMetrics::_impl_.breakeven_)
       - PROTOBUF_FIELD_OFFSET(InstanceMetrics, _impl_.duration_ms_)>(
           reinterpret_cast<char*>(&_impl_.duration_ms_),
           reinterpret_cast<char*>(&other->_impl_.duration_ms_));

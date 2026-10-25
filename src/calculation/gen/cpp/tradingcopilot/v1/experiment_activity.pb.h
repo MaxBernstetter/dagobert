@@ -262,6 +262,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstancePeriodStat final 
     kPeriodKeyFieldNumber = 3,
     kReturnPctFieldNumber = 4,
     kTradeCountFieldNumber = 5,
+    kWinCountFieldNumber = 6,
   };
   // string instance_id = 1 [json_name = "instanceId"];
   void clear_instance_id() ;
@@ -330,11 +331,22 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstancePeriodStat final 
   void _internal_set_trade_count(::int32_t value);
 
   public:
+  // optional int32 win_count = 6 [json_name = "winCount"];
+  [[nodiscard]] bool has_win_count() const;
+  void clear_win_count() ;
+  [[nodiscard]] ::int32_t win_count() const;
+  void set_win_count(::int32_t value);
+
+  private:
+  ::int32_t _internal_win_count() const;
+  void _internal_set_win_count(::int32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentInstancePeriodStat)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<3, 5,
+      ::google::protobuf::internal::TcParseTable<3, 6,
                           0, 87,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -368,6 +380,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstancePeriodStat final 
     ::google::protobuf::internal::ArenaStringPtr period_key_;
     double return_pct_;
     ::int32_t trade_count_;
+    ::int32_t win_count_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1942,6 +1955,34 @@ inline ::int32_t ExperimentInstancePeriodStat::_internal_trade_count() const {
 inline void ExperimentInstancePeriodStat::_internal_set_trade_count(::int32_t value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.trade_count_ = value;
+}
+
+// optional int32 win_count = 6 [json_name = "winCount"];
+inline bool ExperimentInstancePeriodStat::has_win_count() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
+  return value;
+}
+inline void ExperimentInstancePeriodStat::clear_win_count() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.win_count_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+}
+inline ::int32_t ExperimentInstancePeriodStat::win_count() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstancePeriodStat.win_count)
+  return _internal_win_count();
+}
+inline void ExperimentInstancePeriodStat::set_win_count(::int32_t value) {
+  _internal_set_win_count(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstancePeriodStat.win_count)
+}
+inline ::int32_t ExperimentInstancePeriodStat::_internal_win_count() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.win_count_;
+}
+inline void ExperimentInstancePeriodStat::_internal_set_win_count(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.win_count_ = value;
 }
 
 // -------------------------------------------------------------------
