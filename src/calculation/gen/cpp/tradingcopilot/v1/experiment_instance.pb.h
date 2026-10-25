@@ -573,6 +573,14 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED InstanceMetrics final : public ::go
     kYearlyReturnMedFieldNumber = 9,
     kTradesPerMonthAvgFieldNumber = 10,
     kTradesPerMonthMedFieldNumber = 11,
+    kWinRateFieldNumber = 12,
+    kMonthlyWinRateAvgFieldNumber = 13,
+    kMonthlyWinRateMedFieldNumber = 14,
+    kYearlyWinRateAvgFieldNumber = 15,
+    kYearlyWinRateMedFieldNumber = 16,
+    kWinsFieldNumber = 17,
+    kLossesFieldNumber = 18,
+    kBreakevenFieldNumber = 19,
   };
   // optional int64 duration_ms = 1 [json_name = "durationMs"];
   [[nodiscard]] bool has_duration_ms() const;
@@ -695,11 +703,99 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED InstanceMetrics final : public ::go
   void _internal_set_trades_per_month_med(double value);
 
   public:
+  // optional float win_rate = 12 [json_name = "winRate"];
+  [[nodiscard]] bool has_win_rate() const;
+  void clear_win_rate() ;
+  [[nodiscard]] float win_rate() const;
+  void set_win_rate(float value);
+
+  private:
+  float _internal_win_rate() const;
+  void _internal_set_win_rate(float value);
+
+  public:
+  // optional float monthly_win_rate_avg = 13 [json_name = "monthlyWinRateAvg"];
+  [[nodiscard]] bool has_monthly_win_rate_avg() const;
+  void clear_monthly_win_rate_avg() ;
+  [[nodiscard]] float monthly_win_rate_avg() const;
+  void set_monthly_win_rate_avg(float value);
+
+  private:
+  float _internal_monthly_win_rate_avg() const;
+  void _internal_set_monthly_win_rate_avg(float value);
+
+  public:
+  // optional float monthly_win_rate_med = 14 [json_name = "monthlyWinRateMed"];
+  [[nodiscard]] bool has_monthly_win_rate_med() const;
+  void clear_monthly_win_rate_med() ;
+  [[nodiscard]] float monthly_win_rate_med() const;
+  void set_monthly_win_rate_med(float value);
+
+  private:
+  float _internal_monthly_win_rate_med() const;
+  void _internal_set_monthly_win_rate_med(float value);
+
+  public:
+  // optional float yearly_win_rate_avg = 15 [json_name = "yearlyWinRateAvg"];
+  [[nodiscard]] bool has_yearly_win_rate_avg() const;
+  void clear_yearly_win_rate_avg() ;
+  [[nodiscard]] float yearly_win_rate_avg() const;
+  void set_yearly_win_rate_avg(float value);
+
+  private:
+  float _internal_yearly_win_rate_avg() const;
+  void _internal_set_yearly_win_rate_avg(float value);
+
+  public:
+  // optional float yearly_win_rate_med = 16 [json_name = "yearlyWinRateMed"];
+  [[nodiscard]] bool has_yearly_win_rate_med() const;
+  void clear_yearly_win_rate_med() ;
+  [[nodiscard]] float yearly_win_rate_med() const;
+  void set_yearly_win_rate_med(float value);
+
+  private:
+  float _internal_yearly_win_rate_med() const;
+  void _internal_set_yearly_win_rate_med(float value);
+
+  public:
+  // optional int32 wins = 17 [json_name = "wins"];
+  [[nodiscard]] bool has_wins() const;
+  void clear_wins() ;
+  [[nodiscard]] ::int32_t wins() const;
+  void set_wins(::int32_t value);
+
+  private:
+  ::int32_t _internal_wins() const;
+  void _internal_set_wins(::int32_t value);
+
+  public:
+  // optional int32 losses = 18 [json_name = "losses"];
+  [[nodiscard]] bool has_losses() const;
+  void clear_losses() ;
+  [[nodiscard]] ::int32_t losses() const;
+  void set_losses(::int32_t value);
+
+  private:
+  ::int32_t _internal_losses() const;
+  void _internal_set_losses(::int32_t value);
+
+  public:
+  // optional int32 breakeven = 19 [json_name = "breakeven"];
+  [[nodiscard]] bool has_breakeven() const;
+  void clear_breakeven() ;
+  [[nodiscard]] ::int32_t breakeven() const;
+  void set_breakeven(::int32_t value);
+
+  private:
+  ::int32_t _internal_breakeven() const;
+  void _internal_set_breakeven(::int32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tradingcopilot.v1.InstanceMetrics)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 11,
+      ::google::protobuf::internal::TcParseTable<5, 19,
                           0, 0,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -739,6 +835,14 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED InstanceMetrics final : public ::go
     double yearly_return_med_;
     double trades_per_month_avg_;
     double trades_per_month_med_;
+    float win_rate_;
+    float monthly_win_rate_avg_;
+    float monthly_win_rate_med_;
+    float yearly_win_rate_avg_;
+    float yearly_win_rate_med_;
+    ::int32_t wins_;
+    ::int32_t losses_;
+    ::int32_t breakeven_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1873,6 +1977,230 @@ inline double InstanceMetrics::_internal_trades_per_month_med() const {
 inline void InstanceMetrics::_internal_set_trades_per_month_med(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.trades_per_month_med_ = value;
+}
+
+// optional float win_rate = 12 [json_name = "winRate"];
+inline bool InstanceMetrics::has_win_rate() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  return value;
+}
+inline void InstanceMetrics::clear_win_rate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.win_rate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000800U);
+}
+inline float InstanceMetrics::win_rate() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.win_rate)
+  return _internal_win_rate();
+}
+inline void InstanceMetrics::set_win_rate(float value) {
+  _internal_set_win_rate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.win_rate)
+}
+inline float InstanceMetrics::_internal_win_rate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.win_rate_;
+}
+inline void InstanceMetrics::_internal_set_win_rate(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.win_rate_ = value;
+}
+
+// optional float monthly_win_rate_avg = 13 [json_name = "monthlyWinRateAvg"];
+inline bool InstanceMetrics::has_monthly_win_rate_avg() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  return value;
+}
+inline void InstanceMetrics::clear_monthly_win_rate_avg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.monthly_win_rate_avg_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
+}
+inline float InstanceMetrics::monthly_win_rate_avg() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.monthly_win_rate_avg)
+  return _internal_monthly_win_rate_avg();
+}
+inline void InstanceMetrics::set_monthly_win_rate_avg(float value) {
+  _internal_set_monthly_win_rate_avg(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.monthly_win_rate_avg)
+}
+inline float InstanceMetrics::_internal_monthly_win_rate_avg() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.monthly_win_rate_avg_;
+}
+inline void InstanceMetrics::_internal_set_monthly_win_rate_avg(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.monthly_win_rate_avg_ = value;
+}
+
+// optional float monthly_win_rate_med = 14 [json_name = "monthlyWinRateMed"];
+inline bool InstanceMetrics::has_monthly_win_rate_med() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  return value;
+}
+inline void InstanceMetrics::clear_monthly_win_rate_med() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.monthly_win_rate_med_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+}
+inline float InstanceMetrics::monthly_win_rate_med() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.monthly_win_rate_med)
+  return _internal_monthly_win_rate_med();
+}
+inline void InstanceMetrics::set_monthly_win_rate_med(float value) {
+  _internal_set_monthly_win_rate_med(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.monthly_win_rate_med)
+}
+inline float InstanceMetrics::_internal_monthly_win_rate_med() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.monthly_win_rate_med_;
+}
+inline void InstanceMetrics::_internal_set_monthly_win_rate_med(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.monthly_win_rate_med_ = value;
+}
+
+// optional float yearly_win_rate_avg = 15 [json_name = "yearlyWinRateAvg"];
+inline bool InstanceMetrics::has_yearly_win_rate_avg() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  return value;
+}
+inline void InstanceMetrics::clear_yearly_win_rate_avg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.yearly_win_rate_avg_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+}
+inline float InstanceMetrics::yearly_win_rate_avg() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.yearly_win_rate_avg)
+  return _internal_yearly_win_rate_avg();
+}
+inline void InstanceMetrics::set_yearly_win_rate_avg(float value) {
+  _internal_set_yearly_win_rate_avg(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.yearly_win_rate_avg)
+}
+inline float InstanceMetrics::_internal_yearly_win_rate_avg() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.yearly_win_rate_avg_;
+}
+inline void InstanceMetrics::_internal_set_yearly_win_rate_avg(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.yearly_win_rate_avg_ = value;
+}
+
+// optional float yearly_win_rate_med = 16 [json_name = "yearlyWinRateMed"];
+inline bool InstanceMetrics::has_yearly_win_rate_med() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00008000U);
+  return value;
+}
+inline void InstanceMetrics::clear_yearly_win_rate_med() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.yearly_win_rate_med_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00008000U);
+}
+inline float InstanceMetrics::yearly_win_rate_med() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.yearly_win_rate_med)
+  return _internal_yearly_win_rate_med();
+}
+inline void InstanceMetrics::set_yearly_win_rate_med(float value) {
+  _internal_set_yearly_win_rate_med(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.yearly_win_rate_med)
+}
+inline float InstanceMetrics::_internal_yearly_win_rate_med() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.yearly_win_rate_med_;
+}
+inline void InstanceMetrics::_internal_set_yearly_win_rate_med(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.yearly_win_rate_med_ = value;
+}
+
+// optional int32 wins = 17 [json_name = "wins"];
+inline bool InstanceMetrics::has_wins() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00010000U);
+  return value;
+}
+inline void InstanceMetrics::clear_wins() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.wins_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00010000U);
+}
+inline ::int32_t InstanceMetrics::wins() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.wins)
+  return _internal_wins();
+}
+inline void InstanceMetrics::set_wins(::int32_t value) {
+  _internal_set_wins(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.wins)
+}
+inline ::int32_t InstanceMetrics::_internal_wins() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.wins_;
+}
+inline void InstanceMetrics::_internal_set_wins(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.wins_ = value;
+}
+
+// optional int32 losses = 18 [json_name = "losses"];
+inline bool InstanceMetrics::has_losses() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00020000U);
+  return value;
+}
+inline void InstanceMetrics::clear_losses() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.losses_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00020000U);
+}
+inline ::int32_t InstanceMetrics::losses() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.losses)
+  return _internal_losses();
+}
+inline void InstanceMetrics::set_losses(::int32_t value) {
+  _internal_set_losses(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00020000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.losses)
+}
+inline ::int32_t InstanceMetrics::_internal_losses() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.losses_;
+}
+inline void InstanceMetrics::_internal_set_losses(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.losses_ = value;
+}
+
+// optional int32 breakeven = 19 [json_name = "breakeven"];
+inline bool InstanceMetrics::has_breakeven() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00040000U);
+  return value;
+}
+inline void InstanceMetrics::clear_breakeven() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.breakeven_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00040000U);
+}
+inline ::int32_t InstanceMetrics::breakeven() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.InstanceMetrics.breakeven)
+  return _internal_breakeven();
+}
+inline void InstanceMetrics::set_breakeven(::int32_t value) {
+  _internal_set_breakeven(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00040000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.InstanceMetrics.breakeven)
+}
+inline ::int32_t InstanceMetrics::_internal_breakeven() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.breakeven_;
+}
+inline void InstanceMetrics::_internal_set_breakeven(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.breakeven_ = value;
 }
 
 // -------------------------------------------------------------------
