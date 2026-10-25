@@ -7,8 +7,9 @@
 namespace dagobert {
 namespace {
 
-[[nodiscard]] std::optional<SmaCrossRule>
-rule_at_index(const CloseSeries& fast, const CloseSeries& slow, std::size_t index) {
+[[nodiscard]] std::optional<SmaCrossRule> rule_at_index(const CloseSeries &fast,
+                                                        const CloseSeries &slow,
+                                                        std::size_t index) {
   if (index == 0U || !fast.ready[index] || !slow.ready[index] ||
       !fast.ready[index - 1U] || !slow.ready[index - 1U]) {
     return std::nullopt;
@@ -26,8 +27,8 @@ rule_at_index(const CloseSeries& fast, const CloseSeries& slow, std::size_t inde
 
 } // namespace
 
-SmaCrossSeries SmaCrossSignal::evaluate(const CloseSeries& fast,
-                                        const CloseSeries& slow) {
+SmaCrossSeries SmaCrossSignal::evaluate(const CloseSeries &fast,
+                                        const CloseSeries &slow) {
   SmaCrossSeries mask;
   const std::size_t count = fast.samples.size();
   mask.rule.assign(count, std::nullopt);
@@ -40,12 +41,11 @@ SmaCrossSeries SmaCrossSignal::evaluate(const CloseSeries& fast,
   return mask;
 }
 
-std::vector<Action> SmaCrossSignal::actions_from(Position& account,
+std::vector<Action> SmaCrossSignal::actions_from(Position &account,
                                                  std::span<const Bar> bars,
-                                                 const SmaCrossSeries& mask) {
+                                                 const SmaCrossSeries &mask) {
   std::vector<Action> out;
-  const std::size_t count =
-      std::min({bars.size(), mask.rule.size()});
+  const std::size_t count = std::min({bars.size(), mask.rule.size()});
   for (std::size_t i = 0; i < count; ++i) {
     if (!mask.rule[i].has_value()) {
       continue;
@@ -62,9 +62,9 @@ std::vector<Action> SmaCrossSignal::actions_from(Position& account,
   return out;
 }
 
-std::optional<SmaCrossRule>
-SmaCrossSignal::apply(std::optional<double> fast, std::optional<double> slow,
-                      bool flat) {
+std::optional<SmaCrossRule> SmaCrossSignal::apply(std::optional<double> fast,
+                                                  std::optional<double> slow,
+                                                  bool flat) {
   if (!fast.has_value() || !slow.has_value()) {
     return std::nullopt;
   }
@@ -86,7 +86,7 @@ SmaCrossSignal::apply(std::optional<double> fast, std::optional<double> slow,
   return rule;
 }
 
-void SmaCrossSignal::execute(Position& account, const Bar& bar,
+void SmaCrossSignal::execute(Position &account, const Bar &bar,
                              SmaCrossRule rule) {
   if (rule == SmaCrossRule::golden_cross) {
     account.buy_all(bar, rule);

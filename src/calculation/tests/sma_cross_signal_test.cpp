@@ -16,7 +16,7 @@ CloseSeries make_close(std::initializer_list<double> values) {
   return close;
 }
 
-std::vector<Bar> bars_for_closes(const CloseSeries& close) {
+std::vector<Bar> bars_for_closes(const CloseSeries &close) {
   std::vector<Bar> bars;
   bars.reserve(close.samples.size());
   std::int64_t open_ms = 0;
