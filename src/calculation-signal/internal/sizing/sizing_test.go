@@ -15,6 +15,7 @@ type vectors struct {
 		Equity, Atr, Fill float64
 		Cfg               vecCfg
 		Want              float64
+		WantRiskPct       float64
 	}
 	StopPrice []struct {
 		Name            string
@@ -37,6 +38,8 @@ type vectors struct {
 
 func near(a, b float64) bool { return math.Abs(a-b) <= 1e-6*math.Max(1, math.Abs(b)) }
 
+func p[T any](v T) *T { return &v }
+
 func TestVectors(t *testing.T) {
 	raw, err := os.ReadFile("../../../../docs/v2/features/position-sizing-vectors.json")
 	if err != nil {
@@ -48,8 +51,16 @@ func TestVectors(t *testing.T) {
 	}
 	for _, c := range v.Notional {
 		cfg := c.Cfg.WithDefaults()
-		if got := Notional(c.Equity, c.Atr, c.Fill, cfg); !near(got, c.Want) {
+		got := Notional(c.Equity, c.Atr, c.Fill, cfg)
+		if !near(got, c.Want) {
 			t.Errorf("%s: notional %v want %v", c.Name, got, c.Want)
+		}
+		req, capped := RiskPct(got, c.Equity, c.Atr, c.Fill, cfg)
+		if !near(req, cfg.unitRiskPct()) {
+			t.Errorf("%s: requested risk %v want %v", c.Name, req, cfg.unitRiskPct())
+		}
+		if !near(capped, c.WantRiskPct) {
+			t.Errorf("%s: capped risk %v want %v", c.Name, capped, c.WantRiskPct)
 		}
 	}
 	for _, c := range v.StopPrice {
@@ -77,10 +88,27 @@ func TestValidate(t *testing.T) {
 	if err := (Config{}).WithDefaults().Validate(); err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range []Config{{UnitRiskPct: 3}, {UnitRiskPct: 0.1}, {UnitRiskPct: 1.5, HeatPct: 1}, {HeatPct: 3}, {MaxUnits: 5}, {StopAtrMult: -1}, {MaxWeightPct: 101}} {
+	for _, c := range []Config{
+		{UnitRiskPct: p(3.0)},
+		{UnitRiskPct: p(0.1)},
+		{UnitRiskPct: p(1.5), HeatPct: p(1.0)},
+		{HeatPct: p(3.0)},
+		{MaxUnits: p(5)},
+		{StopAtrMult: p(-1.0)},
+		{MaxWeightPct: p(101.0)},
+		{MaxWeightPct: p(0.0)},
+		{UnitRiskPct: p(0.0)},
+	} {
 		if err := c.WithDefaults().Validate(); err == nil {
 			t.Errorf("%+v: want error", c)
 		}
+	}
+}
+
+func TestExplicitZeroIsNotDefaulted(t *testing.T) {
+	c := Config{MaxWeightPct: p(0.0)}.WithDefaults()
+	if c.MaxWeightPct == nil || *c.MaxWeightPct != 0 {
+		t.Fatalf("explicit 0 replaced: %+v", c.MaxWeightPct)
 	}
 }
 
@@ -88,5 +116,12 @@ func TestRaiseStopsNeverFall(t *testing.T) {
 	out := RaiseStops([]Unit{{Fill: 100, Stop: 90, Qty: 1}}, 4, Config{}.WithDefaults())
 	if out[0].Stop != 92 {
 		t.Fatalf("stop %v", out[0].Stop)
+	}
+}
+
+func TestRaiseStopsNegativeStepKeepsStops(t *testing.T) {
+	out := RaiseStops([]Unit{{Fill: 100, Stop: 90, Qty: 1}}, 4, Config{AddAtrMult: p(-1.0)}.WithDefaults())
+	if out[0].Stop != 90 {
+		t.Fatalf("stop moved down to %v", out[0].Stop)
 	}
 }

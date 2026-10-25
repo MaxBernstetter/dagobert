@@ -14,6 +14,9 @@ type Decision struct {
 	QuoteNotional *float64
 	BaseQty       *float64
 	StopPrice     *float64
-	Exit          *Exit
-	RuleID        string
+	// RequestedRiskPct is unitRiskPct; CappedRiskPct is the risk left after the weight cap.
+	RequestedRiskPct *float64
+	CappedRiskPct    *float64
+	Exit             *Exit
+	RuleID           string
 }

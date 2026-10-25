@@ -87,6 +87,9 @@ func sizeBuy(in Input, p Policy) Result {
 
 // sizeNotionalBuy honours a risk-sized notional, capped by cash above the reserve.
 func sizeNotionalBuy(in Input, p Policy) Result {
+	if n := *in.QuoteNotional; !finitePositive(n) {
+		return Result{Decision: "no-trade", Rule: "none", Note: "invalid_notional"}
+	}
 	spendable := in.QuoteCash - p.ReserveQuote
 	if spendable <= 0 {
 		return Result{Decision: "no-trade", Rule: "none", Note: "insufficient_cash_after_reserve"}
@@ -104,14 +107,25 @@ func sizeSell(in Input, p Policy) Result {
 		return Result{Decision: "no-trade", Rule: "none", Note: "no_base_to_sell"}
 	}
 	held := in.BaseHeld
-	if in.BaseQty != nil && *in.BaseQty < held {
-		held = *in.BaseQty
+	if in.BaseQty != nil {
+		if !finitePositive(*in.BaseQty) {
+			return Result{Decision: "no-trade", Rule: "none", Note: "invalid_base_qty"}
+		}
+		held = math.Min(held, *in.BaseQty)
 	}
 	b := money.FloorBase(held)
 	if b <= 0 {
 		return Result{Decision: "no-trade", Rule: "none", Note: "dust_position"}
 	}
+	partial := held < in.BaseHeld
+	if partial && b*in.MarkPrice < p.MinOrderQuote {
+		return Result{Decision: "no-trade", Rule: "none", Note: "below_min_order"}
+	}
 	return Result{Decision: "sell", Size: &b, Rule: "allocate_sell"}
+}
+
+func finitePositive(v float64) bool {
+	return v > 0 && !math.IsInf(v, 0)
 }
 
 func ParseBalance(s string) (float64, error) {

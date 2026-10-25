@@ -295,14 +295,17 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if price <= 0 {
 			return finish(fmt.Errorf("no bar price bar_open=%d", barOpen))
 		}
-		_, baseBefore := wallet.QuoteAndBase(inst.Quote, inst.Base)
+		baseBefore := baseHeld
 		step, err := execrunner.SimulateBarWithModel(&wallet, playbookID, symbol, candleClose, planned.Decision, planned.Size, price, position, costs, slim)
 		if err != nil {
 			return finish(err)
 		}
 		simBatch.Add(step)
 		position = step.Position
-		openUnits = trackUnits(openUnits, dec, wallet, inst, baseBefore, price)
+		if dec.StopPrice != nil || len(openUnits) > 0 {
+			_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
+			openUnits = trackUnits(openUnits, dec, pol.MinOrderQuote, baseBefore, baseAfter, price)
+		}
 		if len(openUnits) > 0 {
 			position = "long"
 		}
@@ -349,16 +352,16 @@ func logProfile(workspace string, stages StageTimings, totalMs int64) {
 }
 
 // trackUnits keeps the open sized units in step with simulated fills. Decisions
-// without a stop price (legacy sizing) leave the list empty.
-func trackUnits(units []sizing.Unit, dec framework.Decision, wallet paper.Wallet, inst instruments.Instrument, baseBefore, price float64) []sizing.Unit {
-	_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
+// without a stop price (legacy sizing) add nothing. A full exit, or a remainder
+// worth less than the venue minimum, clears the units.
+func trackUnits(units []sizing.Unit, dec framework.Decision, minOrderQuote float64, baseBefore, baseAfter, price float64) []sizing.Unit {
 	switch dec.Decision {
 	case "buy":
 		if dec.StopPrice != nil && baseAfter > baseBefore {
 			units = append(units, sizing.Unit{Fill: price, Stop: *dec.StopPrice, Qty: baseAfter - baseBefore})
 		}
 	case "sell":
-		if baseBefore <= 0 || baseAfter <= 0 {
+		if dec.BaseQty == nil || baseBefore <= 0 || baseAfter <= 0 || baseAfter*price < minOrderQuote {
 			return nil
 		}
 		keep := baseAfter / baseBefore

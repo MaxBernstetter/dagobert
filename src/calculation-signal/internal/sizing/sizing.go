@@ -6,14 +6,25 @@ import (
 	"math"
 )
 
-// Config is the optional `sizing` block of a strategy config. Zero fields mean default.
+// Documented defaults, applied to omitted (nil) fields only.
+const (
+	defaultUnitRiskPct  = 1
+	defaultHeatPct      = 2
+	defaultMaxUnits     = 1
+	defaultStopAtrMult  = 2
+	defaultAddAtrMult   = 0.5
+	defaultMaxWeightPct = 100
+)
+
+// Config is the optional `sizing` block of a strategy config. A nil field means the
+// documented default; an explicit 0 is kept and fails Validate.
 type Config struct {
-	UnitRiskPct  float64 `json:"unitRiskPct"`
-	HeatPct      float64 `json:"heatPct"`
-	MaxUnits     int     `json:"maxUnits"`
-	StopAtrMult  float64 `json:"stopAtrMult"`
-	AddAtrMult   float64 `json:"addAtrMult"`
-	MaxWeightPct float64 `json:"maxWeightPct"`
+	UnitRiskPct  *float64 `json:"unitRiskPct,omitempty"`
+	HeatPct      *float64 `json:"heatPct,omitempty"`
+	MaxUnits     *int     `json:"maxUnits,omitempty"`
+	StopAtrMult  *float64 `json:"stopAtrMult,omitempty"`
+	AddAtrMult   *float64 `json:"addAtrMult,omitempty"`
+	MaxWeightPct *float64 `json:"maxWeightPct,omitempty"`
 }
 
 // Unit is one open buy: fill price, stop price and base quantity.
@@ -23,39 +34,65 @@ type Unit struct {
 	Qty  float64
 }
 
-// WithDefaults fills zero fields with the documented defaults.
-func (c Config) WithDefaults() Config {
-	def := func(v *float64, d float64) {
-		if *v == 0 {
-			*v = d
-		}
+func fv(p *float64, d float64) float64 {
+	if p == nil {
+		return d
 	}
-	def(&c.UnitRiskPct, 1)
-	def(&c.HeatPct, 2)
-	def(&c.StopAtrMult, 2)
-	def(&c.AddAtrMult, 0.5)
-	def(&c.MaxWeightPct, 100)
-	if c.MaxUnits == 0 {
-		c.MaxUnits = 1
+	return *p
+}
+
+func (c Config) unitRiskPct() float64 { return fv(c.UnitRiskPct, defaultUnitRiskPct) }
+func (c Config) heatPct() float64     { return fv(c.HeatPct, defaultHeatPct) }
+func (c Config) stopAtrMult() float64 { return fv(c.StopAtrMult, defaultStopAtrMult) }
+func (c Config) addAtrMult() float64  { return fv(c.AddAtrMult, defaultAddAtrMult) }
+func (c Config) maxWeightPct() float64 {
+	return fv(c.MaxWeightPct, defaultMaxWeightPct)
+}
+
+func (c Config) maxUnits() int {
+	if c.MaxUnits == nil {
+		return defaultMaxUnits
+	}
+	return *c.MaxUnits
+}
+
+// WithDefaults returns a copy with every nil field set to its documented default.
+func (c Config) WithDefaults() Config {
+	f := func(v *float64, d float64) *float64 {
+		if v != nil {
+			return v
+		}
+		return &d
+	}
+	c.UnitRiskPct = f(c.UnitRiskPct, defaultUnitRiskPct)
+	c.HeatPct = f(c.HeatPct, defaultHeatPct)
+	c.StopAtrMult = f(c.StopAtrMult, defaultStopAtrMult)
+	c.AddAtrMult = f(c.AddAtrMult, defaultAddAtrMult)
+	c.MaxWeightPct = f(c.MaxWeightPct, defaultMaxWeightPct)
+	if c.MaxUnits == nil {
+		n := defaultMaxUnits
+		c.MaxUnits = &n
 	}
 	return c
 }
 
-// Validate checks the allowed ranges. Call on a config with defaults applied.
+// Validate checks the allowed ranges. Nil fields take their defaults first.
 func (c Config) Validate() error {
+	unit, heat, units := c.unitRiskPct(), c.heatPct(), c.maxUnits()
+	stop, add, weight := c.stopAtrMult(), c.addAtrMult(), c.maxWeightPct()
 	switch {
-	case !(c.UnitRiskPct >= 0.25 && c.UnitRiskPct <= 2):
-		return fmt.Errorf("sizing: unitRiskPct %v must be in [0.25, 2]", c.UnitRiskPct)
-	case !(c.HeatPct >= c.UnitRiskPct && c.HeatPct <= 2):
-		return fmt.Errorf("sizing: heatPct %v must be in [unitRiskPct, 2]", c.HeatPct)
-	case c.MaxUnits < 1 || c.MaxUnits > 4:
-		return fmt.Errorf("sizing: maxUnits %d must be in [1, 4]", c.MaxUnits)
-	case !(c.StopAtrMult > 0):
-		return fmt.Errorf("sizing: stopAtrMult %v must be positive", c.StopAtrMult)
-	case !(c.AddAtrMult > 0):
-		return fmt.Errorf("sizing: addAtrMult %v must be positive", c.AddAtrMult)
-	case !(c.MaxWeightPct > 0 && c.MaxWeightPct <= 100):
-		return fmt.Errorf("sizing: maxWeightPct %v must be in (0, 100]", c.MaxWeightPct)
+	case !(unit >= 0.25 && unit <= 2):
+		return fmt.Errorf("sizing: unitRiskPct %v must be in [0.25, 2]", unit)
+	case !(heat >= unit && heat <= 2):
+		return fmt.Errorf("sizing: heatPct %v must be in [unitRiskPct, 2]", heat)
+	case units < 1 || units > 4:
+		return fmt.Errorf("sizing: maxUnits %d must be in [1, 4]", units)
+	case !(stop > 0):
+		return fmt.Errorf("sizing: stopAtrMult %v must be positive", stop)
+	case !(add > 0):
+		return fmt.Errorf("sizing: addAtrMult %v must be positive", add)
+	case !(weight > 0 && weight <= 100):
+		return fmt.Errorf("sizing: maxWeightPct %v must be in (0, 100]", weight)
 	}
 	return nil
 }
@@ -74,13 +111,25 @@ func Notional(equity, atr, fill float64, c Config) float64 {
 	if !valid(equity, atr, fill) {
 		return 0
 	}
-	byRisk := equity * c.UnitRiskPct / 100 / (c.StopAtrMult * atr / fill)
-	return math.Min(byRisk, equity*c.MaxWeightPct/100)
+	byRisk := equity * c.unitRiskPct() / 100 / (c.stopAtrMult() * atr / fill)
+	return math.Min(byRisk, equity*c.maxWeightPct()/100)
+}
+
+// RiskPct returns the requested risk (unitRiskPct) and the risk percent of equity that
+// notional actually carries at its stop, after the weight cap. Capped is 0 when an input
+// is unusable.
+func RiskPct(notional, equity, atr, fill float64, c Config) (requested, capped float64) {
+	requested = c.unitRiskPct()
+	if !valid(equity, atr, fill) || !valid(notional) {
+		return requested, 0
+	}
+	capped = notional * (c.stopAtrMult() * atr / fill) / equity * 100
+	return requested, capped
 }
 
 // StopPrice is the entry stop: fill minus stopAtrMult times ATR.
 func StopPrice(fill, atr float64, c Config) float64 {
-	return fill - c.StopAtrMult*atr
+	return fill - c.stopAtrMult()*atr
 }
 
 // OpenRisk sums the entry-to-stop loss of open units, in quote.
@@ -98,22 +147,23 @@ func ExcessBaseForHeat(baseHeld, atr, equity float64, c Config) float64 {
 	if !valid(baseHeld, atr, equity) {
 		return 0
 	}
-	dist := c.StopAtrMult * atr
-	over := baseHeld*dist - equity*c.HeatPct/100
+	dist := c.stopAtrMult() * atr
+	over := baseHeld*dist - equity*c.heatPct()/100
 	if over <= 0 {
 		return 0
 	}
 	return math.Min(over/dist, baseHeld)
 }
 
-// RaiseStops moves every earlier stop up by addAtrMult times ATR. A stop never falls.
+// RaiseStops moves every earlier stop up by addAtrMult times ATR. A stop never falls,
+// so a negative step is clamped to zero.
 func RaiseStops(units []Unit, atr float64, c Config) []Unit {
 	out := make([]Unit, len(units))
 	copy(out, units)
 	if !valid(atr) {
 		return out
 	}
-	step := c.AddAtrMult * atr
+	step := math.Max(0, c.addAtrMult()*atr)
 	for i := range out {
 		out[i].Stop += step
 	}
@@ -123,19 +173,19 @@ func RaiseStops(units []Unit, atr float64, c Config) []Unit {
 // PyramidAllowed reports whether another unit may be bought at price, and its notional.
 // units are the open units (stops not yet raised); on true, callers raise them with RaiseStops.
 func PyramidAllowed(units []Unit, lastFill, price, equity, atr float64, c Config) (float64, bool) {
-	if len(units) == 0 || len(units) >= c.MaxUnits || !valid(lastFill, price, equity, atr) {
+	if len(units) == 0 || len(units) >= c.maxUnits() || !valid(lastFill, price, equity, atr) {
 		return 0, false
 	}
-	if price-lastFill < c.AddAtrMult*atr {
+	if price-lastFill < c.addAtrMult()*atr {
 		return 0, false
 	}
 	n := Notional(equity, atr, price, c)
 	if n <= 0 {
 		return 0, false
 	}
-	newRisk := n * c.StopAtrMult * atr / price
+	newRisk := n * c.stopAtrMult() * atr / price
 	total := OpenRisk(RaiseStops(units, atr, c)) + newRisk
-	if total > equity*c.HeatPct/100*(1+1e-9) {
+	if total > equity*c.heatPct()/100*(1+1e-9) {
 		return 0, false
 	}
 	return n, true

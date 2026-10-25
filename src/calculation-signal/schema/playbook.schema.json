@@ -17,6 +17,53 @@
     }
   },
   "$defs": {
+    "sizing": {
+      "description": "Optional risk sizing under a strategy config's `sizing` key (docs/v2/features/position-sizing.md). Omitting it keeps the single target weight and full exit. An omitted field takes its default; an explicit 0 is rejected by range. heatPct must be at least unitRiskPct, checked in code. The Decision fields requestedRiskPct and cappedRiskPct are diagnostics set by the sizing core, not config.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unitRiskPct": {
+          "description": "Loss at the stop for one unit, percent of equity at entry.",
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 2,
+          "default": 1
+        },
+        "heatPct": {
+          "description": "Cap on the summed entry-to-stop loss of open units, percent of equity. Must be at least unitRiskPct.",
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 2,
+          "default": 2
+        },
+        "maxUnits": {
+          "description": "Buys in one trade, including the first. 1 means no pyramid.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1
+        },
+        "stopAtrMult": {
+          "description": "Stop distance in ATR(24h) multiples.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 2
+        },
+        "addAtrMult": {
+          "description": "Favourable move from the last fill, in ATR(24h) multiples, required before another unit. Also the stop step.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.5
+        },
+        "maxWeightPct": {
+          "description": "Notional cap, percent of equity.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "default": 100
+        }
+      }
+    },
     "indicatorDef": {
       "type": "object",
       "required": ["type", "method", "time_frame_hr"],
