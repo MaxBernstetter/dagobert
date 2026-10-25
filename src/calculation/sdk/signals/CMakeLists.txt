@@ -1,4 +1,4 @@
-add_library(dagobert_signals STATIC sma_cross_signal.cpp)
+add_library(dagobert_signals STATIC sma_cross_signal.cpp consensus_gates.cpp)
 target_include_directories(
   dagobert_signals
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
