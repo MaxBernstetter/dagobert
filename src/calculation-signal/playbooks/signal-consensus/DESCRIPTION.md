@@ -32,3 +32,7 @@ Backtests set `AGGREGATION_DURATION_MS=6h` for this playbook.
 | `consensus_buy` | flat, cross up SMA12, higher trend stack, MACD hist > 0, filters, cooldown | `buy` |
 | `consensus_sell` | long, cross below SMA12 | `sell` |
 | `atr_stop` | long, close < SMA12 − 2.5×ATR24 | `sell` |
+
+## Position sizing
+
+The size that matches this stop is specified in [Position sizing](/wiki/playbooks/position-sizing). This playbook does not apply that spec yet. It still emits the signal only, and a run still sizes the order as one target weight of the book.
