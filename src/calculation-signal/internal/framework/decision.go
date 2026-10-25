@@ -10,6 +10,10 @@ type Exit struct {
 type Decision struct {
 	Decision string
 	Size     *float64
-	Exit     *Exit
-	RuleID   string
+	// Optional risk-sized amounts (position-sizing.md). Nil keeps the legacy target weight / full exit.
+	QuoteNotional *float64
+	BaseQty       *float64
+	StopPrice     *float64
+	Exit          *Exit
+	RuleID        string
 }

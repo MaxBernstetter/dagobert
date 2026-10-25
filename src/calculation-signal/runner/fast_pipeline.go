@@ -10,6 +10,7 @@ import (
 	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/playbooks"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 	macross "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/ma-cross"
 	signalconsensus "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/signal-consensus"
 	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
@@ -173,6 +174,7 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 	position := "flat"
 	lastBuyBar := -1
 	lastSellBar := -1
+	var openUnits []sizing.Unit
 	total := len(candleCloses)
 	reportEvery := 1
 	if total > 200 {
@@ -222,7 +224,17 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if lastSellBar >= 0 {
 			barsSinceSell = i - lastSellBar
 		}
+		var lastFill, equity float64
+		if len(openUnits) > 0 {
+			lastFill = openUnits[len(openUnits)-1].Fill
+		}
+		if q0, b0 := wallet.QuoteAndBase(inst.Quote, inst.Base); barClose > 0 {
+			equity = q0 + b0*barClose
+		}
 		dec, err := entry.Strategy.Evaluate(framework.Context{
+			Equity:           equity,
+			OpenUnits:        append([]sizing.Unit(nil), openUnits...),
+			LastFill:         lastFill,
 			Symbol:           symbol,
 			CandleClose:      candleClose,
 			BarOpen:          barOpen,
@@ -266,7 +278,7 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			mark = 1
 		}
 		quoteCash, baseHeld := wallet.QuoteAndBase(inst.Quote, inst.Base)
-		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, pol, encodeBodies)
+		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, dec.QuoteNotional, dec.BaseQty, pol, encodeBodies)
 		if err != nil {
 			return finish(err)
 		}
@@ -283,12 +295,17 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if price <= 0 {
 			return finish(fmt.Errorf("no bar price bar_open=%d", barOpen))
 		}
+		_, baseBefore := wallet.QuoteAndBase(inst.Quote, inst.Base)
 		step, err := execrunner.SimulateBarWithModel(&wallet, playbookID, symbol, candleClose, planned.Decision, planned.Size, price, position, costs, slim)
 		if err != nil {
 			return finish(err)
 		}
 		simBatch.Add(step)
 		position = step.Position
+		openUnits = trackUnits(openUnits, dec, wallet, inst, baseBefore, price)
+		if len(openUnits) > 0 {
+			position = "long"
+		}
 		switch dec.Decision {
 		case "buy":
 			lastBuyBar = i
@@ -329,4 +346,25 @@ func profileEnabled() bool {
 func logProfile(workspace string, stages StageTimings, totalMs int64) {
 	fmt.Fprintf(os.Stderr, "experiment_sim_profile workspace=%s totalMs=%d loopMs=%d encodeMs=%d flushMs=%d\n",
 		workspace, totalMs, stages.LoopMs, stages.EncodeMs, stages.FlushMs)
+}
+
+// trackUnits keeps the open sized units in step with simulated fills. Decisions
+// without a stop price (legacy sizing) leave the list empty.
+func trackUnits(units []sizing.Unit, dec framework.Decision, wallet paper.Wallet, inst instruments.Instrument, baseBefore, price float64) []sizing.Unit {
+	_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
+	switch dec.Decision {
+	case "buy":
+		if dec.StopPrice != nil && baseAfter > baseBefore {
+			units = append(units, sizing.Unit{Fill: price, Stop: *dec.StopPrice, Qty: baseAfter - baseBefore})
+		}
+	case "sell":
+		if baseBefore <= 0 || baseAfter <= 0 {
+			return nil
+		}
+		keep := baseAfter / baseBefore
+		for i := range units {
+			units[i].Qty *= keep
+		}
+	}
+	return units
 }

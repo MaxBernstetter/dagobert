@@ -7,12 +7,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 )
 
 // Config is the ma-cross strategy parameter set (SMA windows in calendar hours).
 type Config struct {
 	FastHr int `json:"fastHr"`
 	SlowHr int `json:"slowHr"`
+	// Sizing is optional risk sizing; nil keeps the single target weight and full exit.
+	Sizing *sizing.Config `json:"sizing,omitempty"`
 }
 
 // DefaultConfig is SMA(3h)/SMA(6h) — matches historical hardcoded behaviour.
@@ -36,13 +40,17 @@ func ParseConfig(raw json.RawMessage) (Config, error) {
 		return Config{}, fmt.Errorf("ma-cross config: %w", err)
 	}
 	for k := range probe {
-		if k != "fastHr" && k != "slowHr" {
+		if k != "fastHr" && k != "slowHr" && k != "sizing" {
 			return Config{}, fmt.Errorf("ma-cross config: unknown key %q", k)
 		}
 	}
 	cfg := DefaultConfig()
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return Config{}, fmt.Errorf("ma-cross config: %w", err)
+	}
+	if cfg.Sizing != nil {
+		d := cfg.Sizing.WithDefaults()
+		cfg.Sizing = &d
 	}
 	return cfg, nil
 }
@@ -60,6 +68,11 @@ func (c Config) Validate(aggregationDurationMS int64) error {
 	}
 	if _, ok := deployedSMAHours[c.SlowHr]; !ok {
 		return fmt.Errorf("ma-cross config: slowHr %d not in deployed SMA set", c.SlowHr)
+	}
+	if c.Sizing != nil {
+		if err := c.Sizing.Validate(); err != nil {
+			return fmt.Errorf("ma-cross config: %w", err)
+		}
 	}
 	if aggregationDurationMS > 0 {
 		if aggregationsForTimeFrame(c.FastHr, aggregationDurationMS) <= 0 {
@@ -87,7 +100,7 @@ func aggregationsForTimeFrame(timeFrameHr int, aggregationDurationMS int64) int 
 
 // CanonicalJSON returns stable JSON for hashing (sorted keys via struct order).
 func (c Config) CanonicalJSON() ([]byte, error) {
-	return json.Marshal(Config{FastHr: c.FastHr, SlowHr: c.SlowHr})
+	return json.Marshal(c)
 }
 
 // Hash returns a hex SHA-256 of the canonical config JSON.

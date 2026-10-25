@@ -98,3 +98,12 @@ The Original Turtle Trading Rules (Richard Dennis and William Eckhardt) size a u
 Moreira and Muir, "Volatility-Managed Portfolios", *Journal of Finance* 72 (4), 2017, scale exposure by the inverse of recent realized variance, because variance persists and expected return does not rise in proportion. [doi.org/10.1111/jofi.12513](https://doi.org/10.1111/jofi.12513). The volatility cut is that direction applied as a cap: less notional when ATR is higher. A quieter ATR is not, by itself, a reason to add.
 
 Kelly, "A New Interpretation of Information Rate", *Bell System Technical Journal* 35 (4), 1956, gives the fraction that maximizes expected log growth. [doi.org/10.1002/j.1538-7305.1956.tb03809.x](https://doi.org/10.1002/j.1538-7305.1956.tb03809.x). Full Kelly, and the related optimal f, produce deep drawdowns and need an edge estimate these playbooks do not have yet. Rotando and Thorp, "The Kelly Criterion and the Stock Market", *American Mathematical Monthly* 99 (1992), apply that fraction to a market edge. [PDF](https://www.edwardothorp.com/wp-content/uploads/2016/11/TheKellyCriterionAndTheStockMarket.pdf). A measured half of the Kelly fraction can later be compared with `unitRiskPct`. It does not set the fraction, and it stays under the 2% ceiling. In the continuous approximation, that half keeps about three-quarters of the growth rate.
+
+## Implementation notes
+
+The pure maths lives in `src/calculation-signal/internal/sizing`; `position-sizing-vectors.json` holds the worked examples as golden vectors. Readings where this page was silent:
+
+- Open risk of earlier units is `qty x (fill - stop)`, computed after their stops are raised by the ATR step.
+- The volatility cut sells `(base x stopAtrMult x ATR - equity x heatPct/100) / (stopAtrMult x ATR)`, capped at the base held.
+- Equity is cash plus base at the bar mark. A decision may carry `QuoteNotional`, `BaseQty` and `StopPrice`; market-action caps a notional by cash above the reserve and skips a buy below the venue minimum.
+- The backtest loop tracks open units from simulated fills. The live path does not yet derive units from the fill journal, and the playbooks do not yet emit sized decisions.
