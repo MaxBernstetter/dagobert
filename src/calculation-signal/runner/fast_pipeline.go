@@ -364,6 +364,11 @@ func trackUnits(units []sizing.Unit, dec framework.Decision, minOrderQuote float
 			}
 		}
 		if dec.StopPrice != nil && baseAfter > baseBefore {
+			if dec.StopRaise != nil {
+				for i := range units {
+					units[i].Stop += *dec.StopRaise
+				}
+			}
 			units = append(units, sizing.Unit{Fill: price, Stop: *dec.StopPrice, Qty: baseAfter - baseBefore})
 		}
 	case "sell":

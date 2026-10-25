@@ -33,7 +33,7 @@ Stored in `calculation_signal.sqlite` → `signal` (not `action`).
 
 ## Position sizing
 
-The buy and the sell that go with a sized trade are specified in [Position sizing](/wiki/playbooks/position-sizing). This playbook does not apply that spec yet. It still emits the cross signal only, and a run still sizes the order as one target weight of the book.
+The buy and the sell that go with a sized trade are specified in [Position sizing](/wiki/playbooks/position-sizing). This playbook applies sizing when configured: with a `sizing` block in the strategy config, the golden cross buys a risk-sized notional with an ATR(24h) stop, and no ATR means no trade. While long, one bar does one thing in this order: `atr_stop` (close at or below the highest open stop, sell all), `death_cross` (sell all), `vol_cut` (partial sell), `pyramid` (buy, only when `maxUnits` is above 1). Without `sizing` it emits the cross signal only and a run sizes the order as one target weight of the book.
 
 ## Sparse lake / gaps
 
