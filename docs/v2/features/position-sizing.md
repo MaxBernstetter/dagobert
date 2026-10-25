@@ -7,7 +7,7 @@ status: specified
 
 # Position sizing
 
-Status: specified. ma-cross applies this when `sizing` is configured; signal-consensus does not yet. A buy still deploys one target weight of the book, and a sell still exits the whole position.
+Status: specified. ma-cross and signal-consensus apply this when `sizing` is configured. A buy still deploys one target weight of the book, and a sell still exits the whole position.
 
 ## Aim
 
@@ -71,7 +71,7 @@ Cash reserve and minimum order stay venue limits.
 
 **ma-cross.** Buy on the golden cross, at the notional above, with the stop at the fill minus `stopAtrMult` times ATR(24h). Sell all when that stop trades or on the death cross, whichever comes first. The death cross remains the trend exit. The ATR stop is the exit for a loser, which a cross does not provide. The playbook does this when `sizing` is configured.
 
-**signal-consensus.** The entry filters stay: SMA12 cross, the higher trend stack, MACD histogram, RSI and volume votes, and the cooldown. The buy uses the existing ATR stop distance, `atrStopMult`, as `stopAtrMult`, so the size matches the sell. Sell all on the cross below SMA12 or on that ATR stop. The volatility cut is the only new exit. The playbook does not size the buy this way yet.
+**signal-consensus.** The entry filters stay: SMA12 cross, the higher trend stack, MACD histogram, RSI and volume votes, and the cooldown. The buy uses the existing ATR stop distance, `atrStopMult`, as `stopAtrMult`, so the size matches the sell. Sell all on the cross below SMA12 or on that ATR stop. The volatility cut is the only new exit. The playbook sizes the buy this way when `sizing` is set.
 
 ## Example
 
