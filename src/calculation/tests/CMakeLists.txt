@@ -1,4 +1,4 @@
-add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp)
+add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.cpp)
 target_include_directories(dagobert-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models)
 target_link_libraries(dagobert-tests PRIVATE GTest::gtest_main magic_enum::magic_enum
                                              dagobert_data_models)

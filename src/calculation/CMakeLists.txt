@@ -47,6 +47,7 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StratForge.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MagicEnum.cmake)
 
 add_library(dagobert_sdk OBJECT sdk/dagobert.cpp)
 target_include_directories(dagobert_sdk PUBLIC sdk)
@@ -61,7 +62,6 @@ target_link_libraries(dagobert INTERFACE dagobert_sdk)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Protobuf.cmake)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MagicEnum.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GoogleTest.cmake)
 
 enable_testing()

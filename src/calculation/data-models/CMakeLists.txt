@@ -1,3 +1,4 @@
-add_library(dagobert_data_models quote.cpp)
+add_library(dagobert_data_models quote.cpp position.cpp)
 target_include_directories(dagobert_data_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(dagobert_data_models PUBLIC magic_enum::magic_enum)
 dagobert_strict_warnings(dagobert_data_models)
