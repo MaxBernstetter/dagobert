@@ -32,6 +32,7 @@ struct Action {
   Side side{Side::none};
   std::string reason;
   double weight_pct{};
+  double stop{};
 };
 
 struct Fill {

@@ -1,0 +1,23 @@
+{
+  "notional": [
+    {"name": "doc example: 2% ATR", "equity": 100000, "atr": 2000, "fill": 100000, "cfg": {}, "want": 25000, "wantRiskPct": 1},
+    {"name": "doc example: 5% ATR", "equity": 100000, "atr": 5000, "fill": 100000, "cfg": {}, "want": 10000, "wantRiskPct": 1},
+    {"name": "doc example: weight cap binds", "equity": 100000, "atr": 400, "fill": 100000, "cfg": {}, "want": 100000, "wantRiskPct": 0.8},
+    {"name": "maxWeightPct 50 caps", "equity": 100000, "atr": 400, "fill": 100000, "cfg": {"maxWeightPct": 50}, "want": 50000, "wantRiskPct": 0.4},
+    {"name": "zero atr", "equity": 100000, "atr": 0, "fill": 100000, "cfg": {}, "want": 0, "wantRiskPct": 0}
+  ],
+  "stopPrice": [
+    {"name": "doc example stop", "fill": 100000, "atr": 2000, "cfg": {}, "want": 96000}
+  ],
+  "excessBase": [
+    {"name": "within heat", "baseHeld": 0.25, "atr": 2000, "equity": 100000, "cfg": {}, "want": 0},
+    {"name": "atr doubled, sell half", "baseHeld": 0.5, "atr": 4000, "equity": 100000, "cfg": {}, "want": 0.25},
+    {"name": "no base", "baseHeld": 0, "atr": 4000, "equity": 100000, "cfg": {}, "want": 0}
+  ],
+  "pyramid": [
+    {"name": "rise of half ATR allows second unit", "cfg": {"maxUnits": 4, "unitRiskPct": 0.5}, "units": [{"fill": 100000, "stop": 96000, "qty": 0.125}], "lastFill": 100000, "price": 101000, "equity": 100000, "atr": 2000, "want": true},
+    {"name": "rise too small", "cfg": {"maxUnits": 4, "unitRiskPct": 0.5}, "units": [{"fill": 100000, "stop": 96000, "qty": 0.125}], "lastFill": 100000, "price": 100500, "equity": 100000, "atr": 2000, "want": false},
+    {"name": "maxUnits 1 never adds", "cfg": {}, "units": [{"fill": 100000, "stop": 96000, "qty": 0.25}], "lastFill": 100000, "price": 105000, "equity": 100000, "atr": 2000, "want": false},
+    {"name": "heat exceeded", "cfg": {"maxUnits": 2, "unitRiskPct": 1, "heatPct": 1.5}, "units": [{"fill": 100000, "stop": 96000, "qty": 0.25}], "lastFill": 100000, "price": 101000, "equity": 100000, "atr": 2000, "want": false}
+  ]
+}
