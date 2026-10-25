@@ -17,6 +17,8 @@ type Decision struct {
 	// RequestedRiskPct is unitRiskPct; CappedRiskPct is the risk left after the weight cap.
 	RequestedRiskPct *float64
 	CappedRiskPct    *float64
-	Exit             *Exit
-	RuleID           string
+	// RaiseStopsBy lifts every open unit's stop by this price step (a pyramid buy).
+	RaiseStopsBy *float64
+	Exit         *Exit
+	RuleID       string
 }

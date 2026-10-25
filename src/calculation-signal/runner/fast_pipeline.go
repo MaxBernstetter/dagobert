@@ -3,6 +3,7 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -357,6 +358,11 @@ func logProfile(workspace string, stages StageTimings, totalMs int64) {
 func trackUnits(units []sizing.Unit, dec framework.Decision, minOrderQuote float64, baseBefore, baseAfter, price float64) []sizing.Unit {
 	switch dec.Decision {
 	case "buy":
+		if dec.RaiseStopsBy != nil && baseAfter > baseBefore {
+			for i := range units {
+				units[i].Stop += math.Max(0, *dec.RaiseStopsBy)
+			}
+		}
 		if dec.StopPrice != nil && baseAfter > baseBefore {
 			units = append(units, sizing.Unit{Fill: price, Stop: *dec.StopPrice, Qty: baseAfter - baseBefore})
 		}
