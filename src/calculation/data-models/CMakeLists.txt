@@ -1,0 +1,3 @@
+add_library(dagobert_data_models quote.cpp)
+target_include_directories(dagobert_data_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+dagobert_strict_warnings(dagobert_data_models)
