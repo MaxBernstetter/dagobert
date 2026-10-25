@@ -118,7 +118,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
     const double spend =
         std::min(sizing::notional(equity, atr, price, sz), account.cash());
     const double stop = sizing::stop_price(price, atr, sz);
-    if (!(spend > 0.0) || !(stop > 0.0) || !(stop < price)) {
+    if (!(spend > 0.0) || sizing::below_min_order(spend, sz)) {
       return;
     }
     const double before = account.qty();
@@ -153,6 +153,9 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
   }
   if (const double cut = sizing::excess_base_for_heat(held, atr, equity, sz);
       cut > 0.0) {
+    if (sizing::below_min_order(cut * price, sz)) {
+      return;
+    }
     const double before = account.qty();
     account.sell_base(bar, cut, SmaCrossRule::vol_cut);
     if (account.flat()) {
@@ -173,7 +176,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
   }
   const double spend = std::min(*add, account.cash());
   const double stop = sizing::stop_price(price, atr, sz);
-  if (!(spend > 0.0) || !(stop > 0.0) || !(stop < price)) {
+  if (!(spend > 0.0) || sizing::below_min_order(spend, sz)) {
     return;
   }
   const double step = sizing::raise_stops({units_.front()}, atr, sz)[0].stop -

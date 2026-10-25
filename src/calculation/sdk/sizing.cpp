@@ -43,7 +43,14 @@ std::string validate(const SizingConfig &cfg) {
   if (!(cfg.max_weight() > 0.0 && cfg.max_weight() <= 100.0)) {
     return "maxWeightPct must be in (0, 100]";
   }
+  if (!(cfg.min_order() >= 0.0 && std::isfinite(cfg.min_order()))) {
+    return "minOrderQuote must be >= 0";
+  }
   return "";
+}
+
+bool below_min_order(double quote, const SizingConfig &cfg) {
+  return quote < cfg.min_order();
 }
 
 double notional(double equity, double atr, double fill,
