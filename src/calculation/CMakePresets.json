@@ -1,0 +1,38 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "toolchain",
+      "hidden": true,
+      "description": "Clang 22.1.8 (newest stable in nixpkgs; Clang 23 not packaged)."
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "binaryDir": "${sourceDir}/../../build/debug",
+      "cacheVariables": {
+        "DAGOBERT_MODE": "debug",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "optimized",
+      "displayName": "Optimized",
+      "binaryDir": "${sourceDir}/../../build/optimized",
+      "cacheVariables": {
+        "DAGOBERT_MODE": "optimized",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    }
+  ]
+}
