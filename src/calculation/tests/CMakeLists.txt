@@ -1,5 +1,7 @@
-add_executable(dagobert-tests magic_enum_test.cpp)
-target_link_libraries(dagobert-tests PRIVATE GTest::gtest_main magic_enum::magic_enum)
+add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp)
+target_include_directories(dagobert-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models)
+target_link_libraries(dagobert-tests PRIVATE GTest::gtest_main magic_enum::magic_enum
+                                             dagobert_data_models)
 dagobert_strict_warnings(dagobert-tests)
 target_link_options(dagobert-tests PRIVATE -static-libstdc++ -static-libgcc)
 if(DAGOBERT_MODE STREQUAL "debug")

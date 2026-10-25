@@ -53,6 +53,7 @@ target_include_directories(dagobert_sdk PUBLIC sdk)
 dagobert_strict_warnings(dagobert_sdk)
 
 add_subdirectory(sdk/indicators)
+add_subdirectory(data-models)
 
 add_library(dagobert INTERFACE)
 target_compile_features(dagobert INTERFACE cxx_std_23)
