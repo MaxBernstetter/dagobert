@@ -30,3 +30,8 @@ Stored in `calculation_signal.sqlite` → `signal` (not `action`).
 | `golden_cross` | `flat`, cross up | `buy` |
 | `death_cross` | `long`, cross down | `sell` |
 | `none` | Otherwise | `no-trade` |
+
+## Position sizing
+
+The buy and the sell that go with a sized trade are specified in [Position sizing](/wiki/playbooks/position-sizing). This playbook does not apply that spec yet. It still emits the cross signal only, and a run still sizes the order as one target weight of the book.
+
