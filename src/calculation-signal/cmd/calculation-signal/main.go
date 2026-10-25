@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ import (
 )
 
 // Invocation: calculation-signal <symbol> <candle_close_ms>
-// Environment: DATA_DIR, PLAYBOOK (slug or legacy path, e.g. ma-cross or ma-cross.yaml).
+// Environment: DATA_DIR, optional STRATEGY_CONFIG (playbook JSON incl. sizing) and EQUITY (quote units), PLAYBOOK (slug or legacy path, e.g. ma-cross or ma-cross.yaml).
 func main() {
 	exitCode, detail := run()
 	fmt.Printf("DETAIL=%d\n", detail)
@@ -41,9 +42,9 @@ func run() (exitCode int, detail int) {
 		return 1, 10
 	}
 
-	detail, err := playbooks.Run(dataDir, playbookEnv, symbol, candleClose)
+	detail, err := playbooks.Run(dataDir, playbookEnv, symbol, candleClose, json.RawMessage(os.Getenv("STRATEGY_CONFIG")))
 	if err != nil {
-		if errors.Is(err, framework.ErrDuplicateAction) {
+		if errors.Is(err, framework.ErrDuplicateAction) || errors.Is(err, framework.ErrDuplicateSignal) {
 			return 2, detail
 		}
 		if detail == 20 {

@@ -75,6 +75,11 @@ func hasRow(db *sql.DB, table, playbookID, symbol string, candleClose int64) (bo
 type Signal struct {
 	Decision string
 	RuleID   string
+	// Optional risk-sized fields (position-sizing.md); nil on legacy signals.
+	QuoteNotional *float64
+	BaseQty       *float64
+	StopPrice     *float64
+	RaiseStopsBy  *float64
 }
 
 func ReadSignal(db *sql.DB, playbookID, symbol string, candleClose int64) (Signal, error) {
@@ -90,13 +95,21 @@ func ReadSignal(db *sql.DB, playbookID, symbol string, candleClose int64) (Signa
 		return Signal{}, err
 	}
 	var body struct {
-		Decision string `json:"decision"`
-		Rule     string `json:"rule"`
+		Decision      string   `json:"decision"`
+		Rule          string   `json:"rule"`
+		QuoteNotional *float64 `json:"quote_notional"`
+		BaseQty       *float64 `json:"base_qty"`
+		StopPrice     *float64 `json:"stop_price"`
+		RaiseStopsBy  *float64 `json:"raise_stops_by"`
 	}
 	if err := json.Unmarshal([]byte(raw), &body); err != nil {
 		return Signal{}, err
 	}
-	return Signal{Decision: body.Decision, RuleID: body.Rule}, nil
+	return Signal{
+		Decision: body.Decision, RuleID: body.Rule,
+		QuoteNotional: body.QuoteNotional, BaseQty: body.BaseQty,
+		StopPrice: body.StopPrice, RaiseStopsBy: body.RaiseStopsBy,
+	}, nil
 }
 
 func CommitSignal(db *sql.DB, playbookID, symbol string, candleClose int64, body []byte) error {
