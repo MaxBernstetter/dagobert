@@ -4,7 +4,9 @@ add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.c
                                    sma_cross_signal_test.cpp consensus_gates_test.cpp consensus_signal_test.cpp
                                    sma_cross_strategy_test.cpp
                                    bars_parquet_test.cpp sizing_test.cpp
-                                   sma_cross_exe_test.cpp sma_cross_sizing_test.cpp)
+                                   sma_cross_exe_test.cpp sma_cross_sizing_test.cpp
+                                   consensus_strategy_test.cpp
+                                   consensus_exe_test.cpp)
 target_include_directories(
   dagobert-tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models
@@ -12,15 +14,17 @@ target_include_directories(
           ${CMAKE_CURRENT_SOURCE_DIR}/../sdk/signals
           ${CMAKE_CURRENT_SOURCE_DIR}/../sdk
           ${CMAKE_CURRENT_SOURCE_DIR}/../strategies/sma-cross
+          ${CMAKE_CURRENT_SOURCE_DIR}/../strategies/consensus
           ${CMAKE_CURRENT_SOURCE_DIR}/../gen/cpp)
 target_link_libraries(
   dagobert-tests
   PRIVATE GTest::gtest_main magic_enum::magic_enum dagobert_data_models
           dagobert_indicators dagobert_signals dagobert_strategy
-          sma_cross_strategy dagobert_proto dagobert_bars_parquet)
-add_dependencies(dagobert-tests strategy-sma-cross)
+          sma_cross_strategy consensus_strategy dagobert_proto dagobert_bars_parquet)
+add_dependencies(dagobert-tests strategy-sma-cross strategy-signal-consensus)
 target_compile_definitions(dagobert-tests
-                           PRIVATE SMA_CROSS_BIN="$<TARGET_FILE:strategy-sma-cross>")
+                           PRIVATE SMA_CROSS_BIN="$<TARGET_FILE:strategy-sma-cross>"
+                           CONSENSUS_BIN="$<TARGET_FILE:strategy-signal-consensus>")
 dagobert_strict_warnings(dagobert-tests)
 target_link_options(dagobert-tests PRIVATE -static-libstdc++ -static-libgcc)
 if(DAGOBERT_MODE STREQUAL "debug")
