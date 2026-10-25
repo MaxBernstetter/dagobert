@@ -14,3 +14,51 @@ Opt-in targets, not part of the default build. Both run each registered strategy
 Invoking the target of the other preset fails with a message naming the right preset.
 
 Add a strategy by calling `dagobert_register_strategy_run(<exe> <fixture-config.json>)` in its `CMakeLists.txt` (see `strategies/sma-cross`).
+
+# C++ calculation build
+
+## Builds never compile dependencies
+
+Arrow, Parquet, protobuf, abseil, thrift, snappy and zlib are built **once**
+into a shared install prefix, `${DAGOBERT_DEPS_ROOT}/<key>` (default
+`${XDG_CACHE_HOME:-~/.cache}/dagobert/deps`). Worktrees only hold source and
+their own object files.
+
+```bash
+devbox shell
+task cpp:deps PRESET=debug      # once per key (PRESET=optimized for release)
+task cpp:build PRESET=debug     # configure + build
+task cpp:test PRESET=debug      # build + ctest
+```
+
+- `<key>` = `<build type>-<hash>`; the hash covers compiler id+version, the
+  build type, `deps/CMakeLists.txt` (versions, flags), the Arrow patch script
+  and `cmake/DepsKey.cmake`. Bumping a version or flag creates a new prefix.
+- `task cpp:deps` serialises on `flock $DAGOBERT_DEPS_ROOT/.lock`, builds into
+  `<key>.partial` and renames it into place, so a half-built prefix is never
+  visible. Concurrent callers wait, then find it done.
+- Configuring `src/calculation` with a missing prefix fails with a message
+  pointing at `task cpp:deps`; there is no per-worktree Arrow compile.
+  The prefix is located from the key (not a fixed preset path) and prepended to
+  `CMAKE_PREFIX_PATH` by `cmake/DepsKey.cmake`.
+- Targets are unchanged for the code: `arrow_static`, `parquet_static`
+  (from the package configs),
+  `protobuf::libprotobuf`.
+- googletest, magic_enum and StratForge are small and still use FetchContent.
+
+## ccache
+
+If `ccache` is installed (devbox provides it) the compiler launcher is
+`cmake/ccache-launcher.sh`: shared cache `${XDG_CACHE_HOME:-~/.cache}/ccache`
+(20G), `CCACHE_BASEDIR` = checkout root so worktrees share hits. Bypass with
+`CCACHE_DISABLE=1`. The dependency build uses it too.
+
+## One build per build directory
+
+Do not run two builds in the same build directory (a concurrent build
+truncated `libarrow.a` before). `task cpp:build` takes `flock` on
+`build/<preset>.lock`.
+
+## Measured times
+
+TIMINGS_PLACEHOLDER

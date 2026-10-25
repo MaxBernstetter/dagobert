@@ -1,6 +1,59 @@
 {
   "lockfile_version": "1",
   "packages": {
+    "ccache@latest": {
+      "last_modified": "2026-10-24T03:22:33Z",
+      "resolved": "github:NixOS/nixpkgs/674a2028661e550a97400c1cc992b9cca9a668a1#ccache",
+      "source": "devbox-search",
+      "version": "4.14.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/isygzn6cidqnqmxhb95xwim2bfxqz9jd-ccache-4.14.1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/kbcydmyw18f6jljanyz5pfhnl1lfbjjg-ccache-4.14.1-man",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/isygzn6cidqnqmxhb95xwim2bfxqz9jd-ccache-4.14.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/nbz4j6d7nrw7l5qx9ilff5fl6gql6w35-ccache-4.14.1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/k0cgvhdidwpp5p2dc33fxyy0w24m757r-ccache-4.14.1-man",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/nbz4j6d7nrw7l5qx9ilff5fl6gql6w35-ccache-4.14.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/j0yrxqvaka4xky3xca88jbnwzbp42lil-ccache-4.14.1",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/vyvr8rwc2vl2r07324if6g42pg6i4ciz-ccache-4.14.1-man",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/j0yrxqvaka4xky3xca88jbnwzbp42lil-ccache-4.14.1"
+        }
+      }
+    },
     "clang_22@22.1.8": {
       "last_modified": "2026-10-24T03:22:33Z",
       "resolved": "github:NixOS/nixpkgs/674a2028661e550a97400c1cc992b9cca9a668a1#clang_22",

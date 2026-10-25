@@ -19,6 +19,23 @@ env:
     sh: id -g
 
 tasks:
+  cpp:deps:
+    desc: Build the shared C++ dependency prefix once (PRESET=debug|optimized); needed before configuring src/calculation
+    cmds:
+      - src/calculation/deps/build.sh {{.PRESET | default "debug"}}
+
+  cpp:build:
+    desc: Configure and build src/calculation (PRESET=debug|optimized); one build per build dir at a time
+    cmds:
+      - cmake --preset {{.PRESET | default "debug"}} -S src/calculation
+      - flock build/{{.PRESET | default "debug"}}.lock cmake --build build/{{.PRESET | default "debug"}}
+
+  cpp:test:
+    desc: Run the C++ tests (PRESET=debug|optimized)
+    cmds:
+      - task: cpp:build
+      - ctest --test-dir build/{{.PRESET | default "debug"}} --output-on-failure
+
   build:jobs:
     desc: Build the four pipeline job images (orchestrator starts these)
     cmds:

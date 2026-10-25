@@ -12,6 +12,9 @@
 
 Trivial changes (typos, docs wording) can skip the full workflow.
 
+## C++ builds
+- Builds never compile dependencies. Run `task cpp:deps PRESET=<debug|optimized>` once; configure then fails with a pointer to it if the shared prefix is missing. Details: `src/calculation/README.md`.
+
 ## Project board
 - The GitHub Project for this repository (`Dagobert`, number 5, see `docs/development/01-task-management.md`) must reflect the current state of agentic development at all times.
 - Set an issue to `In progress` directly when work on it starts, before planning or coding, and update its status on every later change (`In review` once its pull request is open, back to `In progress` when it is reworked).

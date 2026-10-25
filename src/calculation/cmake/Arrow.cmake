@@ -1,56 +1,7 @@
-include(FetchContent)
+# Arrow/Parquet are pre-built in the shared prefix (see cmake/DepsKey.cmake).
+# The package config provides the arrow_static and parquet_static targets.
+find_package(Arrow CONFIG REQUIRED)
+find_package(Parquet CONFIG REQUIRED)
 
-set(_dagobert_arrow_tag "apache-arrow-18.1.0")
-
-FetchContent_Declare(
-  arrow
-  GIT_REPOSITORY https://github.com/apache/arrow.git
-  GIT_TAG ${_dagobert_arrow_tag}
-  GIT_SHALLOW TRUE
-  SOURCE_SUBDIR cpp
-  PATCH_COMMAND
-    ${CMAKE_COMMAND}
-    -DARROW_TOOLCHAIN=cpp/cmake_modules/ThirdpartyToolchain.cmake
-    -P ${CMAKE_CURRENT_LIST_DIR}/ApplyArrowPatches.cmake)
-
-set(ARROW_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(ARROW_BUILD_STATIC ON CACHE BOOL "" FORCE)
-set(ARROW_PARQUET ON CACHE BOOL "" FORCE)
-set(ARROW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ARROW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(ARROW_INSTALL OFF CACHE BOOL "" FORCE)
-set(ARROW_COMPUTE OFF CACHE BOOL "" FORCE)
-set(ARROW_DATASET OFF CACHE BOOL "" FORCE)
-set(ARROW_FILESYSTEM OFF CACHE BOOL "" FORCE)
-set(ARROW_JSON OFF CACHE BOOL "" FORCE)
-set(ARROW_CSV OFF CACHE BOOL "" FORCE)
-set(ARROW_IPC ON CACHE BOOL "" FORCE)
-set(ARROW_GANDIVA OFF CACHE BOOL "" FORCE)
-set(ARROW_ACERO OFF CACHE BOOL "" FORCE)
-set(ARROW_S3 OFF CACHE BOOL "" FORCE)
-set(ARROW_HDFS OFF CACHE BOOL "" FORCE)
-set(ARROW_WITH_THRIFT ON CACHE BOOL "" FORCE)
-set(ARROW_SIMD_LEVEL NONE CACHE STRING "" FORCE)
-set(ARROW_RUNTIME_SIMD_LEVEL NONE CACHE STRING "" FORCE)
-set(ARROW_WITH_SNAPPY ON CACHE BOOL "" FORCE)
-set(ARROW_WITH_ZLIB ON CACHE BOOL "" FORCE)
-set(ARROW_WITH_BROTLI OFF CACHE BOOL "" FORCE)
-set(ARROW_WITH_LZ4 OFF CACHE BOOL "" FORCE)
-set(ARROW_WITH_ZSTD OFF CACHE BOOL "" FORCE)
-set(ARROW_DEPENDENCY_SOURCE AUTO CACHE STRING "" FORCE)
-
-set(_dagobert_saved_cxx_flags_debug "${CMAKE_CXX_FLAGS_DEBUG}")
-set(_dagobert_saved_c_flags_debug "${CMAKE_C_FLAGS_DEBUG}")
-# Arrow debug builds use -Werror (CHECKIN); Nix _FORTIFY_SOURCE needs -O.
-set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g3 -Wno-\\#warnings")
-set(CMAKE_C_FLAGS_DEBUG "-O1 -g3 -Wno-\\#warnings")
-set(BUILD_WARNING_LEVEL PRODUCTION)
-
-FetchContent_MakeAvailable(arrow)
-
-set(DAGOBERT_ARROW_INCLUDE_DIRS
-    "${CMAKE_BINARY_DIR}/_deps/arrow-src/cpp/src"
-    "${arrow_BINARY_DIR}/src")
-
-set(CMAKE_CXX_FLAGS_DEBUG "${_dagobert_saved_cxx_flags_debug}")
-set(CMAKE_C_FLAGS_DEBUG "${_dagobert_saved_c_flags_debug}")
+get_target_property(DAGOBERT_ARROW_INCLUDE_DIRS arrow_static
+                    INTERFACE_INCLUDE_DIRECTORIES)
