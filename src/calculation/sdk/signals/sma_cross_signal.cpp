@@ -3,6 +3,8 @@
 #include "position.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace dagobert {
 namespace {
@@ -95,6 +97,98 @@ void SmaCrossSignal::execute(Position &account, const Bar &bar,
   account.sell_all(bar, rule);
 }
 
-void SmaCrossSignal::reset() { prev_above_.reset(); }
+void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
+                                std::optional<double> fast,
+                                std::optional<double> slow,
+                                std::optional<double> atr_value) {
+  const sizing::SizingConfig &sz = *sizing_;
+  const auto cross = apply(fast, slow, false);
+  const bool bullish = cross == SmaCrossRule::golden_cross;
+  const bool bearish = cross == SmaCrossRule::death_cross;
+  const double price = bar.close;
+  const bool atr_ok = atr_value.has_value() && *atr_value > 0.0;
+  const double atr = atr_ok ? *atr_value : 0.0;
+  const double equity = account.equity(price);
+
+  if (account.flat()) {
+    units_.clear();
+    if (!bullish || !atr_ok || !(price > 0.0)) {
+      return;
+    }
+    const double spend =
+        std::min(sizing::notional(equity, atr, price, sz), account.cash());
+    const double stop = sizing::stop_price(price, atr, sz);
+    if (!(spend > 0.0) || !(stop > 0.0) || !(stop < price)) {
+      return;
+    }
+    const double before = account.qty();
+    account.buy_notional(bar, spend, stop, SmaCrossRule::golden_cross);
+    units_.push_back({price, stop, account.qty() - before});
+    return;
+  }
+
+  if (!units_.empty() && price > 0.0) {
+    double top = -std::numeric_limits<double>::infinity();
+    for (const sizing::Unit &u : units_) {
+      top = std::max(top, u.stop);
+    }
+    if (price <= top) {
+      account.sell_all(bar, SmaCrossRule::atr_stop);
+      units_.clear();
+      return;
+    }
+  }
+  if (bearish) {
+    account.sell_all(bar, SmaCrossRule::death_cross);
+    units_.clear();
+    return;
+  }
+  if (units_.empty() || !atr_ok || !(price > 0.0) || !(equity > 0.0)) {
+    return;
+  }
+
+  double held = 0.0;
+  for (const sizing::Unit &u : units_) {
+    held += u.qty;
+  }
+  if (const double cut = sizing::excess_base_for_heat(held, atr, equity, sz);
+      cut > 0.0) {
+    const double before = account.qty();
+    account.sell_base(bar, cut, SmaCrossRule::vol_cut);
+    if (account.flat()) {
+      units_.clear();
+      return;
+    }
+    const double keep = account.qty() / before;
+    for (sizing::Unit &u : units_) {
+      u.qty *= keep;
+    }
+    return;
+  }
+
+  const auto add = sizing::pyramid_allowed(units_, units_.back().fill, price,
+                                           equity, atr, sz);
+  if (!add.has_value()) {
+    return;
+  }
+  const double spend = std::min(*add, account.cash());
+  const double stop = sizing::stop_price(price, atr, sz);
+  if (!(spend > 0.0) || !(stop > 0.0) || !(stop < price)) {
+    return;
+  }
+  const double step = sizing::raise_stops({units_.front()}, atr, sz)[0].stop -
+                      units_.front().stop;
+  const double before = account.qty();
+  account.buy_notional(bar, spend, stop, SmaCrossRule::pyramid);
+  for (sizing::Unit &u : units_) {
+    u.stop += std::max(0.0, step);
+  }
+  units_.push_back({price, stop, account.qty() - before});
+}
+
+void SmaCrossSignal::reset() {
+  prev_above_.reset();
+  units_.clear();
+}
 
 } // namespace dagobert

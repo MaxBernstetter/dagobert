@@ -7,7 +7,7 @@ status: specified
 
 # Position sizing
 
-Status: specified. ma-cross and signal-consensus apply this when `sizing` is configured. A buy still deploys one target weight of the book, and a sell still exits the whole position.
+Status: specified. ma-cross and signal-consensus apply this when `sizing` is configured. A buy still deploys one target weight of the book, and a sell still exits the whole position. The C++ `SmaCrossSignal`/`SmaCrossStrategy` run the same flow when given a `SizingConfig` (checked against recorded Go output in `sma_cross_sizing_test.cpp`); the `strategy-sma-cross` executable does not read `sizing` from its config yet.
 
 ## Aim
 

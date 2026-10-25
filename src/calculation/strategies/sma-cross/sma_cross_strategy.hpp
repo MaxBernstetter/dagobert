@@ -1,5 +1,6 @@
 #pragma once
 
+#include "atr.hpp"
 #include "position.hpp"
 #include "sma.hpp"
 #include "sma_cross_signal.hpp"
@@ -11,8 +12,12 @@ namespace dagobert {
 
 class SmaCrossStrategy : public Strategy {
 public:
-  explicit SmaCrossStrategy(const tradingcopilot::v1::RunEnvelope &envelope,
-                            std::int64_t bar_duration_ms);
+  // With `sizing` the strategy runs the position-sizing flow (stop, cut,
+  // pyramid) in backtest and live alike; without it, buy_all/sell_all.
+  explicit SmaCrossStrategy(
+      const tradingcopilot::v1::RunEnvelope &envelope,
+      std::int64_t bar_duration_ms,
+      std::optional<sizing::SizingConfig> sizing = std::nullopt);
 
   [[nodiscard]] StrategyResult
   calc_backtest(std::span<const Bar> bars) override;
@@ -22,6 +27,8 @@ public:
 private:
   SMA fast_;
   SMA slow_;
+  ATR atr_;
+  std::optional<sizing::SizingConfig> sizing_;
   SmaCrossSignal cross_;
   Position book_;
 };

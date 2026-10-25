@@ -4,7 +4,7 @@ add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.c
                                    sma_cross_signal_test.cpp consensus_gates_test.cpp consensus_signal_test.cpp
                                    sma_cross_strategy_test.cpp
                                    bars_parquet_test.cpp sizing_test.cpp
-                                   sma_cross_exe_test.cpp)
+                                   sma_cross_exe_test.cpp sma_cross_sizing_test.cpp)
 target_include_directories(
   dagobert-tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models
@@ -34,3 +34,6 @@ gtest_discover_tests(dagobert-tests DISCOVERY_MODE PRE_TEST)
 target_compile_definitions(
   dagobert-tests
   PRIVATE SIZING_VECTORS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/v2/features/position-sizing-vectors.json")
+target_compile_definitions(
+  dagobert-tests
+  PRIVATE SMA_CROSS_SIZING_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/sma_cross_sizing.json")
