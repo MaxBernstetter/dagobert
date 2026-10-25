@@ -1,8 +1,10 @@
 .secrets
 /data/
+/build/
 .cache/
 .tmp/
 .cursorignore
 node_modules/
 .next/
 .env
+/worktree/

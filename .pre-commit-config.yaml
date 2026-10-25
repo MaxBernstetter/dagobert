@@ -1,0 +1,18 @@
+repos:
+  - repo: local
+    hooks:
+      - id: calculation-clang-format
+        name: clang-format (src/calculation)
+        entry: clang-format --dry-run --Werror
+        language: system
+        files: ^src/calculation/
+        types: [c++]
+      - id: calculation-clang-tidy
+        name: clang-tidy (src/calculation)
+        entry: >-
+          bash -c 'if [ ! -f build/debug/compile_commands.json ]; then
+          echo "build/debug/compile_commands.json is missing; configure with: cmake --preset debug (from src/calculation)";
+          exit 1; fi; exec clang-tidy -p build/debug --warnings-as-errors=*'
+        language: system
+        files: ^src/calculation/
+        types: [c++]
