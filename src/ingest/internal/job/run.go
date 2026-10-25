@@ -7,11 +7,19 @@ import (
 	"os"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/ingest/internal/fetchclient"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// Run executes one ingest. It returns a process status of 0, 1, or 2 and a detail code.
-// The caller prints DETAIL. Diagnostics go to stderr.
+// Detail codes (printed as DETAIL=n by the ingest binary):
+//
+//	0  — wrote at least one hour (may also have recorded unavailable holes)
+//	1  — abort: every closed hour already stored or unavailable (exit 2)
+//	10 — invalid input
+//	20 — range includes a still-open hour (exit 2)
+//	30 — provider transport / retries exhausted
+//	32 — no new candles; confirmed exchange holes recorded as unavailable
+//	40 — store / parquet inconsistency
 func Run(args []string, getenv func(string) string) (code, detail int) {
 	cfg, err := parseConfig(args, getenv)
 	if err != nil {
@@ -26,6 +34,17 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 		log.Printf("data layout: %v", err)
 		return 1, 40
 	}
+	if err := shared.EnsureProviderMarketLayout(cfg.DataDir, cfg.Provider, cfg.Base, cfg.Quote); err != nil {
+		log.Printf("hive layout: %v", err)
+		return 1, 40
+	}
+
+	ad, err := openAdapter(cfg)
+	if err != nil {
+		log.Printf("provider: %v", err)
+		return 1, 10
+	}
+
 	st, err := openStore(cfg.DataDir)
 	if err != nil {
 		log.Printf("sqlite: %v", err)
@@ -33,18 +52,29 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	}
 	defer st.close()
 
-	stored, err := st.list(cfg.Symbol, cfg.From, cfg.To)
+	if cfg.Force {
+		if err := st.clearUnavailable(cfg.Provider, cfg.Base, cfg.Quote, cfg.From, cfg.To); err != nil {
+			log.Printf("clear unavailable: %v", err)
+			return 1, 40
+		}
+	}
+
+	stored, err := st.list(cfg.Provider, cfg.Base, cfg.Quote, cfg.From, cfg.To)
 	if err != nil {
 		log.Printf("list stored: %v", err)
 		return 1, 40
 	}
-	path := parquetPath(cfg.DataDir, cfg.Symbol)
-	existing, exists, err := readCandles(path)
+	unavailable, err := st.listUnavailable(cfg.Provider, cfg.Base, cfg.Quote, cfg.From, cfg.To)
+	if err != nil {
+		log.Printf("list unavailable: %v", err)
+		return 1, 40
+	}
+	existing, err := readMarketCandles(cfg.DataDir, cfg.Provider, cfg.Base, cfg.Quote)
 	if err != nil {
 		log.Printf("parquet: %v", err)
 		return 1, 40
 	}
-	if !exists && len(stored) > 0 {
+	if len(existing) == 0 && len(stored) > 0 {
 		log.Printf("parquet missing for stored hours")
 		return 1, 40
 	}
@@ -76,6 +106,10 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	for _, t := range stored {
 		storedSet[t] = struct{}{}
 	}
+	unavailSet := make(map[int64]struct{}, len(unavailable))
+	for _, t := range unavailable {
+		unavailSet[t] = struct{}{}
+	}
 	var missing []int64
 	for _, open := range expected {
 		if cfg.Force {
@@ -85,24 +119,31 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 		if _, ok := have[open]; ok {
 			continue
 		}
-		if _, ok := storedSet[open]; !ok {
-			missing = append(missing, open)
+		if _, ok := storedSet[open]; ok {
+			continue
 		}
+		if _, ok := unavailSet[open]; ok {
+			continue
+		}
+		missing = append(missing, open)
 	}
 	if len(missing) == 0 {
 		return 2, 1
 	}
 
-	f, err := newFetcher(cfg)
+	rows, err := fetchclient.FetchAll(context.Background(), ad, cfg.Base, cfg.Quote, missing, cfg.To, fetchclient.TransportConfig{
+		MaxRetries:    cfg.MaxRetries,
+		BackoffFactor: cfg.BackoffFactor,
+		RetryWait:     cfg.RetryWait,
+		MaxRetryWait:  cfg.MaxRetryWait,
+		RateLimit:     cfg.RateLimit,
+		Concurrency:   cfg.Concurrency,
+	})
 	if err != nil {
-		log.Printf("client: %v", err)
-		return 1, 10
-	}
-	rows, err := f.fetch(context.Background(), windows(missing, cfg.To))
-	if err != nil {
-		log.Printf("binance: %v", err)
+		log.Printf("%s: %v", ad.ID(), err)
 		return 1, 30
 	}
+	freshProv := toJobCandles(rows)
 
 	want := make(map[int64]struct{}, len(missing))
 	for _, t := range missing {
@@ -110,7 +151,7 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	}
 	var fresh []Candle
 	seen := make(map[int64]struct{}, len(missing))
-	for _, c := range rows {
+	for _, c := range freshProv {
 		if c.OpenTime < cfg.From || c.OpenTime >= cfg.To || c.OpenTime%hourMS != 0 {
 			continue
 		}
@@ -126,17 +167,37 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 		seen[c.OpenTime] = struct{}{}
 		fresh = append(fresh, c)
 	}
+
+	var holes []int64
+	for _, t := range missing {
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		holes = append(holes, t)
+		log.Printf("unavailable hour %s (%s returned no closed candle)",
+			time.UnixMilli(t).UTC().Format(time.RFC3339), ad.ID())
+	}
+	if len(holes) > 0 {
+		if err := st.insertUnavailable(cfg.Provider, cfg.Base, cfg.Quote, holes, ad.EmptyReason(), now); err != nil {
+			log.Printf("unavailable insert: %v", err)
+			return 1, 40
+		}
+	}
+
 	if len(fresh) == 0 {
-		log.Printf("no closed missing hours in the response")
+		if len(holes) > 0 {
+			return 0, 32
+		}
+		log.Printf("no closed missing hours in the response and no holes to record")
 		return 1, 30
 	}
 
-	merged, newTimes := mergeCandles(existing, fresh)
-	if err := writeCandles(path, merged); err != nil {
+	_, newTimes := mergeCandles(existing, fresh)
+	if err := writeTouchedYearCandles(cfg.DataDir, cfg.Provider, cfg.Base, cfg.Quote, existing, fresh, ad.DataSource()); err != nil {
 		log.Printf("parquet write: %v", err)
 		return 1, 40
 	}
-	if err := st.insert(cfg.Symbol, newTimes); err != nil {
+	if err := st.insert(cfg.Provider, cfg.Base, cfg.Quote, newTimes); err != nil {
 		log.Printf("sqlite insert: %v", err)
 		return 1, 40
 	}

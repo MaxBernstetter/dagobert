@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { WikiMeta } from "@/lib/wiki";
+import type { WikiMeta } from "@/types/wiki";
 
 export function WikiMetaTable({ meta }: { meta: WikiMeta }) {
   const rows: { label: string; value: string }[] = [

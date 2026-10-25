@@ -1,4 +1,4 @@
-import type { IndicatorSeries } from "@/lib/wiki";
+import type { IndicatorSeries } from "@/types/wiki";
 
 export function WikiSeriesTable({ series }: { series: IndicatorSeries[] }) {
   if (series.length === 0) {

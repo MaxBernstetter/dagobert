@@ -6,5 +6,13 @@ managed:
     - file_option: go_package_prefix
       value: github.com/MaxBernstetter/dagobert/src/gen
 plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: ../src/gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/bufbuild/es
+    out: ../src/frontend/lib/gen
+    opt:
+      - target=ts
   - remote: buf.build/protocolbuffers/cpp
     out: ../src/calculation/gen/cpp

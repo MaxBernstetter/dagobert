@@ -1,6 +1,7 @@
 package lake
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,9 +10,10 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/parquetmeta"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/bars"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
+	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
+	"github.com/MaxBernstetter/dagobert/src/internal/parquetmeta"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 var (
@@ -41,24 +43,64 @@ type row struct {
 	CloseTime int64   `parquet:"close_time"`
 }
 
-// RawSeries is the candle stream plus lake metadata from the parquet sidecar.
+// RawSeries is the candle stream plus lake metadata from the Parquet footer.
 type RawSeries struct {
 	Candles    []bars.Candle
 	IntervalMS int64
 	DataSource shared.DataSource
 }
 
-// Read loads candles and sidecar metadata. A missing file is ErrMissing.
-func Read(path string) (RawSeries, error) {
+// Read loads candles from one or more Hive partition files (e.g. year=*).
+// A market with no files is ErrMissing.
+func Read(paths ...string) (RawSeries, error) {
+	if len(paths) == 0 {
+		return RawSeries{}, ErrMissing
+	}
 	var last error
 	for attempt := 0; attempt < 3; attempt++ {
-		series, err := readOnce(path)
+		series, err := readMany(paths)
 		if err == nil || errors.Is(err, ErrMissing) || errors.Is(err, ErrSchema) {
 			return series, err
 		}
 		last = err
 	}
 	return RawSeries{}, last
+}
+
+func readMany(paths []string) (RawSeries, error) {
+	var all []bars.Candle
+	var intervalMS int64
+	source := shared.DefaultDataSource()
+	found := false
+	for _, path := range paths {
+		part, err := readOnce(path)
+		if errors.Is(err, ErrMissing) {
+			continue
+		}
+		if err != nil {
+			return RawSeries{}, err
+		}
+		found = true
+		all = append(all, part.Candles...)
+		if part.IntervalMS > 0 {
+			intervalMS = part.IntervalMS
+		}
+		if part.DataSource != 0 {
+			source = part.DataSource
+		}
+	}
+	if !found {
+		return RawSeries{}, ErrMissing
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].OpenTime < all[j].OpenTime })
+	if intervalMS <= 0 {
+		opens := make([]int64, len(all))
+		for i, c := range all {
+			opens[i] = c.OpenTime
+		}
+		intervalMS = parquetmeta.InferIntervalMS(opens)
+	}
+	return RawSeries{Candles: all, IntervalMS: intervalMS, DataSource: source}, nil
 }
 
 func readOnce(path string) (series RawSeries, err error) {
@@ -68,7 +110,7 @@ func readOnce(path string) (series RawSeries, err error) {
 		}
 	}()
 
-	file, err := os.Open(path)
+	file, size, err := lakeobject.OpenAbs(context.Background(), path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return RawSeries{}, ErrMissing
@@ -77,16 +119,18 @@ func readOnce(path string) (series RawSeries, err error) {
 	}
 	defer file.Close()
 
-	info, err := file.Stat()
-	if err != nil {
-		return RawSeries{}, err
-	}
-	pf, err := parquet.OpenFile(file, info.Size())
+	pf, err := parquet.OpenFile(file.File, size)
 	if err != nil {
 		return RawSeries{}, err
 	}
 	if !hasColumns(pf.Schema(), requiredColumns) {
 		return RawSeries{}, ErrSchema
+	}
+
+	meta, _ := parquetmeta.FromFile(pf)
+	source := shared.DefaultDataSource()
+	if meta.DataSource != 0 {
+		source = meta.DataSource
 	}
 
 	reader := parquet.NewGenericReader[row](pf)
@@ -109,35 +153,19 @@ func readOnce(path string) (series RawSeries, err error) {
 		}
 		if readErr != nil {
 			if errors.Is(readErr, io.EOF) {
-				interval, source, ierr := resolveLakeMeta(path, candles)
-				if ierr != nil {
-					return RawSeries{}, ierr
+				interval := meta.IntervalMS
+				if interval <= 0 {
+					opens := make([]int64, len(candles))
+					for i, c := range candles {
+						opens[i] = c.OpenTime
+					}
+					interval = parquetmeta.InferIntervalMS(opens)
 				}
 				return RawSeries{Candles: candles, IntervalMS: interval, DataSource: source}, nil
 			}
 			return RawSeries{}, readErr
 		}
 	}
-}
-
-func resolveLakeMeta(parquetPath string, candles []bars.Candle) (intervalMS int64, source shared.DataSource, err error) {
-	meta, ok, err := parquetmeta.Read(parquetPath)
-	if err != nil {
-		return 0, 0, err
-	}
-	source = shared.DefaultDataSource()
-	if ok && meta.DataSource != 0 {
-		source = meta.DataSource
-	}
-	if ok && meta.IntervalMS > 0 {
-		return meta.IntervalMS, source, nil
-	}
-	sort.Slice(candles, func(i, j int) bool { return candles[i].OpenTime < candles[j].OpenTime })
-	opens := make([]int64, len(candles))
-	for i, c := range candles {
-		opens[i] = c.OpenTime
-	}
-	return parquetmeta.InferIntervalMS(opens), source, nil
 }
 
 func hasColumns(schema *parquet.Schema, names []string) bool {

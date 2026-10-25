@@ -74,18 +74,32 @@ A row checked live: `BTCUSDT` `1h`, open time `1792508400000`, close `82409.4300
 
 ## Job
 
-One run takes `From`, `To`, and `Symbol`. `From` is inclusive and `To` is exclusive, both open times in milliseconds UTC. `Symbol` is one of `BTCUSDT`, `ETHUSDT`, or `USDCUSDT`.
+One run takes `From`, `To`, `Symbol`, and optional `-provider` (default `binance`, or `INGEST_PROVIDER`). `From` is inclusive and `To` is exclusive, both open times in milliseconds UTC. `Symbol` is one of `BTCUSDT`, `ETHUSDT`, or `USDCUSDT`.
 
-The run lists open times already stored for that symbol inside the range and fetches only the gaps. A second run with the same parameters makes no Binance call and writes no rows.
+The ingest **facade** owns the hour grid, sqlite index, lake writes, and HTTP fetch mechanics (`src/ingest/internal/fetchclient`). The **Binance adapter** (`src/ingest/provider/binance`) only builds one kline page request and maps the response. See [ingest-provider-facade](../grooming/ingest-provider-facade.md) and [ingest-fetch-facade-refactor](../grooming/ingest-fetch-facade-refactor.md).
 
-Fetching is one client. These settings come from the environment: `max_retries`, `backoff_factor`, `retry_wait`, `max_retry_wait`, `rate_limit` (request weight per minute; a kline call weighs 2), and `concurrency` (a semaphore). Retry 429, 418, and 5xx. Honor `Retry-After`. Do not retry a 400.
+The run lists open times already stored for that provider+symbol inside the range and fetches only the gaps. A second run with the same parameters makes no Binance call and writes no rows.
+
+### Facade transport (env)
+
+Shared across providers: `max_retries`, `backoff_factor`, `retry_wait`, `max_retry_wait`, `rate_limit` (request weight per minute), `concurrency` (semaphore). The facade retries when the adapter reports `Retryable`; it honors `Retry-After` from the page result when present.
+
+### Binance adapter (provider-only)
+
+| Setting | Value |
+|---|---|
+| Connection | `BINANCE_BASE_URL` only |
+| Route | `GET /api/v3/klines` (`interval=1h`, `limit` ≤ 1000) |
+| Request weight | 2 (facade acquires this per page against `rate_limit`) |
+| Max page | 1000 hours (API candle limit) |
+| Retryable | 429, 418, 5xx; transport/parse errors on status 0 or 200. Not 400. |
 
 ## Process
 
-1. Start with `From`, `To`, and `Symbol`.
-2. Skip every open time in that range that is already stored.
+1. Start with `From`, `To`, `Symbol`, and provider (default `binance`).
+2. Skip every open time in that range that is already stored or marked unavailable for that provider.
 3. Fetch the missing closed `1h` klines. Drop a row whose close time is still in the future.
-4. Write the seven stored fields to Parquet, partitioned by symbol. Beside each `symbol.parquet` file, write `symbol.parquet.meta.json` with `interval_ms` (here `3600000` for `1h`) and `data_source` (`binance`, see `src/shared/datasource.go`).
-5. Do not compute indicators. Do not write the database. Do not call Bybit.
+4. Write the seven stored fields to Hive-style Parquet: `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in `ingest.sqlite` with PK `(provider, base, quote, open_time)`.
+5. Do not compute indicators. Do not call Bybit.
 
 `USDCUSDT` is ingested because the execution service converts a USDT close into USDC with `usdc_price = usdt_close / usdcusdt_close`.

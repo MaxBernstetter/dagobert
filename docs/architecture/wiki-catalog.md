@@ -18,7 +18,7 @@ src/calculation-signal/playbooks/<slug>/
   <slug>.yaml
   DESCRIPTION.md
 src/calculation-signal/playbooks/position-sizing/
-  DESCRIPTION.md            # symlink to docs/v2/features/position-sizing.md (`kind: method`)
+  DESCRIPTION.md            # symlink to docs/v2/features/position-sizing.md
 src/calculation-signal/playbooks/strategy-kpi/<slug>/
   README.md                 # strategy KPI doc (`kind: strategy-kpi` in frontmatter)
 ```
@@ -44,9 +44,10 @@ Render with **react-markdown**, **remark-gfm**, **remark-math**, **rehype-katex*
 
 | Route | Content |
 |-------|---------|
-| `/wiki` | Four sections in a 2×2 grid (`lg:grid-cols-2`, one column on narrow viewports), in order: Technical indicators, Market Action, Position Sizing, Strategy performance indicators. Row 1 is Technical indicators and Market Action; row 2 is Position Sizing and Strategy performance indicators. Cards inside a section stack in one column. Technical indicator cards list deployed series counts. |
+| `/wiki` | Four sections in a 2×2 grid: Technical indicators, Market Action, Position Sizing, Strategy performance indicators. A narrow viewport stacks them in that order. |
 | `/wiki/indicators/[formula]` | README + table from `instances/*.json` |
-| `/wiki/playbooks/[slug]` | Playbook DESCRIPTION. Market Action entries (`ma-cross`, `signal-consensus`) show the sheet label "Playbook". `position-sizing` shows "Position sizing". |
+| `/wiki/playbooks/[slug]` | Market Action playbook DESCRIPTION |
+| `/wiki/playbooks/position-sizing` | Position Sizing section. Same text as `docs/v2/features/position-sizing.md` (`kind: method`). |
 | `/wiki/strategy-kpi/[slug]` | Strategy KPI README |
 
 Strategy KPI markdown is under `playbooks/strategy-kpi/` (same volume as `WIKI_PLAYBOOKS_DIR`). Optional `STRATEGY_KPI_DIR` overrides the catalog path.

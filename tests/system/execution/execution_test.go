@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	imageTag    = "trading-copilot-execution:test"
+	imageTag    = "dagobert-execution:test"
 	candleClose = int64(1700000000000)
 	symbol      = "BTCUSDT"
 	playbook    = "ma-cross.yaml"

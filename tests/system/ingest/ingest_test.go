@@ -18,9 +18,11 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 	_ "modernc.org/sqlite"
+
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-const image = "trading-copilot-ingest:test"
+const image = "dagobert-ingest:test"
 
 const hourMS int64 = 3_600_000
 
@@ -108,7 +110,8 @@ func TestStillOpenHour(t *testing.T) {
 	if hits.Load() != 0 {
 		t.Fatalf("fixture calls: %d", hits.Load())
 	}
-	if _, err := os.Stat(filepath.Join(dir, "parquet", "ETHUSDT.parquet")); !os.IsNotExist(err) {
+	hiveETH, _ := shared.ParquetPath(dir, "binance", "ETH", "USDT", shared.YearUTC(open))
+	if _, err := os.Stat(hiveETH); !os.IsNotExist(err) {
 		t.Fatalf("parquet exists or stat error: %v", err)
 	}
 }
@@ -173,6 +176,84 @@ func TestRetriesExhausted(t *testing.T) {
 	assertStored(t, dir, "BTCUSDT", nil)
 }
 
+func TestEmptyKlineMarksUnavailable(t *testing.T) {
+	open := hourFloor(1_670_000_000_000)
+	var hits atomic.Int32
+	base := serve(t, func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		writeJSON(t, w, []kline{})
+	})
+	dir := t.TempDir()
+	stdout, stderr, code := runIngest(t, dir, base, nil, open, open+hourMS, "BTCUSDT")
+	if code != 0 || !bytes.Contains(stdout, []byte("DETAIL=32\n")) {
+		t.Fatalf("first run: exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	if hits.Load() < 1 {
+		t.Fatal("fixture was not called")
+	}
+	assertStored(t, dir, "BTCUSDT", nil)
+	assertUnavailable(t, dir, "BTCUSDT", []int64{open})
+	hiveBTC, _ := shared.ParquetPath(dir, "binance", "BTC", "USDT", shared.YearUTC(open))
+	if _, err := os.Stat(hiveBTC); !os.IsNotExist(err) {
+		t.Fatalf("parquet should not exist: %v", err)
+	}
+
+	before := hits.Load()
+	stdout, stderr, code = runIngest(t, dir, base, nil, open, open+hourMS, "BTCUSDT")
+	if code != 2 || !bytes.Contains(stdout, []byte("DETAIL=1\n")) {
+		t.Fatalf("second run: exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	if hits.Load() != before {
+		t.Fatalf("second run called fixture: before=%d after=%d", before, hits.Load())
+	}
+}
+
+func assertUnavailable(t *testing.T, dir, symbol string, want []int64) {
+	t.Helper()
+	path := filepath.Join(dir, "ingest.sqlite")
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "mode=ro"}
+	db, err := sql.Open("sqlite", u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	base, quote, ok := shared.SplitPipelineSymbol(symbol)
+	if !ok {
+		t.Fatalf("symbol %q", symbol)
+	}
+	rows, err := db.Query(
+		`SELECT open_time FROM unavailable WHERE provider = ? AND base = ? AND quote = ? ORDER BY open_time`,
+		"binance", base, quote,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var got []int64
+	for rows.Next() {
+		var ts int64
+		if err := rows.Scan(&ts); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, ts)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(want) {
+		t.Fatalf("unavailable keys: got %v want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("unavailable keys: got %v want %v", got, want)
+		}
+	}
+}
+
 type kline []any
 
 type candle struct {
@@ -227,6 +308,7 @@ func runIngest(t *testing.T, dataDir, base string, env map[string]string, from, 
 	}
 	args = append(args, image, "-from", strconv.FormatInt(from, 10), "-to", strconv.FormatInt(to, 10))
 	if symbol != "" {
+		// legacy -symbol still accepted by ingest (split into base/quote)
 		args = append(args, "-symbol", symbol)
 	}
 	cmd := exec.Command("docker", args...)
@@ -247,10 +329,21 @@ func runIngest(t *testing.T, dataDir, base string, env map[string]string, from, 
 
 func readParquet(t *testing.T, dir, symbol string) []candle {
 	t.Helper()
-	path := filepath.Join(dir, "parquet", symbol+".parquet")
-	rows, err := parquet.ReadFile[candle](path)
+	base, quote, ok := shared.SplitPipelineSymbol(symbol)
+	if !ok {
+		t.Fatalf("symbol %q", symbol)
+	}
+	paths, err := shared.ListCandleParquetPaths(dir, "binance", base, quote)
 	if err != nil {
-		t.Fatalf("read parquet: %v", err)
+		t.Fatal(err)
+	}
+	var rows []candle
+	for _, path := range paths {
+		part, err := parquet.ReadFile[candle](path)
+		if err != nil {
+			t.Fatalf("read parquet %s: %v", path, err)
+		}
+		rows = append(rows, part...)
 	}
 	return rows
 }
@@ -284,7 +377,14 @@ func assertStored(t *testing.T, dir, symbol string, want []int64) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	rows, err := db.Query(`SELECT open_time FROM stored WHERE symbol = ? ORDER BY open_time`, symbol)
+	base, quote, ok := shared.SplitPipelineSymbol(symbol)
+	if !ok {
+		t.Fatalf("symbol %q", symbol)
+	}
+	rows, err := db.Query(
+		`SELECT open_time FROM stored WHERE provider = ? AND base = ? AND quote = ? ORDER BY open_time`,
+		"binance", base, quote,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

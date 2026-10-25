@@ -1,5 +1,7 @@
 version: "3"
 
+dotenv: ['.env']
+
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
   HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/calculation-signal/playbooks"
@@ -20,12 +22,12 @@ tasks:
   build:jobs:
     desc: Build the four pipeline job images (orchestrator starts these)
     cmds:
-      - docker build -f docker/ingest/Dockerfile -t trading-copilot-ingest .
-      - docker build -f docker/calculation-technical-indicator/Dockerfile -t trading-copilot-calculation-technical-indicator .
-      - docker build -f docker/calculation-signal/Dockerfile -t trading-copilot-calculation-signal .
-      - docker build -f docker/calculation-market-action/Dockerfile -t trading-copilot-calculation-market-action .
-      - docker build -f docker/execution/Dockerfile -t trading-copilot-execution .
-      - docker build -f docker/backtest/Dockerfile -t trading-copilot-backtest .
+      - docker build -f docker/ingest/Dockerfile -t dagobert-ingest .
+      - docker build -f docker/calculation-technical-indicator/Dockerfile -t dagobert-calculation-technical-indicator .
+      - docker build -f docker/calculation-signal/Dockerfile -t dagobert-calculation-signal .
+      - docker build -f docker/calculation-market-action/Dockerfile -t dagobert-calculation-market-action .
+      - docker build -f docker/execution/Dockerfile -t dagobert-execution .
+      - docker build -f docker/backtest/Dockerfile -t dagobert-backtest .
 
   build:stack:
     desc: Build compose images (orchestrator + production frontend)
@@ -42,21 +44,24 @@ tasks:
     desc: Start Floci, the orchestrator, and the web app (run task build once for job images)
     cmds:
       - mkdir -p data/parquet
+      - task: ensure-secrets
       - docker compose up
 
   up:build:
     desc: Build everything, then start the stack (production frontend)
     cmds:
       - mkdir -p data/parquet
+      - task: ensure-secrets
       - task: build
       - docker compose up
 
   up:prod:
-    desc: Stack without compose.override.yaml (production Next.js build in frontend image)
+    desc: Stack without compose.override.yaml (production build in frontend image)
     env:
       COMPOSE_FILE: compose.yaml
     cmds:
       - mkdir -p data/parquet
+      - task: ensure-secrets
       - docker compose build frontend
       - docker compose up
 
@@ -64,13 +69,21 @@ tasks:
     desc: Same as task up but runs compose file watch (sync/rebuild rules)
     cmds:
       - mkdir -p data/parquet
+      - task: ensure-secrets
       - docker compose up --watch
 
-  frontend:clean:
-    desc: Delete root-owned src/frontend/.next from old Docker bind mounts
+  ensure-secrets:
+    internal: true
+    desc: Empty .secrets file so Compose does not create a directory on a missing bind mount
     cmds:
-      - docker run --rm -v "{{.ROOT_DIR}}/src/frontend:/app" alpine rm -rf /app/.next
-      - docker volume rm trading-copilot_frontend_next 2>/dev/null || true
+      - |
+        secrets="{{.HOST_SECRETS_FILE}}"
+        if [ -d "$secrets" ] && [ -z "$(ls -A "$secrets")" ]; then
+          rmdir "$secrets"
+        fi
+        if [ ! -e "$secrets" ]; then
+          touch "$secrets"
+        fi
 
   frontend:deps:
     desc: Sync package-lock into the frontend container node_modules volume (after new npm deps)
@@ -90,7 +103,7 @@ tasks:
   test:
     desc: System-test the job images
     cmds:
-      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/calculation-signal ./tests/system/execution ./tests/system/backtest -count=1 -timeout 20m
+      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/calculation-signal ./tests/system/execution ./tests/system/backtest ./tests/system/experiment -count=1 -timeout 20m
 
   seed-demo-year:
     desc: Wipe data/, backfill 1y BTC, run ma-cross pipeline with simulated venue (no Bybit)
@@ -99,6 +112,224 @@ tasks:
       - go run ./src/cmd/seed-demo-year
 
   backtest-run:
-    desc: Run one catalogued backtest (BACKTEST_ID=uuid, uses trading-copilot-backtest image)
+    desc: Run one catalogued backtest (BACKTEST_ID=uuid, uses dagobert-backtest image)
     cmds:
-      - docker run --rm -e DATA_DIR=/data -e BACKTEST_ID={{.BACKTEST_ID}} -e VENUE_SIMULATE=1 -v "{{.HOST_DATA_DIR}}:/data" trading-copilot-backtest
+      - docker run --rm -e DATA_DIR=/data -e BACKTEST_ID={{.BACKTEST_ID}} -e VENUE_SIMULATE=1 -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
+
+  experiment-run:
+    desc: Run one multi-instance experiment (EXPERIMENT_ID=uuid, uses dagobert-backtest image)
+    cmds:
+      - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 -e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS | default "4"}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
+
+  infra:local:
+    desc: Step 1 — apply Terraform against Floci (S3/SSM/IAM)
+    cmds:
+      - docker compose up -d floci
+      - |
+        export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN:-}"
+        export TF_VAR_supabase_database_password="${SUPABASE_DB_PWD:-}"
+        TF_IMG=hashicorp/terraform:1.9
+        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "4566"}}"
+        if command -v terraform >/dev/null 2>&1; then
+          (cd infra/terraform && terraform init -input=false && \
+            terraform apply -input=false -auto-approve \
+              -var='environment=local' -var='aws_region=us-east-1' \
+              -var="floci_endpoint=${FLOCI_ENDPOINT}")
+        else
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e TF_VAR_supabase_access_token \
+            -e TF_VAR_supabase_database_password \
+            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" init -input=false
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e TF_VAR_supabase_access_token \
+            -e TF_VAR_supabase_database_password \
+            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" apply -input=false -auto-approve \
+            -var='environment=local' -var='aws_region=us-east-1' \
+            -var="floci_endpoint=${FLOCI_ENDPOINT}"
+        fi
+      - |
+        echo "Set in .env (defaults already in compose.yaml):"
+        echo "  LAKE_BUCKET=dagobert-local-lake"
+        echo "  SSM_PREFIX=/dagobert/local"
+        echo "  EXPERIMENT_ARTIFACTS=s3   # optional step 3"
+
+  infra:prod:
+    desc: Apply Terraform for prod, including the Supabase project (.env SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD)
+    cmds:
+      - |
+        if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_DB_PWD:-}" ]; then
+          echo "Set SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD in .env" >&2
+          exit 1
+        fi
+        if [ -z "${SUPABASE_ORGANIZATION_ID:-}" ]; then
+          echo "Set SUPABASE_ORGANIZATION_ID in .env (dashboard org id)" >&2
+          exit 1
+        fi
+        export TF_VAR_supabase_access_token="$SUPABASE_ACCESS_TOKEN"
+        export TF_VAR_supabase_database_password="$SUPABASE_DB_PWD"
+        TF_IMG=hashicorp/terraform:1.9
+        TF_ARGS=(-input=false -auto-approve -var=environment=prod -var="supabase_organization_id=${SUPABASE_ORGANIZATION_ID}" -var="aws_region={{.AWS_REGION | default "eu-central-1"}}")
+        if command -v terraform >/dev/null 2>&1; then
+          (cd infra/terraform && terraform init -input=false && terraform apply "${TF_ARGS[@]}")
+        else
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e TF_VAR_supabase_access_token \
+            -e TF_VAR_supabase_database_password \
+            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" init -input=false
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e TF_VAR_supabase_access_token \
+            -e TF_VAR_supabase_database_password \
+            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" apply "${TF_ARGS[@]}"
+        fi
+
+  infra:seed-ssm:
+    desc: Step 2 — push .secrets BYBIT_* into Floci SSM
+    cmds:
+      - chmod +x scripts/seed-ssm-from-secrets.sh
+      - ./scripts/seed-ssm-from-secrets.sh
+
+  db:up:
+    desc: Start Compose Postgres (control plane)
+    cmds:
+      - docker compose up -d postgres
+
+  db:diff:
+    desc: Atlas — edit HCL then generate a migration (name=… optional)
+    dir: db
+    env:
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+    cmds:
+      - |
+        ATLAS="{{.ATLAS | default ""}}"
+        if [ -z "$ATLAS" ]; then
+          if command -v atlas >/dev/null 2>&1; then ATLAS=atlas
+          elif [ -x "$HOME/.local/bin/atlas" ]; then ATLAS="$HOME/.local/bin/atlas"
+          else echo "atlas CLI not found (install Atlas OSS)" >&2; exit 1
+          fi
+        fi
+        NAME="{{.name | default "schema"}}"
+        "$ATLAS" migrate diff "$NAME" --env local
+
+  db:sqlc:
+    desc: Regenerate sqlc Go queries (db/sqlc → src/experimentapi/experimentdb)
+    dir: db/sqlc
+    cmds:
+      - |
+        SQLC="{{.SQLC | default ""}}"
+        if [ -z "$SQLC" ]; then
+          if command -v sqlc >/dev/null 2>&1; then SQLC=sqlc
+          elif [ -x "$HOME/.local/bin/sqlc" ]; then SQLC="$HOME/.local/bin/sqlc"
+          else echo "sqlc CLI not found" >&2; exit 1
+          fi
+        fi
+        "$SQLC" generate
+
+  proto:lint:
+    desc: Buf lint for proto/
+    dir: proto
+    cmds:
+      - |
+        BUF="{{.BUF | default ""}}"
+        if [ -z "$BUF" ]; then
+          if command -v buf >/dev/null 2>&1; then BUF=buf
+          elif [ -x "$HOME/.local/bin/buf" ]; then BUF="$HOME/.local/bin/buf"
+          else echo "buf CLI not found" >&2; exit 1
+          fi
+        fi
+        "$BUF" lint
+
+  proto:gen:
+    desc: Buf generate Go + TS from proto/
+    dir: proto
+    cmds:
+      - |
+        BUF="{{.BUF | default ""}}"
+        if [ -z "$BUF" ]; then
+          if command -v buf >/dev/null 2>&1; then BUF=buf
+          elif [ -x "$HOME/.local/bin/buf" ]; then BUF="$HOME/.local/bin/buf"
+          else echo "buf CLI not found" >&2; exit 1
+          fi
+        fi
+        "$BUF" generate
+      - |
+        echo "Go → src/gen/tradingcopilot/v1 ; TS → src/frontend/lib/gen/tradingcopilot/v1"
+
+  proto:breaking:
+    desc: Buf breaking check against main (or BSR if pushed)
+    dir: proto
+    cmds:
+      - |
+        BUF="{{.BUF | default ""}}"
+        if [ -z "$BUF" ]; then
+          if command -v buf >/dev/null 2>&1; then BUF=buf
+          elif [ -x "$HOME/.local/bin/buf" ]; then BUF="$HOME/.local/bin/buf"
+          else echo "buf CLI not found" >&2; exit 1
+          fi
+        fi
+        "$BUF" breaking --against '../.git#branch=main,subdir=proto' || \
+          "$BUF" breaking --against '.git#branch=main' || \
+          echo "breaking: skipped (no baseline on main yet — first push establishes it)"
+
+  proto:push:
+    desc: Push schemas to Buf Schema Registry (buf registry login first)
+    dir: proto
+    cmds:
+      - |
+        BUF="{{.BUF | default ""}}"
+        if [ -z "$BUF" ]; then
+          if command -v buf >/dev/null 2>&1; then BUF=buf
+          elif [ -x "$HOME/.local/bin/buf" ]; then BUF="$HOME/.local/bin/buf"
+          else echo "buf CLI not found" >&2; exit 1
+          fi
+        fi
+        "$BUF" push --label v0.1.0
+
+  db:migrate:
+    desc: Atlas — apply migrations to DATABASE_URL (Compose Postgres)
+    dir: db
+    deps: [db:up]
+    env:
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+    cmds:
+      - |
+        ATLAS="{{.ATLAS | default ""}}"
+        if [ -z "$ATLAS" ]; then
+          if command -v atlas >/dev/null 2>&1; then ATLAS=atlas
+          elif [ -x "$HOME/.local/bin/atlas" ]; then ATLAS="$HOME/.local/bin/atlas"
+          else echo "atlas CLI not found (install Atlas OSS)" >&2; exit 1
+          fi
+        fi
+        # Wait until Postgres accepts connections (healthcheck may still be starting).
+        for i in $(seq 1 30); do
+          if docker compose exec -T postgres pg_isready -U trading -d trading >/dev/null 2>&1; then
+            break
+          fi
+          sleep 1
+        done
+        "$ATLAS" migrate apply --env local
+      - |
+        echo "Applied. Revisions in schema atlas; app tables in public."
+
+  db:migrate:supabase:
+    desc: Atlas — apply db/migrations to SUPABASE_DB_URL (direct :5432 or session pooler)
+    dir: db
+    cmds:
+      - |
+        if [ -z "${SUPABASE_DB_URL:-}" ]; then
+          echo "SUPABASE_DB_URL is unset. Set it to the Supabase Postgres URL (direct port 5432, or the session pooler on 5432 for IPv4). Do not use the transaction pooler (6543)." >&2
+          exit 1
+        fi
+        ATLAS="{{.ATLAS | default ""}}"
+        if [ -z "$ATLAS" ]; then
+          if command -v atlas >/dev/null 2>&1; then ATLAS=atlas
+          elif [ -x "$HOME/.local/bin/atlas" ]; then ATLAS="$HOME/.local/bin/atlas"
+          else echo "atlas CLI not found (install Atlas OSS)" >&2; exit 1
+          fi
+        fi
+        "$ATLAS" migrate apply --env supabase
+      - |
+        echo "Applied to Supabase. Revisions in schema atlas; app tables in public (anon/authenticated revoked)."

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 )
 
 // DerivePosition rebuilds long/flat before the current candle.

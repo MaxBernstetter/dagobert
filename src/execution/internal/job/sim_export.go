@@ -1,6 +1,6 @@
 package job
 
-import "github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
+import "github.com/MaxBernstetter/dagobert/src/execution/internal/store"
 
 // OrderLinkID builds the canonical order link id for a playbook bar.
 func OrderLinkID(playbook, symbol string, candleClose int64) string {
@@ -17,7 +17,7 @@ func FormatOrderQty(f float64) string {
 	return formatQty(f)
 }
 
-// VenueSymbolForSeries maps ingest symbol to venue symbol.
+// VenueSymbolForSeries maps ingest symbol to a paper/sim venue symbol.
 func VenueSymbolForSeries(symbol string) (string, bool) {
-	return venueSymbol(symbol)
+	return paperVenueSymbol(symbol)
 }

@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WikiMarkdown } from "@/components/wiki-markdown";
 import { WikiMetaTable } from "@/components/wiki-meta";
 import { WikiSeriesTable } from "@/components/wiki-series-table";
-import type { StrategyKpiEntry } from "@/lib/strategy-kpi-catalog";
+import type { StrategyKpiEntry } from "@/types/strategy-kpi";
 import { formatStrategyKpiValue } from "@/lib/strategy-kpi-shared";
-import type { IndicatorSeries, WikiEntry } from "@/lib/wiki";
+import type { IndicatorSeries, WikiEntry } from "@/types/wiki";
 
 export function WikiIndicatorDetail({
   entry,
@@ -34,8 +34,7 @@ export function WikiIndicatorDetail({
   );
 }
 
-export function WikiPlaybookDetail({ entry }: { entry: WikiEntry }) {
-  const kicker = entry.meta.kind === "method" ? "Position sizing" : "Playbook";
+export function WikiPlaybookDetail({ entry, kicker = "Playbook" }: { entry: WikiEntry; kicker?: string }) {
   return (
     <article className="space-y-4">
       <div>

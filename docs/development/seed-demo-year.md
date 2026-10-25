@@ -10,7 +10,7 @@ Venue calls are **not** made when `VENUE_SIMULATE=1` (set by the seed script). B
 task seed-demo-year
 ```
 
-For **non-destructive** experiments over historical data, use the **Backtesting** page instead (see `docs/development/run-backtest.md`).
+For **non-destructive** experiments over historical data, use the **Experiments** page instead (see `docs/development/run-backtest.md`).
 
 Requires network for Binance ingest. Ingest and KPI backfill dominate runtime; the bar replay uses **`FastSimulatedPipeline`**: KPI series for the window are loaded once, signal/market-action/execution run in memory (paper wallet), then signal/action rows and execution tables are flushed in batched transactions (not one DB open per bar). Restart the frontend if it is already running so it picks up the new `data/` volume.
 

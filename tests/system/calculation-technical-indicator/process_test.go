@@ -15,9 +15,11 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 	_ "modernc.org/sqlite"
+
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-const image = "trading-copilot-calculation-technical-indicator"
+const image = "dagobert-calculation-technical-indicator"
 
 const (
 	hour = int64(3_600_000)
@@ -218,12 +220,25 @@ func dataDir(t *testing.T) string {
 
 func writeCandles(t *testing.T, dir, symbol string, rows []candle) {
 	t.Helper()
-	path := filepath.Join(dir, "parquet")
-	if err := os.MkdirAll(path, 0o777); err != nil {
-		t.Fatal(err)
+	if len(rows) == 0 {
+		t.Fatal("no rows")
 	}
-	if err := parquet.WriteFile(filepath.Join(path, symbol+".parquet"), rows); err != nil {
-		t.Fatalf("write parquet: %v", err)
+	byYear := map[int][]candle{}
+	for _, r := range rows {
+		y := shared.YearUTC(r.OpenTime)
+		byYear[y] = append(byYear[y], r)
+	}
+	for y, part := range byYear {
+		path, err := shared.ParquetPath(dir, "binance", "BTC", "USDT", y)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
+			t.Fatal(err)
+		}
+		if err := parquet.WriteFile(path, part); err != nil {
+			t.Fatalf("write parquet: %v", err)
+		}
 	}
 }
 

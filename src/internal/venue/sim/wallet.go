@@ -4,8 +4,8 @@ import (
 	"errors"
 	"math"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 )
 
 // ApplyBuy spends quote at mid using fee/slippage model.

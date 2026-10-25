@@ -25,6 +25,24 @@ func TestComputeSharpePositive(t *testing.T) {
 	}
 }
 
+func TestBuildInstanceReportUsesGivenStartCash(t *testing.T) {
+	fills := []StrategyKPIFill{
+		{CandleCloseMs: 3000, Side: "buy", BaseQty: 1, QuoteQty: 100_000, Price: 100_000},
+	}
+	bars := []StrategyKPIBar{
+		{CloseMs: 1000, Close: 100_000},
+		{CloseMs: 3000, Close: 100_000},
+	}
+	missing := BuildInstanceReportFromSim(RunReport{}, "pb", "BTCUSDT", 1000, 3000, 0, fills, bars)
+	if missing.KPIs.Comparison != nil {
+		t.Fatalf("zero start cash invented a book: %+v", missing.KPIs.Comparison)
+	}
+	got := BuildInstanceReportFromSim(RunReport{}, "pb", "BTCUSDT", 1000, 3000, 100_000, fills, bars)
+	if got.KPIs.Comparison == nil || got.KPIs.Comparison.StartCash != 100_000 {
+		t.Fatalf("comparison = %+v", got.KPIs.Comparison)
+	}
+}
+
 func TestReplayAndActiveReturn(t *testing.T) {
 	bars := []StrategyKPIBar{
 		{CloseMs: 3000, Close: 100},

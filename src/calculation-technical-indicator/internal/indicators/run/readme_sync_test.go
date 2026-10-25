@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/indicators"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/indicators"
 	"gopkg.in/yaml.v3"
 )
 

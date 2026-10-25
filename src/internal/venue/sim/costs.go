@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/money"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
 )
 
 // Model is execution costs vs the bar mid/close (basis points).

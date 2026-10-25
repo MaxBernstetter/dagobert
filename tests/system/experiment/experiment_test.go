@@ -1,0 +1,514 @@
+package experiment_test
+
+import (
+	"database/sql"
+	"encoding/json"
+	"math"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/parquet-go/parquet-go"
+
+	"github.com/MaxBernstetter/dagobert/src/backtest"
+	"github.com/MaxBernstetter/dagobert/src/backtest/store"
+	"github.com/MaxBernstetter/dagobert/src/shared"
+	_ "modernc.org/sqlite"
+)
+
+const (
+	hour   = int64(3_600_000)
+	symbol = "BTCUSDT"
+)
+
+type hourCandle struct {
+	OpenTime  int64   `parquet:"open_time"`
+	Open      float64 `parquet:"open"`
+	High      float64 `parquet:"high"`
+	Low       float64 `parquet:"low"`
+	Close     float64 `parquet:"close"`
+	Volume    float64 `parquet:"volume"`
+	CloseTime int64   `parquet:"close_time"`
+}
+
+func TestStudyMultiInstanceCorrectness(t *testing.T) {
+	dataDir := tempDataDir(t)
+	seedLiveMarker(t, dataDir)
+
+	endMs := 240 * hour
+	writeCrossingParquet(t, dataDir, symbol, endMs)
+
+	cat, err := store.Open(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cat.Close()
+
+	settings := store.DefaultExperimentSettings()
+	settings.Base = "BTC"; settings.Quote = "USDT"
+	settings.FromMs = 0
+	settings.ToMs = endMs
+	settings.RedownloadMissing = false
+
+	cfgA, _ := json.Marshal(map[string]int{"fastHr": 3, "slowHr": 6})
+	cfgB, _ := json.Marshal(map[string]int{"fastHr": 6, "slowHr": 12})
+	rec, err := cat.CreateStudy("multi-instance", "", settings, []store.ExperimentInstanceSpec{
+		{Label: "SMA 3/6", Playbook: "ma-cross", StrategyConfig: cfgA},
+		{Label: "SMA 6/12", Playbook: "ma-cross", StrategyConfig: cfgB},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Instances) != 2 {
+		t.Fatalf("instances %d", len(rec.Instances))
+	}
+	if rec.Instances[0].ConfigHash == rec.Instances[1].ConfigHash {
+		t.Fatal("expected distinct config hashes")
+	}
+	if rec.Instances[0].PlaybookKey == rec.Instances[1].PlaybookKey {
+		t.Fatal("expected distinct playbook keys")
+	}
+
+	// KPI must be empty before run (write-at-end).
+	if n, err := cat.CountExperimentKPIRows(rec.ID); err != nil || n != 0 {
+		t.Fatalf("pre-run experiment_kpi count=%d err=%v", n, err)
+	}
+
+	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("VENUE_SIMULATE", "1")
+	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := cat.GetExperiment(rec.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != store.StatusCompleted {
+		t.Fatalf("status %q error %q", got.Status, got.Error)
+	}
+	for _, inst := range got.Instances {
+		if inst.Status != store.StatusCompleted {
+			t.Fatalf("instance %s status %q error %q", inst.Label, inst.Status, inst.Error)
+		}
+		if inst.StartedAt == nil || inst.FinishedAt == nil {
+			t.Fatalf("instance %s missing timing started=%v finished=%v", inst.Label, inst.StartedAt, inst.FinishedAt)
+		}
+		if *inst.FinishedAt < *inst.StartedAt {
+			t.Fatalf("instance %s finished_at %d < started_at %d", inst.Label, *inst.FinishedAt, *inst.StartedAt)
+		}
+		ws := store.ExperimentWorkspaceDir(dataDir, inst)
+		reportPath := filepath.Join(ws, "report.json")
+		body, err := os.ReadFile(reportPath)
+		if err != nil {
+			t.Fatalf("instance %s missing report.json: %v", inst.Label, err)
+		}
+		var report struct {
+			Run struct {
+				StartedAtMs  int64 `json:"startedAtMs"`
+				FinishedAtMs int64 `json:"finishedAtMs"`
+				DurationMs   int64 `json:"durationMs"`
+			} `json:"run"`
+			KPIs struct {
+				Results []json.RawMessage `json:"results"`
+			} `json:"kpis"`
+			Statistics struct {
+				MonthlyReturns []struct {
+					Period string  `json:"period"`
+					Return float64 `json:"return"`
+				} `json:"monthlyReturns"`
+			} `json:"statistics"`
+		}
+		if err := json.Unmarshal(body, &report); err != nil {
+			t.Fatalf("instance %s report.json: %v", inst.Label, err)
+		}
+		if report.Run.StartedAtMs != *inst.StartedAt || report.Run.FinishedAtMs != *inst.FinishedAt {
+			t.Fatalf("instance %s report timing mismatch columns vs file", inst.Label)
+		}
+		if report.Run.DurationMs != report.Run.FinishedAtMs-report.Run.StartedAtMs {
+			t.Fatalf("instance %s durationMs %d != finished-started", inst.Label, report.Run.DurationMs)
+		}
+		if len(report.KPIs.Results) == 0 && len(report.Statistics.MonthlyReturns) == 0 {
+			// Short fixture may have no fills; still require file + timing.
+			t.Logf("instance %s report has no KPI results (possible on short range)", inst.Label)
+		}
+	}
+
+	if _, err := os.Stat(filepath.Join(dataDir, "technical_indicator.sqlite")); !os.IsNotExist(err) {
+		t.Fatal("prod technical_indicator.sqlite must not be created by experiment")
+	}
+	if liveRows(t, dataDir) != 1 {
+		t.Fatal("live calculation_signal.sqlite marker row was overwritten")
+	}
+
+	kpiRows, err := cat.CountExperimentKPIRows(rec.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kpiRows < 8 {
+		t.Fatalf("experiment_kpi rows: got %d want at least 8", kpiRows)
+	}
+	// Shared once: only one experiment_id partition (no per-instance duplication).
+	dup := countKPIByStudyPartitions(t, dataDir)
+	if dup != 1 {
+		t.Fatalf("expected 1 experiment_id with KPI rows, got %d partitions", dup)
+	}
+
+	wsA := store.ExperimentWorkspaceDir(dataDir, got.Instances[0])
+	wsB := store.ExperimentWorkspaceDir(dataDir, got.Instances[1])
+	buysA := countSignalsWithDecision(t, wsA, "buy")
+	buysB := countSignalsWithDecision(t, wsB, "buy")
+	fillsA := countFills(t, wsA)
+	fillsB := countFills(t, wsB)
+	closesA := decisionCloses(t, wsA, "buy")
+	closesB := decisionCloses(t, wsB, "buy")
+	t.Logf("3/6 buys=%d fills=%d closes=%v; 6/12 buys=%d fills=%d closes=%v", buysA, fillsA, closesA, buysB, fillsB, closesB)
+
+	if buysA < 1 || fillsA < 1 {
+		t.Fatalf("SMA 3/6 expected buy+fill on crossing fixture, buys=%d fills=%d", buysA, fillsA)
+	}
+	if buysB < 1 || fillsB < 1 {
+		t.Fatalf("SMA 6/12 expected buy+fill on crossing fixture, buys=%d fills=%d", buysB, fillsB)
+	}
+	// Distinct configs must fire buys on different bars (golden divergence).
+	if sameInt64Slice(closesA, closesB) {
+		t.Fatalf("expected divergent buy candle closes for 3/6 vs 6/12; both %v", closesA)
+	}
+
+	keysA := distinctPlaybooks(t, wsA)
+	keysB := distinctPlaybooks(t, wsB)
+	if len(keysA) != 1 || keysA[0] != got.Instances[0].PlaybookKey {
+		t.Fatalf("instance A playbook keys %v want [%s]", keysA, got.Instances[0].PlaybookKey)
+	}
+	if len(keysB) != 1 || keysB[0] != got.Instances[1].PlaybookKey {
+		t.Fatalf("instance B playbook keys %v want [%s]", keysB, got.Instances[1].PlaybookKey)
+	}
+
+	endA := portfolioEndValue(t, wsA)
+	endB := portfolioEndValue(t, wsB)
+	if math.IsNaN(endA) || math.IsInf(endA, 0) || math.IsNaN(endB) || math.IsInf(endB, 0) {
+		t.Fatal("portfolio end value not finite")
+	}
+}
+
+func TestStudySignalConsensusThresholds(t *testing.T) {
+	dataDir := tempDataDir(t)
+	seedLiveMarker(t, dataDir)
+
+	endMs := 4000 * hour
+	writeCrossingParquet(t, dataDir, symbol, endMs)
+
+	cat, err := store.Open(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cat.Close()
+
+	settings := store.DefaultExperimentSettings()
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
+	settings.FromMs = 480 * hour
+	settings.ToMs = endMs
+	settings.RedownloadMissing = false
+
+	cfgA, _ := json.Marshal(map[string]any{
+		"rsiBull": 52, "rsiBear": 48,
+		"volRatioBull": 1.1, "volRatioBear": 0.85,
+		"atrStopMult": 2.5,
+		"minBarsFlatAfterSell": 8, "minBarsLongBeforeSell": 4,
+	})
+	cfgB, _ := json.Marshal(map[string]any{
+		"rsiBull": 60, "rsiBear": 40,
+		"volRatioBull": 1.2, "volRatioBear": 0.8,
+		"atrStopMult": 3.0,
+		"minBarsFlatAfterSell": 4, "minBarsLongBeforeSell": 2,
+	})
+	rec, err := cat.CreateStudy("consensus-thresholds", "", settings, []store.ExperimentInstanceSpec{
+		{Label: "default thresholds", Playbook: "signal-consensus", StrategyConfig: cfgA},
+		{Label: "loose thresholds", Playbook: "signal-consensus", StrategyConfig: cfgB},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Instances) != 2 {
+		t.Fatalf("instances %d", len(rec.Instances))
+	}
+	if rec.Instances[0].ConfigHash == rec.Instances[1].ConfigHash {
+		t.Fatal("expected distinct config hashes")
+	}
+	if rec.Instances[0].PlaybookKey == rec.Instances[1].PlaybookKey {
+		t.Fatal("expected distinct playbook keys")
+	}
+
+	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("VENUE_SIMULATE", "1")
+	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := cat.GetExperiment(rec.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != store.StatusCompleted {
+		t.Fatalf("status %q error %q", got.Status, got.Error)
+	}
+	for _, inst := range got.Instances {
+		if inst.Status != store.StatusCompleted {
+			t.Fatalf("instance %s status %q error %q", inst.Label, inst.Status, inst.Error)
+		}
+		if !strings.HasPrefix(inst.PlaybookKey, "signal-consensus.yaml#") {
+			t.Fatalf("playbook key %q", inst.PlaybookKey)
+		}
+	}
+
+	if liveRows(t, dataDir) != 1 {
+		t.Fatal("live calculation_signal.sqlite marker row was overwritten")
+	}
+}
+
+func tempDataDir(t *testing.T) string {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := shared.EnsureDataLayout(dir); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// writeCrossingParquet builds an oscillatory path so short vs long SMA crosses diverge.
+func writeCrossingParquet(t *testing.T, dataDir, sym string, endMs int64) {
+	t.Helper()
+	hours := endMs / hour
+	rows := make([]hourCandle, 0, hours)
+	price := 100.0
+	for i := 0; i < int(hours); i++ {
+		// Alternating multi-hour trends with different wavelengths.
+		phase := i % 36
+		switch {
+		case phase < 10:
+			price -= 0.8
+		case phase < 22:
+			price += 1.1
+		default:
+			price -= 0.4
+		}
+		ot := int64(i) * hour
+		rows = append(rows, hourCandle{
+			OpenTime: ot, Open: price, High: price + 1, Low: price - 1,
+			Close: price, Volume: 10, CloseTime: ot + hour - 1,
+		})
+	}
+	byYear := map[int][]hourCandle{}
+	for _, r := range rows {
+		y := shared.YearUTC(r.OpenTime)
+		byYear[y] = append(byYear[y], r)
+	}
+	for y, part := range byYear {
+		pqPath, err := shared.ParquetPath(dataDir, "binance", "BTC", "USDT", y)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(pqPath), 0o777); err != nil {
+			t.Fatal(err)
+		}
+		if err := parquet.WriteFile(pqPath, part); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func seedLiveMarker(t *testing.T, dataDir string) {
+	t.Helper()
+	dbPath := filepath.Join(dataDir, "calculation_signal.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+CREATE TABLE signal (
+  playbook TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  candle_close INTEGER NOT NULL,
+  body TEXT NOT NULL,
+  PRIMARY KEY (playbook, symbol, candle_close)
+);
+INSERT INTO signal (playbook, symbol, candle_close, body)
+VALUES ('LIVE_MARKER', 'BTCUSDT', 1, '{}');
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func liveRows(t *testing.T, dataDir string) int {
+	db, err := sql.Open("sqlite", filepath.Join(dataDir, "calculation_signal.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM signal`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func countKPIByStudyPartitions(t *testing.T, dataDir string) int {
+	t.Helper()
+	db, err := sql.Open("sqlite", filepath.Join(dataDir, "backtests.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(DISTINCT experiment_id) FROM experiment_kpi`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func countSignalsWithDecision(t *testing.T, workspace, decision string) int {
+	return len(decisionCloses(t, workspace, decision))
+}
+
+func decisionCloses(t *testing.T, workspace, decision string) []int64 {
+	t.Helper()
+	// Slim experiment path does not write signal rows; infer buys/sells from fill_journal.
+	side := ""
+	switch decision {
+	case "buy":
+		side = "Buy"
+	case "sell":
+		side = "Sell"
+	default:
+		return nil
+	}
+	dbPath := filepath.Join(workspace, "execution.sqlite")
+	if _, err := os.Stat(dbPath); err != nil {
+		return nil
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	rows, err := db.Query(`SELECT order_link_id FROM fill_journal WHERE side = ? ORDER BY order_link_id`, side)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var link string
+		if err := rows.Scan(&link); err != nil {
+			t.Fatal(err)
+		}
+		last := strings.LastIndex(link, ":")
+		if last <= 0 {
+			continue
+		}
+		ms, err := strconv.ParseInt(link[last+1:], 10, 64)
+		if err != nil || ms <= 0 {
+			continue
+		}
+		out = append(out, ms)
+	}
+	return out
+}
+
+func sameInt64Slice(a, b []int64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func distinctPlaybooks(t *testing.T, workspace string) []string {
+	t.Helper()
+	dbPath := filepath.Join(workspace, "execution.sqlite")
+	if _, err := os.Stat(dbPath); err != nil {
+		return nil
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	rows, err := db.Query(`SELECT DISTINCT order_link_id FROM fill_journal`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	seen := map[string]struct{}{}
+	var out []string
+	for rows.Next() {
+		var link string
+		if err := rows.Scan(&link); err != nil {
+			t.Fatal(err)
+		}
+		// order_link_id = playbookKey:symbol:candleClose
+		last := strings.LastIndex(link, ":")
+		if last <= 0 {
+			continue
+		}
+		rest := link[:last]
+		prev := strings.LastIndex(rest, ":")
+		if prev <= 0 {
+			continue
+		}
+		key := rest[:prev]
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func countFills(t *testing.T, workspace string) int {
+	t.Helper()
+	dbPath := filepath.Join(workspace, "execution.sqlite")
+	if _, err := os.Stat(dbPath); err != nil {
+		return 0
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	err = db.QueryRow(`SELECT COUNT(*) FROM fill_journal`).Scan(&n)
+	if err != nil {
+		err = db.QueryRow(`SELECT COUNT(*) FROM order_result WHERE kind = 'fill'`).Scan(&n)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func portfolioEndValue(t *testing.T, workspace string) float64 {
+	t.Helper()
+	db, err := sql.Open("sqlite", filepath.Join(workspace, "execution.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var cash float64
+	_ = db.QueryRow(`SELECT SUM(CAST(cash_balance AS REAL)) FROM balance`).Scan(&cash)
+	return cash
+}

@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/ingest/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/ingest/internal/job"
 )
 
 // Run ingests klines (same as the job binary).

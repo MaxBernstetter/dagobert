@@ -4,18 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/framework"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 )
 
 func TestGoldenCrossFromFlat(t *testing.T) {
 	s := Strategy{}
-	ctx := framework.Context{
-		Position:        "flat",
-		HasPreviousBar:  true,
-		Results:         dualSMAResults(110, 100),
-		PreviousResults: dualSMAResults(90, 100),
-	}
+	ctx := frameworkContext(nil, "flat", true, dualSMAResults(110, 100), dualSMAResults(90, 100))
 	dec, err := s.Evaluate(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -27,12 +22,7 @@ func TestGoldenCrossFromFlat(t *testing.T) {
 
 func TestDeathCrossFromLong(t *testing.T) {
 	s := Strategy{}
-	ctx := framework.Context{
-		Position:        "long",
-		HasPreviousBar:  true,
-		Results:         dualSMAResults(90, 100),
-		PreviousResults: dualSMAResults(110, 100),
-	}
+	ctx := frameworkContext(nil, "long", true, dualSMAResults(90, 100), dualSMAResults(110, 100))
 	dec, err := s.Evaluate(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -44,12 +34,7 @@ func TestDeathCrossFromLong(t *testing.T) {
 
 func TestFastStillAboveNoBuy(t *testing.T) {
 	s := Strategy{}
-	ctx := framework.Context{
-		Position:        "flat",
-		HasPreviousBar:  true,
-		Results:         dualSMAResults(110, 100),
-		PreviousResults: dualSMAResults(108, 100),
-	}
+	ctx := frameworkContext(nil, "flat", true, dualSMAResults(110, 100), dualSMAResults(108, 100))
 	dec, err := s.Evaluate(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -61,11 +46,7 @@ func TestFastStillAboveNoBuy(t *testing.T) {
 
 func TestFirstBarNoTrade(t *testing.T) {
 	s := Strategy{}
-	ctx := framework.Context{
-		Position:       "flat",
-		HasPreviousBar: false,
-		Results:        dualSMAResults(110, 100),
-	}
+	ctx := frameworkContext(nil, "flat", false, dualSMAResults(110, 100), nil)
 	dec, err := s.Evaluate(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +56,21 @@ func TestFirstBarNoTrade(t *testing.T) {
 	}
 }
 
+func frameworkContext(cfg json.RawMessage, position string, hasPrev bool, results, prev []kpi.Result) framework.Context {
+	return framework.Context{
+		Position:        position,
+		HasPreviousBar:  hasPrev,
+		Results:         results,
+		PreviousResults: prev,
+		StrategyConfig:  cfg,
+	}
+}
+
 func dualSMAResults(fast, slow float64) []kpi.Result {
+	return dualSMAAt(3, 6, fast, slow)
+}
+
+func dualSMAAt(fastHr, slowHr int, fast, slow float64) []kpi.Result {
 	mk := func(hr int, v float64) kpi.Result {
 		def, _ := json.Marshal(map[string]any{
 			"type": "MovingAverage", "method": "sma", "time_frame_hr": hr,
@@ -83,5 +78,5 @@ func dualSMAResults(fast, slow float64) []kpi.Result {
 		val, _ := json.Marshal(v)
 		return kpi.Result{Def: def, Value: val, Unit: "price"}
 	}
-	return []kpi.Result{mk(3, fast), mk(6, slow)}
+	return []kpi.Result{mk(fastHr, fast), mk(slowHr, slow)}
 }

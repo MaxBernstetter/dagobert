@@ -1,4 +1,4 @@
-import type { ActivityRow, LiveState } from "@/lib/read";
+import type { ActivityRow, LiveState } from "@/types/read";
 
 function matchesLiveRow(row: ActivityRow, live: LiveState): boolean {
   return (

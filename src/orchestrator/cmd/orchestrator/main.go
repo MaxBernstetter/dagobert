@@ -23,6 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
+
+	"github.com/MaxBernstetter/dagobert/src/internal/secrets"
 )
 
 const (
@@ -251,6 +253,7 @@ type taskInput struct {
 	Stage       string `json:"stage"`
 	CandleClose int64  `json:"candleClose"`
 	Symbol      string `json:"symbol"`
+	Provider    string `json:"provider,omitempty"`
 	From        int64  `json:"from,omitempty"`
 }
 
@@ -339,25 +342,33 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 	args := []string{"run", "--rm"}
 	args = append(args, dockerJobUserArgs()...)
 	args = append(args, "-e", "DATA_DIR=/data", "-v", data+":/data")
+	args = append(args, dockerDataPlaneEnvArgs()...)
 	switch in.Stage {
 	case "ingest":
 		from := in.From
+		provider := strings.TrimSpace(in.Provider)
+		if provider == "" {
+			provider = "binance"
+		}
+		base, quote := splitSeries(in.Symbol)
 		if from <= 0 {
-			from = ingestFrom(in.Symbol, barOpen)
+			from = ingestFrom(provider, base, quote, barOpen)
 		}
 		args = append(args,
 			"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
-			"trading-copilot-ingest",
+			"dagobert-ingest",
 			"-from", strconv.FormatInt(from, 10),
 			"-to", strconv.FormatInt(in.CandleClose, 10),
-			"-symbol", in.Symbol,
+			"-base", base,
+			"-quote", quote,
+			"-provider", provider,
 		)
 	case "process", "calculation-technical-indicator":
-		args = append(args, "-e", "SOURCE=live", "trading-copilot-calculation-technical-indicator", in.Symbol, strconv.FormatInt(barOpen, 10))
+		args = append(args, "-e", "SOURCE=live", "dagobert-calculation-technical-indicator", in.Symbol, strconv.FormatInt(barOpen, 10))
 	case "indicators":
 		args = append(args,
 			"-e", "SOURCE=backfill",
-			"trading-copilot-calculation-technical-indicator",
+			"dagobert-calculation-technical-indicator",
 			in.Symbol,
 			strconv.FormatInt(in.From, 10),
 			strconv.FormatInt(in.CandleClose, 10),
@@ -365,11 +376,11 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 	case "strategy", "calculation-signal":
 		args = append(args,
 			"-e", "PLAYBOOK=ma-cross",
-			"trading-copilot-calculation-signal",
+			"dagobert-calculation-signal",
 			in.Symbol, strconv.FormatInt(in.CandleClose, 10),
 		)
 	case "calculation-market-action":
-		envFile, err := plainEnvFile(env("SECRETS_FILE", "/secrets/.secrets"))
+		envFile, err := secretsEnvFile()
 		if err != nil {
 			return 1, err
 		}
@@ -377,11 +388,11 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 		args = append(args,
 			"--env-file", envFile,
 			"-e", "PLAYBOOK=ma-cross.yaml",
-			"trading-copilot-calculation-market-action",
+			"dagobert-calculation-market-action",
 			in.Symbol, strconv.FormatInt(in.CandleClose, 10),
 		)
 	case "execution":
-		envFile, err := plainEnvFile(env("SECRETS_FILE", "/secrets/.secrets"))
+		envFile, err := secretsEnvFile()
 		if err != nil {
 			return 1, err
 		}
@@ -389,7 +400,7 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 		args = append(args,
 			"--env-file", envFile,
 			"-e", "PLAYBOOK=ma-cross.yaml",
-			"trading-copilot-execution",
+			"dagobert-execution",
 			in.Symbol, strconv.FormatInt(in.CandleClose, 10),
 		)
 	default:
@@ -427,20 +438,34 @@ type liveFile struct {
 
 // ingestFrom starts at the hour after the newest stored open when that hour
 // is older than the current bar, so one ingest fills the gap and the current bar.
-func ingestFrom(symbol string, barOpen int64) int64 {
-	latest, ok := latestStored(symbol)
+func splitSeries(sym string) (base, quote string) {
+	sym = strings.ToUpper(strings.TrimSpace(sym))
+	quotes := []string{"USDT", "USDC", "BUSD", "FDUSD", "TUSD", "BTC", "ETH", "BNB", "EUR", "TRY", "BRL", "GBP", "AUD", "USD"}
+	for _, q := range quotes {
+		if strings.HasSuffix(sym, q) && len(sym) > len(q) {
+			return sym[:len(sym)-len(q)], q
+		}
+	}
+	if sym == "" {
+		return "BTC", "USDT"
+	}
+	return sym, "USDT"
+}
+
+func ingestFrom(provider, base, quote string, barOpen int64) int64 {
+	latest, ok := latestStored(provider, base, quote)
 	if !ok {
 		return barOpen
 	}
 	next := latest + hourMS
 	if next < barOpen {
-		fmt.Printf("orchestrator: %s behind, ingest from %d through the current bar\n", symbol, next)
+		fmt.Printf("orchestrator: %s %s/%s behind, ingest from %d through the current bar\n", provider, base, quote, next)
 		return next
 	}
 	return barOpen
 }
 
-func latestStored(symbol string) (int64, bool) {
+func latestStored(provider, base, quote string) (int64, bool) {
 	path := filepath.Join(env("LIVE_DIR", "/data"), "ingest.sqlite")
 	if _, err := os.Stat(path); err != nil {
 		return 0, false
@@ -456,7 +481,10 @@ func latestStored(symbol string) (int64, bool) {
 	}
 	defer db.Close()
 	var latest sql.NullInt64
-	err = db.QueryRow(`SELECT MAX(open_time) FROM stored WHERE symbol = ?`, symbol).Scan(&latest)
+	err = db.QueryRow(
+		`SELECT MAX(open_time) FROM stored WHERE provider = ? AND base = ? AND quote = ?`,
+		provider, base, quote,
+	).Scan(&latest)
 	if err != nil || !latest.Valid {
 		return 0, false
 	}
@@ -489,34 +517,15 @@ func writeLive(in taskInput, running bool, exitCode int) {
 	_ = os.WriteFile(path, body, 0o644)
 }
 
-func plainEnvFile(src string) (string, error) {
-	raw, err := os.ReadFile(src)
+// secretsEnvFile resolves Bybit credentials (SSM → .secrets → process env) into a docker --env-file.
+func secretsEnvFile() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	envMap, err := secrets.LoadBybit(ctx, env("SECRETS_FILE", "/secrets/.secrets"))
 	if err != nil {
 		return "", err
 	}
-	var lines []string
-	for _, line := range strings.Split(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		line = strings.TrimPrefix(line, "export ")
-		lines = append(lines, line)
-	}
-	f, err := os.CreateTemp("", "execution-env-*")
-	if err != nil {
-		return "", err
-	}
-	if _, err := f.WriteString(strings.Join(lines, "\n") + "\n"); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return "", err
-	}
-	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
-		return "", err
-	}
-	return f.Name(), nil
+	return secrets.WriteEnvFile(envMap)
 }
 
 func env(key, fallback string) string {

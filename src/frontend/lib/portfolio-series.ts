@@ -1,4 +1,4 @@
-import type { ActivityRow, JournalRow } from "@/lib/read";
+import type { ActivityRow, JournalRow } from "@/types/read";
 import { playbookFromOrderLinkId } from "@/lib/strategy-groups";
 
 export type PortfolioPoint = { time: number; value: number };

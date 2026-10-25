@@ -7,7 +7,7 @@ func TestPlausibleHostDataDir(t *testing.T) {
 		path string
 		ok   bool
 	}{
-		{"/home/user/trading-copilot/data", true},
+		{"/home/user/dagobert/data", true},
 		{"/data", true},
 		{"/", false},
 		{"rw", false},

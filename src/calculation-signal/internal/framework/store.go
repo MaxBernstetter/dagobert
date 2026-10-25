@@ -3,7 +3,7 @@ package framework
 import (
 	"database/sql"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
 )
 
 var (

@@ -6,18 +6,18 @@ unit: ratio
 status: implemented
 algorithm: v1
 series:
-  - key: close-distance-sma-3h
+  - key: close-distance-sma-24h
     definition:
       type: CloseDistance
       method: sma
-      time_frame_hr: 3
+      time_frame_hr: 24
 inputs:
   - Bar close and a moving average with the same `time_frame_hr`
 ---
 
 ## Definition
 
-**Close distance** is the relative gap between the current close and a moving average of the same `time_frame_hr`.
+**Close distance** is the relative gap between the current close and a moving average over `time_frame_hr`. The deployed window is 24h: a window of one bar (3h) would average only the current close, so the value would always be 0.
 
 ## Formula
 

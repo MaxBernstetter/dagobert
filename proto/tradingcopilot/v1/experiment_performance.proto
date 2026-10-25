@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// public.experiment_performance. win_rate is a generated column.
+message ExperimentPerformance {
+  string experiment_id = 1;
+  int32 wins = 2;
+  int32 losses = 3;
+  int32 breakeven = 4;
+  optional float win_rate = 5;
+}
+
+// public.experiment_period_stat
+message ExperimentPeriodStat {
+  string experiment_id = 1;
+  string period_kind = 2;
+  string period_key = 3;
+  int32 wins = 4;
+  int32 trades = 5;
+}
+
+// public.experiment_outcome_stat. side: 1 gain, 0 loss. unit: 1 quote, 0 percent.
+message ExperimentOutcomeStat {
+  string experiment_id = 1;
+  int32 side = 2;
+  int32 unit = 3;
+  float average = 4;
+  float p10 = 5;
+  float p25 = 6;
+  float p50 = 7;
+  float p75 = 8;
+  float p90 = 9;
+  float p95 = 10;
+}
+
+// public.experiment_trade_outcome. side: 1 gain, 0 loss.
+message ExperimentTradeOutcome {
+  string instance_id = 1;
+  int32 ordinal = 2;
+  int32 side = 3;
+  float quote = 4;
+  optional float percent = 5;
+}

@@ -1,7 +1,9 @@
 package framework
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/internal/kpi"
+	"encoding/json"
+
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 )
 
 // Context is the input sample for one strategy invocation.
@@ -23,6 +25,13 @@ type Context struct {
 	// PreviousResults are KPI values for the prior aggregation bar, when present.
 	PreviousResults []kpi.Result
 	HasPreviousBar  bool
+	// PreviousBarOpen is the open time of the prior bar in the evaluate sequence (0 if none).
+	PreviousBarOpen int64
+	// GapFromPrevious is true when the prior evaluate bar is more than one aggregation
+	// away (sparse lake / omitted incomplete buckets). Strategies may hold or adjust.
+	GapFromPrevious bool
+	// StrategyConfig is optional playbook-specific JSON (nil/empty → playbook defaults).
+	StrategyConfig json.RawMessage
 }
 
 // MovingAverage reads an SMA or EMA for the given time_frame_hr on this bar.

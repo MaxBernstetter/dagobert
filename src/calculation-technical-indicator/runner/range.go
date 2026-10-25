@@ -3,9 +3,9 @@ package runner
 import (
 	"errors"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/job"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/lake"
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/job"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/lake"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 // KPIRow is a computed indicator bar for backtest storage.

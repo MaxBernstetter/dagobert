@@ -10,6 +10,10 @@ series:
     definition:
       type: Rsi
       time_frame_hr: 3
+  - key: rsi-6h
+    definition:
+      type: Rsi
+      time_frame_hr: 6
 inputs:
   - Segment closes of the active aggregated bar (`SegmentClose`)
 ---

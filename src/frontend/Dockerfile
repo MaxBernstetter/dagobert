@@ -1,37 +1,28 @@
 # syntax=docker/dockerfile:1
+# Build context is the repository root so the SPA can bundle wiki markdown
+# from the calculation-* folders.
+FROM node:22-bookworm-slim AS deps
+WORKDIR /repo/src/frontend
+COPY src/frontend/package.json src/frontend/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-FROM node:22-bookworm-slim AS base
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-
-# Dependencies change rarely — keep this layer cacheable across source edits.
-FROM base AS deps
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
-
-# Hot reload: source is synced from the host via `docker compose watch`.
 FROM deps AS dev
-ENV NODE_ENV=development
-COPY . .
+COPY src/frontend ./
+COPY src/calculation-technical-indicator /repo/src/calculation-technical-indicator
+COPY src/calculation-signal /repo/src/calculation-signal
 EXPOSE 3000
-CMD ["npm", "run", "dev:docker"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
 
 FROM deps AS build
-COPY . .
-ENV NODE_ENV=production
-RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+COPY src/frontend ./
+COPY src/calculation-technical-indicator /repo/src/calculation-technical-indicator
+COPY src/calculation-signal /repo/src/calculation-signal
+ARG VITE_EXPERIMENT_API_URL=
+ENV VITE_EXPERIMENT_API_URL=$VITE_EXPERIMENT_API_URL
+RUN npm run build
 
-FROM node:22-bookworm-slim AS prod
-WORKDIR /app
-ENV NODE_ENV=production
-ENV DATA_DIR=/data
-COPY --from=build /app/package.json /app/package-lock.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/next.config.ts ./
+FROM deps AS prod
+COPY --from=build /repo/src/frontend/dist ./dist
+COPY src/frontend/vite.config.ts ./
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]

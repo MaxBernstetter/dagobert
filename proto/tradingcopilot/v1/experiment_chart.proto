@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// ChartSeries is the plot for one instance run. Candle and indicator columns share one index.
+// Portfolio points and markers are the instance series. Missing indicator samples are NaN.
+message ChartSeries {
+  repeated int64 time_sec = 1;
+  repeated double open = 2;
+  repeated double high = 3;
+  repeated double low = 4;
+  repeated double close = 5;
+  repeated ChartIndicator indicators = 6;
+  repeated ChartPoint portfolio = 7;
+  repeated ChartMarker markers = 8;
+}
+
+message ChartIndicator {
+  string id = 1;
+  string label = 2;
+  string unit = 3;
+  ChartPane pane = 4;
+  ChartStyle style = 5;
+  repeated double reference = 6;
+  repeated double value = 7;
+}
+
+message ChartPoint {
+  int64 time_sec = 1;
+  double value = 2;
+}
+
+message ChartMarker {
+  int64 time_sec = 1;
+  ChartSide side = 2;
+}
+
+enum ChartPane {
+  CHART_PANE_UNSPECIFIED = 0;
+  CHART_PANE_PRICE = 1;
+  CHART_PANE_OSCILLATOR = 2;
+}
+
+enum ChartStyle {
+  CHART_STYLE_UNSPECIFIED = 0;
+  CHART_STYLE_LINE = 1;
+  CHART_STYLE_HISTOGRAM = 2;
+}
+
+enum ChartSide {
+  CHART_SIDE_UNSPECIFIED = 0;
+  CHART_SIDE_BUY = 1;
+  CHART_SIDE_SELL = 2;
+}

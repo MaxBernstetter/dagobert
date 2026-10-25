@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git worktree list:*)",
+      "Bash(gofmt:*)",
+      "Bash(go vet:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(go list:*)",
+      "Bash(task test:*)",
+      "Bash(task build:jobs)",
+      "Bash(task db:sqlc)",
+      "Bash(task proto:lint)",
+      "Bash(task proto:breaking)",
+      "Bash(task proto:gen)",
+      "Bash(npm run build:*)",
+      "Bash(rg:*)",
+      "Bash(ls:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./.secrets)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-plugin/hooks/guard-secrets.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/claude-plugin/hooks/go-format.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

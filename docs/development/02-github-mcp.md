@@ -2,7 +2,7 @@
 
 Coding agents manage GitHub Issues and the GitHub Project for this repository through the hosted GitHub MCP server. The connection is configured at project scope in `.mcp.json` at the repository root.
 
-The board itself is not created yet. When it exists, record its owner, project number, and URL in [01-task-management](01-task-management.md). Until then, track work in GitHub Issues on `MaxBernstetter/trading-copilot`.
+The board is the user-owned project `Dagobert` (number 5, see [01-task-management](01-task-management.md#github-project)). Track work in GitHub Issues on `MaxBernstetter/dagobert` and mirror its status on that board.
 
 ## Configuration
 

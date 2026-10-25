@@ -1,50 +1,93 @@
 package parquetmeta
 
 import (
-	"encoding/json"
+	"fmt"
 	"os"
+	"strconv"
 
-	"github.com/MaxBernstetter/trading-copilot/src/shared"
+	"github.com/parquet-go/parquet-go"
+
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// Meta describes the candle stream beside a parquet file.
+// Footer key–value schema for lake candle files (Parquet FileMetaData).
+const (
+	SchemaVersion = 1
+
+	KeySchemaVersion = "trading_copilot.schema_version"
+	KeyIntervalMS    = "trading_copilot.interval_ms"
+	KeyDataSource    = "trading_copilot.data_source"
+)
+
+// Meta is the lake candle file metadata written into the Parquet footer.
 type Meta struct {
-	IntervalMS int64            `json:"interval_ms"`
-	DataSource shared.DataSource `json:"data_source"`
+	SchemaVersion int
+	IntervalMS    int64
+	DataSource    shared.DataSource
 }
 
-func sidecarPath(parquetPath string) string {
-	return parquetPath + ".meta.json"
-}
-
-// Write records raw candle interval next to a parquet file.
-func Write(parquetPath string, meta Meta) error {
-	raw, err := json.Marshal(meta)
-	if err != nil {
-		return err
+// WriterOptions returns parquet-go options that embed Meta in the file footer.
+func WriterOptions(m Meta) []parquet.WriterOption {
+	if m.SchemaVersion == 0 {
+		m.SchemaVersion = SchemaVersion
 	}
-	tmp := sidecarPath(parquetPath) + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
-		return err
+	return []parquet.WriterOption{
+		parquet.KeyValueMetadata(KeySchemaVersion, strconv.Itoa(m.SchemaVersion)),
+		parquet.KeyValueMetadata(KeyIntervalMS, strconv.FormatInt(m.IntervalMS, 10)),
+		parquet.KeyValueMetadata(KeyDataSource, m.DataSource.String()),
 	}
-	return os.Rename(tmp, sidecarPath(parquetPath))
 }
 
-// Read loads sidecar metadata when present.
+// FromFile reads Meta from an open Parquet file's key–value metadata.
+func FromFile(f *parquet.File) (Meta, bool) {
+	if f == nil {
+		return Meta{}, false
+	}
+	verStr, okVer := f.Lookup(KeySchemaVersion)
+	intervalStr, okInterval := f.Lookup(KeyIntervalMS)
+	sourceStr, okSource := f.Lookup(KeyDataSource)
+	if !okVer && !okInterval && !okSource {
+		return Meta{}, false
+	}
+	var m Meta
+	if okVer {
+		if v, err := strconv.Atoi(verStr); err == nil {
+			m.SchemaVersion = v
+		}
+	}
+	if okInterval {
+		if v, err := strconv.ParseInt(intervalStr, 10, 64); err == nil {
+			m.IntervalMS = v
+		}
+	}
+	if okSource {
+		if ds, ok := shared.ParseDataSource(sourceStr); ok {
+			m.DataSource = ds
+		}
+	}
+	return m, true
+}
+
+// Read opens path and loads footer Meta when present.
 func Read(parquetPath string) (Meta, bool, error) {
-	path := sidecarPath(parquetPath)
-	raw, err := os.ReadFile(path)
+	file, err := os.Open(parquetPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return Meta{}, false, nil
 		}
 		return Meta{}, false, err
 	}
-	var meta Meta
-	if err := json.Unmarshal(raw, &meta); err != nil {
-		return Meta{}, true, err
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return Meta{}, false, err
 	}
-	return meta, true, nil
+	pf, err := parquet.OpenFile(file, info.Size())
+	if err != nil {
+		return Meta{}, false, fmt.Errorf("parquet open: %w", err)
+	}
+	m, ok := FromFile(pf)
+	return m, ok, nil
 }
 
 // InferIntervalMS estimates the candle period from consecutive open times.

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ActivityRow } from "@/lib/read";
+import type { ActivityRow } from "@/types/read";
 
 function statusLabel(kind: ActivityRow["kind"]): string {
   switch (kind) {
@@ -48,4 +48,14 @@ export function rowVenueStatus(row: ActivityRow): string {
     return row.retMsg;
   }
   return "—";
+}
+
+/** True when the venue line says something the execution badge does not already say. */
+export function venueStatusAddsDetail(row: ActivityRow): boolean {
+  const venue = rowVenueStatus(row);
+  if (venue === "—") return false;
+  if (row.kind === "fill" && venue.toLowerCase() === "filled") return false;
+  if (row.kind === "pending" && venue.toLowerCase() === "pending") return false;
+  if (row.kind === "rejection" && row.retMsg && venue === row.retMsg) return false;
+  return true;
 }

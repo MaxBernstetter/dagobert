@@ -17,6 +17,14 @@ message InstanceMetrics {
   optional double yearly_return_med = 9;
   optional double trades_per_month_avg = 10;
   optional double trades_per_month_med = 11;
+  optional float win_rate = 12;
+  optional float monthly_win_rate_avg = 13;
+  optional float monthly_win_rate_med = 14;
+  optional float yearly_win_rate_avg = 15;
+  optional float yearly_win_rate_med = 16;
+  optional int32 wins = 17;
+  optional int32 losses = 18;
+  optional int32 breakeven = 19;
 }
 
 // ExperimentInstance is the full relational row for public.experiment_instance.

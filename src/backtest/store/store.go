@@ -16,29 +16,52 @@ import (
 )
 
 const (
-	StatusDraft     = "draft"
-	StatusRunning   = "running"
-	StatusCompleted = "completed"
-	StatusFailed    = "failed"
+	StatusDraft         = "draft"
+	StatusMaterializing = "materializing" // experiment: async instance expansion in progress
+	StatusRunning       = "running"
+	StatusCompleted     = "completed"
+	StatusPartial       = "partial" // experiment: some instances completed, some failed
+	StatusFailed        = "failed"
+	StatusCancelled     = "cancelled"
 )
 
 // Settings is the user-facing backtest configuration (snapshot at run time).
 type Settings struct {
-	Symbol             string  `json:"symbol"`
-	Playbook           string  `json:"playbook"`
-	FromMs             int64   `json:"fromMs"`
-	ToMs               int64   `json:"toMs"`
-	InitialUSDC        float64 `json:"initialUsdc"`
-	InitialUSDT        float64 `json:"initialUsdt"`
-	InitialBase        float64 `json:"initialBase"`
-	TargetWeightPct    float64 `json:"targetWeightPct"`
-	CashReserveQuote   float64 `json:"cashReserveQuote"`
-	MinOrderQuote      float64 `json:"minOrderQuote"`
-	RedownloadMissing  bool    `json:"redownloadMissing"`
-	Algo               string  `json:"algo"`
-	SpreadBps          float64 `json:"spreadBps"`
-	SlippageBps        float64 `json:"slippageBps"`
-	FeeBps             float64 `json:"feeBps"`
+	Provider          string  `json:"provider"`
+	Base              string  `json:"base"`
+	Quote             string  `json:"quote"`
+	Playbook          string  `json:"playbook"`
+	FromMs            int64   `json:"fromMs"`
+	ToMs              int64   `json:"toMs"`
+	InitialUSDC       float64 `json:"initialUsdc"`
+	InitialUSDT       float64 `json:"initialUsdt"`
+	InitialBase       float64 `json:"initialBase"`
+	TargetWeightPct   float64 `json:"targetWeightPct"`
+	CashReserveQuote  float64 `json:"cashReserveQuote"`
+	MinOrderQuote     float64 `json:"minOrderQuote"`
+	RedownloadMissing bool    `json:"redownloadMissing"`
+	Algo              string  `json:"algo"`
+	SpreadBps         float64 `json:"spreadBps"`
+	SlippageBps       float64 `json:"slippageBps"`
+	FeeBps            float64 `json:"feeBps"`
+}
+
+// PipelineSymbol is the KPI/signal/execution series id for this market.
+func (s Settings) PipelineSymbol() string {
+	return pipelineSymbol(s.Provider, s.Base, s.Quote)
+}
+
+func pipelineSymbol(provider, base, quote string) string {
+	b := strings.ToUpper(strings.TrimSpace(base))
+	q := strings.ToUpper(strings.TrimSpace(quote))
+	if b == "" {
+		b = "BTC"
+	}
+	if q == "" {
+		q = "USDT"
+	}
+	_ = provider
+	return b + q
 }
 
 // DefaultSettings returns form defaults for a new backtest.
@@ -48,15 +71,17 @@ func DefaultSettings() Settings {
 	to -= to % (60 * 60 * 1000)
 	from := to - 365*24*60*60*1000
 	return Settings{
-		Symbol:            "BTCUSDT",
+		Provider:          "binance",
+		Base:              "BTC",
+		Quote:             "USDT",
 		Playbook:          "ma-cross",
 		FromMs:            from,
 		ToMs:              to,
 		InitialUSDC:       100_000,
 		InitialUSDT:       0,
 		InitialBase:       0,
-		TargetWeightPct:   95,
-		CashReserveQuote:  100,
+		TargetWeightPct:   100,
+		CashReserveQuote:  0,
 		MinOrderQuote:     1,
 		RedownloadMissing: false,
 		Algo:              "v1",
@@ -68,20 +93,20 @@ func DefaultSettings() Settings {
 
 // Record is one catalog row.
 type Record struct {
-	ID               string
-	Name             string
-	Description      string
-	Status           string
-	Settings         Settings
-	WorkspaceRelPath string
-	CreatedAt        int64
-	StartedAt        *int64
-	FinishedAt       *int64
-	Error            string
-	ProgressDone      int
-	ProgressTotal     int
-	ProgressStage     int
-	ProgressStages    int
+	ID                 string
+	Name               string
+	Description        string
+	Status             string
+	Settings           Settings
+	WorkspaceRelPath   string
+	CreatedAt          int64
+	StartedAt          *int64
+	FinishedAt         *int64
+	Error              string
+	ProgressDone       int
+	ProgressTotal      int
+	ProgressStage      int
+	ProgressStages     int
 	ProgressStageLabel string
 }
 
@@ -150,11 +175,14 @@ CREATE TABLE IF NOT EXISTS backtest_kpi (
 	if err != nil {
 		return err
 	}
-	return ensureColumns(c.db, "backtest", []struct{ name, ddl string }{
+	if err := ensureColumns(c.db, "backtest", []struct{ name, ddl string }{
 		{name: "progress_stage", ddl: "progress_stage INTEGER NOT NULL DEFAULT 0"},
 		{name: "progress_stages", ddl: "progress_stages INTEGER NOT NULL DEFAULT 0"},
 		{name: "progress_stage_label", ddl: "progress_stage_label TEXT NOT NULL DEFAULT ''"},
-	})
+	}); err != nil {
+		return err
+	}
+	return migrateExperimentTables(c.db)
 }
 
 // CreateDraft inserts a new draft backtest.
@@ -162,12 +190,17 @@ func (c *Catalog) CreateDraft(name, description string, settings Settings) (Reco
 	if strings.TrimSpace(name) == "" {
 		return Record{}, errors.New("name required")
 	}
-	if settings.Symbol == "" {
+	if settings.Base == "" || settings.Quote == "" {
 		settings = DefaultSettings()
 	}
 	if settings.Algo == "" {
 		settings.Algo = "v1"
 	}
+	if strings.TrimSpace(settings.Provider) == "" {
+		settings.Provider = "binance"
+	}
+	settings.Base = strings.ToUpper(strings.TrimSpace(settings.Base))
+	settings.Quote = strings.ToUpper(strings.TrimSpace(settings.Quote))
 	id := uuid.NewString()
 	rel := filepath.Join("backtests", id)
 	created := time.Now().UnixMilli()

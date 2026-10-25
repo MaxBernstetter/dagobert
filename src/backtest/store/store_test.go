@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MaxBernstetter/trading-copilot/src/backtest/store"
+	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 )
 
 func TestCatalogCreateList(t *testing.T) {

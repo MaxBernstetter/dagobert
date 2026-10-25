@@ -1,7 +1,7 @@
 package kpi
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/internal/canonical"
+	"github.com/MaxBernstetter/dagobert/src/internal/canonical"
 )
 
 // RSI reads RSI for the given aggregation window (hours).

@@ -1,31 +1,32 @@
-# Merged automatically by `docker compose up` (local dev).
-# Production frontend only: COMPOSE_FILE=compose.yaml docker compose up
+# Merged automatically by `docker compose up` / `task up` (local dev).
+# Serves the Vite SPA from src/frontend.
+# Production SPA image only: COMPOSE_FILE=compose.yaml docker compose up
 
 services:
   frontend:
     build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
       target: dev
-    command: ["npm", "run", "dev:docker"]
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+    environment:
+      VITE_EXPERIMENT_API_URL: ${VITE_EXPERIMENT_API_URL:-}
+      VITE_DEV_API_PROXY: ${VITE_DEV_API_PROXY:-http://orchestrator:8090}
     volumes:
-      - ./src/frontend:/app
-      - frontend_node_modules:/app/node_modules
-      # Keep .next off the host bind mount (avoids corrupt / mixed turbopack caches).
-      - frontend_next:/app/.next
+      - ./src/frontend:/repo/src/frontend
+      - ./src/calculation-technical-indicator:/repo/src/calculation-technical-indicator:ro
+      - ./src/calculation-signal:/repo/src/calculation-signal:ro
     develop:
       watch:
         - action: sync
           path: ./src/frontend
-          target: /app
+          target: /repo/src/frontend
           ignore:
             - node_modules/
-            - .next/
+            - dist/
         - action: rebuild
           path: ./src/frontend/package.json
         - action: rebuild
           path: ./src/frontend/package-lock.json
         - action: rebuild
           path: ./src/frontend/Dockerfile
-
-volumes:
-  frontend_node_modules:
-  frontend_next:

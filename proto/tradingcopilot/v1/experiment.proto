@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+import "tradingcopilot/v1/strategy.proto";
+
+// Experiment is the full relational row for public.experiment (settings are typed columns).
+// Field numbers: 1–20 identity/status; 21–50 settings; 51–70 progress/timestamps.
+message Experiment {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string error = 5;
+
+  // Settings (public.experiment columns).
+  string provider = 21;
+  string base = 22;
+  string quote = 23;
+  int64 from_ms = 24;
+  int64 to_ms = 25;
+  double initial_usdc = 26;
+  double initial_usdt = 27;
+  double initial_base = 28;
+  double target_weight_pct = 29;
+  double cash_reserve_quote = 30;
+  double min_order_quote = 31;
+  bool redownload_missing = 32;
+  string algo = 33;
+  double spread_bps = 34;
+  double slippage_bps = 35;
+  double fee_bps = 36;
+
+  int64 created_at_ms = 51;
+  optional int64 started_at_ms = 52;
+  optional int64 finished_at_ms = 53;
+
+  int32 progress_stage = 54;
+  int32 progress_stages = 55;
+  string progress_stage_label = 56;
+  int32 progress_instance_done = 57;
+  int32 progress_instance_total = 58;
+
+  // List enrichment (not columns).
+  repeated string list_playbooks = 70;
+  repeated string list_symbols = 71;
+
+  // Nested settings view for API clients (derived from fields 21–36; not a column).
+  ExperimentSettings settings = 80;
+}
+
+// Nested settings view for create requests (maps onto Experiment fields 21–36).
+message ExperimentSettings {
+  string provider = 1;
+  string base = 2;
+  string quote = 3;
+  int64 from_ms = 4;
+  int64 to_ms = 5;
+  double initial_usdc = 6;
+  double initial_usdt = 7;
+  double initial_base = 8;
+  double target_weight_pct = 9;
+  double cash_reserve_quote = 10;
+  double min_order_quote = 11;
+  bool redownload_missing = 12;
+  string algo = 13;
+  double spread_bps = 14;
+  double slippage_bps = 15;
+  double fee_bps = 16;
+}
+
+message ExperimentProgress {
+  string id = 1;
+  string status = 2;
+  string error = 3;
+  int32 progress_stage = 4;
+  int32 progress_stages = 5;
+  string progress_stage_label = 6;
+  int32 progress_instance_done = 7;
+  int32 progress_instance_total = 8;
+  int64 failed_instance_count = 9;
+  optional int64 started_at_ms = 10;
+  optional int64 finished_at_ms = 11;
+}
+
+message ListExperimentsResponse {
+  repeated Experiment experiments = 1;
+}
+
+enum ExperimentCreateMode {
+  EXPERIMENT_CREATE_MODE_UNSPECIFIED = 0;
+  EXPERIMENT_CREATE_MODE_GRID = 1;
+  EXPERIMENT_CREATE_MODE_MANUAL = 2;
+}
+
+message GridAxis {
+  string key = 1;
+  // Numeric or string values (protojson may send numbers as numbers).
+  repeated string values = 2;
+  repeated double numeric_values = 3;
+}
+
+message ExperimentGridSpec {
+  string playbook = 1;
+  repeated GridAxis axes = 2;
+}
+
+message ExperimentInstanceSpec {
+  string label = 1;
+  string playbook = 2;
+  string symbol = 3;
+  MaCrossConfig ma_cross = 10;
+  SignalConsensusConfig signal_consensus = 11;
+}
+
+message CreateExperimentRequest {
+  string name = 1;
+  string description = 2;
+  ExperimentSettings settings = 3;
+  ExperimentCreateMode mode = 4;
+  string playbook = 5;
+  ExperimentGridSpec grid = 6;
+  repeated ExperimentInstanceSpec instances = 7;
+}
+
+message ErrorResponse {
+  string error = 1;
+}
+
+message OkResponse {
+  bool ok = 1;
+}

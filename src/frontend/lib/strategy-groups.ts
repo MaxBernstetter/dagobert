@@ -1,4 +1,4 @@
-import type { ActivityRow, JournalRow } from "@/lib/read";
+import type { ActivityRow, JournalRow } from "@/types/read";
 
 export type StrategyGroup = {
   playbook: string;

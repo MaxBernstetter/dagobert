@@ -1,8 +1,8 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/execution/internal/store"
-	"github.com/MaxBernstetter/trading-copilot/src/internal/venue/paper"
+	"github.com/MaxBernstetter/dagobert/src/execution/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 )
 
 // SimBatch collects simulated orders for one batched flush.

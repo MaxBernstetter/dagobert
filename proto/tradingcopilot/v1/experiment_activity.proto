@@ -9,6 +9,7 @@ message ExperimentInstancePeriodStat {
   string period_key = 3;
   optional double return_pct = 4;
   optional int32 trade_count = 5;
+  optional int32 win_count = 6;
 }
 
 // public.experiment_instance_action

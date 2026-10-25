@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 )
 
 // EncodeActionJSON builds the action row body (same shape as the market-action job).
 func EncodeActionJSON(playbookID, symbol, decision string, size *float64, rule, signalRule string) ([]byte, error) {
-	inst, _ := instruments.BySeries(symbol)
+	inst, _ := instruments.Resolve(symbol)
 	unit, unitKind := "", ""
 	switch decision {
 	case "buy":

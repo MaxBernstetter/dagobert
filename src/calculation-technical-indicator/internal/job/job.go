@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/bars"
-	indicatorrun "github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/indicators/run"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/lake"
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-technical-indicator/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
+	indicatorrun "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/indicators/run"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/lake"
+	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/store"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 const (
@@ -23,10 +25,11 @@ const (
 	detailSchema  = 40
 )
 
-var symbols = map[string]struct{}{
-	"BTCUSDT":  {},
-	"ETHUSDT":  {},
-	"USDCUSDT": {},
+// validPipelineSymbol accepts any lake series that splits into provider base/quote
+// (no hardcoded BTCUSDT allowlist — catalog membership is enforced at pick/ingest).
+func validPipelineSymbol(symbol string) bool {
+	_, _, ok := shared.SplitPipelineSymbol(strings.TrimSpace(symbol))
+	return ok
 }
 
 type kpiBody struct {
@@ -65,7 +68,7 @@ func Run(args []string, dataDir string, nowMS int64, nowInvalid bool) (detail in
 		return detailExists, exitCode(detailExists)
 	}
 
-	raw, err := lake.Read(filepath.Join(dataDir, "parquet", symbol+".parquet"))
+	raw, err := lake.Read(rawParquetPaths(dataDir, symbol)...)
 	if err != nil {
 		if errors.Is(err, lake.ErrMissing) {
 			return detailMissing, exitCode(detailMissing)
@@ -124,7 +127,7 @@ func runRange(args []string, dataDir string, nowMS int64, nowInvalid bool) (deta
 		return detailInvalid, exitCode(detailInvalid)
 	}
 	symbol := args[0]
-	if _, ok := symbols[symbol]; !ok {
+	if !validPipelineSymbol(symbol) {
 		return detailInvalid, exitCode(detailInvalid)
 	}
 	from, err := strconv.ParseInt(args[1], 10, 64)
@@ -175,7 +178,7 @@ func parseArgs(args []string, dataDir string, nowInvalid bool) (string, int64, b
 		return "", 0, false
 	}
 	symbol := args[0]
-	if _, ok := symbols[symbol]; !ok {
+	if !validPipelineSymbol(symbol) {
 		return "", 0, false
 	}
 	barOpen, err := strconv.ParseInt(args[1], 10, 64)

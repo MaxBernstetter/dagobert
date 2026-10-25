@@ -2,7 +2,6 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 
 type Theme = "light" | "dark";
 
@@ -24,17 +23,17 @@ export function ThemeToggle() {
     setTheme(next);
   }
 
+  const nextLabel = theme === "dark" ? "Light mode" : "Dark mode";
+
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="sm"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      className="gap-1.5"
+      aria-label={nextLabel}
+      title={nextLabel}
+      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
-      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      <span className="hidden sm:inline">{theme === "dark" ? "Light" : "Dark"}</span>
-    </Button>
+      {theme === "dark" ? <Sun className="size-3.5" aria-hidden /> : <Moon className="size-3.5" aria-hidden />}
+    </button>
   );
 }

@@ -6,4 +6,5 @@
 .cursorignore
 node_modules/
 .next/
+.env
 /worktree/

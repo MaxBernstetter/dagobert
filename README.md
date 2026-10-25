@@ -1,6 +1,6 @@
-# trading-copilot
+# Dagobert
 
-A personal copilot for systematic crypto spot swing trades on 3-hour UTC candles. It loads public Binance klines, computes one indicator record per closed candle, runs a single Go playbook strategy, and sends the resulting action to the Bybit EU spot demo. A Next.js app shows balances, past decisions and why they fired, and the fill or rejection.
+Personal experiment suite for systematic crypto spot swing trades on 3-hour UTC candles. It loads public Binance klines, computes one indicator record per closed candle, runs Go playbook strategies, and can send actions to the Bybit EU spot demo. The web UI covers experiments, providers, and experiment results.
 
 The orchestrator is the long-running process. The pipeline is five stateless Go containers, started by the orchestrator when a candle closes:
 
@@ -35,7 +35,7 @@ devbox shell
 task up
 ```
 
-Run `task build` once (job images + stack), then `task up` for Floci, the orchestrator, and the production frontend at [http://localhost:3001](http://localhost:3001). For UI work use `task dev` instead: Compose **watch** syncs `./src/frontend` into the container and runs `next dev` (no full image rebuild on each save). `task up:build` rebuilds everything then starts the stack. Set `WEB_PORT` to publish the app on another host port. The four jobs are not part of that stack. The orchestrator starts them when a 3-hour UTC candle closes. `task run` starts one execution now. `CANDLE_CLOSE_MS` defaults to `1700006400000` (2023-11-14 23:00 UTC). A second `task run` for the same close does not place a second order. The overview can also backfill hourly candles, or recalculate indicators, for a UTC from/to range. Those two steps do not place orders. `task down` stops the stack and leaves `data/` in place.
+Run `task build` once (job images + stack), then `task up` for Floci, the orchestrator, and the production frontend at [http://localhost:3001](http://localhost:3001). For UI work use `task dev` instead: Compose **watch** syncs `./src/frontend` into the container and runs the Vite dev server (no full image rebuild on each save). `task up:build` rebuilds everything then starts the stack. Set `WEB_PORT` (default 3001), `FLOCI_PORT` (default 4566), `POSTGRES_PORT` (default 5432), or `ORCHESTRATOR_PORT` (default 8090) in `.env` to publish those services on other host ports. The four jobs are not part of that stack. The orchestrator starts them when a 3-hour UTC candle closes. `task run` starts one execution now. `CANDLE_CLOSE_MS` defaults to `1700006400000` (2023-11-14 23:00 UTC). A second `task run` for the same close does not place a second order. The overview can also backfill hourly candles, or recalculate indicators, for a UTC from/to range. Those two steps do not place orders. `task down` stops the stack and leaves `data/` in place.
 
 Ingest reads public klines from `https://data-api.binance.vision` unless `BINANCE_BASE_URL` is set. It also accepts `ETHUSDT` and `USDCUSDT`. Process, strategy, and execution accept `BTCUSDT` and `ETHUSDT`. Execution trades `BTCUSDC` and `ETHUSDC` on `https://api-demo.bybit.eu`.
 
@@ -56,4 +56,4 @@ task run        # one candle close, CANDLE_CLOSE_MS optional
 task down
 ```
 
-The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. Application code lives under `src/` (jobs, `shared/`, `internal/instruments`, and `frontend/`). `npm run build` in `src/frontend/` typechecks the app. There is no browser test suite.
+The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. Application code lives under `src/` (jobs, `shared/`, `internal/instruments`, and `frontend/`, the Vite SPA). `npm run build` in `src/frontend/` typechecks the app. There is no browser test suite.

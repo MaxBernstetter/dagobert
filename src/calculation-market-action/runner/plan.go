@@ -1,8 +1,16 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-market-action/internal/allocate"
+	"github.com/MaxBernstetter/dagobert/src/calculation-market-action/internal/allocate"
 )
+
+// Policy is the allocation policy (re-exported for callers outside market-action).
+type Policy = allocate.Policy
+
+// PolicyFromEnv loads ALLOC_* sizing policy.
+func PolicyFromEnv() Policy {
+	return allocate.PolicyFromEnv()
+}
 
 // PlannedAction is a sized market-action without persisting to SQLite.
 type PlannedAction struct {
@@ -13,7 +21,12 @@ type PlannedAction struct {
 
 // PlanAction sizes a signal and returns the action JSON body.
 func PlanAction(playbookID, symbol, signalDecision, signalRule string, quoteCash, baseHeld, mark float64) (PlannedAction, error) {
-	pol := allocate.PolicyFromEnv()
+	return PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule, quoteCash, baseHeld, mark, allocate.PolicyFromEnv(), true)
+}
+
+// PlanActionWithPolicy sizes a signal using a preloaded policy.
+// When encodeBody is false, Body is left nil (slim experiment path).
+func PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule string, quoteCash, baseHeld, mark float64, pol allocate.Policy, encodeBody bool) (PlannedAction, error) {
 	out := allocate.Size(allocate.Input{
 		SignalDecision: signalDecision,
 		QuoteCash:      quoteCash,
@@ -27,9 +40,14 @@ func PlanAction(playbookID, symbol, signalDecision, signalRule string, quoteCash
 	if out.Note != "" && out.Decision == "no-trade" {
 		rule = out.Note
 	}
+	planned := PlannedAction{Decision: out.Decision, Size: out.Size}
+	if !encodeBody {
+		return planned, nil
+	}
 	body, err := allocate.EncodeActionJSON(playbookID, symbol, out.Decision, out.Size, rule, signalRule)
 	if err != nil {
 		return PlannedAction{}, err
 	}
-	return PlannedAction{Body: body, Decision: out.Decision, Size: out.Size}, nil
+	planned.Body = body
+	return planned, nil
 }

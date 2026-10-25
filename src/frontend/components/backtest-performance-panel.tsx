@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  BacktestDetailSection,
-  BacktestMetricGroup,
-  BacktestMetricRow,
-} from "@/components/backtest-detail-section";
-import {
-  decisionsPerMonthStats,
-  tradeCountFromFills,
-  type BacktestRunStatistics,
-} from "@/lib/backtest-period-stats";
+import { BacktestDetailSection } from "@/components/backtest-detail-section";
+import { Badge } from "@/components/ui/badge";
+import type { BacktestRunStatistics, OutcomeSide } from "@/lib/backtest-period-stats";
 import type { BacktestOutcome } from "@/lib/backtest-shared";
 import type { BacktestKpiSetState } from "@/hooks/use-backtest-kpi-set";
-import { returnTone, strategyKpiTone } from "@/lib/strategy-kpi-tone";
+import { returnTone, strategyKpiTone, toneTextClassName, type KpiTone } from "@/lib/strategy-kpi-tone";
 import {
   formatStrategyKpiValue,
   type StrategyKpiComparison,
@@ -42,14 +35,157 @@ function kpiMeta(results: StrategyKpiResult[], slug: string) {
   return results.find((r) => r.def.slug === slug)?.def;
 }
 
+type PeriodCell = { text: string; tone: KpiTone; title?: string };
+
+const dash: PeriodCell = { text: "—", tone: "neutral" };
+
+const periodHeaders: { label: string; title: string }[] = [
+  { label: "Total", title: "Whole backtest window." },
+  { label: "Month avg.", title: "Mean of calendar months in this run." },
+  { label: "Month med.", title: "Median of calendar months in this run." },
+  { label: "Year avg.", title: "Mean of calendar years inside the run." },
+  { label: "Year med.", title: "Median of calendar years inside the run." },
+];
+
+const periodGrid =
+  "grid grid-cols-[minmax(4.75rem,1.15fr)_repeat(5,minmax(0,1fr))] items-baseline gap-x-2";
+
+function filled(cell: PeriodCell): boolean {
+  return cell.text !== "—";
+}
+
+function percentCell(
+  value: number | null | undefined,
+  toneOf: (value: number) => KpiTone,
+): PeriodCell {
+  if (value == null || !Number.isFinite(value)) return dash;
+  return { text: formatStrategyKpiValue("percent", value), tone: toneOf(value) };
+}
+
+function rateCell(value: number | null | undefined): PeriodCell {
+  const text = formatRate(value);
+  return text === "—" ? dash : { text, tone: "neutral" };
+}
+
+function PeriodValue({ cell }: { cell: PeriodCell }) {
+  const empty = !filled(cell);
+  const color = empty
+    ? "font-normal text-muted-foreground"
+    : cell.tone === "neutral"
+      ? "text-foreground"
+      : toneTextClassName(cell.tone);
+  return (
+    <span className={cn("text-right text-xs font-medium tabular-nums", color)} title={cell.title}>
+      {cell.text}
+    </span>
+  );
+}
+
+function KpiPeriodRow({
+  label,
+  title,
+  cells,
+}: {
+  label: string;
+  title?: string;
+  cells: PeriodCell[];
+}) {
+  return (
+    <div className={cn(periodGrid, "border-b border-border/40 py-1.5 last:border-b-0")}>
+      <span className="text-xs text-muted-foreground" title={title}>
+        {label}
+      </span>
+      {cells.map((cell, index) => (
+        <PeriodValue key={index} cell={cell} />
+      ))}
+    </div>
+  );
+}
+
+function singleTotal(cell: PeriodCell): PeriodCell[] {
+  return [cell, dash, dash, dash, dash];
+}
+
+function HeaderTag({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <Badge variant="secondary" className="font-normal tabular-nums">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn("font-medium text-foreground", valueClassName)}>{value}</span>
+    </Badge>
+  );
+}
+
+const ladderKeys = ["average", "p50", "p75", "p90", "p95"] as const;
+
+const ladderHeaders = ["Average", "Median", "25% above", "10% above", "5% above"];
+
+function formatQuote(value: number | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function LadderValue({
+  side,
+  tone,
+}: {
+  side: OutcomeSide | null | undefined;
+  tone: KpiTone;
+}) {
+  return (
+    <>
+      {ladderKeys.map((key) => {
+        const quote = side?.absolute?.[key];
+        const pct = side?.percentage?.[key];
+        const color = toneTextClassName(tone);
+        return (
+          <span key={key} className="text-right text-xs font-medium tabular-nums leading-tight">
+            <span className={quote == null ? "font-normal text-muted-foreground" : color}>
+              {formatQuote(quote)}
+            </span>
+            <span className={cn("block", pct == null ? "font-normal text-muted-foreground" : color)}>
+              {pct == null ? "—" : formatStrategyKpiValue("percent", pct)}
+            </span>
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function OutcomeLadder({
+  label,
+  side,
+  tone,
+}: {
+  label: string;
+  side: OutcomeSide | null | undefined;
+  tone: KpiTone;
+}) {
+  if (!side?.absolute && !side?.percentage) return null;
+  return (
+    <div className={cn(periodGrid, "border-b border-border/40 py-1.5 last:border-b-0")}>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <LadderValue side={side} tone={tone} />
+    </div>
+  );
+}
+
 export function BacktestPerformancePanel({
   kpi,
   comparison,
   statistics,
   outcome,
-  decisionTimestampsMs,
   loading,
   className,
+  title = "Performance",
 }: {
   kpi: BacktestKpiSetState;
   comparison: StrategyKpiComparison | undefined;
@@ -58,6 +194,7 @@ export function BacktestPerformancePanel({
   decisionTimestampsMs?: number[];
   loading?: boolean;
   className?: string;
+  title?: string;
 }) {
   const { results } = kpi;
   const show =
@@ -71,7 +208,7 @@ export function BacktestPerformancePanel({
 
   if (loading && results.length === 0 && !comparison && !statistics && !outcome) {
     return (
-      <BacktestDetailSection title="Performance" className={className}>
+      <BacktestDetailSection title={title} className={className}>
         <p className="text-xs text-muted-foreground">Loading…</p>
       </BacktestDetailSection>
     );
@@ -82,176 +219,152 @@ export function BacktestPerformancePanel({
       ? comparison.startCash * (1 + comparison.strategyReturn)
       : null;
   const totalReturnTone = comparison ? returnTone(comparison.strategyReturn) : "neutral";
-  const trades = outcome ? tradeCountFromFills(outcome.fills) : null;
-  const decisions = outcome?.decisions ?? null;
-  const decisionRates = decisionTimestampsMs?.length
-    ? decisionsPerMonthStats(decisionTimestampsMs)
-    : null;
 
-  const maxDd = kpiValue(results, "max-drawdown");
-  const maxDdMeta = kpiMeta(results, "max-drawdown");
-  const cagr = kpiValue(results, "cagr");
-  const cagrMeta = kpiMeta(results, "cagr");
-  const sharpe = kpiValue(results, "sharpe");
-  const sharpeMeta = kpiMeta(results, "sharpe");
-  const sortino = kpiValue(results, "sortino");
-  const sortinoMeta = kpiMeta(results, "sortino");
+  const rows: { label: string; title?: string; cells: PeriodCell[] }[] = [];
+
+  const returnCells: PeriodCell[] = [
+    comparison
+      ? {
+          text: formatStrategyKpiValue("percent", comparison.strategyReturn),
+          tone: totalReturnTone,
+        }
+      : dash,
+    percentCell(statistics?.monthlyReturnAvg, (value) => returnTone(value * 12)),
+    percentCell(statistics?.monthlyReturnMed, (value) => returnTone(value * 12)),
+    percentCell(statistics?.yearlyReturnAvg, returnTone),
+    percentCell(statistics?.yearlyReturnMed, returnTone),
+  ];
+  if (returnCells.some(filled)) {
+    rows.push({ label: "Return", cells: returnCells });
+  }
+
+  if (comparison) {
+    rows.push({
+      label: "Buy & hold",
+      cells: singleTotal({
+        text: formatStrategyKpiValue("percent", comparison.buyHoldReturn),
+        tone: returnTone(comparison.buyHoldReturn),
+      }),
+    });
+  }
+
   const vsBh = kpiValue(results, "active-return");
   const vsBhMeta = kpiMeta(results, "active-return");
+  if (vsBh != null && vsBhMeta) {
+    rows.push({
+      label: vsBhMeta.label,
+      title: vsBhMeta.title,
+      cells: singleTotal({
+        text: formatStrategyKpiValue(vsBhMeta.format, vsBh),
+        tone: strategyKpiTone("active-return", vsBh),
+        title: vsBhMeta.title,
+      }),
+    });
+  }
+
+  for (const slug of ["cagr", "sharpe", "sortino", "max-drawdown"] as const) {
+    const value = kpiValue(results, slug);
+    const meta = kpiMeta(results, slug);
+    if (value == null || !meta) continue;
+    rows.push({
+      label: meta.label,
+      title: meta.title,
+      cells: singleTotal({
+        text: formatStrategyKpiValue(meta.format, value),
+        tone: strategyKpiTone(slug, value),
+        title: meta.title,
+      }),
+    });
+  }
+
+  const winCells: PeriodCell[] = [
+    percentCell(statistics?.winRate, (value) => strategyKpiTone("win-rate", value)),
+    percentCell(statistics?.monthlyWinRateAvg, (value) => strategyKpiTone("win-rate", value)),
+    percentCell(statistics?.monthlyWinRateMed, (value) => strategyKpiTone("win-rate", value)),
+    percentCell(statistics?.yearlyWinRateAvg, (value) => strategyKpiTone("win-rate", value)),
+    percentCell(statistics?.yearlyWinRateMed, (value) => strategyKpiTone("win-rate", value)),
+  ];
+  if (winCells.some(filled)) {
+    rows.push({
+      label: "Win rate",
+      title: "Winning sells divided by closed trades. Month and year cells are the mean and median of calendar-bucket rates.",
+      cells: winCells,
+    });
+  }
+
+  const tradeAvg = rateCell(statistics?.tradesPerMonthAvg);
+  const tradeMed = rateCell(statistics?.tradesPerMonthMed);
+  if (filled(tradeAvg) || filled(tradeMed)) {
+    rows.push({
+      label: "Trades",
+      cells: [dash, tradeAvg, tradeMed, dash, dash],
+    });
+  }
+
+  const showRunLength = (statistics?.durationMonths ?? 0) > 0;
+  const showLadder = Boolean(statistics?.gain || statistics?.loss);
+  const showFinalBalance = finalBalance != null;
+
+  const balanceTone = totalReturnTone === "neutral" ? undefined : toneTextClassName(totalReturnTone);
 
   return (
-    <BacktestDetailSection title="Performance" className={cn(className)}>
-      <div className="space-y-3">
-        <BacktestMetricGroup
-          title="Total range"
-          hint="Whole backtest window. Totals depend on run length; compare runs using p.a. and p.m. below."
-        >
-          {statistics && (
-            <BacktestMetricRow label="Run length" value={formatDurationMonths(statistics.durationMonths)} />
-          )}
-          {finalBalance != null && (
-            <BacktestMetricRow
-              label="Final balance"
-              value={`${finalBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC`}
-              tone={totalReturnTone}
-            />
-          )}
-          {comparison && (
-            <>
-              <BacktestMetricRow
-                label="Total return (window)"
-                value={formatStrategyKpiValue("percent", comparison.strategyReturn)}
-                tone={totalReturnTone}
-              />
-              <BacktestMetricRow
-                label="Buy & hold (window)"
-                value={formatStrategyKpiValue("percent", comparison.buyHoldReturn)}
-                tone={returnTone(comparison.buyHoldReturn)}
-              />
-            </>
-          )}
-          {vsBh != null && vsBhMeta && (
-            <BacktestMetricRow
-              label={vsBhMeta.label}
-              title={vsBhMeta.title}
-              value={formatStrategyKpiValue(vsBhMeta.format, vsBh)}
-              tone={strategyKpiTone("active-return", vsBh)}
-            />
-          )}
-          {maxDd != null && maxDdMeta && (
-            <BacktestMetricRow
-              label={maxDdMeta.label}
-              title={maxDdMeta.title}
-              value={formatStrategyKpiValue(maxDdMeta.format, maxDd)}
-              tone={strategyKpiTone("max-drawdown", maxDd)}
-            />
-          )}
-          {trades != null && (
-            <BacktestMetricRow label="Trades" value={trades.toLocaleString()} />
-          )}
-          {decisions != null && (
-            <BacktestMetricRow label="Decisions" value={decisions.toLocaleString()} />
-          )}
-        </BacktestMetricGroup>
-
-        <BacktestMetricGroup
-          title="Per annum (p.a.)"
-          hint="CAGR annualizes the full window. Year μ/med are mean and median of calendar years inside the run."
-        >
-          {cagr != null && cagrMeta && (
-            <BacktestMetricRow
-              label={cagrMeta.label}
-              title={cagrMeta.title}
-              value={formatStrategyKpiValue(cagrMeta.format, cagr)}
-              tone={strategyKpiTone("cagr", cagr)}
-            />
-          )}
-          {sharpe != null && sharpeMeta && (
-            <BacktestMetricRow
-              label={sharpeMeta.label}
-              title={sharpeMeta.title}
-              value={formatStrategyKpiValue(sharpeMeta.format, sharpe)}
-              tone={strategyKpiTone("sharpe", sharpe)}
-            />
-          )}
-          {sortino != null && sortinoMeta && (
-            <BacktestMetricRow
-              label={sortinoMeta.label}
-              title={sortinoMeta.title}
-              value={formatStrategyKpiValue(sortinoMeta.format, sortino)}
-              tone={strategyKpiTone("sortino", sortino)}
-            />
-          )}
-          {statistics && (
-            <>
-              <BacktestMetricRow
-                label="Year return μ"
-                value={formatStrategyKpiValue("percent", statistics.yearlyReturnAvg ?? NaN)}
-                tone={
-                  statistics.yearlyReturnAvg != null
-                    ? returnTone(statistics.yearlyReturnAvg)
-                    : "neutral"
-                }
-              />
-              <BacktestMetricRow
-                label="Year return med"
-                value={formatStrategyKpiValue("percent", statistics.yearlyReturnMed ?? NaN)}
-                tone={
-                  statistics.yearlyReturnMed != null
-                    ? returnTone(statistics.yearlyReturnMed)
-                    : "neutral"
-                }
-              />
-            </>
-          )}
-        </BacktestMetricGroup>
-
-        {statistics && (
-          <BacktestMetricGroup
-            title="Per month (p.m.)"
-            hint="μ / med across calendar months in this run."
-          >
-            <BacktestMetricRow
-              label="Month return μ"
-              value={formatStrategyKpiValue("percent", statistics.monthlyReturnAvg ?? NaN)}
-              tone={
-                statistics.monthlyReturnAvg != null
-                  ? returnTone(statistics.monthlyReturnAvg * 12)
-                  : "neutral"
-              }
-            />
-            <BacktestMetricRow
-              label="Month return med"
-              value={formatStrategyKpiValue("percent", statistics.monthlyReturnMed ?? NaN)}
-              tone={
-                statistics.monthlyReturnMed != null
-                  ? returnTone(statistics.monthlyReturnMed * 12)
-                  : "neutral"
-              }
-            />
-            <BacktestMetricRow
-              label="Trades / mo μ"
-              value={formatRate(statistics.tradesPerMonthAvg)}
-            />
-            <BacktestMetricRow
-              label="Trades / mo med"
-              value={formatRate(statistics.tradesPerMonthMed)}
-            />
-            {decisionRates && (
-              <>
-                <BacktestMetricRow
-                  label="Decisions / mo μ"
-                  value={formatRate(decisionRates.avg)}
-                />
-                <BacktestMetricRow
-                  label="Decisions / mo med"
-                  value={formatRate(decisionRates.med)}
-                />
-              </>
+    <BacktestDetailSection
+      title={title}
+      className={cn(className)}
+      titleExtra={
+        showRunLength || showFinalBalance ? (
+          <>
+            {showRunLength && statistics && (
+              <HeaderTag label="Run length" value={formatDurationMonths(statistics.durationMonths)} />
             )}
-          </BacktestMetricGroup>
+            {showFinalBalance && (
+              <HeaderTag
+                label="Final balance"
+                value={`${finalBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC`}
+                valueClassName={balanceTone}
+              />
+            )}
+          </>
+        ) : null
+      }
+    >
+      <div className="space-y-4">
+        {rows.length > 0 && (
+          <div>
+            <div className={cn(periodGrid, "border-b border-border/40 pb-1")}>
+              <span />
+              {periodHeaders.map((header) => (
+                <span
+                  key={header.label}
+                  className="text-right text-[0.65rem] leading-tight text-muted-foreground"
+                  title={header.title}
+                >
+                  {header.label}
+                </span>
+              ))}
+            </div>
+            {rows.map((row) => (
+              <KpiPeriodRow key={row.label} label={row.label} title={row.title} cells={row.cells} />
+            ))}
+          </div>
         )}
-
+        {showLadder && (
+          <div>
+            <div className={cn(periodGrid, "border-b border-border/40 pb-1")}>
+              <span />
+              {ladderHeaders.map((header) => (
+                <span
+                  key={header}
+                  className="text-right text-[0.65rem] leading-tight text-muted-foreground"
+                >
+                  {header}
+                </span>
+              ))}
+            </div>
+            <OutcomeLadder label="Gain" side={statistics?.gain} tone="good" />
+            <OutcomeLadder label="Loss" side={statistics?.loss} tone="bad" />
+          </div>
+        )}
         {comparison && (
           <p className="text-xs text-muted-foreground">
             Benchmark: {comparison.startCash.toLocaleString()} USDC into the asset at the first bar (buy

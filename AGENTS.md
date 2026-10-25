@@ -7,12 +7,13 @@
 ## Before planning or implementing
 1. For tracked work, follow `docs/development/01-task-management.md`.
 2. GitHub operations go through the GitHub MCP server: `docs/development/02-github-mcp.md`.
-3. Follow `docs/development/04-coding-principles.md`. System tests on the job container prove the result. An audit covers edge cases, performance, and clean code.
+3. Follow `docs/development/principles/README.md` for planning and implementation: applicability, simplicity, twelve-factor, clean code, scalability, and the Definition of done. Check the Definition of done before closing a non-trivial task.
+4. Follow `docs/development/04-coding-principles.md` for job containers. System tests on the job container prove the result. An audit covers edge cases, performance, and clean code.
 
 Trivial changes (typos, docs wording) can skip the full workflow.
 
 ## Project board
-- The GitHub Project for this repository must reflect the current state of agentic development at all times, once the board exists.
+- The GitHub Project for this repository (`Dagobert`, number 5, see `docs/development/01-task-management.md`) must reflect the current state of agentic development at all times.
 - Set an issue to `In progress` directly when work on it starts, before planning or coding, and update its status on every later change (`In review` once its pull request is open, back to `In progress` when it is reworked).
 
 ## Pull requests

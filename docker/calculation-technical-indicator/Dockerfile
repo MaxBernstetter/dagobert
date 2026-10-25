@@ -7,6 +7,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go mod download
 COPY src/shared ./src/shared
+COPY src/internal/awsenv ./src/internal/awsenv
+COPY src/internal/lakeobject ./src/internal/lakeobject
 COPY src/internal/parquetmeta ./src/internal/parquetmeta
 COPY src/calculation-technical-indicator ./src/calculation-technical-indicator
 ENV CGO_ENABLED=0

@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/MaxBernstetter/trading-copilot/src/calculation-signal/internal/playbooks"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/playbooks"
 )
 
 // RunOneBar computes and stores the layer-1 signal for one candle close.

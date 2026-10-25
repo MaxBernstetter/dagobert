@@ -9,7 +9,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/MaxBernstetter/trading-copilot/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
 )
 
 var ErrNotFound = errors.New("action not found")
