@@ -26,14 +26,16 @@ struct BinaryRun {
 
 std::string config_json(const std::string &label, double quote,
                         int schema_version = 1,
-                        const std::string &type = "SignalConsensusConfig") {
+                        const std::string &type = "SignalConsensusConfig",
+                        const std::string &sizing = "") {
   return R"({"schemaVersion":)" + std::to_string(schema_version) +
          R"(,"label":")" + label +
          R"(","provider":"demo","base":"BTC","quote":"USDT",)"
          R"("fromMs":"1704067200000","toMs":"1704844800000","initialQuote":)" +
          std::to_string(quote) +
          R"(,"payload":{"@type":"type.googleapis.com/tradingcopilot.v1.)" +
-         type + R"("}})";
+         type + R"(")" + (sizing.empty() ? "" : R"(,"sizing":)" + sizing) +
+         "}}";
 }
 
 BinaryRun run_binary(const std::string &config) {
@@ -105,4 +107,31 @@ TEST(ConsensusExe, EmptyRangeExits1) {
   cfg.replace(cfg.find("1704067200000"), 13, "1804067200000");
   cfg.replace(cfg.find("1704844800000"), 13, "1804844800000");
   EXPECT_EQ(run_binary(cfg).exit_code, 1);
+}
+
+TEST(ConsensusExe, SizedRunReportsSizedFillsAndRules) {
+  const BinaryRun run = run_binary(config_json("signal-consensus", 1000.0, 1,
+                                               "SignalConsensusConfig",
+                                               R"({"unitRiskPct":0.25})"));
+  ASSERT_EQ(run.exit_code, 0);
+  tradingcopilot::v1::RunReport report;
+  ASSERT_TRUE(report.ParseFromString(run.out));
+  ASSERT_GE(report.fills_size(), 2);
+  EXPECT_EQ(report.actions_size(), report.fills_size());
+  EXPECT_EQ(report.fills(0).side(), "buy");
+  EXPECT_LT(report.fills(0).qty() * report.fills(0).price(), 1000.0);
+  std::set<std::string> reasons;
+  for (const auto &action : report.actions()) {
+    reasons.insert(action.reason());
+  }
+  EXPECT_TRUE(reasons.count("consensus_buy"));
+  EXPECT_TRUE(reasons.count("atr_stop"));
+}
+
+TEST(ConsensusExe, InvalidSizingExits2) {
+  const BinaryRun run =
+      run_binary(config_json("signal-consensus", 1000.0, 1,
+                             "SignalConsensusConfig", R"({"unitRiskPct":3})"));
+  EXPECT_EQ(run.exit_code, 2);
+  EXPECT_TRUE(run.out.empty());
 }

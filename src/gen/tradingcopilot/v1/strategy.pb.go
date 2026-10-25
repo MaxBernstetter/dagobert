@@ -21,17 +21,116 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Position sizing options (docs/v2/features/position-sizing.md). Every field
+// is optional: an unset field takes its documented default, an explicit value
+// (including 0) is validated. The strategy executables exit 2 on an invalid
+// value.
+type Sizing struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	UnitRiskPct  *float64               `protobuf:"fixed64,1,opt,name=unit_risk_pct,json=unitRiskPct,proto3,oneof" json:"unit_risk_pct,omitempty"`
+	HeatPct      *float64               `protobuf:"fixed64,2,opt,name=heat_pct,json=heatPct,proto3,oneof" json:"heat_pct,omitempty"`
+	MaxUnits     *int32                 `protobuf:"varint,3,opt,name=max_units,json=maxUnits,proto3,oneof" json:"max_units,omitempty"`
+	StopAtrMult  *float64               `protobuf:"fixed64,4,opt,name=stop_atr_mult,json=stopAtrMult,proto3,oneof" json:"stop_atr_mult,omitempty"`
+	AddAtrMult   *float64               `protobuf:"fixed64,5,opt,name=add_atr_mult,json=addAtrMult,proto3,oneof" json:"add_atr_mult,omitempty"`
+	MaxWeightPct *float64               `protobuf:"fixed64,6,opt,name=max_weight_pct,json=maxWeightPct,proto3,oneof" json:"max_weight_pct,omitempty"`
+	// Smallest order in quote currency; full exits ignore it.
+	MinOrderQuote *float64 `protobuf:"fixed64,7,opt,name=min_order_quote,json=minOrderQuote,proto3,oneof" json:"min_order_quote,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Sizing) Reset() {
+	*x = Sizing{}
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Sizing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Sizing) ProtoMessage() {}
+
+func (x *Sizing) ProtoReflect() protoreflect.Message {
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Sizing.ProtoReflect.Descriptor instead.
+func (*Sizing) Descriptor() ([]byte, []int) {
+	return file_tradingcopilot_v1_strategy_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Sizing) GetUnitRiskPct() float64 {
+	if x != nil && x.UnitRiskPct != nil {
+		return *x.UnitRiskPct
+	}
+	return 0
+}
+
+func (x *Sizing) GetHeatPct() float64 {
+	if x != nil && x.HeatPct != nil {
+		return *x.HeatPct
+	}
+	return 0
+}
+
+func (x *Sizing) GetMaxUnits() int32 {
+	if x != nil && x.MaxUnits != nil {
+		return *x.MaxUnits
+	}
+	return 0
+}
+
+func (x *Sizing) GetStopAtrMult() float64 {
+	if x != nil && x.StopAtrMult != nil {
+		return *x.StopAtrMult
+	}
+	return 0
+}
+
+func (x *Sizing) GetAddAtrMult() float64 {
+	if x != nil && x.AddAtrMult != nil {
+		return *x.AddAtrMult
+	}
+	return 0
+}
+
+func (x *Sizing) GetMaxWeightPct() float64 {
+	if x != nil && x.MaxWeightPct != nil {
+		return *x.MaxWeightPct
+	}
+	return 0
+}
+
+func (x *Sizing) GetMinOrderQuote() float64 {
+	if x != nil && x.MinOrderQuote != nil {
+		return *x.MinOrderQuote
+	}
+	return 0
+}
+
 type MaCrossConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FastHr        int32                  `protobuf:"varint,1,opt,name=fast_hr,json=fastHr,proto3" json:"fast_hr,omitempty"`
-	SlowHr        int32                  `protobuf:"varint,2,opt,name=slow_hr,json=slowHr,proto3" json:"slow_hr,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	FastHr int32                  `protobuf:"varint,1,opt,name=fast_hr,json=fastHr,proto3" json:"fast_hr,omitempty"`
+	SlowHr int32                  `protobuf:"varint,2,opt,name=slow_hr,json=slowHr,proto3" json:"slow_hr,omitempty"`
+	// Unset keeps buy_all/sell_all.
+	Sizing        *Sizing `protobuf:"bytes,3,opt,name=sizing,proto3,oneof" json:"sizing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MaCrossConfig) Reset() {
 	*x = MaCrossConfig{}
-	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[0]
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +142,7 @@ func (x *MaCrossConfig) String() string {
 func (*MaCrossConfig) ProtoMessage() {}
 
 func (x *MaCrossConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[0]
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +155,7 @@ func (x *MaCrossConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MaCrossConfig.ProtoReflect.Descriptor instead.
 func (*MaCrossConfig) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_strategy_proto_rawDescGZIP(), []int{0}
+	return file_tradingcopilot_v1_strategy_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *MaCrossConfig) GetFastHr() int32 {
@@ -73,6 +172,13 @@ func (x *MaCrossConfig) GetSlowHr() int32 {
 	return 0
 }
 
+func (x *MaCrossConfig) GetSizing() *Sizing {
+	if x != nil {
+		return x.Sizing
+	}
+	return nil
+}
+
 type SignalConsensusConfig struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	RsiBull               float64                `protobuf:"fixed64,100,opt,name=rsi_bull,json=rsiBull,proto3" json:"rsi_bull,omitempty"`
@@ -82,13 +188,15 @@ type SignalConsensusConfig struct {
 	AtrStopMult           float64                `protobuf:"fixed64,104,opt,name=atr_stop_mult,json=atrStopMult,proto3" json:"atr_stop_mult,omitempty"`
 	MinBarsFlatAfterSell  int32                  `protobuf:"varint,105,opt,name=min_bars_flat_after_sell,json=minBarsFlatAfterSell,proto3" json:"min_bars_flat_after_sell,omitempty"`
 	MinBarsLongBeforeSell int32                  `protobuf:"varint,106,opt,name=min_bars_long_before_sell,json=minBarsLongBeforeSell,proto3" json:"min_bars_long_before_sell,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Unset keeps buy_all/sell_all.
+	Sizing        *Sizing `protobuf:"bytes,107,opt,name=sizing,proto3,oneof" json:"sizing,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SignalConsensusConfig) Reset() {
 	*x = SignalConsensusConfig{}
-	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[1]
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -100,7 +208,7 @@ func (x *SignalConsensusConfig) String() string {
 func (*SignalConsensusConfig) ProtoMessage() {}
 
 func (x *SignalConsensusConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[1]
+	mi := &file_tradingcopilot_v1_strategy_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -113,7 +221,7 @@ func (x *SignalConsensusConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignalConsensusConfig.ProtoReflect.Descriptor instead.
 func (*SignalConsensusConfig) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_strategy_proto_rawDescGZIP(), []int{1}
+	return file_tradingcopilot_v1_strategy_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SignalConsensusConfig) GetRsiBull() float64 {
@@ -165,14 +273,40 @@ func (x *SignalConsensusConfig) GetMinBarsLongBeforeSell() int32 {
 	return 0
 }
 
+func (x *SignalConsensusConfig) GetSizing() *Sizing {
+	if x != nil {
+		return x.Sizing
+	}
+	return nil
+}
+
 var File_tradingcopilot_v1_strategy_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_strategy_proto_rawDesc = "" +
 	"\n" +
-	" tradingcopilot/v1/strategy.proto\x12\x11tradingcopilot.v1\"A\n" +
+	" tradingcopilot/v1/strategy.proto\x12\x11tradingcopilot.v1\"\x92\x03\n" +
+	"\x06Sizing\x12'\n" +
+	"\runit_risk_pct\x18\x01 \x01(\x01H\x00R\vunitRiskPct\x88\x01\x01\x12\x1e\n" +
+	"\bheat_pct\x18\x02 \x01(\x01H\x01R\aheatPct\x88\x01\x01\x12 \n" +
+	"\tmax_units\x18\x03 \x01(\x05H\x02R\bmaxUnits\x88\x01\x01\x12'\n" +
+	"\rstop_atr_mult\x18\x04 \x01(\x01H\x03R\vstopAtrMult\x88\x01\x01\x12%\n" +
+	"\fadd_atr_mult\x18\x05 \x01(\x01H\x04R\n" +
+	"addAtrMult\x88\x01\x01\x12)\n" +
+	"\x0emax_weight_pct\x18\x06 \x01(\x01H\x05R\fmaxWeightPct\x88\x01\x01\x12+\n" +
+	"\x0fmin_order_quote\x18\a \x01(\x01H\x06R\rminOrderQuote\x88\x01\x01B\x10\n" +
+	"\x0e_unit_risk_pctB\v\n" +
+	"\t_heat_pctB\f\n" +
+	"\n" +
+	"_max_unitsB\x10\n" +
+	"\x0e_stop_atr_multB\x0f\n" +
+	"\r_add_atr_multB\x11\n" +
+	"\x0f_max_weight_pctB\x12\n" +
+	"\x10_min_order_quote\"\x84\x01\n" +
 	"\rMaCrossConfig\x12\x17\n" +
 	"\afast_hr\x18\x01 \x01(\x05R\x06fastHr\x12\x17\n" +
-	"\aslow_hr\x18\x02 \x01(\x05R\x06slowHr\"\xaf\x02\n" +
+	"\aslow_hr\x18\x02 \x01(\x05R\x06slowHr\x126\n" +
+	"\x06sizing\x18\x03 \x01(\v2\x19.tradingcopilot.v1.SizingH\x00R\x06sizing\x88\x01\x01B\t\n" +
+	"\a_sizing\"\xf2\x02\n" +
 	"\x15SignalConsensusConfig\x12\x19\n" +
 	"\brsi_bull\x18d \x01(\x01R\arsiBull\x12\x19\n" +
 	"\brsi_bear\x18e \x01(\x01R\arsiBear\x12$\n" +
@@ -180,7 +314,9 @@ const file_tradingcopilot_v1_strategy_proto_rawDesc = "" +
 	"\x0evol_ratio_bear\x18g \x01(\x01R\fvolRatioBear\x12\"\n" +
 	"\ratr_stop_mult\x18h \x01(\x01R\vatrStopMult\x126\n" +
 	"\x18min_bars_flat_after_sell\x18i \x01(\x05R\x14minBarsFlatAfterSell\x128\n" +
-	"\x19min_bars_long_before_sell\x18j \x01(\x05R\x15minBarsLongBeforeSellB\xda\x01\n" +
+	"\x19min_bars_long_before_sell\x18j \x01(\x05R\x15minBarsLongBeforeSell\x126\n" +
+	"\x06sizing\x18k \x01(\v2\x19.tradingcopilot.v1.SizingH\x00R\x06sizing\x88\x01\x01B\t\n" +
+	"\a_sizingB\xda\x01\n" +
 	"\x15com.tradingcopilot.v1B\rStrategyProtoP\x01ZMgithub.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1;tradingcopilotv1\xa2\x02\x03TXX\xaa\x02\x11Tradingcopilot.V1\xca\x02\x11Tradingcopilot\\V1\xe2\x02\x1dTradingcopilot\\V1\\GPBMetadata\xea\x02\x12Tradingcopilot::V1b\x06proto3"
 
 var (
@@ -195,17 +331,20 @@ func file_tradingcopilot_v1_strategy_proto_rawDescGZIP() []byte {
 	return file_tradingcopilot_v1_strategy_proto_rawDescData
 }
 
-var file_tradingcopilot_v1_strategy_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_tradingcopilot_v1_strategy_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_tradingcopilot_v1_strategy_proto_goTypes = []any{
-	(*MaCrossConfig)(nil),         // 0: tradingcopilot.v1.MaCrossConfig
-	(*SignalConsensusConfig)(nil), // 1: tradingcopilot.v1.SignalConsensusConfig
+	(*Sizing)(nil),                // 0: tradingcopilot.v1.Sizing
+	(*MaCrossConfig)(nil),         // 1: tradingcopilot.v1.MaCrossConfig
+	(*SignalConsensusConfig)(nil), // 2: tradingcopilot.v1.SignalConsensusConfig
 }
 var file_tradingcopilot_v1_strategy_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: tradingcopilot.v1.MaCrossConfig.sizing:type_name -> tradingcopilot.v1.Sizing
+	0, // 1: tradingcopilot.v1.SignalConsensusConfig.sizing:type_name -> tradingcopilot.v1.Sizing
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_tradingcopilot_v1_strategy_proto_init() }
@@ -213,13 +352,16 @@ func file_tradingcopilot_v1_strategy_proto_init() {
 	if File_tradingcopilot_v1_strategy_proto != nil {
 		return
 	}
+	file_tradingcopilot_v1_strategy_proto_msgTypes[0].OneofWrappers = []any{}
+	file_tradingcopilot_v1_strategy_proto_msgTypes[1].OneofWrappers = []any{}
+	file_tradingcopilot_v1_strategy_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tradingcopilot_v1_strategy_proto_rawDesc), len(file_tradingcopilot_v1_strategy_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

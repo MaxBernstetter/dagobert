@@ -2,6 +2,7 @@
 
 #include "position.hpp"
 #include "series.hpp"
+#include "sizing_proto.hpp"
 
 #include "tradingcopilot/v1/strategy.pb.h"
 
@@ -49,6 +50,15 @@ SmaCrossStrategy::SmaCrossStrategy(
       sizing_(sizing),
       cross_(sizing ? SmaCrossSignal{*sizing} : SmaCrossSignal{}),
       book_(initial_quote()) {}
+
+std::optional<sizing::SizingConfig>
+SmaCrossStrategy::sizing_of(const tradingcopilot::v1::RunEnvelope &envelope) {
+  const auto config = unpack_ma_cross(envelope);
+  if (!config.has_sizing()) {
+    return std::nullopt;
+  }
+  return sizing_from_proto(config.sizing());
+}
 
 StrategyResult SmaCrossStrategy::calc_backtest(std::span<const Bar> bars) {
   for (const Bar &bar : bars) {

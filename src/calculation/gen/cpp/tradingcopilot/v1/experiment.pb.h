@@ -1597,280 +1597,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ErrorResponse final : public ::goog
 };
 // -------------------------------------------------------------------
 
-class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceSpec final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:tradingcopilot.v1.ExperimentInstanceSpec) */ {
-  using Super_ = ::google::protobuf::Message;
-
- public:
-  inline ExperimentInstanceSpec() : ExperimentInstanceSpec(nullptr) {}
-  ~ExperimentInstanceSpec() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(ExperimentInstanceSpec* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(ExperimentInstanceSpec));
-  }
-#endif
-
-  template <typename = void>
-  explicit constexpr ExperimentInstanceSpec(::google::protobuf::internal::ConstantInitialized,
-                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-                               class_data);
-
-  inline ExperimentInstanceSpec(const ExperimentInstanceSpec& from) : ExperimentInstanceSpec(nullptr, from) {}
-  inline ExperimentInstanceSpec(ExperimentInstanceSpec&& from) noexcept : ExperimentInstanceSpec(nullptr, ::std::move(from)) {}
-  inline ExperimentInstanceSpec& operator=(const ExperimentInstanceSpec& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline ExperimentInstanceSpec& operator=(ExperimentInstanceSpec&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
-  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
-  GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  [[nodiscard]] static const ExperimentInstanceSpec& default_instance() {
-    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<ExperimentInstanceSpec>(&ExperimentInstanceSpec_globals_);
-  }
-  static constexpr int kIndexInFileMessages = 6;
-  friend void swap(ExperimentInstanceSpec& a, ExperimentInstanceSpec& b) { a.Swap(&b); }
-  inline void Swap(ExperimentInstanceSpec* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(ExperimentInstanceSpec* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  [[nodiscard]] ExperimentInstanceSpec* PROTOBUF_NONNULL
-  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return Super_::DefaultConstruct<ExperimentInstanceSpec>(arena);
-  }
-  using Super_::CopyFrom;
-  void CopyFrom(const ExperimentInstanceSpec& from);
-  using Super_::MergeFrom;
-  void MergeFrom(const ExperimentInstanceSpec& from) { ExperimentInstanceSpec::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  [[nodiscard]] bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] ::size_t ByteSizeLong() const final;
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] int GetCachedSize() const {
-    return _impl_._cached_size_.Get();
-  }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(ExperimentInstanceSpec* PROTOBUF_NONNULL other);
- private:
-  static ::absl::string_view FullMessageName() { return "tradingcopilot.v1.ExperimentInstanceSpec"; }
-
-  explicit ExperimentInstanceSpec(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  ExperimentInstanceSpec(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ExperimentInstanceSpec& from);
-  ExperimentInstanceSpec(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ExperimentInstanceSpec&& from) noexcept
-      : ExperimentInstanceSpec(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_(
-      const MessageLite& prototype,
-      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
-
-  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kLabelFieldNumber = 1,
-    kPlaybookFieldNumber = 2,
-    kSymbolFieldNumber = 3,
-    kMaCrossFieldNumber = 10,
-    kSignalConsensusFieldNumber = 11,
-  };
-  // string label = 1 [json_name = "label"];
-  void clear_label() ;
-  [[nodiscard]] const ::std::string& label() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_label(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_label();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_label();
-  void set_allocated_label(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_label() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_label(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_label();
-
-  public:
-  // string playbook = 2 [json_name = "playbook"];
-  void clear_playbook() ;
-  [[nodiscard]] const ::std::string& playbook() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_playbook(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_playbook();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_playbook();
-  void set_allocated_playbook(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_playbook() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_playbook(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_playbook();
-
-  public:
-  // string symbol = 3 [json_name = "symbol"];
-  void clear_symbol() ;
-  [[nodiscard]] const ::std::string& symbol() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_symbol(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_symbol();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_symbol();
-  void set_allocated_symbol(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_symbol() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_symbol(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_symbol();
-
-  public:
-  // .tradingcopilot.v1.MaCrossConfig ma_cross = 10 [json_name = "maCross"];
-  [[nodiscard]] bool has_ma_cross() const;
-  void clear_ma_cross() ;
-  [[nodiscard]] const ::tradingcopilot::v1::MaCrossConfig& ma_cross() const;
-  [[nodiscard]] ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE release_ma_cross();
-  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NONNULL mutable_ma_cross();
-  void set_allocated_ma_cross(::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE value);
-  void unsafe_arena_set_allocated_ma_cross(::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE value);
-  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE unsafe_arena_release_ma_cross();
-
-  private:
-  const ::tradingcopilot::v1::MaCrossConfig& _internal_ma_cross() const;
-  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NONNULL _internal_mutable_ma_cross();
-
-  public:
-  // .tradingcopilot.v1.SignalConsensusConfig signal_consensus = 11 [json_name = "signalConsensus"];
-  [[nodiscard]] bool has_signal_consensus() const;
-  void clear_signal_consensus() ;
-  [[nodiscard]] const ::tradingcopilot::v1::SignalConsensusConfig& signal_consensus() const;
-  [[nodiscard]] ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE release_signal_consensus();
-  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NONNULL mutable_signal_consensus();
-  void set_allocated_signal_consensus(::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE value);
-  void unsafe_arena_set_allocated_signal_consensus(::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE value);
-  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE unsafe_arena_release_signal_consensus();
-
-  private:
-  const ::tradingcopilot::v1::SignalConsensusConfig& _internal_signal_consensus() const;
-  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NONNULL _internal_mutable_signal_consensus();
-
-  public:
-  // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentInstanceSpec)
- private:
-  class _Internal;
-  using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<2, 5,
-                          2, 68,
-                          2>;
-  static constexpr ParseTableT_ InternalGenerateParseTable_(
-      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
-  friend class ::google::protobuf::internal::TcParser;
-  #ifndef PROTOBUF_MESSAGE_GLOBALS
-  static const ParseTableT_ _table_;
-  #endif
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  friend ::google::protobuf::internal::PrivateAccess;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
-                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const ExperimentInstanceSpec& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::internal::ArenaStringPtr label_;
-    ::google::protobuf::internal::ArenaStringPtr playbook_;
-    ::google::protobuf::internal::ArenaStringPtr symbol_;
-    ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE ma_cross_;
-    ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE signal_consensus_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_tradingcopilot_2fv1_2fexperiment_2eproto;
-};
-// -------------------------------------------------------------------
-
 class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentGridSpec final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:tradingcopilot.v1.ExperimentGridSpec) */ {
   using Super_ = ::google::protobuf::Message;
@@ -2965,6 +2691,280 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ListExperimentsResponse final : pub
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::RepeatedPtrField< ::tradingcopilot::v1::Experiment > experiments_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_tradingcopilot_2fv1_2fexperiment_2eproto;
+};
+// -------------------------------------------------------------------
+
+class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceSpec final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:tradingcopilot.v1.ExperimentInstanceSpec) */ {
+  using Super_ = ::google::protobuf::Message;
+
+ public:
+  inline ExperimentInstanceSpec() : ExperimentInstanceSpec(nullptr) {}
+  ~ExperimentInstanceSpec() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(ExperimentInstanceSpec* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(ExperimentInstanceSpec));
+  }
+#endif
+
+  template <typename = void>
+  explicit constexpr ExperimentInstanceSpec(::google::protobuf::internal::ConstantInitialized,
+                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+                               class_data);
+
+  inline ExperimentInstanceSpec(const ExperimentInstanceSpec& from) : ExperimentInstanceSpec(nullptr, from) {}
+  inline ExperimentInstanceSpec(ExperimentInstanceSpec&& from) noexcept : ExperimentInstanceSpec(nullptr, ::std::move(from)) {}
+  inline ExperimentInstanceSpec& operator=(const ExperimentInstanceSpec& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline ExperimentInstanceSpec& operator=(ExperimentInstanceSpec&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
+  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
+  GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  [[nodiscard]] static const ExperimentInstanceSpec& default_instance() {
+    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<ExperimentInstanceSpec>(&ExperimentInstanceSpec_globals_);
+  }
+  static constexpr int kIndexInFileMessages = 6;
+  friend void swap(ExperimentInstanceSpec& a, ExperimentInstanceSpec& b) { a.Swap(&b); }
+  inline void Swap(ExperimentInstanceSpec* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(ExperimentInstanceSpec* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  [[nodiscard]] ExperimentInstanceSpec* PROTOBUF_NONNULL
+  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return Super_::DefaultConstruct<ExperimentInstanceSpec>(arena);
+  }
+  using Super_::CopyFrom;
+  void CopyFrom(const ExperimentInstanceSpec& from);
+  using Super_::MergeFrom;
+  void MergeFrom(const ExperimentInstanceSpec& from) { ExperimentInstanceSpec::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  [[nodiscard]] bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] ::size_t ByteSizeLong() const final;
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] int GetCachedSize() const {
+    return _impl_._cached_size_.Get();
+  }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(ExperimentInstanceSpec* PROTOBUF_NONNULL other);
+ private:
+  static ::absl::string_view FullMessageName() { return "tradingcopilot.v1.ExperimentInstanceSpec"; }
+
+  explicit ExperimentInstanceSpec(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  ExperimentInstanceSpec(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ExperimentInstanceSpec& from);
+  ExperimentInstanceSpec(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ExperimentInstanceSpec&& from) noexcept
+      : ExperimentInstanceSpec(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_(
+      const MessageLite& prototype,
+      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
+
+  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kLabelFieldNumber = 1,
+    kPlaybookFieldNumber = 2,
+    kSymbolFieldNumber = 3,
+    kMaCrossFieldNumber = 10,
+    kSignalConsensusFieldNumber = 11,
+  };
+  // string label = 1 [json_name = "label"];
+  void clear_label() ;
+  [[nodiscard]] const ::std::string& label() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_label(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_label();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_label();
+  void set_allocated_label(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_label() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_label(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_label();
+
+  public:
+  // string playbook = 2 [json_name = "playbook"];
+  void clear_playbook() ;
+  [[nodiscard]] const ::std::string& playbook() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_playbook(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_playbook();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_playbook();
+  void set_allocated_playbook(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_playbook() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_playbook(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_playbook();
+
+  public:
+  // string symbol = 3 [json_name = "symbol"];
+  void clear_symbol() ;
+  [[nodiscard]] const ::std::string& symbol() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_symbol(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_symbol();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_symbol();
+  void set_allocated_symbol(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_symbol() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_symbol(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_symbol();
+
+  public:
+  // .tradingcopilot.v1.MaCrossConfig ma_cross = 10 [json_name = "maCross"];
+  [[nodiscard]] bool has_ma_cross() const;
+  void clear_ma_cross() ;
+  [[nodiscard]] const ::tradingcopilot::v1::MaCrossConfig& ma_cross() const;
+  [[nodiscard]] ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE release_ma_cross();
+  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NONNULL mutable_ma_cross();
+  void set_allocated_ma_cross(::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_ma_cross(::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE value);
+  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE unsafe_arena_release_ma_cross();
+
+  private:
+  const ::tradingcopilot::v1::MaCrossConfig& _internal_ma_cross() const;
+  ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NONNULL _internal_mutable_ma_cross();
+
+  public:
+  // .tradingcopilot.v1.SignalConsensusConfig signal_consensus = 11 [json_name = "signalConsensus"];
+  [[nodiscard]] bool has_signal_consensus() const;
+  void clear_signal_consensus() ;
+  [[nodiscard]] const ::tradingcopilot::v1::SignalConsensusConfig& signal_consensus() const;
+  [[nodiscard]] ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE release_signal_consensus();
+  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NONNULL mutable_signal_consensus();
+  void set_allocated_signal_consensus(::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_signal_consensus(::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE value);
+  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE unsafe_arena_release_signal_consensus();
+
+  private:
+  const ::tradingcopilot::v1::SignalConsensusConfig& _internal_signal_consensus() const;
+  ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NONNULL _internal_mutable_signal_consensus();
+
+  public:
+  // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentInstanceSpec)
+ private:
+  class _Internal;
+  using ParseTableT_ =
+      ::google::protobuf::internal::TcParseTable<2, 5,
+                          2, 68,
+                          2>;
+  static constexpr ParseTableT_ InternalGenerateParseTable_(
+      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
+  friend class ::google::protobuf::internal::TcParser;
+  #ifndef PROTOBUF_MESSAGE_GLOBALS
+  static const ParseTableT_ _table_;
+  #endif
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  friend ::google::protobuf::internal::PrivateAccess;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const ExperimentInstanceSpec& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr label_;
+    ::google::protobuf::internal::ArenaStringPtr playbook_;
+    ::google::protobuf::internal::ArenaStringPtr symbol_;
+    ::tradingcopilot::v1::MaCrossConfig* PROTOBUF_NULLABLE ma_cross_;
+    ::tradingcopilot::v1::SignalConsensusConfig* PROTOBUF_NULLABLE signal_consensus_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };

@@ -19,6 +19,10 @@ public:
       std::int64_t bar_duration_ms,
       std::optional<sizing::SizingConfig> sizing = std::nullopt);
 
+  // The envelope's optional `sizing` block; exits 2 when it is invalid.
+  [[nodiscard]] static std::optional<sizing::SizingConfig>
+  sizing_of(const tradingcopilot::v1::RunEnvelope &envelope);
+
   [[nodiscard]] StrategyResult
   calc_backtest(std::span<const Bar> bars) override;
   [[nodiscard]] StrategyResult calc_live(const Bar &bar) override;

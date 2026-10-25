@@ -14,8 +14,16 @@ namespace dagobert {
 
 class ConsensusStrategy : public Strategy {
 public:
-  explicit ConsensusStrategy(const tradingcopilot::v1::RunEnvelope &envelope,
-                             std::int64_t bar_duration_ms);
+  // With `sizing` the entry, stop, vol_cut and pyramid flow runs in backtest
+  // and live alike; without it, buy_all/sell_all.
+  explicit ConsensusStrategy(
+      const tradingcopilot::v1::RunEnvelope &envelope,
+      std::int64_t bar_duration_ms,
+      std::optional<sizing::SizingConfig> sizing = std::nullopt);
+
+  // The envelope's optional `sizing` block; exits 2 when it is invalid.
+  [[nodiscard]] static std::optional<sizing::SizingConfig>
+  sizing_of(const tradingcopilot::v1::RunEnvelope &envelope);
 
   [[nodiscard]] StrategyResult
   calc_backtest(std::span<const Bar> bars) override;
@@ -30,6 +38,7 @@ private:
   SMA vol_mean_;
   ATR atr_;
   MACD macd_;
+  std::optional<sizing::SizingConfig> sizing_;
   ConsensusSignal consensus_;
   Position book_;
 };

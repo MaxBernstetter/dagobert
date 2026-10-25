@@ -996,189 +996,6 @@ const ::_pbi::ClassData* ErrorResponse_get_class_data() {
 }
 }  // namespace
 #endif  // PROTOBUF_CUSTOM_VTABLE
-class ExperimentInstanceSpec::_Internal {
- public:
-  using HasBits = decltype(::std::declval<ExperimentInstanceSpec>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-      8 * PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._has_bits_);
-};
-
-constexpr ExperimentInstanceSpec::ParseTableT_ ExperimentInstanceSpec::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
-  return ParseTableT_{
-    {
-      PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._has_bits_),
-      0, // no _extensions_
-      11, 24,  // max_field_number, fast_idx_mask
-      offsetof(ParseTableT_, field_lookup_table),
-      4294965752,  // skipmap
-      offsetof(ParseTableT_, field_entries),
-      5,  // num_field_entries
-      2,  // num_aux_entries
-      offsetof(ParseTableT_, aux_entries),
-      class_data,
-      nullptr,  // post_loop_handler
-      ::_pbi::TcParser::MpUnknownFields,  // fallback
-      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
-      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentInstanceSpec>(),  // to_prefetch
-      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
-    }, {{
-      {::_pbi::TcParser::MiniParse, {}},
-      // string label = 1 [json_name = "label"];
-      {::_pbi::TcParser::FastUS1,
-       {10, 0, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.label_)}},
-      // string playbook = 2 [json_name = "playbook"];
-      {::_pbi::TcParser::FastUS1,
-       {18, 1, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.playbook_)}},
-      // string symbol = 3 [json_name = "symbol"];
-      {::_pbi::TcParser::FastUS1,
-       {26, 2, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.symbol_)}},
-    }}, {{
-      65535, 65535
-    }}, {{
-      // string label = 1 [json_name = "label"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.label_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // string playbook = 2 [json_name = "playbook"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.playbook_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // string symbol = 3 [json_name = "symbol"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.symbol_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // .tradingcopilot.v1.MaCrossConfig ma_cross = 10 [json_name = "maCross"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.ma_cross_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-      // .tradingcopilot.v1.SignalConsensusConfig signal_consensus = 11 [json_name = "signalConsensus"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.signal_consensus_), _Internal::kHasBitsOffset + 4, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-    }},
-    {{
-        #ifndef PROTOBUF_MESSAGE_GLOBALS
-        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::MaCrossConfig>()},
-        #else
-        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::MaCrossConfig_globals_},
-        #endif
-        #ifndef PROTOBUF_MESSAGE_GLOBALS
-        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::SignalConsensusConfig>()},
-        #else
-        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::SignalConsensusConfig_globals_},
-        #endif
-    }},
-    {{
-      "\50\5\10\6\0\0\0\0"
-      "tradingcopilot.v1.ExperimentInstanceSpec"
-      "label"
-      "playbook"
-      "symbol"
-    }},
-  };
-}
-
-
-inline constexpr ExperimentInstanceSpec::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    ::_pbi::ConstantInitialized) noexcept
-      : label_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        playbook_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        symbol_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        ma_cross_{nullptr},
-        signal_consensus_{nullptr} {}
-
-template <typename>
-constexpr ExperimentInstanceSpec::ExperimentInstanceSpec(::_pbi::ConstantInitialized,
-                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
-    : Super_(
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          class_data
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          ),
-      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
-}
-inline void* PROTOBUF_NONNULL ExperimentInstanceSpec::PlacementNew_(
-    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
-  return ::new (mem) ExperimentInstanceSpec(arena);
-}
-constexpr auto ExperimentInstanceSpec::InternalNewImpl_() {
-  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(ExperimentInstanceSpec), alignof(ExperimentInstanceSpec));
-}
-constexpr auto ExperimentInstanceSpec::InternalGenerateClassData_(
-    const MessageLite& prototype,
-    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
-  return ::google::protobuf::internal::ClassDataFull{
-      ::google::protobuf::internal::ClassData{
-          &prototype,
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-          &_table_.header,
-#else
-          tc_table,
-#endif
-          nullptr,  // IsInitialized
-          &ExperimentInstanceSpec::MergeImpl,
-          Super_::GetNewImpl<ExperimentInstanceSpec>(),
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          &ExperimentInstanceSpec::SharedDtor,
-          Super_::GetClearImpl<ExperimentInstanceSpec>(), &ExperimentInstanceSpec::ByteSizeLong,
-              &ExperimentInstanceSpec::_InternalSerialize,
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._cached_size_),
-          false,
-      },
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[6],
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-      &::_pbi::kDescriptorMethods,
-      &descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto,
-      nullptr,  // tracker
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  };
-}
-struct ExperimentInstanceSpecGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
-  constexpr ExperimentInstanceSpecGlobalsTypeInternal()
-      :
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-        _default(::_pbi::ConstantInitialized{},
-                 ExperimentInstanceSpec_class_data_.base())
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-        MessageGlobalsBase(ExperimentInstanceSpec::InternalGenerateClassData_(
-            _default, &ExperimentInstanceSpec_globals_._table.header)),
-        _default(::_pbi::ConstantInitialized{}, GetClassData()),
-        _table(::_pbi::PrivateAccess::GenerateParseTable<ExperimentInstanceSpec>(
-            GetClassData()))
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  {
-  }
-  ~ExperimentInstanceSpecGlobalsTypeInternal() {}
-  union {
-    alignas(::_pbi::kMaxMessageAlignment) ExperimentInstanceSpec _default;
-  };
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  decltype(::_pbi::PrivateAccess::GenerateParseTable<ExperimentInstanceSpec>(
-      ::std::declval<const ::_pbi::ClassData*>())) _table;
-#endif
-};
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-static_assert(PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpecGlobalsTypeInternal, _default) ==
-              ::_pbi::MessageGlobalsBase::OffsetToDefault());
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST ExperimentInstanceSpecGlobalsTypeInternal ExperimentInstanceSpec_globals_
-        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-namespace {
-const ::_pbi::ClassData* ExperimentInstanceSpec_get_class_data() {
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  return ExperimentInstanceSpec_globals_.GetClassData();
-#else
-  return ExperimentInstanceSpec_class_data_.base();
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-}
-}  // namespace
-#endif  // PROTOBUF_CUSTOM_VTABLE
 class ExperimentGridSpec::_Internal {
  public:
   using HasBits = decltype(::std::declval<ExperimentGridSpec>()._impl_._has_bits_);
@@ -1863,6 +1680,189 @@ const ::_pbi::ClassData* ListExperimentsResponse_get_class_data() {
   return ListExperimentsResponse_globals_.GetClassData();
 #else
   return ListExperimentsResponse_class_data_.base();
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+}
+}  // namespace
+#endif  // PROTOBUF_CUSTOM_VTABLE
+class ExperimentInstanceSpec::_Internal {
+ public:
+  using HasBits = decltype(::std::declval<ExperimentInstanceSpec>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._has_bits_);
+};
+
+constexpr ExperimentInstanceSpec::ParseTableT_ ExperimentInstanceSpec::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
+  return ParseTableT_{
+    {
+      PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._has_bits_),
+      0, // no _extensions_
+      11, 24,  // max_field_number, fast_idx_mask
+      offsetof(ParseTableT_, field_lookup_table),
+      4294965752,  // skipmap
+      offsetof(ParseTableT_, field_entries),
+      5,  // num_field_entries
+      2,  // num_aux_entries
+      offsetof(ParseTableT_, aux_entries),
+      class_data,
+      nullptr,  // post_loop_handler
+      ::_pbi::TcParser::MpUnknownFields,  // fallback
+      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentInstanceSpec>(),  // to_prefetch
+      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+    }, {{
+      {::_pbi::TcParser::MiniParse, {}},
+      // string label = 1 [json_name = "label"];
+      {::_pbi::TcParser::FastUS1,
+       {10, 0, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.label_)}},
+      // string playbook = 2 [json_name = "playbook"];
+      {::_pbi::TcParser::FastUS1,
+       {18, 1, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.playbook_)}},
+      // string symbol = 3 [json_name = "symbol"];
+      {::_pbi::TcParser::FastUS1,
+       {26, 2, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.symbol_)}},
+    }}, {{
+      65535, 65535
+    }}, {{
+      // string label = 1 [json_name = "label"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.label_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // string playbook = 2 [json_name = "playbook"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.playbook_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // string symbol = 3 [json_name = "symbol"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.symbol_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // .tradingcopilot.v1.MaCrossConfig ma_cross = 10 [json_name = "maCross"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.ma_cross_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+      // .tradingcopilot.v1.SignalConsensusConfig signal_consensus = 11 [json_name = "signalConsensus"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_.signal_consensus_), _Internal::kHasBitsOffset + 4, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    }},
+    {{
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::MaCrossConfig>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::MaCrossConfig_globals_},
+        #endif
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::SignalConsensusConfig>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::SignalConsensusConfig_globals_},
+        #endif
+    }},
+    {{
+      "\50\5\10\6\0\0\0\0"
+      "tradingcopilot.v1.ExperimentInstanceSpec"
+      "label"
+      "playbook"
+      "symbol"
+    }},
+  };
+}
+
+
+inline constexpr ExperimentInstanceSpec::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    ::_pbi::ConstantInitialized) noexcept
+      : label_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        playbook_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        symbol_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        ma_cross_{nullptr},
+        signal_consensus_{nullptr} {}
+
+template <typename>
+constexpr ExperimentInstanceSpec::ExperimentInstanceSpec(::_pbi::ConstantInitialized,
+                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
+    : Super_(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          class_data
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          ),
+      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
+}
+inline void* PROTOBUF_NONNULL ExperimentInstanceSpec::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) ExperimentInstanceSpec(arena);
+}
+constexpr auto ExperimentInstanceSpec::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(ExperimentInstanceSpec), alignof(ExperimentInstanceSpec));
+}
+constexpr auto ExperimentInstanceSpec::InternalGenerateClassData_(
+    const MessageLite& prototype,
+    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
+  return ::google::protobuf::internal::ClassDataFull{
+      ::google::protobuf::internal::ClassData{
+          &prototype,
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+          &_table_.header,
+#else
+          tc_table,
+#endif
+          nullptr,  // IsInitialized
+          &ExperimentInstanceSpec::MergeImpl,
+          Super_::GetNewImpl<ExperimentInstanceSpec>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &ExperimentInstanceSpec::SharedDtor,
+          Super_::GetClearImpl<ExperimentInstanceSpec>(), &ExperimentInstanceSpec::ByteSizeLong,
+              &ExperimentInstanceSpec::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpec, _impl_._cached_size_),
+          false,
+      },
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+      &file_reflection_data[6],
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+      &::_pbi::kDescriptorMethods,
+      &descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto,
+      nullptr,  // tracker
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  };
+}
+struct ExperimentInstanceSpecGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
+  constexpr ExperimentInstanceSpecGlobalsTypeInternal()
+      :
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+        _default(::_pbi::ConstantInitialized{},
+                 ExperimentInstanceSpec_class_data_.base())
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+        MessageGlobalsBase(ExperimentInstanceSpec::InternalGenerateClassData_(
+            _default, &ExperimentInstanceSpec_globals_._table.header)),
+        _default(::_pbi::ConstantInitialized{}, GetClassData()),
+        _table(::_pbi::PrivateAccess::GenerateParseTable<ExperimentInstanceSpec>(
+            GetClassData()))
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  {
+  }
+  ~ExperimentInstanceSpecGlobalsTypeInternal() {}
+  union {
+    alignas(::_pbi::kMaxMessageAlignment) ExperimentInstanceSpec _default;
+  };
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  decltype(::_pbi::PrivateAccess::GenerateParseTable<ExperimentInstanceSpec>(
+      ::std::declval<const ::_pbi::ClassData*>())) _table;
+#endif
+};
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+static_assert(PROTOBUF_FIELD_OFFSET(ExperimentInstanceSpecGlobalsTypeInternal, _default) ==
+              ::_pbi::MessageGlobalsBase::OffsetToDefault());
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST ExperimentInstanceSpecGlobalsTypeInternal ExperimentInstanceSpec_globals_
+        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+namespace {
+const ::_pbi::ClassData* ExperimentInstanceSpec_get_class_data() {
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  return ExperimentInstanceSpec_globals_.GetClassData();
+#else
+  return ExperimentInstanceSpec_class_data_.base();
 #endif  // PROTOBUF_MESSAGE_GLOBALS
 }
 }  // namespace

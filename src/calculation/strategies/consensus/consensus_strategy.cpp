@@ -1,6 +1,7 @@
 #include "consensus_strategy.hpp"
 
 #include "series.hpp"
+#include "sizing_proto.hpp"
 
 #include "tradingcopilot/v1/strategy.pb.h"
 
@@ -25,9 +26,10 @@ constexpr std::size_t kMacdFast = 12;
 constexpr std::size_t kMacdSlow = 26;
 constexpr std::size_t kMacdSignal = 9;
 
-// Validates label and payload type. The thresholds are the compiled gate
-// constants; the payload is accepted but not read yet.
-void check_payload(const tradingcopilot::v1::RunEnvelope &envelope) {
+// Validates label and payload type and returns the config. The thresholds are
+// the compiled gate constants; only `sizing` is read.
+tradingcopilot::v1::SignalConsensusConfig
+check_payload(const tradingcopilot::v1::RunEnvelope &envelope) {
   if (envelope.label() != kLabel) {
     std::cerr << "label must be signal-consensus: " << envelope.label() << '\n';
     std::exit(2);
@@ -42,20 +44,31 @@ void check_payload(const tradingcopilot::v1::RunEnvelope &envelope) {
     std::cerr << "payload must unpack to SignalConsensusConfig\n";
     std::exit(2);
   }
+  return config;
 }
 
 } // namespace
 
 ConsensusStrategy::ConsensusStrategy(
     const tradingcopilot::v1::RunEnvelope &envelope,
-    std::int64_t bar_duration_ms)
+    std::int64_t bar_duration_ms, std::optional<sizing::SizingConfig> sizing)
     : Strategy(envelope), signal_(bars_for(kSignalHr, bar_duration_ms)),
       regime_(bars_for(kRegimeHr, bar_duration_ms)),
       macro_(bars_for(kMacroHr, bar_duration_ms)), rsi_(kRsiPeriod),
       vol_mean_(bars_for(kVolumeMeanHr, bar_duration_ms)),
       atr_(bars_for(kAtrHr, bar_duration_ms)),
-      macd_(kMacdFast, kMacdSlow, kMacdSignal), book_(initial_quote()) {
+      macd_(kMacdFast, kMacdSlow, kMacdSignal), sizing_(sizing),
+      consensus_(sizing), book_(initial_quote()) {
   check_payload(envelope);
+}
+
+std::optional<sizing::SizingConfig>
+ConsensusStrategy::sizing_of(const tradingcopilot::v1::RunEnvelope &envelope) {
+  const auto config = check_payload(envelope);
+  if (!config.has_sizing()) {
+    return std::nullopt;
+  }
+  return sizing_from_proto(config.sizing());
 }
 
 StrategyResult ConsensusStrategy::calc_backtest(std::span<const Bar> bars) {
@@ -82,7 +95,7 @@ StrategyResult ConsensusStrategy::calc_backtest(std::span<const Bar> bars) {
                                  vol_mean, atr, macd.histogram});
 
   Position account{initial_quote()};
-  (void)ConsensusSignal::actions_from(account, bars, mask);
+  (void)ConsensusSignal::actions_from(account, bars, mask, sizing_);
   const double mark = bars.empty() ? 0.0 : bars.back().close;
   return strategy_result(account, mark);
 }
@@ -98,7 +111,9 @@ StrategyResult ConsensusStrategy::calc_live(const Bar &bar) {
                                vol_mean_.push(bar.volume),
                                atr_.push(bar.high, bar.low, bar.close),
                                macd_.push(bar.close).histogram};
-  if (const auto rule = consensus_.apply(sample, book_.flat())) {
+  const auto rule = sizing_ ? consensus_.apply(sample, book_)
+                            : consensus_.apply(sample, book_.flat());
+  if (rule) {
     consensus_.execute(book_, bar, *rule);
   }
   return strategy_result(book_, bar.close);
