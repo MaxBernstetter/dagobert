@@ -1,0 +1,1 @@
+{"schemaVersion":1,"label":"sma-cross","provider":"demo","base":"BTC","quote":"USDT","fromMs":"1704067200000","toMs":"1704153600000","initialQuote":1000.0,"payload":{"@type":"type.googleapis.com/tradingcopilot.v1.MaCrossConfig","fastHr":3,"slowHr":6}}

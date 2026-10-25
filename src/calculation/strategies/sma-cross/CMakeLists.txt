@@ -26,3 +26,7 @@ if(DAGOBERT_MODE STREQUAL "debug")
     strategy-sma-cross
     PRIVATE -O1 -Wno-\#warnings -Wno-nullability-extension -Wno-gcc-compat)
 endif()
+
+dagobert_register_strategy_run(
+  strategy-sma-cross
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../tests/fixtures/sma_cross_config.json)

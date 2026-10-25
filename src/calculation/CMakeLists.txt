@@ -46,6 +46,7 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
       "-flto=thin -fuse-ld=lld -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
 endif()
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Valgrind.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StratForge.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MagicEnum.cmake)
 
@@ -71,3 +72,5 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GoogleTest.cmake)
 
 enable_testing()
 add_subdirectory(tests)
+
+dagobert_define_valgrind_targets()
