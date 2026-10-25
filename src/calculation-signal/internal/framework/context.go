@@ -3,6 +3,7 @@ package framework
 import (
 	"encoding/json"
 
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 )
 
@@ -30,6 +31,12 @@ type Context struct {
 	// GapFromPrevious is true when the prior evaluate bar is more than one aggregation
 	// away (sparse lake / omitted incomplete buckets). Strategies may hold or adjust.
 	GapFromPrevious bool
+	// Equity is quote cash plus base marked at the bar mark (0 when unknown).
+	Equity float64
+	// OpenUnits are the open buys with fill, stop and base quantity (empty when flat or unsized).
+	OpenUnits []sizing.Unit
+	// LastFill is the fill price of the latest open unit (0 when flat).
+	LastFill float64
 	// StrategyConfig is optional playbook-specific JSON (nil/empty → playbook defaults).
 	StrategyConfig json.RawMessage
 }

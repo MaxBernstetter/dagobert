@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 )
 
 // Config is the signal-consensus threshold set (SMA windows stay fixed).
@@ -17,6 +19,8 @@ type Config struct {
 	AtrStopMult           float64 `json:"atrStopMult"`
 	MinBarsFlatAfterSell  int     `json:"minBarsFlatAfterSell"`
 	MinBarsLongBeforeSell int     `json:"minBarsLongBeforeSell"`
+	// Sizing is optional risk sizing; nil keeps the single target weight and full exit.
+	Sizing *sizing.Config `json:"sizing,omitempty"`
 }
 
 // DefaultConfig matches historical hardcoded thresholds (logic v10 on 3h bars).
@@ -34,7 +38,7 @@ func DefaultConfig() Config {
 
 var knownConfigKeys = map[string]struct{}{
 	"rsiBull": {}, "rsiBear": {}, "volRatioBull": {}, "volRatioBear": {},
-	"atrStopMult": {}, "minBarsFlatAfterSell": {}, "minBarsLongBeforeSell": {},
+	"atrStopMult": {}, "minBarsFlatAfterSell": {}, "minBarsLongBeforeSell": {}, "sizing": {},
 }
 
 // ParseConfig decodes JSON into Config. Empty or nil raw uses DefaultConfig.
@@ -54,6 +58,10 @@ func ParseConfig(raw json.RawMessage) (Config, error) {
 	cfg := DefaultConfig()
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return Config{}, fmt.Errorf("signal-consensus config: %w", err)
+	}
+	if cfg.Sizing != nil {
+		d := cfg.Sizing.WithDefaults()
+		cfg.Sizing = &d
 	}
 	return cfg, nil
 }
@@ -75,6 +83,11 @@ func (c Config) Validate(_ int64) error {
 	if c.AtrStopMult <= 0 {
 		return fmt.Errorf("signal-consensus config: atrStopMult must be positive")
 	}
+	if c.Sizing != nil {
+		if err := c.Sizing.Validate(); err != nil {
+			return fmt.Errorf("signal-consensus config: %w", err)
+		}
+	}
 	if c.MinBarsFlatAfterSell < 0 || c.MinBarsLongBeforeSell < 0 {
 		return fmt.Errorf("signal-consensus config: cooldown bars must be >= 0")
 	}
@@ -91,6 +104,7 @@ func (c Config) CanonicalJSON() ([]byte, error) {
 		AtrStopMult:           c.AtrStopMult,
 		MinBarsFlatAfterSell:  c.MinBarsFlatAfterSell,
 		MinBarsLongBeforeSell: c.MinBarsLongBeforeSell,
+		Sizing:                c.Sizing,
 	})
 }
 

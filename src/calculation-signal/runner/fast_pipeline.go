@@ -3,6 +3,7 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/playbooks"
+	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/sizing"
 	macross "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/ma-cross"
 	signalconsensus "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/signal-consensus"
 	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
@@ -173,6 +175,7 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 	position := "flat"
 	lastBuyBar := -1
 	lastSellBar := -1
+	var openUnits []sizing.Unit
 	total := len(candleCloses)
 	reportEvery := 1
 	if total > 200 {
@@ -222,7 +225,17 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if lastSellBar >= 0 {
 			barsSinceSell = i - lastSellBar
 		}
+		var lastFill, equity float64
+		if len(openUnits) > 0 {
+			lastFill = openUnits[len(openUnits)-1].Fill
+		}
+		if q0, b0 := wallet.QuoteAndBase(inst.Quote, inst.Base); barClose > 0 {
+			equity = q0 + b0*barClose
+		}
 		dec, err := entry.Strategy.Evaluate(framework.Context{
+			Equity:           equity,
+			OpenUnits:        append([]sizing.Unit(nil), openUnits...),
+			LastFill:         lastFill,
 			Symbol:           symbol,
 			CandleClose:      candleClose,
 			BarOpen:          barOpen,
@@ -266,7 +279,7 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			mark = 1
 		}
 		quoteCash, baseHeld := wallet.QuoteAndBase(inst.Quote, inst.Base)
-		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, pol, encodeBodies)
+		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, dec.QuoteNotional, dec.BaseQty, pol, encodeBodies)
 		if err != nil {
 			return finish(err)
 		}
@@ -283,12 +296,20 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if price <= 0 {
 			return finish(fmt.Errorf("no bar price bar_open=%d", barOpen))
 		}
+		baseBefore := baseHeld
 		step, err := execrunner.SimulateBarWithModel(&wallet, playbookID, symbol, candleClose, planned.Decision, planned.Size, price, position, costs, slim)
 		if err != nil {
 			return finish(err)
 		}
 		simBatch.Add(step)
 		position = step.Position
+		if dec.StopPrice != nil || len(openUnits) > 0 {
+			_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
+			openUnits = trackUnits(openUnits, dec, pol.MinOrderQuote, baseBefore, baseAfter, price)
+		}
+		if len(openUnits) > 0 {
+			position = "long"
+		}
 		switch dec.Decision {
 		case "buy":
 			lastBuyBar = i
@@ -329,4 +350,30 @@ func profileEnabled() bool {
 func logProfile(workspace string, stages StageTimings, totalMs int64) {
 	fmt.Fprintf(os.Stderr, "experiment_sim_profile workspace=%s totalMs=%d loopMs=%d encodeMs=%d flushMs=%d\n",
 		workspace, totalMs, stages.LoopMs, stages.EncodeMs, stages.FlushMs)
+}
+
+// trackUnits keeps the open sized units in step with simulated fills. Decisions
+// without a stop price (legacy sizing) add nothing. A full exit, or a remainder
+// worth less than the venue minimum, clears the units.
+func trackUnits(units []sizing.Unit, dec framework.Decision, minOrderQuote float64, baseBefore, baseAfter, price float64) []sizing.Unit {
+	switch dec.Decision {
+	case "buy":
+		if dec.RaiseStopsBy != nil && baseAfter > baseBefore {
+			for i := range units {
+				units[i].Stop += math.Max(0, *dec.RaiseStopsBy)
+			}
+		}
+		if dec.StopPrice != nil && baseAfter > baseBefore {
+			units = append(units, sizing.Unit{Fill: price, Stop: *dec.StopPrice, Qty: baseAfter - baseBefore})
+		}
+	case "sell":
+		if dec.BaseQty == nil || baseBefore <= 0 || baseAfter <= 0 || baseAfter*price < minOrderQuote {
+			return nil
+		}
+		keep := baseAfter / baseBefore
+		for i := range units {
+			units[i].Qty *= keep
+		}
+	}
+	return units
 }

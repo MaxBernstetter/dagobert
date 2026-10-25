@@ -30,6 +30,9 @@ type Input struct {
 	QuoteCash      float64
 	BaseHeld       float64
 	MarkPrice      float64
+	// QuoteNotional / BaseQty are optional risk-sized amounts from the signal; nil keeps the legacy sizing.
+	QuoteNotional *float64
+	BaseQty       *float64
 }
 
 // Result is the sized action or a no-trade with reason.
@@ -61,6 +64,9 @@ func sizeBuy(in Input, p Policy) Result {
 	if portfolio <= 0 {
 		return Result{Decision: "no-trade", Rule: "none", Note: "empty_portfolio"}
 	}
+	if in.QuoteNotional != nil {
+		return sizeNotionalBuy(in, p)
+	}
 	current := in.BaseHeld * in.MarkPrice
 	targetValue := portfolio * (p.TargetWeightPct / 100)
 	room := targetValue - current
@@ -79,15 +85,47 @@ func sizeBuy(in Input, p Policy) Result {
 	return Result{Decision: "buy", Size: &q, Rule: "allocate_buy"}
 }
 
+// sizeNotionalBuy honours a risk-sized notional, capped by cash above the reserve.
+func sizeNotionalBuy(in Input, p Policy) Result {
+	if n := *in.QuoteNotional; !finitePositive(n) {
+		return Result{Decision: "no-trade", Rule: "none", Note: "invalid_notional"}
+	}
+	spendable := in.QuoteCash - p.ReserveQuote
+	if spendable <= 0 {
+		return Result{Decision: "no-trade", Rule: "none", Note: "insufficient_cash_after_reserve"}
+	}
+	quote := math.Min(*in.QuoteNotional, spendable)
+	if quote < p.MinOrderQuote {
+		return Result{Decision: "no-trade", Rule: "none", Note: "below_min_order"}
+	}
+	q := money.RoundQuote(quote)
+	return Result{Decision: "buy", Size: &q, Rule: "allocate_buy"}
+}
+
 func sizeSell(in Input, p Policy) Result {
 	if in.BaseHeld <= 0 {
 		return Result{Decision: "no-trade", Rule: "none", Note: "no_base_to_sell"}
 	}
-	b := money.FloorBase(in.BaseHeld)
+	held := in.BaseHeld
+	if in.BaseQty != nil {
+		if !finitePositive(*in.BaseQty) {
+			return Result{Decision: "no-trade", Rule: "none", Note: "invalid_base_qty"}
+		}
+		held = math.Min(held, *in.BaseQty)
+	}
+	b := money.FloorBase(held)
 	if b <= 0 {
 		return Result{Decision: "no-trade", Rule: "none", Note: "dust_position"}
 	}
+	partial := held < in.BaseHeld
+	if partial && b*in.MarkPrice < p.MinOrderQuote {
+		return Result{Decision: "no-trade", Rule: "none", Note: "below_min_order"}
+	}
 	return Result{Decision: "sell", Size: &b, Rule: "allocate_sell"}
+}
+
+func finitePositive(v float64) bool {
+	return v > 0 && !math.IsInf(v, 0)
 }
 
 func ParseBalance(s string) (float64, error) {

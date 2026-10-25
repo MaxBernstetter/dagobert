@@ -21,17 +21,19 @@ type PlannedAction struct {
 
 // PlanAction sizes a signal and returns the action JSON body.
 func PlanAction(playbookID, symbol, signalDecision, signalRule string, quoteCash, baseHeld, mark float64) (PlannedAction, error) {
-	return PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule, quoteCash, baseHeld, mark, allocate.PolicyFromEnv(), true)
+	return PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule, quoteCash, baseHeld, mark, nil, nil, allocate.PolicyFromEnv(), true)
 }
 
 // PlanActionWithPolicy sizes a signal using a preloaded policy.
 // When encodeBody is false, Body is left nil (slim experiment path).
-func PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule string, quoteCash, baseHeld, mark float64, pol allocate.Policy, encodeBody bool) (PlannedAction, error) {
+func PlanActionWithPolicy(playbookID, symbol, signalDecision, signalRule string, quoteCash, baseHeld, mark float64, quoteNotional, baseQty *float64, pol allocate.Policy, encodeBody bool) (PlannedAction, error) {
 	out := allocate.Size(allocate.Input{
 		SignalDecision: signalDecision,
 		QuoteCash:      quoteCash,
 		BaseHeld:       baseHeld,
 		MarkPrice:      mark,
+		QuoteNotional:  quoteNotional,
+		BaseQty:        baseQty,
 	}, pol)
 	rule := signalRule
 	if out.Rule != "" && out.Rule != "none" {
