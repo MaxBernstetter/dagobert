@@ -115,7 +115,7 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
     if (sizing::below_min_order(q * close, cfg)) {
       return std::nullopt;
     }
-    plan_ = Plan{.qty = q};
+    plan_ = Plan{.qty = q, .atr = atr};
     return ConsensusRule::vol_cut;
   }
   if (const auto n = sizing::pyramid_allowed(units_, units_.back().fill, close,
@@ -219,6 +219,8 @@ void ConsensusSignal::buy_unit(Position &account, const Bar &bar,
     return;
   }
   const Fill fill = account.buy_notional(bar, spend, plan_.stop, rule);
+  // The replay applies its own cash clamp to the requested amount.
+  account.annotate_last_requested(plan_.notional);
   const sizing::RiskPct risk =
       sizing::risk_pct(spend, plan_.equity, plan_.atr, bar.close, *sizing_);
   account.annotate_last_risk(risk.requested, risk.capped);
@@ -249,6 +251,9 @@ void ConsensusSignal::execute(Position &account, const Bar &bar,
   case ConsensusRule::vol_cut: {
     const double before = account.qty();
     account.sell_base(bar, plan_.qty, rule);
+    // The replay recomputes the cut as held - equity * this on its wallet.
+    account.annotate_last_heat(sizing_->heat() / 100.0 /
+                               (sizing_->stop_mult() * plan_.atr));
     if (account.flat()) {
       units_.clear();
       return;

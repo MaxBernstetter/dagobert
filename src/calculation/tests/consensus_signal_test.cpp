@@ -245,6 +245,21 @@ TEST(ConsensusSizing, UsesEveryRuleAndSizesFromTheStop) {
   // Entry: 0.5% of 100000 over a 2.5 * 2 ATR stop at 101.
   EXPECT_NEAR(account.fills().front().qty * 101.0, 10100.0, 1e-6);
   EXPECT_NEAR(actions.front().stop, 96.0, 1e-9);
+  // Replay annotations: buys carry the pre-clamp request, vol_cut the heat.
+  bool cut = false;
+  for (const Action &a : actions) {
+    if (a.reason == "vol_cut") {
+      cut = true;
+      EXPECT_GT(a.heat_base_per_equity, 0.0);
+      EXPECT_EQ(a.requested_notional, 0.0);
+    } else if (a.reason == "consensus_buy" || a.reason == "pyramid") {
+      EXPECT_GE(a.requested_notional, a.notional - 1e-9);
+      EXPECT_GT(a.requested_notional, 0.0);
+      EXPECT_EQ(a.heat_base_per_equity, 0.0);
+    }
+  }
+  EXPECT_TRUE(cut);
+  EXPECT_NEAR(actions.front().requested_notional, 10100.0, 1e-6);
 }
 
 TEST(ConsensusSizing, BuyBelowMinOrderIsSkipped) {
