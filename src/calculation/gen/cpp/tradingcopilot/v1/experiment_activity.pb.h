@@ -901,6 +901,11 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
     kReasonFieldNumber = 8,
     kBarOpenMsFieldNumber = 5,
     kWeightPctFieldNumber = 7,
+    kQuoteNotionalFieldNumber = 9,
+    kBaseQtyFieldNumber = 10,
+    kStopPriceFieldNumber = 11,
+    kRaiseStopsByFieldNumber = 12,
+    kEquityFieldNumber = 13,
   };
   // string id = 1 [json_name = "id"];
   void clear_id() ;
@@ -1013,11 +1018,66 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
   void _internal_set_weight_pct(double value);
 
   public:
+  // optional double quote_notional = 9 [json_name = "quoteNotional"];
+  [[nodiscard]] bool has_quote_notional() const;
+  void clear_quote_notional() ;
+  [[nodiscard]] double quote_notional() const;
+  void set_quote_notional(double value);
+
+  private:
+  double _internal_quote_notional() const;
+  void _internal_set_quote_notional(double value);
+
+  public:
+  // optional double base_qty = 10 [json_name = "baseQty"];
+  [[nodiscard]] bool has_base_qty() const;
+  void clear_base_qty() ;
+  [[nodiscard]] double base_qty() const;
+  void set_base_qty(double value);
+
+  private:
+  double _internal_base_qty() const;
+  void _internal_set_base_qty(double value);
+
+  public:
+  // optional double stop_price = 11 [json_name = "stopPrice"];
+  [[nodiscard]] bool has_stop_price() const;
+  void clear_stop_price() ;
+  [[nodiscard]] double stop_price() const;
+  void set_stop_price(double value);
+
+  private:
+  double _internal_stop_price() const;
+  void _internal_set_stop_price(double value);
+
+  public:
+  // optional double raise_stops_by = 12 [json_name = "raiseStopsBy"];
+  [[nodiscard]] bool has_raise_stops_by() const;
+  void clear_raise_stops_by() ;
+  [[nodiscard]] double raise_stops_by() const;
+  void set_raise_stops_by(double value);
+
+  private:
+  double _internal_raise_stops_by() const;
+  void _internal_set_raise_stops_by(double value);
+
+  public:
+  // optional double equity = 13 [json_name = "equity"];
+  [[nodiscard]] bool has_equity() const;
+  void clear_equity() ;
+  [[nodiscard]] double equity() const;
+  void set_equity(double value);
+
+  private:
+  double _internal_equity() const;
+  void _internal_set_equity(double value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentInstanceAction)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<3, 8,
+      ::google::protobuf::internal::TcParseTable<4, 13,
                           0, 101,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -1054,6 +1114,11 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
     ::google::protobuf::internal::ArenaStringPtr reason_;
     ::int64_t bar_open_ms_;
     double weight_pct_;
+    double quote_notional_;
+    double base_qty_;
+    double stop_price_;
+    double raise_stops_by_;
+    double equity_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -2423,6 +2488,146 @@ inline void ExperimentInstanceAction::set_allocated_reason(::std::string* PROTOB
     _impl_.reason_.Set("", GetArena());
   }
   // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.ExperimentInstanceAction.reason)
+}
+
+// optional double quote_notional = 9 [json_name = "quoteNotional"];
+inline bool ExperimentInstanceAction::has_quote_notional() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000100U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_quote_notional() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.quote_notional_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000100U);
+}
+inline double ExperimentInstanceAction::quote_notional() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.quote_notional)
+  return _internal_quote_notional();
+}
+inline void ExperimentInstanceAction::set_quote_notional(double value) {
+  _internal_set_quote_notional(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.quote_notional)
+}
+inline double ExperimentInstanceAction::_internal_quote_notional() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.quote_notional_;
+}
+inline void ExperimentInstanceAction::_internal_set_quote_notional(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.quote_notional_ = value;
+}
+
+// optional double base_qty = 10 [json_name = "baseQty"];
+inline bool ExperimentInstanceAction::has_base_qty() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000200U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_base_qty() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.base_qty_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000200U);
+}
+inline double ExperimentInstanceAction::base_qty() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.base_qty)
+  return _internal_base_qty();
+}
+inline void ExperimentInstanceAction::set_base_qty(double value) {
+  _internal_set_base_qty(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.base_qty)
+}
+inline double ExperimentInstanceAction::_internal_base_qty() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.base_qty_;
+}
+inline void ExperimentInstanceAction::_internal_set_base_qty(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.base_qty_ = value;
+}
+
+// optional double stop_price = 11 [json_name = "stopPrice"];
+inline bool ExperimentInstanceAction::has_stop_price() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000400U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_stop_price() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stop_price_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000400U);
+}
+inline double ExperimentInstanceAction::stop_price() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.stop_price)
+  return _internal_stop_price();
+}
+inline void ExperimentInstanceAction::set_stop_price(double value) {
+  _internal_set_stop_price(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.stop_price)
+}
+inline double ExperimentInstanceAction::_internal_stop_price() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.stop_price_;
+}
+inline void ExperimentInstanceAction::_internal_set_stop_price(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stop_price_ = value;
+}
+
+// optional double raise_stops_by = 12 [json_name = "raiseStopsBy"];
+inline bool ExperimentInstanceAction::has_raise_stops_by() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000800U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_raise_stops_by() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.raise_stops_by_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000800U);
+}
+inline double ExperimentInstanceAction::raise_stops_by() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.raise_stops_by)
+  return _internal_raise_stops_by();
+}
+inline void ExperimentInstanceAction::set_raise_stops_by(double value) {
+  _internal_set_raise_stops_by(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.raise_stops_by)
+}
+inline double ExperimentInstanceAction::_internal_raise_stops_by() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.raise_stops_by_;
+}
+inline void ExperimentInstanceAction::_internal_set_raise_stops_by(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.raise_stops_by_ = value;
+}
+
+// optional double equity = 13 [json_name = "equity"];
+inline bool ExperimentInstanceAction::has_equity() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00001000U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_equity() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.equity_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
+}
+inline double ExperimentInstanceAction::equity() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.equity)
+  return _internal_equity();
+}
+inline void ExperimentInstanceAction::set_equity(double value) {
+  _internal_set_equity(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.equity)
+}
+inline double ExperimentInstanceAction::_internal_equity() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.equity_;
+}
+inline void ExperimentInstanceAction::_internal_set_equity(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.equity_ = value;
 }
 
 // -------------------------------------------------------------------

@@ -484,11 +484,11 @@ constexpr ExperimentInstanceAction::ParseTableT_ ExperimentInstanceAction::Inter
     {
       PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_._has_bits_),
       0, // no _extensions_
-      8, 56,  // max_field_number, fast_idx_mask
+      13, 120,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967040,  // skipmap
+      4294959104,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      8,  // num_field_entries
+      13,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -498,10 +498,7 @@ constexpr ExperimentInstanceAction::ParseTableT_ ExperimentInstanceAction::Inter
       ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentInstanceAction>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // string reason = 8 [json_name = "reason"];
-      {::_pbi::TcParser::FastUS1,
-       {66, 5, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.reason_)}},
+      {::_pbi::TcParser::MiniParse, {}},
       // string id = 1 [json_name = "id"];
       {::_pbi::TcParser::FastUS1,
        {10, 0, 0,
@@ -530,6 +527,32 @@ constexpr ExperimentInstanceAction::ParseTableT_ ExperimentInstanceAction::Inter
       {::_pbi::TcParser::FastF64S1,
        {57, 7, 0,
         PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.weight_pct_)}},
+      // string reason = 8 [json_name = "reason"];
+      {::_pbi::TcParser::FastUS1,
+       {66, 5, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.reason_)}},
+      // optional double quote_notional = 9 [json_name = "quoteNotional"];
+      {::_pbi::TcParser::FastF64S1,
+       {73, 8, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.quote_notional_)}},
+      // optional double base_qty = 10 [json_name = "baseQty"];
+      {::_pbi::TcParser::FastF64S1,
+       {81, 9, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.base_qty_)}},
+      // optional double stop_price = 11 [json_name = "stopPrice"];
+      {::_pbi::TcParser::FastF64S1,
+       {89, 10, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.stop_price_)}},
+      // optional double raise_stops_by = 12 [json_name = "raiseStopsBy"];
+      {::_pbi::TcParser::FastF64S1,
+       {97, 11, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.raise_stops_by_)}},
+      // optional double equity = 13 [json_name = "equity"];
+      {::_pbi::TcParser::FastF64S1,
+       {105, 12, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.equity_)}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
     }}, {{
@@ -549,6 +572,16 @@ constexpr ExperimentInstanceAction::ParseTableT_ ExperimentInstanceAction::Inter
       {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.weight_pct_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // string reason = 8 [json_name = "reason"];
       {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.reason_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // optional double quote_notional = 9 [json_name = "quoteNotional"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.quote_notional_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double base_qty = 10 [json_name = "baseQty"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.base_qty_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double stop_price = 11 [json_name = "stopPrice"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.stop_price_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double raise_stops_by = 12 [json_name = "raiseStopsBy"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.raise_stops_by_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional double equity = 13 [json_name = "equity"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.equity_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     }},
     // no aux_entries
     {{
@@ -587,7 +620,12 @@ inline constexpr ExperimentInstanceAction::Impl_::Impl_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         bar_open_ms_{::int64_t{0}},
-        weight_pct_{0} {}
+        weight_pct_{0},
+        quote_notional_{0},
+        base_qty_{0},
+        stop_price_{0},
+        raise_stops_by_{0},
+        equity_{0} {}
 
 template <typename>
 constexpr ExperimentInstanceAction::ExperimentInstanceAction(::_pbi::ConstantInitialized,
@@ -1157,7 +1195,7 @@ const ::uint32_t
         5,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_._has_bits_),
-        11, // hasbit index offset
+        16, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.id_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.experiment_id_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.instance_id_),
@@ -1166,6 +1204,11 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.side_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.weight_pct_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.reason_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.quote_notional_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.base_qty_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.stop_price_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.raise_stops_by_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceAction, _impl_.equity_),
         0,
         1,
         2,
@@ -1174,6 +1217,11 @@ const ::uint32_t
         4,
         7,
         5,
+        8,
+        9,
+        10,
+        11,
+        12,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentInstanceFill, _impl_._has_bits_),
         14, // hasbit index offset
@@ -1220,10 +1268,10 @@ static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::tradingcopilot::v1::ExperimentInstancePeriodStat)},
         {15, sizeof(::tradingcopilot::v1::ExperimentInstanceAction)},
-        {34, sizeof(::tradingcopilot::v1::ExperimentInstanceFill)},
-        {59, sizeof(::tradingcopilot::v1::ListActionsResponse)},
-        {64, sizeof(::tradingcopilot::v1::ListFillsResponse)},
-        {69, sizeof(::tradingcopilot::v1::ListPeriodStatsResponse)},
+        {44, sizeof(::tradingcopilot::v1::ExperimentInstanceFill)},
+        {69, sizeof(::tradingcopilot::v1::ListActionsResponse)},
+        {74, sizeof(::tradingcopilot::v1::ListFillsResponse)},
+        {79, sizeof(::tradingcopilot::v1::ListPeriodStatsResponse)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -1244,41 +1292,47 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5factivity
     "turn_pct\030\004 \001(\001H\000R\treturnPct\210\001\001\022$\n\013trade_"
     "count\030\005 \001(\005H\001R\ntradeCount\210\001\001\022 \n\twin_coun"
     "t\030\006 \001(\005H\002R\010winCount\210\001\001B\r\n\013_return_pctB\016\n"
-    "\014_trade_countB\014\n\n_win_count\"\207\002\n\030Experime"
+    "\014_trade_countB\014\n\n_win_count\"\214\004\n\030Experime"
     "ntInstanceAction\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexpe"
     "riment_id\030\002 \001(\tR\014experimentId\022\037\n\013instanc"
     "e_id\030\003 \001(\tR\ninstanceId\022\026\n\006symbol\030\004 \001(\tR\006"
     "symbol\022\036\n\013bar_open_ms\030\005 \001(\003R\tbarOpenMs\022\022"
     "\n\004side\030\006 \001(\tR\004side\022\"\n\nweight_pct\030\007 \001(\001H\000"
-    "R\tweightPct\210\001\001\022\026\n\006reason\030\010 \001(\tR\006reasonB\r"
-    "\n\013_weight_pct\"\266\002\n\026ExperimentInstanceFill"
-    "\022\016\n\002id\030\001 \001(\tR\002id\022#\n\rexperiment_id\030\002 \001(\tR"
-    "\014experimentId\022\037\n\013instance_id\030\003 \001(\tR\ninst"
-    "anceId\022 \n\taction_id\030\004 \001(\tH\000R\010actionId\210\001\001"
-    "\022\026\n\006symbol\030\005 \001(\tR\006symbol\022\023\n\005ts_ms\030\006 \001(\003R"
-    "\004tsMs\022\022\n\004side\030\007 \001(\tR\004side\022\020\n\003qty\030\010 \001(\001R\003"
-    "qty\022\024\n\005price\030\t \001(\001R\005price\022\020\n\003fee\030\n \001(\001R\003"
-    "fee\022\033\n\tfee_asset\030\013 \001(\tR\010feeAssetB\014\n\n_act"
-    "ion_id\"\\\n\023ListActionsResponse\022E\n\007actions"
-    "\030\001 \003(\0132+.tradingcopilot.v1.ExperimentIns"
-    "tanceActionR\007actions\"T\n\021ListFillsRespons"
-    "e\022\?\n\005fills\030\001 \003(\0132).tradingcopilot.v1.Exp"
-    "erimentInstanceFillR\005fills\"`\n\027ListPeriod"
-    "StatsResponse\022E\n\005stats\030\001 \003(\0132/.tradingco"
-    "pilot.v1.ExperimentInstancePeriodStatR\005s"
-    "tatsB\344\001\n\025com.tradingcopilot.v1B\027Experime"
-    "ntActivityProtoP\001ZMgithub.com/MaxBernste"
-    "tter/dagobert/src/gen/tradingcopilot/v1;"
-    "tradingcopilotv1\242\002\003TXX\252\002\021Tradingcopilot."
-    "V1\312\002\021Tradingcopilot\\V1\342\002\035Tradingcopilot\\"
-    "V1\\GPBMetadata\352\002\022Tradingcopilot::V1b\006pro"
-    "to3"
+    "R\tweightPct\210\001\001\022\026\n\006reason\030\010 \001(\tR\006reason\022*"
+    "\n\016quote_notional\030\t \001(\001H\001R\rquoteNotional\210"
+    "\001\001\022\036\n\010base_qty\030\n \001(\001H\002R\007baseQty\210\001\001\022\"\n\nst"
+    "op_price\030\013 \001(\001H\003R\tstopPrice\210\001\001\022)\n\016raise_"
+    "stops_by\030\014 \001(\001H\004R\014raiseStopsBy\210\001\001\022\033\n\006equ"
+    "ity\030\r \001(\001H\005R\006equity\210\001\001B\r\n\013_weight_pctB\021\n"
+    "\017_quote_notionalB\013\n\t_base_qtyB\r\n\013_stop_p"
+    "riceB\021\n\017_raise_stops_byB\t\n\007_equity\"\266\002\n\026E"
+    "xperimentInstanceFill\022\016\n\002id\030\001 \001(\tR\002id\022#\n"
+    "\rexperiment_id\030\002 \001(\tR\014experimentId\022\037\n\013in"
+    "stance_id\030\003 \001(\tR\ninstanceId\022 \n\taction_id"
+    "\030\004 \001(\tH\000R\010actionId\210\001\001\022\026\n\006symbol\030\005 \001(\tR\006s"
+    "ymbol\022\023\n\005ts_ms\030\006 \001(\003R\004tsMs\022\022\n\004side\030\007 \001(\t"
+    "R\004side\022\020\n\003qty\030\010 \001(\001R\003qty\022\024\n\005price\030\t \001(\001R"
+    "\005price\022\020\n\003fee\030\n \001(\001R\003fee\022\033\n\tfee_asset\030\013 "
+    "\001(\tR\010feeAssetB\014\n\n_action_id\"\\\n\023ListActio"
+    "nsResponse\022E\n\007actions\030\001 \003(\0132+.tradingcop"
+    "ilot.v1.ExperimentInstanceActionR\007action"
+    "s\"T\n\021ListFillsResponse\022\?\n\005fills\030\001 \003(\0132)."
+    "tradingcopilot.v1.ExperimentInstanceFill"
+    "R\005fills\"`\n\027ListPeriodStatsResponse\022E\n\005st"
+    "ats\030\001 \003(\0132/.tradingcopilot.v1.Experiment"
+    "InstancePeriodStatR\005statsB\344\001\n\025com.tradin"
+    "gcopilot.v1B\027ExperimentActivityProtoP\001ZM"
+    "github.com/MaxBernstetter/dagobert/src/g"
+    "en/tradingcopilot/v1;tradingcopilotv1\242\002\003"
+    "TXX\252\002\021Tradingcopilot.V1\312\002\021Tradingcopilot"
+    "\\V1\342\002\035Tradingcopilot\\V1\\GPBMetadata\352\002\022Tr"
+    "adingcopilot::V1b\006proto3"
 };
 static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto = {
     false,
     false,
-    1443,
+    1704,
     descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto,
     "tradingcopilot/v1/experiment_activity.proto",
     &descriptor_table_tradingcopilot_2fv1_2fexperiment_5factivity_2eproto_once,
@@ -1681,9 +1735,9 @@ ExperimentInstanceAction::ExperimentInstanceAction(
                offsetof(Impl_, bar_open_ms_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, bar_open_ms_),
-           offsetof(Impl_, weight_pct_) -
+           offsetof(Impl_, equity_) -
                offsetof(Impl_, bar_open_ms_) +
-               sizeof(Impl_::weight_pct_));
+               sizeof(Impl_::equity_));
 
   // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ExperimentInstanceAction)
 }
@@ -1702,9 +1756,9 @@ inline void ExperimentInstanceAction::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, bar_open_ms_),
            0,
-           offsetof(Impl_, weight_pct_) -
+           offsetof(Impl_, equity_) -
                offsetof(Impl_, bar_open_ms_) +
-               sizeof(Impl_::weight_pct_));
+               sizeof(Impl_::equity_));
 }
 ExperimentInstanceAction::~ExperimentInstanceAction() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.ExperimentInstanceAction)
@@ -1785,6 +1839,13 @@ PROTOBUF_NOINLINE void ExperimentInstanceAction::Clear() {
                  reinterpret_cast<char*>(&this_._impl_.weight_pct_) -
                  reinterpret_cast<char*>(&this_._impl_.bar_open_ms_)) +
                  sizeof(_impl_.weight_pct_));
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00001f00U)) {
+    ::memset(&this_._impl_.quote_notional_, 0,
+             static_cast<::size_t>(
+                 reinterpret_cast<char*>(&this_._impl_.equity_) -
+                 reinterpret_cast<char*>(&this_._impl_.quote_notional_)) +
+                 sizeof(_impl_.equity_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -1885,6 +1946,41 @@ PROTOBUF_NOINLINE void ExperimentInstanceAction::Clear() {
     }
   }
 
+  // optional double quote_notional = 9 [json_name = "quoteNotional"];
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        9, this_._internal_quote_notional(), target);
+  }
+
+  // optional double base_qty = 10 [json_name = "baseQty"];
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        10, this_._internal_base_qty(), target);
+  }
+
+  // optional double stop_price = 11 [json_name = "stopPrice"];
+  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        11, this_._internal_stop_price(), target);
+  }
+
+  // optional double raise_stops_by = 12 [json_name = "raiseStopsBy"];
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        12, this_._internal_raise_stops_by(), target);
+  }
+
+  // optional double equity = 13 [json_name = "equity"];
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+        13, this_._internal_equity(), target);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -1908,7 +2004,7 @@ PROTOBUF_NOINLINE void ExperimentInstanceAction::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  total_size += static_cast<bool>(0x00000080U & cached_has_bits) * 9;
+  total_size += ::absl::popcount(0x00001f80U & cached_has_bits) * 9;
   if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
     // string id = 1 [json_name = "id"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
@@ -2041,6 +2137,23 @@ void ExperimentInstanceAction::MergeImpl(::google::protobuf::MessageLite& to_msg
       _this->_impl_.weight_pct_ = from._impl_.weight_pct_;
     }
   }
+  if (BatchCheckHasBit(cached_has_bits, 0x00001f00U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      _this->_impl_.quote_notional_ = from._impl_.quote_notional_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      _this->_impl_.base_qty_ = from._impl_.base_qty_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+      _this->_impl_.stop_price_ = from._impl_.stop_price_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+      _this->_impl_.raise_stops_by_ = from._impl_.raise_stops_by_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      _this->_impl_.equity_ = from._impl_.equity_;
+    }
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
@@ -2067,8 +2180,8 @@ void ExperimentInstanceAction::InternalSwap(ExperimentInstanceAction* PROTOBUF_R
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.side_, &other->_impl_.side_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.reason_, &other->_impl_.reason_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.weight_pct_)
-      + sizeof(ExperimentInstanceAction::_impl_.weight_pct_)
+      PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.equity_)
+      + sizeof(ExperimentInstanceAction::_impl_.equity_)
       - PROTOBUF_FIELD_OFFSET(ExperimentInstanceAction, _impl_.bar_open_ms_)>(
           reinterpret_cast<char*>(&_impl_.bar_open_ms_),
           reinterpret_cast<char*>(&other->_impl_.bar_open_ms_));

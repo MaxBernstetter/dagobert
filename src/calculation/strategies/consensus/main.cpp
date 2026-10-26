@@ -2,17 +2,18 @@
 #include "bars_parquet.hpp"
 #include "consensus_strategy.hpp"
 
-#include "sizing_proto.hpp"
+#include "report.hpp"
+#include "sweep.hpp"
 
 #include "tradingcopilot/v1/run_report.pb.h"
 
 #include <google/protobuf/util/json_util.h>
-#include <magic_enum/magic_enum.hpp>
 
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <string>
 
 namespace {
@@ -55,35 +56,24 @@ read_envelope(const std::string &path) {
   return envelope;
 }
 
-void fill_report(const dagobert::StrategyResult &result,
-                 const tradingcopilot::v1::RunEnvelope &envelope,
-                 std::int64_t duration_ms,
-                 tradingcopilot::v1::RunReport &report) {
-  report.set_schema_version(envelope.schema_version());
-  report.set_label(envelope.label());
-  report.mutable_metrics()->set_duration_ms(duration_ms);
-  for (const auto &action : result.actions) {
-    auto *out = report.add_actions();
-    out->set_symbol(envelope.base() + envelope.quote());
-    out->set_bar_open_ms(action.bar_open_ms);
-    out->set_side(std::string(magic_enum::enum_name(action.side)));
-    out->set_weight_pct(action.weight_pct);
-    out->set_reason(action.reason);
-  }
-  for (const auto &fill : result.fills) {
-    auto *out = report.add_fills();
-    out->set_symbol(envelope.base() + envelope.quote());
-    out->set_ts_ms(fill.ts_ms);
-    out->set_side(fill.side);
-    out->set_qty(fill.qty);
-    out->set_price(fill.price);
-    out->set_fee(0.0);
-  }
+[[nodiscard]] dagobert::SweepStrategy
+sweep_strategy(const tradingcopilot::v1::RunEnvelope &envelope,
+               std::int64_t duration_ms) {
+  const auto sizing = dagobert::ConsensusStrategy::sizing_of(envelope);
+  return {std::make_unique<dagobert::ConsensusStrategy>(
+              envelope, duration_ms, sizing,
+              dagobert::ConsensusStrategy::params_of(envelope)),
+          sizing.has_value()};
 }
 
 } // namespace
 
 int main(int argc, char **argv) {
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--sweep") {
+      return dagobert::run_sweep(std::cin, std::cout, sweep_strategy);
+    }
+  }
   const std::string config_path = arg_value(argc, argv, "--config");
   const std::string data_dir = arg_value(argc, argv, "--data-dir");
   const tradingcopilot::v1::RunEnvelope envelope = read_envelope(config_path);
@@ -119,10 +109,8 @@ int main(int argc, char **argv) {
   const dagobert::StrategyResult result = strategy.calc_backtest(bars);
 
   tradingcopilot::v1::RunReport report;
-  fill_report(result, envelope, envelope.to_ms() - envelope.from_ms(), report);
-  if (sizing.has_value()) {
-    dagobert::write_sizing_output(result.actions, report);
-  }
+  dagobert::fill_report(result, envelope, envelope.to_ms() - envelope.from_ms(),
+                        sizing.has_value(), true, report);
   if (!report.SerializeToOstream(&std::cout)) {
     fail(kExitRunFailed, "cannot write report");
   }

@@ -36,4 +36,9 @@ message RunReport {
   // One entry per action, in order, when `sizing` is configured; empty
   // otherwise.
   repeated ActionSizing sizing = 7;
+  // Sweep item key (SweepItem.key); empty in single runs.
+  string key = 8;
+  // Non-empty when a sweep item failed (bad envelope or config); the other
+  // report fields are then empty.
+  string error = 9;
 }

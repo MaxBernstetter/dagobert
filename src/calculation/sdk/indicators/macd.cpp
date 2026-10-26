@@ -1,5 +1,7 @@
 #include "macd.hpp"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <numeric>
@@ -108,7 +110,7 @@ MACD::MACD(std::size_t fast_period, std::size_t slow_period,
       signal_period_(signal_period == 0U ? 1U : signal_period) {
   if (fast_period == 0U || slow_period == 0U || signal_period == 0U) {
     std::cerr << "MACD periods must be positive\n";
-    std::exit(2);
+    exit_config();
   }
   fast_multiplier_ = 2.0 / (static_cast<double>(fast_period_) + 1.0);
   slow_multiplier_ = 2.0 / (static_cast<double>(slow_period_) + 1.0);

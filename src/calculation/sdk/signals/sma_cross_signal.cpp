@@ -55,11 +55,12 @@ void annotate_risk(Position &account, double spend, double equity, double atr,
 
 std::vector<Action> SmaCrossSignal::actions_from(Position &account,
                                                  std::span<const Bar> bars,
-                                                 const SmaCrossSeries &mask) {
+                                                 const SmaCrossSeries &mask,
+                                                 std::int64_t trade_from_ms) {
   std::vector<Action> out;
   const std::size_t count = std::min({bars.size(), mask.rule.size()});
   for (std::size_t i = 0; i < count; ++i) {
-    if (!mask.rule[i].has_value()) {
+    if (!mask.rule[i].has_value() || bars[i].open_ms < trade_from_ms) {
       continue;
     }
     const SmaCrossRule rule = *mask.rule[i];
@@ -195,10 +196,16 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
   const double before = account.qty();
   account.buy_notional(bar, spend, stop, SmaCrossRule::pyramid);
   annotate_risk(account, spend, equity, atr, price, sz);
+  account.annotate_last_raise(std::max(0.0, step));
   for (sizing::Unit &u : units_) {
     u.stop += std::max(0.0, step);
   }
   units_.push_back({price, stop, account.qty() - before});
+}
+
+void SmaCrossSignal::warm(std::optional<double> fast,
+                          std::optional<double> slow) {
+  (void)apply(fast, slow, false);
 }
 
 void SmaCrossSignal::reset() {

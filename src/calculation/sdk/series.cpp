@@ -2,7 +2,9 @@
 
 #include "position.hpp"
 
+#include "exit_policy.hpp"
 #include <cmath>
+
 #include <cstdlib>
 #include <iostream>
 
@@ -34,14 +36,14 @@ std::size_t bars_for(std::int32_t hours, std::int64_t bar_duration_ms) {
   if (hours <= 0 || bar_duration_ms <= 0) {
     std::cerr << "bars_for: hours and bar_duration_ms must be positive: hours="
               << hours << " bar_duration_ms=" << bar_duration_ms << '\n';
-    std::exit(2);
+    exit_config();
   }
   const std::int64_t bars =
       static_cast<std::int64_t>(hours) * 3'600'000 / bar_duration_ms;
   if (bars <= 0) {
     std::cerr << "bars_for: bar count must be positive for hours=" << hours
               << " bar_duration_ms=" << bar_duration_ms << '\n';
-    std::exit(2);
+    exit_config();
   }
   return static_cast<std::size_t>(bars);
 }

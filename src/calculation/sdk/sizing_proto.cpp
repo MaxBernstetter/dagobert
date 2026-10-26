@@ -2,6 +2,8 @@
 
 #include <magic_enum/magic_enum.hpp>
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -33,7 +35,7 @@ sizing_from_proto(const tradingcopilot::v1::Sizing &proto) {
   }
   if (const std::string error = sizing::validate(cfg); !error.empty()) {
     std::cerr << "invalid sizing: " << error << '\n';
-    std::exit(2);
+    exit_config();
   }
   return cfg;
 }

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -62,7 +64,7 @@ Column apply_atr(const std::vector<double> &high,
 ATR::ATR(std::size_t period_bars) : period_(period_bars) {
   if (period_bars == 0U) {
     std::cerr << "ATR period must be positive: " << period_bars << '\n';
-    std::exit(2);
+    exit_config();
   }
 }
 

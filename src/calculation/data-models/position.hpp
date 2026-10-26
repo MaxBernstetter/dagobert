@@ -37,6 +37,11 @@ public:
   template <typename Rule>
   Fill sell_base(const Bar &bar, double qty, Rule rule);
 
+  // Records how far a pyramid buy raised the earlier stops.
+  void annotate_last_raise(double raise_stops_by) {
+    actions_.back().raise_stops_by = raise_stops_by;
+  }
+
   // Records the risk percents (of equity) on the latest buy action.
   void annotate_last_risk(double requested_pct, double capped_pct) {
     actions_.back().requested_risk_pct = requested_pct;
@@ -71,6 +76,8 @@ template <typename Rule> Fill Position::buy_all(const Bar &bar, Rule rule) {
   action.reason = std::string(magic_enum::enum_name(rule));
   action.weight_pct = 100.0;
   action.notional = qty * bar.close;
+  action.base_qty = qty;
+  action.equity = equity(bar.close);
   actions_.push_back(action);
 
   Fill fill;
@@ -100,6 +107,8 @@ template <typename Rule> Fill Position::sell_all(const Bar &bar, Rule rule) {
   action.reason = std::string(magic_enum::enum_name(rule));
   action.weight_pct = 100.0;
   action.notional = sold_qty * bar.close;
+  action.base_qty = sold_qty;
+  action.equity = equity(bar.close);
   actions_.push_back(action);
 
   Fill fill;
@@ -122,6 +131,8 @@ Fill Position::record(const Bar &bar, Side side, double qty, double weight_pct,
   action.weight_pct = weight_pct;
   action.stop = stop;
   action.notional = qty * bar.close;
+  action.base_qty = qty;
+  action.equity = equity(bar.close);
   actions_.push_back(action);
 
   Fill fill;
