@@ -28,4 +28,31 @@ TEST(ParquetBars, FixtureRoundTrip) {
   EXPECT_EQ(bars[0].duration_ms, kIntervalMs);
 }
 
+// The decimal schema (lake) and the old string schema (lake_legacy) hold the same
+// logical bars; both must load to bit-identical doubles, including a volume
+// that does not fit int64 at scale 8.
+TEST(ParquetBars, DecimalAndLegacySchemasAgree) {
+  const std::filesystem::path fixtures =
+      std::filesystem::path(__FILE__).parent_path() / "fixtures";
+  const std::vector<Bar> dec = load_bars_from_lake(
+      (fixtures / "lake").string(), "demo", "BTC", "USDT", kOpenMs,
+      kOpenMs + 2 * kIntervalMs);
+  const std::vector<Bar> old = load_bars_from_lake(
+      (fixtures / "lake_legacy").string(), "demo", "BTC", "USDT", kOpenMs,
+      kOpenMs + 2 * kIntervalMs);
+  ASSERT_EQ(dec.size(), 2U);
+  ASSERT_EQ(old.size(), 2U);
+  for (std::size_t i = 0; i < 2; ++i) {
+    EXPECT_EQ(dec[i].open_ms, old[i].open_ms);
+    EXPECT_EQ(dec[i].open, old[i].open);
+    EXPECT_EQ(dec[i].high, old[i].high);
+    EXPECT_EQ(dec[i].low, old[i].low);
+    EXPECT_EQ(dec[i].close, old[i].close);
+    EXPECT_EQ(dec[i].volume, old[i].volume);
+    EXPECT_EQ(dec[i].duration_ms, old[i].duration_ms);
+  }
+  EXPECT_EQ(dec[1].low, 1e-8);
+  EXPECT_EQ(dec[1].volume, 250000000000.12345678);
+}
+
 } // namespace dagobert

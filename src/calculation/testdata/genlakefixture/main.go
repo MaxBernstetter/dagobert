@@ -11,9 +11,25 @@ import (
 	"time"
 
 	"github.com/parquet-go/parquet-go"
+
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
+	"github.com/MaxBernstetter/dagobert/src/internal/parquetmeta"
+	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 type candle struct {
+	OpenTime  int64
+	Open      string
+	High      string
+	Low       string
+	Close     string
+	Volume    string
+	CloseTime int64
+}
+
+// legacyCandle is the schema_version 1 layout (decimal strings), kept to test
+// that the readers still accept old lakes.
+type legacyCandle struct {
 	OpenTime  int64  `parquet:"open_time"`
 	Open      string `parquet:"open"`
 	High      string `parquet:"high"`
@@ -23,10 +39,14 @@ type candle struct {
 	CloseTime int64  `parquet:"close_time"`
 }
 
+// legacy selects the string schema for every file written in this run.
+var legacy bool
+
 func main() {
 	benchDir := flag.String("bench", "", "write only a seeded benchmark lake (provider=binance, BTC/USDT) under this directory")
 	benchBars := flag.Int("bars", 5840, "bench: number of 3h bars (5840 = 730 days)")
 	benchSeed := flag.Int64("seed", 110, "bench: random seed")
+	flag.BoolVar(&legacy, "legacy", false, "write the old string schema (schema_version 1) instead of decimals")
 	flag.Parse()
 	if *benchDir != "" {
 		writeBenchLake(*benchDir, *benchBars, *benchSeed)
@@ -43,7 +63,14 @@ func main() {
 		Volume:    "12.345",
 		CloseTime: openMs + intervalMs - 1,
 	}
-	writeLake("lake", []candle{row})
+	// A second bar with the smallest price step and a volume above int64 at scale 8.
+	wide := candle{openMs + intervalMs, "0.00000001", "99999999.99999999", "0.00000001", "12345.67890123",
+		"250000000000.12345678", openMs + 2*intervalMs - 1}
+	writeLake("lake", []candle{row, wide})
+	// The same single bar in the old string schema, for the dual-read test.
+	legacy = true
+	writeLake("lake_legacy", []candle{row, wide})
+	legacy = false
 
 	// Twelve bars that open and close one sma-cross trade (fast 3h, slow 6h).
 	closes := []string{"10", "10", "10", "10", "20", "20", "20", "20", "10", "10", "10", "10"}
@@ -104,11 +131,33 @@ func writeFileInterval(out string, rows []candle, intervalMs int64) {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		panic(err)
 	}
-	if err := parquet.WriteFile(out, rows,
-		parquet.KeyValueMetadata("trading_copilot.schema_version", "1"),
-		parquet.KeyValueMetadata("trading_copilot.interval_ms", strconv.FormatInt(intervalMs, 10)),
-		parquet.KeyValueMetadata("trading_copilot.data_source", "binance"),
-	); err != nil {
+	if legacy {
+		old := make([]legacyCandle, len(rows))
+		for i, r := range rows {
+			old[i] = legacyCandle(r)
+		}
+		if err := parquet.WriteFile(out, old,
+			parquet.KeyValueMetadata("trading_copilot.schema_version", "1"),
+			parquet.KeyValueMetadata("trading_copilot.interval_ms", strconv.FormatInt(intervalMs, 10)),
+			parquet.KeyValueMetadata("trading_copilot.data_source", "binance"),
+		); err != nil {
+			panic(err)
+		}
+		return
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		panic(err)
+	}
+	meta := parquetmeta.Meta{IntervalMS: intervalMs, DataSource: shared.DataSourceBinance}
+	conv := make([]candlefile.Row, len(rows))
+	for i, r := range rows {
+		conv[i] = candlefile.Row(r)
+	}
+	if err := candlefile.Write(f, conv, meta); err != nil {
+		panic(err)
+	}
+	if err := f.Close(); err != nil {
 		panic(err)
 	}
 }

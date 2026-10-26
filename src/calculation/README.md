@@ -4,7 +4,7 @@ Build with a preset from `src/calculation`: `cmake --preset debug|optimized`, th
 
 ## Valgrind and Callgrind
 
-Opt-in targets, not part of the default build. Both run each registered strategy on the seeded fixture lake `tests/fixtures/lake_roundtrip` (the Valgrind devbox package provides `valgrind`).
+Opt-in targets, not part of the default build. Both run each registered strategy on the seeded fixture lake `tests/fixtures/lake_roundtrip` (decimal columns; `tests/fixtures/lake_legacy` keeps the old string schema for the dual-read test, both made by `testdata/genlakefixture`) (the Valgrind devbox package provides `valgrind`).
 
 | Target | Preset | What it does |
 | --- | --- | --- |
