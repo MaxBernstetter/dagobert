@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"net/http"
 	"os"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 	"github.com/google/uuid"
@@ -139,14 +139,6 @@ func loadCandleWindow(ctx context.Context, dataDir, provider, base, quote string
 	return all, nil
 }
 
-type parquetCandleRow struct {
-	OpenTime int64   `parquet:"open_time"`
-	Open     float64 `parquet:"open"`
-	High     float64 `parquet:"high"`
-	Low      float64 `parquet:"low"`
-	Close    float64 `parquet:"close"`
-}
-
 func readChartCandleFile(path string) (candles []chartCandle, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -165,27 +157,15 @@ func readChartCandleFile(path string) (candles []chartCandle, err error) {
 	if err != nil {
 		return nil, err
 	}
-	reader := parquet.NewGenericReader[parquetCandleRow](pf)
-	defer reader.Close()
-	buf := make([]parquetCandleRow, 256)
-	for {
-		n, readErr := reader.Read(buf)
-		for _, item := range buf[:n] {
-			candles = append(candles, chartCandle{
-				OpenTime: item.OpenTime,
-				Open:     item.Open,
-				High:     item.High,
-				Low:      item.Low,
-				Close:    item.Close,
-			})
-		}
-		if readErr != nil {
-			if errors.Is(readErr, io.EOF) {
-				return candles, nil
-			}
-			return nil, readErr
-		}
+	rows, err := candlefile.ReadFloat(pf)
+	if err != nil {
+		return nil, err
 	}
+	candles = make([]chartCandle, len(rows))
+	for i, item := range rows {
+		candles[i] = chartCandle{OpenTime: item.OpenTime, Open: item.Open, High: item.High, Low: item.Low, Close: item.Close}
+	}
+	return candles, nil
 }
 
 func loadIndicatorWindow(dataDir, provider, base, quote, algo string, fromSec, toSec int64) (map[int64]map[string]float64, []chartIndicatorMeta) {

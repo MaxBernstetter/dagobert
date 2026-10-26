@@ -9,6 +9,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY src/shared ./src/shared
 COPY src/internal/awsenv ./src/internal/awsenv
 COPY src/internal/lakeobject ./src/internal/lakeobject
+COPY src/internal/candlefile ./src/internal/candlefile
 COPY src/internal/parquetmeta ./src/internal/parquetmeta
 COPY src/calculation-technical-indicator ./src/calculation-technical-indicator
 ENV CGO_ENABLED=0

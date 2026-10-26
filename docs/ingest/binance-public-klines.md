@@ -99,7 +99,23 @@ Shared across providers: `max_retries`, `backoff_factor`, `retry_wait`, `max_ret
 1. Start with `From`, `To`, `Symbol`, and provider (default `binance`).
 2. Skip every open time in that range that is already stored or marked unavailable for that provider.
 3. Fetch the missing closed `1h` klines. Drop a row whose close time is still in the future.
-4. Write the seven stored fields to Hive-style Parquet: `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in `ingest.sqlite` with PK `(provider, base, quote, open_time)`.
+4. Write the seven stored fields to Hive-style Parquet (columns as in [Candle file format](#candle-file-format)): `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.schema_version` (`2`), `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in `ingest.sqlite` with PK `(provider, base, quote, open_time)`.
 5. Do not compute indicators. Do not call Bybit.
 
 `USDCUSDT` is ingested because the execution service converts a USDT close into USDC with `usdc_price = usdt_close / usdcusdt_close`.
+
+## Candle file format
+
+Schema version 2 (DATA.01). The Binance decimal strings are stored as exact fixed-scale decimals, never as floats.
+
+| Column | Parquet type | Encoding |
+|---|---|---|
+| `open_time`, `close_time` | INT64 | DELTA_BINARY_PACKED, Snappy |
+| `open`, `high`, `low`, `close` | DECIMAL(18,8) on INT64 | DELTA_BINARY_PACKED, Snappy, no dictionary |
+| `volume` | DECIMAL(28,8) on FIXED_LEN_BYTE_ARRAY(12) | PLAIN, Snappy, no dictionary |
+
+Scale 8 is Binance's maximum precision. Prices fit DECIMAL(18,8) (below 1e10). Volume is in base-asset units: a high-supply token such as SHIB or PEPE trades 1e11 to 1e12 units per hour, which overflows DECIMAL(18,8), so volume gets DECIMAL(28,8) (up to about 1e20). Snappy is used because the C++ reader (Arrow) is built with Snappy and zlib only.
+
+Ingest never truncates. A value with more than 8 significant decimals (trailing zeros are fine), with an exponent, or that does not fit its precision makes the run fail with exit 1 and `DETAIL=50`; the log names the open time and the value, and nothing is stored for that run.
+
+Schema version 1 (decimal strings in `open`..`volume`) is still readable: every reader detects the column type. Writers only write version 2.

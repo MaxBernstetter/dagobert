@@ -10,6 +10,8 @@ COPY src/shared ./src/shared
 COPY src/ingest/provider ./src/ingest/provider
 COPY src/internal/awsenv ./src/internal/awsenv
 COPY src/internal/lakeobject ./src/internal/lakeobject
+COPY src/internal/candlefile ./src/internal/candlefile
+COPY src/internal/parquetmeta ./src/internal/parquetmeta
 COPY src/internal/secrets ./src/internal/secrets
 COPY src/orchestrator ./src/orchestrator
 COPY src/experimentapi ./src/experimentapi
