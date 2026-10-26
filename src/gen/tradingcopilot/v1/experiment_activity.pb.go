@@ -119,14 +119,18 @@ type ExperimentInstanceAction struct {
 	Reason       string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
 	// Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
 	// unset for unsized actions. Same names as the live signal body.
-	QuoteNotional *float64 `protobuf:"fixed64,9,opt,name=quote_notional,json=quoteNotional,proto3,oneof" json:"quote_notional,omitempty"` // buy: quote to spend
+	QuoteNotional *float64 `protobuf:"fixed64,9,opt,name=quote_notional,json=quoteNotional,proto3,oneof" json:"quote_notional,omitempty"` // buy: quote requested, before the cash clamp
 	BaseQty       *float64 `protobuf:"fixed64,10,opt,name=base_qty,json=baseQty,proto3,oneof" json:"base_qty,omitempty"`                  // vol_cut: base to sell
 	StopPrice     *float64 `protobuf:"fixed64,11,opt,name=stop_price,json=stopPrice,proto3,oneof" json:"stop_price,omitempty"`            // buy: stop of the new unit
 	RaiseStopsBy  *float64 `protobuf:"fixed64,12,opt,name=raise_stops_by,json=raiseStopsBy,proto3,oneof" json:"raise_stops_by,omitempty"` // pyramid: earlier stops move up by this
 	// Book equity (quote) at the decision bar close; rescales sized notionals.
-	Equity        *float64 `protobuf:"fixed64,13,opt,name=equity,proto3,oneof" json:"equity,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Equity *float64 `protobuf:"fixed64,13,opt,name=equity,proto3,oneof" json:"equity,omitempty"`
+	// vol_cut: base the heat budget allows per unit of equity, heat_pct/100 /
+	// (stop_atr_mult * atr). The cut is held - equity * this, so a replay on a
+	// different wallet recomputes it instead of rescaling base_qty.
+	HeatBasePerEquity *float64 `protobuf:"fixed64,14,opt,name=heat_base_per_equity,json=heatBasePerEquity,proto3,oneof" json:"heat_base_per_equity,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ExperimentInstanceAction) Reset() {
@@ -246,6 +250,13 @@ func (x *ExperimentInstanceAction) GetRaiseStopsBy() float64 {
 func (x *ExperimentInstanceAction) GetEquity() float64 {
 	if x != nil && x.Equity != nil {
 		return *x.Equity
+	}
+	return 0
+}
+
+func (x *ExperimentInstanceAction) GetHeatBasePerEquity() float64 {
+	if x != nil && x.HeatBasePerEquity != nil {
+		return *x.HeatBasePerEquity
 	}
 	return 0
 }
@@ -527,7 +538,7 @@ const file_tradingcopilot_v1_experiment_activity_proto_rawDesc = "" +
 	"\v_return_pctB\x0e\n" +
 	"\f_trade_countB\f\n" +
 	"\n" +
-	"_win_count\"\x8c\x04\n" +
+	"_win_count\"\xdb\x04\n" +
 	"\x18ExperimentInstanceAction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rexperiment_id\x18\x02 \x01(\tR\fexperimentId\x12\x1f\n" +
@@ -545,13 +556,15 @@ const file_tradingcopilot_v1_experiment_activity_proto_rawDesc = "" +
 	"\n" +
 	"stop_price\x18\v \x01(\x01H\x03R\tstopPrice\x88\x01\x01\x12)\n" +
 	"\x0eraise_stops_by\x18\f \x01(\x01H\x04R\fraiseStopsBy\x88\x01\x01\x12\x1b\n" +
-	"\x06equity\x18\r \x01(\x01H\x05R\x06equity\x88\x01\x01B\r\n" +
+	"\x06equity\x18\r \x01(\x01H\x05R\x06equity\x88\x01\x01\x124\n" +
+	"\x14heat_base_per_equity\x18\x0e \x01(\x01H\x06R\x11heatBasePerEquity\x88\x01\x01B\r\n" +
 	"\v_weight_pctB\x11\n" +
 	"\x0f_quote_notionalB\v\n" +
 	"\t_base_qtyB\r\n" +
 	"\v_stop_priceB\x11\n" +
 	"\x0f_raise_stops_byB\t\n" +
-	"\a_equity\"\xb6\x02\n" +
+	"\a_equityB\x17\n" +
+	"\x15_heat_base_per_equity\"\xb6\x02\n" +
 	"\x16ExperimentInstanceFill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rexperiment_id\x18\x02 \x01(\tR\fexperimentId\x12\x1f\n" +

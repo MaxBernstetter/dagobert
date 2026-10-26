@@ -100,12 +100,8 @@ func compareJSON(t *testing.T, path string, a, b any, tol float64) {
 // timestamp/side (exact) and qty/price (1e-9), instance KPIs within 1e-6.
 // Sized configs are covered too: the C++ ATR is the simple mean of the last n true ranges, like Go.
 //
-// Known gap, not covered: sized configs that fire "vol_cut" or "pyramid" (maxUnits > 1 or a heat
-// breach). The replay rescales C++ amounts linearly by goWalletEquity/cppEquity (planReplay), but
-// those two rules size from held base and equity affinely (cut = held - equity*heat/dist), so
-// the small held/equity drift between the fee-paying Go wallet and the C++ account is amplified
-// (first mismatches: 0.0197049 vs 0.01893767 cut; 0.97384805 vs 0.97489129 pyramid buy).
-// Entries, ATR stops and death-cross exits match to 1e-9.
+// vol_cut and pyramid are covered: the replay recomputes the cut from the replayed wallet
+// (heat_base_per_equity) and rescales pyramid notionals, see signalrunner.planReplay.
 func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 	bin := cppBinary(t)
 	_ = os.Setenv("VENUE_SIMULATE", "1")
@@ -157,6 +153,11 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 		`{"fastHr":3,"slowHr":6}`,
 		`{"fastHr":12,"slowHr":48,"sizing":{"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
 		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":1,"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
+		`{"fastHr":12,"slowHr":48,"sizing":{}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":3}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":2}}`,
+		`{"fastHr":3,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":4,"addAtrMult":0.25}}`,
+		`{"fastHr":12,"slowHr":24,"sizing":{"unitRiskPct":0.75,"heatPct":1.5,"maxUnits":3,"stopAtrMult":1}}`,
 	}
 	items := make([]SweepItemSpec, len(configs))
 	for i, c := range configs {
@@ -170,6 +171,17 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	rules := map[string]int{}
+	for _, rep := range reports {
+		for _, a := range rep.Actions {
+			rules[a.Reason]++
+		}
+	}
+	if rules["vol_cut"] == 0 || rules["pyramid"] == 0 {
+		t.Fatalf("configs must fire vol_cut and pyramid, fired %v", rules)
+	}
+	t.Logf("rules fired: %v", rules)
 
 	for i, cfg := range configs {
 		t.Run(cfg, func(t *testing.T) {

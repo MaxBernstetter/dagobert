@@ -159,6 +159,9 @@ func ReplayActions(rep *pb.RunReport, aggMS int64) ([]signalrunner.ReplayAction,
 				return nil, fmt.Errorf("sweep item %s: sized %s action at bar %d has no positive equity", rep.Key, a.Side, a.BarOpenMs)
 			}
 			sz.Equity = *a.Equity
+			if a.BaseQty != nil {
+				sz.HeatBasePerEquity = a.HeatBasePerEquity
+			}
 		}
 		out = append(out, signalrunner.ReplayAction{
 			CandleCloseMs: a.BarOpenMs + aggMS, Decision: a.Side, Sizing: sz,

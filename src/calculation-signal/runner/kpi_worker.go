@@ -30,12 +30,17 @@ type ReplayAction struct {
 
 // ReplaySizing carries the signal-level sizing of an action. Nil QuoteNotional and BaseQty keep
 // the legacy sizing (buy up to the target weight, sell everything). Equity is the book equity
-// the C++ strategy sized against; when set, both amounts are rescaled by goWalletEquity/Equity,
+// the C++ strategy sized against; when set, both amounts are rescaled by goWalletEquity/Equity
+// (a vol_cut with HeatBasePerEquity is recomputed instead),
 // where goWalletEquity is the replayed wallet marked to market at the decision bar close.
 type ReplaySizing struct {
 	QuoteNotional *float64
 	BaseQty       *float64
 	Equity        float64
+	// HeatBasePerEquity marks a vol_cut: the base the heat budget allows per unit of equity.
+	// The cut is recomputed on the replayed wallet as held - equity*HeatBasePerEquity, because
+	// it is affine in held and equity and a linear rescale would amplify their drift.
+	HeatBasePerEquity *float64
 }
 
 // KPIJob is one instance to turn into fills and KPIs. Nothing in it touches disk.
@@ -75,6 +80,9 @@ func ReplayKPI(job KPIJob) KPIResult {
 		wallet.Coins[c] = v
 	}
 	position := "flat"
+	// held mirrors the sum of the Go pipeline's open units (trackUnits), which a vol_cut is
+	// sized from; it differs from the wallet base by dust left over from earlier exits.
+	var held float64
 	for _, a := range job.Actions {
 		i := sort.Search(len(job.Bars), func(i int) bool { return job.Bars[i].CloseMs >= a.CandleCloseMs })
 		if i == len(job.Bars) || job.Bars[i].CloseMs != a.CandleCloseMs {
@@ -83,7 +91,7 @@ func ReplayKPI(job KPIJob) KPIResult {
 		}
 		size := a.Size
 		if a.Sizing != nil {
-			planned, err := planReplay(&wallet, job, a, job.Bars[i].Close)
+			planned, err := planReplay(&wallet, job, a, job.Bars[i].Close, held)
 			if err != nil {
 				res.Err = err
 				return res
@@ -93,12 +101,15 @@ func ReplayKPI(job KPIJob) KPIResult {
 			}
 			size = *planned.Size
 		}
+		_, baseBefore := wallet.QuoteAndBase(instBase(job.Symbol))
 		step, err := execrunner.SimulateBarWithModel(&wallet, job.Playbook, job.Symbol, a.CandleCloseMs, a.Decision, &size, job.Bars[i].Close, position, job.Costs, true)
 		if err != nil {
 			res.Err = err
 			return res
 		}
 		position = step.Position
+		_, baseAfter := wallet.QuoteAndBase(instBase(job.Symbol))
+		held = trackHeld(held, a, job.Policy.MinOrderQuote, baseBefore, baseAfter, job.Bars[i].Close)
 		for _, j := range step.Journals {
 			base, _ := strconv.ParseFloat(strings.TrimSpace(j.BaseQty), 64)
 			quote, _ := strconv.ParseFloat(strings.TrimSpace(j.QuoteQty), 64)
@@ -114,7 +125,7 @@ func ReplayKPI(job KPIJob) KPIResult {
 }
 
 // planReplay sizes a Sizing action against the replayed wallet. Rescaling needs the C++ equity.
-func planReplay(wallet *paper.Wallet, job KPIJob, a ReplayAction, price float64) (marketrunner.PlannedAction, error) {
+func planReplay(wallet *paper.Wallet, job KPIJob, a ReplayAction, price, held float64) (marketrunner.PlannedAction, error) {
 	inst, ok := instruments.Resolve(job.Symbol)
 	if !ok {
 		return marketrunner.PlannedAction{}, fmt.Errorf("unknown symbol %s", job.Symbol)
@@ -126,6 +137,15 @@ func planReplay(wallet *paper.Wallet, job KPIJob, a ReplayAction, price float64)
 			return marketrunner.PlannedAction{}, fmt.Errorf("sized action at %d has equity %v, cannot rescale", a.CandleCloseMs, a.Sizing.Equity)
 		}
 		k := (quote + base*price) / a.Sizing.Equity
+		if h := a.Sizing.HeatBasePerEquity; h != nil && bq != nil {
+			cut := held - (quote+base*price)**h
+			if !(cut > 0) {
+				return marketrunner.PlannedAction{Decision: "no-trade"}, nil
+			}
+			bq = &cut
+			qn = nil
+			k = 1
+		}
 		if qn != nil {
 			v := *qn * k
 			qn = &v
@@ -161,4 +181,27 @@ func RunKPIWorkers(workers int, in <-chan []KPIJob, out chan<- []KPIResult) {
 	}
 	wg.Wait()
 	close(out)
+}
+
+func instBase(symbol string) (string, string) {
+	inst, _ := instruments.Resolve(symbol)
+	return inst.Quote, inst.Base
+}
+
+// trackHeld is trackUnits for the total held base: a buy adds the wallet delta, a vol_cut scales
+// by the kept share, a full exit or a remainder under the venue minimum clears it.
+func trackHeld(held float64, a ReplayAction, minOrderQuote, baseBefore, baseAfter, price float64) float64 {
+	switch a.Decision {
+	case "buy":
+		if baseAfter > baseBefore {
+			held += baseAfter - baseBefore
+		}
+	case "sell":
+		partial := a.Sizing != nil && a.Sizing.HeatBasePerEquity != nil
+		if !partial || baseBefore <= 0 || baseAfter <= 0 || baseAfter*price < minOrderQuote {
+			return 0
+		}
+		held *= baseAfter / baseBefore
+	}
+	return held
 }

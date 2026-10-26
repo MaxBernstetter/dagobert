@@ -44,6 +44,10 @@ struct Action {
   double base_qty{};
   double equity{};
   double raise_stops_by{};
+  // vol_cut: heat budget in base per unit of equity (see the proto).
+  double heat_base_per_equity{};
+  // Buys: the strategy's notional before the cash clamp (notional is what was spent).
+  double requested_notional{};
 };
 
 struct Fill {

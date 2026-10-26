@@ -906,6 +906,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
     kStopPriceFieldNumber = 11,
     kRaiseStopsByFieldNumber = 12,
     kEquityFieldNumber = 13,
+    kHeatBasePerEquityFieldNumber = 14,
   };
   // string id = 1 [json_name = "id"];
   void clear_id() ;
@@ -1073,11 +1074,22 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
   void _internal_set_equity(double value);
 
   public:
+  // optional double heat_base_per_equity = 14 [json_name = "heatBasePerEquity"];
+  [[nodiscard]] bool has_heat_base_per_equity() const;
+  void clear_heat_base_per_equity() ;
+  [[nodiscard]] double heat_base_per_equity() const;
+  void set_heat_base_per_equity(double value);
+
+  private:
+  double _internal_heat_base_per_equity() const;
+  void _internal_set_heat_base_per_equity(double value);
+
+  public:
   // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentInstanceAction)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 13,
+      ::google::protobuf::internal::TcParseTable<4, 14,
                           0, 101,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -1119,6 +1131,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentInstanceAction final : pu
     double stop_price_;
     double raise_stops_by_;
     double equity_;
+    double heat_base_per_equity_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -2628,6 +2641,34 @@ inline double ExperimentInstanceAction::_internal_equity() const {
 inline void ExperimentInstanceAction::_internal_set_equity(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.equity_ = value;
+}
+
+// optional double heat_base_per_equity = 14 [json_name = "heatBasePerEquity"];
+inline bool ExperimentInstanceAction::has_heat_base_per_equity() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00002000U);
+  return value;
+}
+inline void ExperimentInstanceAction::clear_heat_base_per_equity() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.heat_base_per_equity_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+}
+inline double ExperimentInstanceAction::heat_base_per_equity() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentInstanceAction.heat_base_per_equity)
+  return _internal_heat_base_per_equity();
+}
+inline void ExperimentInstanceAction::set_heat_base_per_equity(double value) {
+  _internal_set_heat_base_per_equity(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentInstanceAction.heat_base_per_equity)
+}
+inline double ExperimentInstanceAction::_internal_heat_base_per_equity() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.heat_base_per_equity_;
+}
+inline void ExperimentInstanceAction::_internal_set_heat_base_per_equity(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.heat_base_per_equity_ = value;
 }
 
 // -------------------------------------------------------------------

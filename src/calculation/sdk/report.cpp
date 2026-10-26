@@ -21,13 +21,19 @@ void write_action(const Action &action, const std::string &symbol, bool sized,
   }
   out.set_equity(action.equity);
   if (action.side == Side::buy) {
-    out.set_quote_notional(action.notional);
+    // The requested size: a replay on another wallet applies its own cash clamp.
+    out.set_quote_notional(action.requested_notional > 0.0
+                               ? action.requested_notional
+                               : action.notional);
     out.set_stop_price(action.stop);
     if (action.reason == "pyramid") {
       out.set_raise_stops_by(action.raise_stops_by);
     }
   } else if (action.reason == "vol_cut") {
     out.set_base_qty(action.base_qty);
+    if (action.heat_base_per_equity > 0.0) {
+      out.set_heat_base_per_equity(action.heat_base_per_equity);
+    }
   }
 }
 
