@@ -118,12 +118,6 @@ func ExperimentRunBackend() string {
 	}
 }
 
-// ExperimentRunHeavy keeps the monolithic docker RunExperiment path (long-tail / Fargate-style).
-func ExperimentRunHeavy() bool {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("EXPERIMENT_RUN_HEAVY")))
-	return v == "1" || v == "true" || v == "yes"
-}
-
 // StudyBatchSize is instances per simulate batch (default 64).
 func StudyBatchSize() int {
 	return intEnvDefault("EXPERIMENT_BATCH_SIZE", 64, 1)

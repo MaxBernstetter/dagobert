@@ -7,7 +7,7 @@ One Go process (`src/orchestrator/cmd/orchestrator`) that runs the live pipeline
 
 ## Experiment fan-out (`experiment_fanout.go`)
 `runStudyJob` is chosen by `EXPERIMENT_RUN_BACKEND`:
-- unset or `docker` (compose default), or `EXPERIMENT_RUN_HEAVY=1`: one `dagobert-backtest` container, `EXPERIMENT_PHASE=all`.
+- unset or `docker` (compose default): one `dagobert-backtest` container, `EXPERIMENT_PHASE=all`.
 - `batched` or `sfn`: a `prepare` container, then `simulate` containers over batches of `EXPERIMENT_BATCH_SIZE` instances (default 64), then `finalize`. Batches run in a local pool bounded by `EXPERIMENT_MAP_MAX_CONCURRENCY` (default 8), or through Step Functions when `EXPERIMENT_SFN_ARN` is set. Any non-zero exit stops the experiment. Job state is in memory only.
 
 ## Data dir and backfill

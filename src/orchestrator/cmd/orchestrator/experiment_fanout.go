@@ -19,10 +19,6 @@ import (
 )
 
 func runStudyJob(ctx context.Context, id string, retryFailed bool) {
-	if awsenv.ExperimentRunHeavy() {
-		runStudyJobDockerWhole(ctx, id, retryFailed)
-		return
-	}
 	switch awsenv.ExperimentRunBackend() {
 	case "batched", "sfn":
 		runStudyBatched(ctx, id, retryFailed)
