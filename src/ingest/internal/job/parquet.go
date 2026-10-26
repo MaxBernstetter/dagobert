@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,21 +10,15 @@ import (
 	"github.com/parquet-go/parquet-go"
 
 	"github.com/MaxBernstetter/dagobert/src/ingest/provider"
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/internal/parquetmeta"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// Candle is the on-disk row. Column order is the struct field order.
-type Candle struct {
-	OpenTime  int64  `parquet:"open_time"`
-	Open      string `parquet:"open"`
-	High      string `parquet:"high"`
-	Low       string `parquet:"low"`
-	Close     string `parquet:"close"`
-	Volume    string `parquet:"volume"`
-	CloseTime int64  `parquet:"close_time"`
-}
+// Candle is one stored hour; values are decimal strings in memory and fixed-scale
+// decimals on disk (see candlefile).
+type Candle = candlefile.Row
 
 func toJobCandles(in []provider.Candle) []Candle {
 	out := make([]Candle, len(in))
@@ -55,7 +50,11 @@ func readCandles(dataDir, path string) (rows []Candle, exists bool, err error) {
 		return nil, true, err
 	}
 	defer f.Close()
-	rows, err = parquet.Read[Candle](f.File, size)
+	pf, err := parquet.OpenFile(f.File, size)
+	if err != nil {
+		return nil, true, err
+	}
+	rows, err = candlefile.Read(pf)
 	if err != nil {
 		return nil, true, err
 	}
@@ -99,7 +98,7 @@ func writeCandles(dataDir, path string, rows []Candle, source shared.DataSource)
 		}
 	}()
 	meta := parquetmeta.Meta{IntervalMS: hourMS, DataSource: source}
-	if err := parquet.Write(tmp, rows, parquetmeta.WriterOptions(meta)...); err != nil {
+	if err := candlefile.Write(tmp, rows, meta); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -180,4 +179,21 @@ func mergeCandles(existing, fresh []Candle) (merged []Candle, newTimes []int64) 
 	}
 	sort.Slice(merged, func(i, j int) bool { return merged[i].OpenTime < merged[j].OpenTime })
 	return merged, newTimes
+}
+
+// validateCandles checks every provider value against the fixed-scale decimal
+// columns before anything is stored, so a bad value fails the run loudly and
+// is never truncated.
+func validateCandles(rows []Candle) error {
+	for _, c := range rows {
+		for col, v := range map[string]string{"open": c.Open, "high": c.High, "low": c.Low, "close": c.Close} {
+			if _, err := candlefile.EncodePrice(col, v); err != nil {
+				return fmt.Errorf("open_time %d: %w", c.OpenTime, err)
+			}
+		}
+		if _, err := candlefile.EncodeVolume("volume", c.Volume); err != nil {
+			return fmt.Errorf("open_time %d: %w", c.OpenTime, err)
+		}
+	}
+	return nil
 }

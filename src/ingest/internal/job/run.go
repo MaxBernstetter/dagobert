@@ -2,12 +2,14 @@ package job
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math"
 	"os"
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/ingest/internal/fetchclient"
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
@@ -20,6 +22,7 @@ import (
 //	30 — provider transport / retries exhausted
 //	32 — no new candles; confirmed exchange holes recorded as unavailable
 //	40 — store / parquet inconsistency
+//	50 — a value has more than 8 decimals or does not fit the fixed-scale decimal columns
 func Run(args []string, getenv func(string) string) (code, detail int) {
 	cfg, err := parseConfig(args, getenv)
 	if err != nil {
@@ -144,6 +147,10 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 		return 1, 30
 	}
 	freshProv := toJobCandles(rows)
+	if err := validateCandles(freshProv); err != nil {
+		log.Printf("candle value: %v", err)
+		return 1, 50
+	}
 
 	want := make(map[int64]struct{}, len(missing))
 	for _, t := range missing {
@@ -195,6 +202,10 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 	_, newTimes := mergeCandles(existing, fresh)
 	if err := writeTouchedYearCandles(cfg.DataDir, cfg.Provider, cfg.Base, cfg.Quote, existing, fresh, ad.DataSource()); err != nil {
 		log.Printf("parquet write: %v", err)
+		var ve *candlefile.ValueError
+		if errors.As(err, &ve) {
+			return 1, 50
+		}
 		return 1, 40
 	}
 	if err := st.insert(cfg.Provider, cfg.Base, cfg.Quote, newTimes); err != nil {

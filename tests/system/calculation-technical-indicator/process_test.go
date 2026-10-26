@@ -13,10 +13,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/parquet-go/parquet-go"
 	_ "modernc.org/sqlite"
 
 	"github.com/MaxBernstetter/dagobert/src/shared"
+	"github.com/MaxBernstetter/dagobert/tests/system/internal/lakefile"
 )
 
 const image = "dagobert-calculation-technical-indicator"
@@ -166,13 +166,13 @@ func TestTwoMovingAverageWindows(t *testing.T) {
 }
 
 type candle struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
+	OpenTime  int64
+	Open      float64
+	High      float64
+	Low       float64
+	Close     float64
+	Volume    float64
+	CloseTime int64
 }
 
 func case1Candles() []candle {
@@ -236,7 +236,7 @@ func writeCandles(t *testing.T, dir, symbol string, rows []candle) {
 		if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
 			t.Fatal(err)
 		}
-		if err := parquet.WriteFile(path, part); err != nil {
+		if err := lakefile.Write(path, toLake(part)); err != nil {
 			t.Fatalf("write parquet: %v", err)
 		}
 	}
@@ -437,4 +437,12 @@ func repoRoot() (string, error) {
 		}
 		dir = parent
 	}
+}
+
+func toLake(rows []candle) []lakefile.Candle {
+	out := make([]lakefile.Candle, len(rows))
+	for i, r := range rows {
+		out[i] = lakefile.Candle(r)
+	}
+	return out
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -256,7 +257,30 @@ func assertUnavailable(t *testing.T, dir, symbol string, want []int64) {
 
 type kline []any
 
+// candle is a stored hour with values as 8-decimal strings.
 type candle struct {
+	OpenTime  int64
+	Open      string
+	High      string
+	Low       string
+	Close     string
+	Volume    string
+	CloseTime int64
+}
+
+// diskCandle is the lake schema: DECIMAL(18,8) prices, DECIMAL(28,8) volume.
+type diskCandle struct {
+	OpenTime  int64    `parquet:"open_time"`
+	Open      int64    `parquet:"open,decimal(8:18)"`
+	High      int64    `parquet:"high,decimal(8:18)"`
+	Low       int64    `parquet:"low,decimal(8:18)"`
+	Close     int64    `parquet:"close,decimal(8:18)"`
+	Volume    [12]byte `parquet:"volume,decimal(8:28)"`
+	CloseTime int64    `parquet:"close_time"`
+}
+
+// legacyCandle is the old string schema, still readable.
+type legacyCandle struct {
 	OpenTime  int64  `parquet:"open_time"`
 	Open      string `parquet:"open"`
 	High      string `parquet:"high"`
@@ -264,6 +288,23 @@ type candle struct {
 	Close     string `parquet:"close"`
 	Volume    string `parquet:"volume"`
 	CloseTime int64  `parquet:"close_time"`
+}
+
+func d8(u int64) string {
+	sign := ""
+	if u < 0 {
+		sign, u = "-", -u
+	}
+	return fmt.Sprintf("%s%d.%08d", sign, u/100_000_000, u%100_000_000)
+}
+
+func vol8(b [12]byte) string {
+	hi := new(big.Int).SetBytes(b[:])
+	if b[0]&0x80 != 0 {
+		hi.Sub(hi, new(big.Int).Lsh(big.NewInt(1), 96))
+	}
+	q, r := new(big.Int).QuoRem(hi, big.NewInt(100_000_000), new(big.Int))
+	return fmt.Sprintf("%s.%08d", q, r.Int64())
 }
 
 func candleRow(open int64, o, h, l, c, vol string) kline {
@@ -339,24 +380,33 @@ func readParquet(t *testing.T, dir, symbol string) []candle {
 	}
 	var rows []candle
 	for _, path := range paths {
-		part, err := parquet.ReadFile[candle](path)
+		part, err := parquet.ReadFile[diskCandle](path)
 		if err != nil {
 			t.Fatalf("read parquet %s: %v", path, err)
 		}
-		rows = append(rows, part...)
+		for _, r := range part {
+			rows = append(rows, candle{r.OpenTime, d8(r.Open), d8(r.High), d8(r.Low), d8(r.Close), vol8(r.Volume), r.CloseTime})
+		}
 	}
 	return rows
 }
 
 func assertCandle(t *testing.T, got candle, open int64, o, h, l, c, vol string) {
 	t.Helper()
+	f8 := func(v string) string {
+		x, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fmt.Sprintf("%.8f", x)
+	}
 	want := candle{
 		OpenTime:  open,
-		Open:      o,
-		High:      h,
-		Low:       l,
-		Close:     c,
-		Volume:    vol,
+		Open:      f8(o),
+		High:      f8(h),
+		Low:       f8(l),
+		Close:     f8(c),
+		Volume:    f8(vol),
 		CloseTime: open + hourMS - 1,
 	}
 	if got != want {
@@ -425,5 +475,63 @@ func repoRoot() (string, error) {
 			return "", fmt.Errorf("go.mod not found from %s", wd)
 		}
 		dir = parent
+	}
+}
+
+func TestTooManyDecimalsFailsLoudly(t *testing.T) {
+	open := hourFloor(1_700_000_000_000)
+	rows := []kline{candleRow(open, "100.0", "110.0", "90.0", "105.123456789", "1.5")}
+	base := serve(t, func(w http.ResponseWriter, r *http.Request) { writeJSON(t, w, rows) })
+	dir := t.TempDir()
+	stdout, stderr, code := runIngest(t, dir, base, nil, open, open+hourMS, "BTCUSDT")
+	if code != 1 || !bytes.Contains(stdout, []byte("DETAIL=50\n")) || !bytes.Contains(stderr, []byte("105.123456789")) {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	if n := len(readParquet(t, dir, "BTCUSDT")); n != 0 {
+		t.Fatalf("rows stored despite bad value: %d", n)
+	}
+	assertStored(t, dir, "BTCUSDT", nil)
+}
+
+func TestPriceOverflowFailsLoudly(t *testing.T) {
+	open := hourFloor(1_700_000_000_000)
+	rows := []kline{candleRow(open, "100.0", "110.0", "90.0", "10000000000.0", "1.5")}
+	base := serve(t, func(w http.ResponseWriter, r *http.Request) { writeJSON(t, w, rows) })
+	stdout, stderr, code := runIngest(t, t.TempDir(), base, nil, open, open+hourMS, "BTCUSDT")
+	if code != 1 || !bytes.Contains(stdout, []byte("DETAIL=50\n")) || !bytes.Contains(stderr, []byte("10000000000.0")) {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestHugeVolumeAndLegacyFileAreKept(t *testing.T) {
+	open0 := hourFloor(1_700_000_000_000)
+	open1 := open0 + hourMS
+	dir := t.TempDir()
+	// Hour 0 already sits in a legacy string file; hour 1 arrives with a volume
+	// above DECIMAL(18,8)'s 1e10 limit (a memecoin-sized hour).
+	base0, quote0, _ := shared.SplitPipelineSymbol("SHIBUSDT")
+	path, err := shared.ParquetPath(dir, "binance", base0, quote0, shared.YearUTC(open0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := parquet.WriteFile(path, []legacyCandle{{open0, "0.00001000", "0.00001100", "0.00000900", "0.00001050", "1.50000000", open0 + hourMS - 1}}); err != nil {
+		t.Fatal(err)
+	}
+	rows := []kline{candleRow(open1, "0.00001050", "0.00001200", "0.00001000", "0.00001100", "250000000000.12345678")}
+	srv := serve(t, func(w http.ResponseWriter, r *http.Request) { writeJSON(t, w, rows) })
+	stdout, stderr, code := runIngest(t, dir, srv, nil, open0, open1+hourMS, "SHIBUSDT")
+	if code != 0 || !bytes.Contains(stdout, []byte("DETAIL=0\n")) {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	got := readParquet(t, dir, "SHIBUSDT")
+	if len(got) != 2 {
+		t.Fatalf("rows: %d", len(got))
+	}
+	assertCandle(t, got[0], open0, "0.00001", "0.000011", "0.000009", "0.0000105", "1.5")
+	if got[1].Volume != "250000000000.12345678" || got[1].Close != "0.00001100" {
+		t.Fatalf("second row: %+v", got[1])
 	}
 }

@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 
 	"github.com/parquet-go/parquet-go"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/internal/parquetmeta"
 	"github.com/MaxBernstetter/dagobert/src/shared"
@@ -31,16 +31,6 @@ var requiredColumns = []string{
 	"close",
 	"volume",
 	"close_time",
-}
-
-type row struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
 }
 
 // RawSeries is the candle stream plus lake metadata from the Parquet footer.
@@ -133,39 +123,31 @@ func readOnce(path string) (series RawSeries, err error) {
 		source = meta.DataSource
 	}
 
-	reader := parquet.NewGenericReader[row](pf)
-	defer reader.Close()
-
-	buf := make([]row, 256)
-	var candles []bars.Candle
-	for {
-		n, readErr := reader.Read(buf)
-		for _, item := range buf[:n] {
-			candles = append(candles, bars.Candle{
-				OpenTime:  item.OpenTime,
-				Open:      item.Open,
-				High:      item.High,
-				Low:       item.Low,
-				Close:     item.Close,
-				Volume:    item.Volume,
-				CloseTime: item.CloseTime,
-			})
-		}
-		if readErr != nil {
-			if errors.Is(readErr, io.EOF) {
-				interval := meta.IntervalMS
-				if interval <= 0 {
-					opens := make([]int64, len(candles))
-					for i, c := range candles {
-						opens[i] = c.OpenTime
-					}
-					interval = parquetmeta.InferIntervalMS(opens)
-				}
-				return RawSeries{Candles: candles, IntervalMS: interval, DataSource: source}, nil
-			}
-			return RawSeries{}, readErr
+	rows, err := candlefile.ReadFloat(pf)
+	if err != nil {
+		return RawSeries{}, err
+	}
+	candles := make([]bars.Candle, len(rows))
+	for i, item := range rows {
+		candles[i] = bars.Candle{
+			OpenTime:  item.OpenTime,
+			Open:      item.Open,
+			High:      item.High,
+			Low:       item.Low,
+			Close:     item.Close,
+			Volume:    item.Volume,
+			CloseTime: item.CloseTime,
 		}
 	}
+	interval := meta.IntervalMS
+	if interval <= 0 {
+		opens := make([]int64, len(candles))
+		for i, c := range candles {
+			opens[i] = c.OpenTime
+		}
+		interval = parquetmeta.InferIntervalMS(opens)
+	}
+	return RawSeries{Candles: candles, IntervalMS: interval, DataSource: source}, nil
 }
 
 func hasColumns(schema *parquet.Schema, names []string) bool {
