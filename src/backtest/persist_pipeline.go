@@ -21,6 +21,10 @@ const (
 	persistQueueMax     = 4096
 	persistReportWriter = 8
 	persistRetries      = 3
+	// persistParallelPG is the number of batches committed at once on Postgres. Each batch is its
+	// own transaction over disjoint instances; one backend is CPU bound by index and foreign-key
+	// maintenance of the COPY, so separate connections scale. SQLite has a single writer.
+	persistParallelPG = 4
 )
 
 // Test seams (system tests only). Zero values mean production behaviour.
@@ -76,18 +80,45 @@ type persister struct {
 	cat          *experimentRunCatalog
 	experimentID string
 	total        int
-	done         int
+	mu           sync.Mutex
+	done         int // instances claimed by a commit attempt; only grows on success
+}
+
+// claim reserves n instances for a commit attempt and returns the progress value to store.
+func (p *persister) claim(n int) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.done += n
+	return p.done
+}
+
+func (p *persister) release(n int) {
+	p.mu.Lock()
+	p.done -= n
+	p.mu.Unlock()
 }
 
 // runPersister drains results until the channel is closed and returns once everything is flushed.
 func runPersister(cat *experimentRunCatalog, experimentID string, total, alreadyDone int, in <-chan instanceResult) {
 	p := &persister{cat: cat, experimentID: experimentID, total: total, done: alreadyDone}
+	parallel := 1
+	if cat.usesPostgres() {
+		parallel = persistParallelPG
+	}
+	sem := make(chan struct{}, parallel)
+	var inflight sync.WaitGroup
+	defer inflight.Wait()
 	batch := make([]instanceResult, 0, persistBatchMax)
 	var timer <-chan time.Time
 	flush := func() {
 		if len(batch) > 0 {
-			p.flush(batch)
-			batch = batch[:0]
+			sem <- struct{}{}
+			inflight.Add(1)
+			go func(b []instanceResult) {
+				defer func() { <-sem; inflight.Done() }()
+				p.flush(b)
+			}(batch)
+			batch = make([]instanceResult, 0, persistBatchMax)
 		}
 		timer = nil
 	}
@@ -147,7 +178,6 @@ func (p *persister) commit(batch []instanceResult) {
 			time.Sleep(persistBackoff(attempt - 1))
 		}
 		if err = p.try(batch); err == nil {
-			p.done += len(batch)
 			return
 		}
 	}
@@ -159,10 +189,9 @@ func (p *persister) commit(batch []instanceResult) {
 	}
 	r := batch[0]
 	r.err = fmt.Errorf("persist: %w", err)
-	if ferr := p.cat.PersistInstanceBatch(p.experimentID, []instanceResult{r}, p.done+1, p.total); ferr != nil {
+	if ferr := p.cat.PersistInstanceBatch(p.experimentID, []instanceResult{r}, p.claim(1), p.total); ferr != nil {
 		log.Printf("experiment %s: instance %s could not be marked failed: %v", p.experimentID, r.inst.ID, ferr)
 	}
-	p.done++
 }
 
 func (p *persister) try(batch []instanceResult) error {
@@ -175,5 +204,9 @@ func (p *persister) try(batch []instanceResult) error {
 			return err
 		}
 	}
-	return p.cat.PersistInstanceBatch(p.experimentID, batch, p.done+len(batch), p.total)
+	err := p.cat.PersistInstanceBatch(p.experimentID, batch, p.claim(len(batch)), p.total)
+	if err != nil {
+		p.release(len(batch))
+	}
+	return err
 }

@@ -33,7 +33,7 @@ The simulate phase is a three-stage pipeline. Database writes never run on the c
 1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines): run the strategy, read the instance fills once from the workspace journal, and build the report (KPIs, statistics, period series) in memory. The result (`instanceResult`: instance, report, fills, timing, error) goes to a queue. Compute workers touch no database and no mutex.
 2. **Queue**: a bounded channel with capacity `min(instances, 4096)` (about 10 KB per result). The send only blocks when more than 4096 results wait for persistence.
 3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` (and the S3 copy) with a pool of 8, then commits the batch in **one transaction**:
-   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on fills, trade outcomes and period stats, `COPY` for the three tables, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter.
+   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on fills, trade outcomes and period stats, `COPY` for the three tables, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently on Postgres (separate connections; progress uses `GREATEST`).
    - SQLite (`store.PersistInstanceBatch`): the same status, timing and metric updates plus progress in one transaction.
 
 Compute and KPI errors reach the database only as `failed` rows in these batches.
@@ -44,11 +44,11 @@ Compute and KPI errors reach the database only as `failed` rows in these batches
 
 | Catalog | Instances | Before (main) | After (this change) |
 |---|---|---|---|
-| SQLite | 3000 | 9 min 4 s | 1 min 44 s |
+| SQLite | 3000 | 9 min 4 s | 1 min 44 s (Go engine; 253 s measured later, see `docs/development/05-cpp-benchmark.md`) |
 | Postgres | 100 | 5 min 8 s | 7.7 s |
-| Postgres | 3000 | not run to completion (about 3 s per instance, roughly 2.6 h extrapolated; a contended partial run completed 132 of 3000 in 25 min) | 2 min 39 s |
+| Postgres | 3000 | not run to completion (about 3 s per instance, roughly 2.6 h extrapolated; a contended partial run completed 132 of 3000 in 25 min) | 2 min 39 s (Go engine) |
 
-Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
+With `EXPERIMENT_ENGINE=cpp` the same 3000 instances take 4 to 6 s on SQLite and about 100 s on Postgres (195 s before #162, 229 s on the random-walk lake), see `docs/development/05-cpp-benchmark.md`; the Postgres time is the COPY of about 5 M fills (foreign-key checks), not compute. Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
 
 ### KPI worker (actions to KPIs)
 
