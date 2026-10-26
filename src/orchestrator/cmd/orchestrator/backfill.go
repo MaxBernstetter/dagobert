@@ -442,7 +442,7 @@ func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName strin
 	args = append(args, dockerDataPlaneEnvArgs()...)
 	if label == "experiment" {
 		args = append(args, "-e", "EXPERIMENT_SIM_WORKERS="+env("EXPERIMENT_SIM_WORKERS", "4"))
-		for _, k := range []string{"EXPERIMENT_ENGINE", "EXPERIMENT_CPP_PROCESSES", "EXPERIMENT_CPP_SHARD_MAX"} {
+		for _, k := range []string{"EXPERIMENT_ENGINE", "EXPERIMENT_CPP_PROCESSES", "EXPERIMENT_CPP_SHARD_MAX", "CPP_SMA_CROSS_BIN", "CPP_SIGNAL_CONSENSUS_BIN"} {
 			if v := strings.TrimSpace(os.Getenv(k)); v != "" {
 				args = append(args, "-e", k+"="+v)
 			}

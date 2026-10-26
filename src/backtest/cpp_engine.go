@@ -47,8 +47,11 @@ func experimentEngine() (string, error) {
 
 // cppBinaryEnv names the env var holding the executable of a playbook slug.
 func cppBinaryEnv(slug string) (string, error) {
-	if slug == "ma-cross" {
+	switch slug {
+	case "ma-cross":
 		return "CPP_SMA_CROSS_BIN", nil
+	case "signal-consensus":
+		return "CPP_SIGNAL_CONSENSUS_BIN", nil
 	}
 	return "", fmt.Errorf("C++ engine does not support playbook %q", slug)
 }
