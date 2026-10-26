@@ -16,7 +16,7 @@ Run lint and breaking before changing a schema.
 
 ## Generated code (committed)
 - Go: `src/gen/` (`go_package_prefix` is set in `buf.gen.yaml`).
-- TypeScript: `src/frontend/lib/gen/` (`protobuf-es`).
+- TypeScript: `src/frontend/src/lib/gen/` (`protobuf-es`).
 - C++: `src/calculation/gen/cpp/`.
 
 ## Breaking-change exception

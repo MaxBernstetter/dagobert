@@ -19,12 +19,13 @@ npm run build    # typecheck (tsc) and build to dist/; this is the check gate
 
 In Docker, `task up` (dev server, bind-mounted source) or `task dev` (with compose watch) publishes the SPA on `WEB_PORT` (default 3001). `task up:prod` serves the built `dist/` instead. The container proxies `/api` to `http://orchestrator:8090`. There is no `./data` volume. Set `VITE_EXPERIMENT_API_URL` at image build time only when the browser should call the API origin directly (the API must then allow this site's CORS).
 
-## Layout (partly legacy)
+## Layout
 
-The app was migrated from Next.js and the old layout is still in use. Only `src/` is new code.
+Everything lives under `src/`; the `@` alias (`vite.config.ts`, `tsconfig.json`) maps to `src/`.
 
-- `src/` holds the Vite entry points, `api.ts`, `wikiCatalog.ts` and `src/shims/`.
-- `app/`, `components/`, `lib/`, `hooks/` and `types/` sit next to `src/`, not inside it. They are the old Next-style tree and are imported through the `@` alias (`vite.config.ts` maps `@` to the frontend root).
-- `src/shims/` (`next-link.tsx`, `next-navigation.ts`, `server-only.ts`) stand in for `next/link`, `next/navigation` and `server-only` so that legacy files compile without Next.js. Next.js itself is not a dependency.
-
-New code should go under `src/`. Moving the legacy folders into `src/` and dropping the shims is open cleanup.
+- `main.tsx`, `App.tsx`: entry point and routes (react-router).
+- `api.ts`, `wikiCatalog.ts`, `WikiPages.tsx`, `ChartPanel.tsx`: API client, wiki catalog and pages, chart.
+- `components/`: UI (`components/ui/` holds the shadcn primitives; `link.tsx` wraps the router link).
+- `lib/`: helpers and API types; `lib/gen/` is generated protobuf-es output (`task proto:gen`).
+- `hooks/`, `types/`: React hooks and shared types.
+- `globals.css`, `styles.css`: styles.

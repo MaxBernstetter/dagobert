@@ -15,10 +15,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       dedupe: ["react", "react-dom"],
       alias: {
-        "@": root,
-        "next/link": path.resolve(root, "src/shims/next-link.tsx"),
-        "next/navigation": path.resolve(root, "src/shims/next-navigation.ts"),
-        "server-only": path.resolve(root, "src/shims/server-only.ts"),
+        "@": path.resolve(root, "src"),
         react: path.resolve(root, "node_modules/react"),
         "react-dom": path.resolve(root, "node_modules/react-dom"),
       },
