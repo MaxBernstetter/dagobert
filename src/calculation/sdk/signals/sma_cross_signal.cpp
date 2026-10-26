@@ -126,8 +126,8 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
     if (!bullish || !atr_ok || !(price > 0.0)) {
       return;
     }
-    const double spend =
-        std::min(sizing::notional(equity, atr, price, sz), account.cash());
+    const double want = sizing::notional(equity, atr, price, sz);
+    const double spend = std::min(want, account.cash());
     const double stop = sizing::stop_price(price, atr, sz);
     if (!(spend > 0.0) || sizing::below_min_order(spend, sz)) {
       return;
@@ -135,6 +135,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
     const double before = account.qty();
     account.buy_notional(bar, spend, stop, SmaCrossRule::golden_cross);
     annotate_risk(account, spend, equity, atr, price, sz);
+    account.annotate_last_requested(want);
     units_.push_back({price, stop, account.qty() - before});
     return;
   }
@@ -170,6 +171,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
     }
     const double before = account.qty();
     account.sell_base(bar, cut, SmaCrossRule::vol_cut);
+    account.annotate_last_heat(sz.heat() / 100.0 / (sz.stop_mult() * atr));
     if (account.flat()) {
       units_.clear();
       return;
@@ -196,6 +198,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
   const double before = account.qty();
   account.buy_notional(bar, spend, stop, SmaCrossRule::pyramid);
   annotate_risk(account, spend, equity, atr, price, sz);
+  account.annotate_last_requested(*add);
   account.annotate_last_raise(std::max(0.0, step));
   for (sizing::Unit &u : units_) {
     u.stop += std::max(0.0, step);

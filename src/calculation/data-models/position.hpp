@@ -42,6 +42,16 @@ public:
     actions_.back().raise_stops_by = raise_stops_by;
   }
 
+  // Records the notional a buy asked for before the cash clamp.
+  void annotate_last_requested(double requested_notional) {
+    actions_.back().requested_notional = requested_notional;
+  }
+
+  // Records the heat budget behind a vol_cut (base per unit of equity).
+  void annotate_last_heat(double heat_base_per_equity) {
+    actions_.back().heat_base_per_equity = heat_base_per_equity;
+  }
+
   // Records the risk percents (of equity) on the latest buy action.
   void annotate_last_risk(double requested_pct, double capped_pct) {
     actions_.back().requested_risk_pct = requested_pct;

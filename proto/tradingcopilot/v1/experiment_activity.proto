@@ -24,12 +24,16 @@ message ExperimentInstanceAction {
   string reason = 8;
   // Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
   // unset for unsized actions. Same names as the live signal body.
-  optional double quote_notional = 9; // buy: quote to spend
+  optional double quote_notional = 9; // buy: quote requested, before the cash clamp
   optional double base_qty = 10;      // vol_cut: base to sell
   optional double stop_price = 11;    // buy: stop of the new unit
   optional double raise_stops_by = 12; // pyramid: earlier stops move up by this
   // Book equity (quote) at the decision bar close; rescales sized notionals.
   optional double equity = 13;
+  // vol_cut: base the heat budget allows per unit of equity, heat_pct/100 /
+  // (stop_atr_mult * atr). The cut is held - equity * this, so a replay on a
+  // different wallet recomputes it instead of rescaling base_qty.
+  optional double heat_base_per_equity = 14;
 }
 
 // public.experiment_instance_fill
