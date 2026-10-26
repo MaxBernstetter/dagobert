@@ -16,7 +16,7 @@ go run ./src/calculation/testdata/genlakefixture -bench "$LAKE" -bars 5840
 
 cfg() { # label payload-json
   cat >"$OUT/$1.json" <<JSON
-{"schemaVersion":1,"label":"$1","provider":"binance","base":"BTC","quote":"USDT","fromMs":"$FROM","toMs":"$TO","initialQuote":1000.0,"payload":$2}
+{"schemaVersion":2,"label":"$1","provider":"binance","base":"BTC","quote":"USDT","fromMs":"$FROM","toMs":"$TO","initialQuote":1000.0,"payload":$2}
 JSON
 }
 cfg sma-cross '{"@type":"type.googleapis.com/tradingcopilot.v1.MaCrossConfig","fastHr":12,"slowHr":48}'
