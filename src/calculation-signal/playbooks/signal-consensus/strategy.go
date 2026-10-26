@@ -129,7 +129,7 @@ func sizedDecision(ctx framework.Context, cfg Config, atr float64, okATR, crossD
 			return framework.Decision{}, false
 		}
 		n := sizing.Notional(ctx.Equity, atr, px, sc)
-		if n <= 0 {
+		if n <= 0 || sizing.BelowMin(n, sc) {
 			return framework.Decision{}, false
 		}
 		return sizedBuy(n, px, atr, ctx.Equity, sc, "consensus_buy"), true
@@ -154,9 +154,15 @@ func sizedDecision(ctx framework.Context, cfg Config, atr float64, okATR, crossD
 		return framework.Decision{}, false
 	}
 	if q := sizing.ExcessBaseForHeat(held, atr, ctx.Equity, sc); q > 0 {
+		if sizing.BelowMin(q*px, sc) {
+			return framework.Decision{}, false
+		}
 		return framework.Decision{Decision: "sell", BaseQty: &q, RuleID: "vol_cut"}, true
 	}
 	if n, ok := sizing.PyramidAllowed(ctx.OpenUnits, ctx.LastFill, px, ctx.Equity, atr, sc); ok {
+		if sizing.BelowMin(n, sc) {
+			return framework.Decision{}, false
+		}
 		d := sizedBuy(n, px, atr, ctx.Equity, sc, "pyramid")
 		step := *sc.AddAtrMult * atr
 		d.RaiseStopsBy = &step

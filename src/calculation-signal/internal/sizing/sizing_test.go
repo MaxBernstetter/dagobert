@@ -98,6 +98,7 @@ func TestValidate(t *testing.T) {
 		{MaxWeightPct: p(101.0)},
 		{MaxWeightPct: p(0.0)},
 		{UnitRiskPct: p(0.0)},
+		{MinOrderQuote: p(-0.01)},
 	} {
 		if err := c.WithDefaults().Validate(); err == nil {
 			t.Errorf("%+v: want error", c)
@@ -123,5 +124,18 @@ func TestRaiseStopsNegativeStepKeepsStops(t *testing.T) {
 	out := RaiseStops([]Unit{{Fill: 100, Stop: 90, Qty: 1}}, 4, Config{AddAtrMult: p(-1.0)}.WithDefaults())
 	if out[0].Stop != 90 {
 		t.Fatalf("stop moved down to %v", out[0].Stop)
+	}
+}
+
+func TestMinOrderQuote(t *testing.T) {
+	if c := (Config{}).WithDefaults(); *c.MinOrderQuote != 1 {
+		t.Fatalf("default %v, want 1", *c.MinOrderQuote)
+	}
+	zero := Config{MinOrderQuote: p(0.0)}.WithDefaults()
+	if zero.MinOrderQuote == nil || *zero.MinOrderQuote != 0 || zero.Validate() != nil {
+		t.Fatalf("explicit 0 must be kept and valid: %+v", zero.MinOrderQuote)
+	}
+	if !BelowMin(0.99, Config{}) || BelowMin(1, Config{}) || BelowMin(0.01, zero) {
+		t.Fatal("BelowMin boundary")
 	}
 }

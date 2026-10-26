@@ -71,7 +71,7 @@ func evaluateSized(ctx framework.Context, sz sizing.Config, bullish, bearish boo
 			return noTrade("none")
 		}
 		n := sizing.Notional(ctx.Equity, atr, price, sz)
-		if n <= 0 {
+		if n <= 0 || sizing.BelowMin(n, sz) {
 			return noTrade("none")
 		}
 		return sizedBuy(n, price, atr, ctx.Equity, sz, "golden_cross")
@@ -98,9 +98,15 @@ func evaluateSized(ctx framework.Context, sz sizing.Config, bullish, bearish boo
 		held += u.Qty
 	}
 	if cut := sizing.ExcessBaseForHeat(held, atr, ctx.Equity, sz); cut > 0 {
+		if sizing.BelowMin(cut*price, sz) {
+			return noTrade("none")
+		}
 		return framework.Decision{Decision: "sell", RuleID: "vol_cut", BaseQty: &cut}
 	}
 	if n, ok := sizing.PyramidAllowed(ctx.OpenUnits, ctx.LastFill, price, ctx.Equity, atr, sz); ok {
+		if sizing.BelowMin(n, sz) {
+			return noTrade("none")
+		}
 		dec := sizedBuy(n, price, atr, ctx.Equity, sz, "pyramid")
 		step := sizing.RaiseStops(ctx.OpenUnits[:1], atr, sz)[0].Stop - ctx.OpenUnits[0].Stop
 		dec.RaiseStopsBy = &step

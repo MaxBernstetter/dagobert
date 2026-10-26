@@ -8,16 +8,18 @@ import (
 
 // Documented defaults, applied to omitted (nil) fields only.
 const (
-	defaultUnitRiskPct  = 1
-	defaultHeatPct      = 2
-	defaultMaxUnits     = 1
-	defaultStopAtrMult  = 2
-	defaultAddAtrMult   = 0.5
-	defaultMaxWeightPct = 100
+	defaultUnitRiskPct   = 1
+	defaultHeatPct       = 2
+	defaultMaxUnits      = 1
+	defaultStopAtrMult   = 2
+	defaultAddAtrMult    = 0.5
+	defaultMaxWeightPct  = 100
+	defaultMinOrderQuote = 1.0
 )
 
 // Config is the optional `sizing` block of a strategy config. A nil field means the
-// documented default; an explicit 0 is kept and fails Validate.
+// documented default; an explicit 0 is kept and fails Validate, except MinOrderQuote
+// where 0 is valid and disables the strategy-level minimum.
 type Config struct {
 	UnitRiskPct  *float64 `json:"unitRiskPct,omitempty"`
 	HeatPct      *float64 `json:"heatPct,omitempty"`
@@ -25,6 +27,9 @@ type Config struct {
 	StopAtrMult  *float64 `json:"stopAtrMult,omitempty"`
 	AddAtrMult   *float64 `json:"addAtrMult,omitempty"`
 	MaxWeightPct *float64 `json:"maxWeightPct,omitempty"`
+	// MinOrderQuote is the smallest sized order in quote; smaller buys, pyramids and
+	// vol_cut sells are skipped. Full exits are never skipped.
+	MinOrderQuote *float64 `json:"minOrderQuote,omitempty"`
 }
 
 // Unit is one open buy: fill price, stop price and base quantity.
@@ -49,6 +54,11 @@ func (c Config) maxWeightPct() float64 {
 	return fv(c.MaxWeightPct, defaultMaxWeightPct)
 }
 
+func (c Config) minOrderQuote() float64 { return fv(c.MinOrderQuote, defaultMinOrderQuote) }
+
+// BelowMin reports whether a sized order of quote is under the minimum order and must be skipped.
+func BelowMin(quote float64, c Config) bool { return quote < c.minOrderQuote() }
+
 func (c Config) maxUnits() int {
 	if c.MaxUnits == nil {
 		return defaultMaxUnits
@@ -69,6 +79,7 @@ func (c Config) WithDefaults() Config {
 	c.StopAtrMult = f(c.StopAtrMult, defaultStopAtrMult)
 	c.AddAtrMult = f(c.AddAtrMult, defaultAddAtrMult)
 	c.MaxWeightPct = f(c.MaxWeightPct, defaultMaxWeightPct)
+	c.MinOrderQuote = f(c.MinOrderQuote, defaultMinOrderQuote)
 	if c.MaxUnits == nil {
 		n := defaultMaxUnits
 		c.MaxUnits = &n
@@ -80,7 +91,10 @@ func (c Config) WithDefaults() Config {
 func (c Config) Validate() error {
 	unit, heat, units := c.unitRiskPct(), c.heatPct(), c.maxUnits()
 	stop, add, weight := c.stopAtrMult(), c.addAtrMult(), c.maxWeightPct()
+	minOrder := c.minOrderQuote()
 	switch {
+	case !(minOrder >= 0):
+		return fmt.Errorf("sizing: minOrderQuote %v must be >= 0", minOrder)
 	case !(unit >= 0.25 && unit <= 2):
 		return fmt.Errorf("sizing: unitRiskPct %v must be in [0.25, 2]", unit)
 	case !(heat >= unit && heat <= 2):

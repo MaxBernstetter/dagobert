@@ -61,6 +61,12 @@
           "exclusiveMinimum": 0,
           "maximum": 100,
           "default": 100
+        },
+        "minOrderQuote": {
+          "description": "Smallest sized order in quote. Smaller buys, pyramids and vol_cut sells are skipped; full exits always run. 0 disables the minimum.",
+          "type": "number",
+          "minimum": 0,
+          "default": 1
         }
       }
     },

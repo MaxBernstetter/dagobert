@@ -35,7 +35,8 @@ func TestWriteCppSizingFixture(t *testing.T) {
 		atrBar  = 8 // 24h
 		count   = 120
 	)
-	cfgJSON := `{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3,"stopAtrMult":2,"addAtrMult":0.5}}`
+	cfgJSON := `{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3,"stopAtrMult":2,"addAtrMult":0.5,"minOrderQuote":40}}`
+	zeroMinJSON := `{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3,"stopAtrMult":2,"addAtrMult":0.5,"minOrderQuote":0}}`
 	var cfgDoc struct {
 		Sizing sizing.Config `json:"sizing"`
 	}
@@ -128,6 +129,7 @@ func TestWriteCppSizingFixture(t *testing.T) {
 		var actions []action
 		var fills []fill
 		seen := map[string]bool{}
+		skipped := false
 		for i, b := range bars {
 			var lastFill float64
 			if len(units) > 0 {
@@ -151,6 +153,11 @@ func TestWriteCppSizingFixture(t *testing.T) {
 				t.Fatal(err)
 			}
 			if dec.Decision == "no-trade" {
+				// A skip is a bar where the same state with no minimum would pyramid or vol_cut.
+				ctx.StrategyConfig = json.RawMessage(zeroMinJSON)
+				if free, err := (Strategy{}).Evaluate(ctx); err == nil && (free.RuleID == "pyramid" || free.RuleID == "vol_cut") {
+					skipped = true
+				}
 				continue
 			}
 			before := base
@@ -187,14 +194,14 @@ func TestWriteCppSizingFixture(t *testing.T) {
 			}
 			seen[dec.RuleID] = true
 		}
-		if !(seen["golden_cross"] && seen["atr_stop"] && seen["death_cross"] && seen["vol_cut"] && seen["pyramid"]) {
+		if !(seen["golden_cross"] && seen["atr_stop"] && seen["death_cross"] && seen["vol_cut"] && seen["pyramid"] && skipped) {
 			continue
 		}
 		doc := map[string]any{
 			"generatedBy": "go test ./src/calculation-signal/playbooks/ma-cross -run TestWriteCppSizingFixture (see cppfixture_test.go)",
 			"seed":        seed, "barMs": barMS, "initialQuote": initial,
 			"fastHr": 6, "slowHr": 12,
-			"sizing":  json.RawMessage(`{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3,"stopAtrMult":2,"addAtrMult":0.5}`),
+			"sizing":  json.RawMessage(`{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3,"stopAtrMult":2,"addAtrMult":0.5,"minOrderQuote":40}`),
 			"bars":    bars,
 			"actions": actions, "fills": fills,
 			"finalCash": cash, "finalQty": base,

@@ -70,7 +70,9 @@ sizing::SizingConfig sizing_of(const Struct &root) {
   cfg.max_units = static_cast<int>(num(s, "maxUnits"));
   cfg.stop_atr_mult = num(s, "stopAtrMult");
   cfg.add_atr_mult = num(s, "addAtrMult");
-  cfg.min_order_quote = 0.0; // Go sizing has no minimum; allocate enforces it
+  if (s.fields().contains("minOrderQuote")) {
+    cfg.min_order_quote = num(s, "minOrderQuote");
+  }
   return cfg;
 }
 

@@ -174,3 +174,26 @@ func TestInvalidSizingRejected(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestMinOrderQuoteSkipsSizedOrdersButNotExits(t *testing.T) {
+	big := json.RawMessage(`{"sizing":{"unitRiskPct":0.5,"maxUnits":2,"minOrderQuote":1000000}}`)
+	unit := []sizing.Unit{{Fill: 100000, Stop: 96000, Qty: 0.125}}
+	with := func(ctx framework.Context) framework.Context { ctx.StrategyConfig = big; return ctx }
+	for name, ctx := range map[string]framework.Context{
+		"buy":     with(sizedCtx("flat", true, false, 2000, 100000, 100000, nil)),
+		"vol cut": with(sizedCtx("long", false, false, 5000, 105000, 100000, unit)),
+		"pyramid": with(sizedCtx("long", false, false, 2000, 101000, 100000, unit)),
+	} {
+		if dec, _ := (Strategy{}).Evaluate(ctx); dec.Decision != "no-trade" {
+			t.Errorf("%s below minimum must be skipped: %+v", name, dec)
+		}
+	}
+	for rule, ctx := range map[string]framework.Context{
+		"atr_stop":    with(sizedCtx("long", false, true, 2000, 95000, 100000, unit)),
+		"death_cross": with(sizedCtx("long", false, true, 2000, 105000, 100000, unit)),
+	} {
+		if dec, _ := (Strategy{}).Evaluate(ctx); dec.RuleID != rule {
+			t.Errorf("full exit %s must run: %+v", rule, dec)
+		}
+	}
+}
