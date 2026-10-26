@@ -283,7 +283,7 @@ tasks:
         fi
         "$BUF" generate
       - |
-        echo "Go → src/gen/tradingcopilot/v1 ; TS → src/frontend/lib/gen/tradingcopilot/v1"
+        echo "Go → src/gen/tradingcopilot/v1 ; TS → src/frontend/src/lib/gen/tradingcopilot/v1"
 
   proto:breaking:
     desc: Buf breaking check against main (or BSR if pushed)

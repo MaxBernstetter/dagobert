@@ -12,10 +12,7 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "next/link": ["./src/shims/next-link.tsx"],
-      "next/navigation": ["./src/shims/next-navigation.ts"],
-      "server-only": ["./src/shims/server-only.ts"]
+      "@/*": ["./src/*"]
     },
     "noUnusedLocals": false,
     "noUnusedParameters": false,
