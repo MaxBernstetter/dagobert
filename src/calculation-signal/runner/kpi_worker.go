@@ -7,8 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 )
@@ -16,10 +18,24 @@ import (
 // ReplayAction is one sized order decision of a strategy instance (the C++ sweep outcome).
 // Size is the order quantity as the execution venue takes it: quote spend for a buy, base
 // amount for a sell. Bars without an action are no-trade and need no entry.
+//
+// When Sizing is set, Size is ignored and the order is sized at replay time from the replayed
+// wallet with the market-action policy (KPIJob.Policy), exactly as the Go pipeline sizes it.
 type ReplayAction struct {
 	CandleCloseMs int64
 	Decision      string // "buy" or "sell"
 	Size          float64
+	Sizing        *ReplaySizing
+}
+
+// ReplaySizing carries the signal-level sizing of an action. Nil QuoteNotional and BaseQty keep
+// the legacy sizing (buy up to the target weight, sell everything). Equity is the book equity
+// the C++ strategy sized against; when set, both amounts are rescaled by goWalletEquity/Equity,
+// where goWalletEquity is the replayed wallet marked to market at the decision bar close.
+type ReplaySizing struct {
+	QuoteNotional *float64
+	BaseQty       *float64
+	Equity        float64
 }
 
 // KPIJob is one instance to turn into fills and KPIs. Nothing in it touches disk.
@@ -32,7 +48,8 @@ type KPIJob struct {
 	StartCash float64
 	Coins     map[string]float64 // starting paper wallet; copied before use
 	Costs     sim.Model
-	Actions   []ReplayAction // ascending CandleCloseMs
+	Policy    marketrunner.Policy // used by actions that carry Sizing
+	Actions   []ReplayAction      // ascending CandleCloseMs
 	Bars      []StrategyKPIBar
 	Run       RunReport
 }
@@ -65,6 +82,17 @@ func ReplayKPI(job KPIJob) KPIResult {
 			return res
 		}
 		size := a.Size
+		if a.Sizing != nil {
+			planned, err := planReplay(&wallet, job, a, job.Bars[i].Close)
+			if err != nil {
+				res.Err = err
+				return res
+			}
+			if planned.Decision == "no-trade" {
+				continue
+			}
+			size = *planned.Size
+		}
 		step, err := execrunner.SimulateBarWithModel(&wallet, job.Playbook, job.Symbol, a.CandleCloseMs, a.Decision, &size, job.Bars[i].Close, position, job.Costs, true)
 		if err != nil {
 			res.Err = err
@@ -83,6 +111,31 @@ func ReplayKPI(job KPIJob) KPIResult {
 	}
 	res.Report = framework.BuildInstanceReportFromSim(job.Run, job.Playbook, job.Symbol, job.FromMs, job.ToMs, job.StartCash, res.Fills, job.Bars)
 	return res
+}
+
+// planReplay sizes a Sizing action against the replayed wallet. Rescaling needs the C++ equity.
+func planReplay(wallet *paper.Wallet, job KPIJob, a ReplayAction, price float64) (marketrunner.PlannedAction, error) {
+	inst, ok := instruments.Resolve(job.Symbol)
+	if !ok {
+		return marketrunner.PlannedAction{}, fmt.Errorf("unknown symbol %s", job.Symbol)
+	}
+	quote, base := wallet.QuoteAndBase(inst.Quote, inst.Base)
+	qn, bq := a.Sizing.QuoteNotional, a.Sizing.BaseQty
+	if qn != nil || bq != nil {
+		if a.Sizing.Equity <= 0 {
+			return marketrunner.PlannedAction{}, fmt.Errorf("sized action at %d has equity %v, cannot rescale", a.CandleCloseMs, a.Sizing.Equity)
+		}
+		k := (quote + base*price) / a.Sizing.Equity
+		if qn != nil {
+			v := *qn * k
+			qn = &v
+		}
+		if bq != nil {
+			v := *bq * k
+			bq = &v
+		}
+	}
+	return marketrunner.PlanActionWithPolicy(job.Playbook, job.Symbol, a.Decision, "", quote, base, price, qn, bq, job.Policy, false)
 }
 
 // RunKPIWorkers runs a pool of workers over batches of jobs. Each input batch yields one output
