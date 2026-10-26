@@ -198,3 +198,60 @@ doubles, including a volume above int64 at scale 8.
 - One synthetic symbol, one config per strategy; trade counts and results of
   Go and C++ were not cross-checked in this phase.
 - Single-process timings include a warm page cache; cold-cache runs not measured.
+
+## 3000-instance experiment, end to end (issue #158, parent #130)
+
+Target of #130: 3000 instances in about 10 s, down from about 5 min on the Go path.
+
+Harness: `TestBenchPersistGrid` in `tests/system/experiment/bench_persist_test.go` (manual, skipped
+unless `BENCH_INSTANCES` is set). It calls `backtest.RunExperiment` on a 3000-instance ma-cross grid
+(10 SMA pairs x stop multiples, `gridConfig`) over one lake of 17520 hourly BTC/USDT bars (730 days).
+`BENCH_WALK=1` selects a seeded random walk (seed 110); the default zigzag fixture is the same as the
+system tests. Both fixtures trade a lot (about 1750 fills per instance on the walk, 1950 on the zigzag,
+hourly SMA 3/6 to 24/48), so the persisted row volume is far above a realistic experiment.
+
+```bash
+task cpp:deps PRESET=optimized && task cpp:build PRESET=optimized
+go test -c -o /tmp/exp.test ./tests/system/experiment
+export BENCH_HOURS=17520 BENCH_WALK=1 CPP_SMA_CROSS_BIN=$PWD/build/optimized/strategies/sma-cross/strategy-sma-cross
+BENCH_INSTANCES=3000 EXPERIMENT_ENGINE=cpp /tmp/exp.test -test.run BenchPersistGrid -test.v
+# Postgres: add DATABASE_URL=... (a database loaded with db/sqlc/schema.sql; the harness mirrors the grid into it)
+```
+
+Timed: the `RunExperiment` call only, i.e. prepare (bar range, coverage), bar loading, the sweep
+(C++ processes or Go loop), KPI replay, report.json, persistence (SQLite catalog or Postgres COPY),
+progress updates. Not timed: fixture and catalog creation, process start of the test binary. S3 upload
+is not exercised (no `EXPERIMENT_ARTIFACTS` bucket), and the Go `prepare` indicator pass is part of the Go number.
+Machine: Intel Core Ultra 9 185H, 22 logical CPUs, 62 GB, Linux 7.0, Go 1.24, optimized C++ build, default
+`EXPERIMENT_CPP_PROCESSES` (NumCPU) and `EXPERIMENT_CPP_SHARD_MAX` (500). The machine was shared: load
+average 7 to 14 during all runs, so treat the numbers as upper bounds.
+
+| run | store | instances | runs (s) | median (s) |
+|---|---|---|---|---|
+| Go, zigzag lake | SQLite | 3000 | 253 (one run) | 253 |
+| Go, walk lake | SQLite | 100 | 15.1, 15.7, 10.9 | 15.1 (extrapolated to 3000: about 450) |
+| cpp, walk lake | SQLite | 100 | 2.2, 2.3, 2.5 | 2.3 |
+| cpp, walk lake | SQLite | 3000 | 12.1 (cold), 5.7, 5.6 | 5.7 |
+| cpp, zigzag lake | SQLite | 3000 | 8.3 (cold), 8.5, 4.2, 4.3, 3.9, 4.0 | 4.2 |
+| cpp, zigzag lake | Postgres | 3000 | 55, 66, 69 | 66 |
+| cpp, walk lake | Postgres | 3000 | 229 (one run) | 229 |
+
+The Go 3000 figure is measured on the zigzag lake only; the walk-lake Go figure is a linear extrapolation
+from 100 instances (not measured). Go on Postgres at 100 instances: 15.2 and 7.9 s, same order as SQLite.
+
+Result: with the SQLite catalog the C++ engine meets the target (about 4 to 6 s warm, one cold first run
+8 to 12 s). With Postgres it does not: 66 s to 229 s. The time is in `PersistInstanceBatch` (the COPY of
+5 M fills and 2.6 M trade outcomes), not in compute: per 200-instance batch the commit takes 0.1 to 0.17 s
+on SQLite and 3 to 10 s on Postgres, report.json writing 3 ms. The CPU profile of the Postgres run shows
+about 31 percent in pgx `CopyFrom` value encoding (`encodePlanDriverValuer`, `newEncodeError`: a
+`uuid.UUID` per row goes through the `driver.Valuer` path) and about 21 percent in GC.
+
+Equality, Go vs cpp (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
+completed): Sharpe, Sortino, CAGR, max drawdown, monthly/yearly return, trades per month, wins, losses,
+breakeven, win rate and fill count are identical (max relative difference 0). `metric_duration_ms` differs
+by design (wall time of the instance).
+
+Follow-ups (not done here): encode UUIDs as `pgtype.UUID`/`[16]byte` in the COPY rows and drop the
+per-fill `uuid.New()`; consider COPY of fills only for sampled instances or a coarser row model; run the
+Postgres case against a database without the dev stack on the same host. The fixture trades 10 to 20 times
+more than real data, so the Postgres number is a worst case.

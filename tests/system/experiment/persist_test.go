@@ -35,7 +35,11 @@ func gridExperiment(t *testing.T, n int) (string, *store.Catalog, store.Experime
 	if h, _ := strconv.Atoi(os.Getenv("BENCH_HOURS")); h > 0 {
 		endMs = int64(h) * hour
 	}
-	writeCrossingParquet(t, dataDir, symbol, endMs)
+	if os.Getenv("BENCH_WALK") != "" {
+		writeWalkParquet(t, dataDir, endMs)
+	} else {
+		writeCrossingParquet(t, dataDir, symbol, endMs)
+	}
 	cat, err := store.Open(dataDir)
 	if err != nil {
 		t.Fatal(err)
