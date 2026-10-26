@@ -2,9 +2,13 @@
 package main
 
 import (
+	"flag"
+	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/parquet-go/parquet-go"
 )
@@ -20,6 +24,14 @@ type candle struct {
 }
 
 func main() {
+	benchDir := flag.String("bench", "", "write only a seeded benchmark lake (provider=binance, BTC/USDT) under this directory")
+	benchBars := flag.Int("bars", 5840, "bench: number of 3h bars (5840 = 730 days)")
+	benchSeed := flag.Int64("seed", 110, "bench: random seed")
+	flag.Parse()
+	if *benchDir != "" {
+		writeBenchLake(*benchDir, *benchBars, *benchSeed)
+		return
+	}
 	const openMs int64 = 1704067200000
 	const intervalMs int64 = 10800000
 	row := candle{
@@ -71,6 +83,10 @@ func writeLake(name string, rows []candle) {
 	out := filepath.Join("src", "calculation", "tests", "fixtures", name,
 		"parquet", "provider=demo", "base=BTC", "quote=USDT", "year=2024",
 		"candles.parquet")
+	writeFile(out, rows)
+}
+
+func writeFile(out string, rows []candle) {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		panic(err)
 	}
@@ -80,5 +96,32 @@ func writeLake(name string, rows []candle) {
 		parquet.KeyValueMetadata("trading_copilot.data_source", "binance"),
 	); err != nil {
 		panic(err)
+	}
+}
+
+// writeBenchLake writes a deterministic geometric random walk of 3h bars
+// starting 2024-01-01 UTC into <dir>/parquet, one file per UTC year.
+func writeBenchLake(dir string, bars int, seed int64) {
+	const intervalMs int64 = 10800000
+	openMs := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
+	rng := rand.New(rand.NewSource(seed))
+	price := 40000.0
+	byYear := map[int][]candle{}
+	for i := 0; i < bars; i++ {
+		open := openMs + int64(i)*intervalMs
+		o := price
+		price *= math.Exp(0.0003 + 0.012*rng.NormFloat64())
+		hi := math.Max(o, price) * (1 + 0.004*rng.Float64())
+		lo := math.Min(o, price) * (1 - 0.004*rng.Float64())
+		year := time.UnixMilli(open).UTC().Year()
+		byYear[year] = append(byYear[year], candle{
+			open, fmtF(o), fmtF(hi), fmtF(lo), fmtF(price),
+			fmtF(100 + 50*rng.Float64()), open + intervalMs - 1,
+		})
+	}
+	for year, rows := range byYear {
+		out := filepath.Join(dir, "parquet", "provider=binance", "base=BTC",
+			"quote=USDT", "year="+strconv.Itoa(year), "candles.parquet")
+		writeFile(out, rows)
 	}
 }

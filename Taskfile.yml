@@ -36,6 +36,11 @@ tasks:
       - task: cpp:build
       - ctest --test-dir build/{{.PRESET | default "debug"}} --output-on-failure
 
+  cpp:bench:
+    desc: Benchmark optimized C++ strategies against the Go experiment path (RUNS=15); needs task cpp:build PRESET=optimized
+    cmds:
+      - scripts/cpp-bench.sh {{.RUNS | default "15"}}
+
   build:jobs:
     desc: Build the four pipeline job images (orchestrator starts these)
     cmds:
