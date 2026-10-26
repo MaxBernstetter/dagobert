@@ -1,38 +1,30 @@
-# Experiment SPA
+# Frontend
 
-Vite + React static UI. The browser calls the Go Experiment API and does not mount `DATA_DIR`, use `better-sqlite3`, or read SQLite. The Next app in `src/frontend` stays until cutover.
+Vite + React + TypeScript single-page app. It talks only to the Go Experiment API and never reads `./data`, SQLite or Parquet. It does not start jobs.
 
 ## API
 
-`VITE_EXPERIMENT_API_URL` is the origin the browser prefixes on `/api/v1/...`. Leave it empty to use same-origin `/api`. `npm run dev` and `vite preview` proxy `/api` to `VITE_DEV_API_PROXY`, or to `VITE_EXPERIMENT_API_URL` when the proxy variable is unset, or to `http://127.0.0.1:8090`.
+`VITE_EXPERIMENT_API_URL` is the origin the browser prefixes on `/api/v1/...`. Leave it empty for same-origin `/api`. `npm run dev` and `vite preview` proxy `/api` to `VITE_DEV_API_PROXY`, else `VITE_EXPERIMENT_API_URL`, else `http://127.0.0.1:8090` (the orchestrator, which serves the API when `DATABASE_URL` is set). See `vite.config.ts`.
 
-JSON field names match the Go API protojson (camelCase): `experiments`, `instances`, `nextCursor`, `fromMs`, `toMs`, `initialUsdc`, `listSymbols`, `maCross`, and chart `bars` / `indicators`.
+JSON field names are camelCase (protojson). The API client is `src/api.ts`.
 
-The chart panel requests:
-
-`GET /api/v1/experiments/{id}/instances/{instanceId}/chart-series?from=&to=`
-
-`from` and `to` are unix seconds.
-
-## Run on the host
-
-The Experiment API must already be listening (orchestrator default `127.0.0.1:8090`).
+## Commands
 
 ```bash
 cd src/frontend
-cp .env.example .env   # optional
 npm install
-npm run dev
+npm run dev      # Vite dev server on :3000; the Experiment API must be reachable
+npm run build    # typecheck (tsc) and build to dist/; this is the check gate
 ```
 
-Open http://localhost:3000. `npm run typecheck` and `npm run build` check and emit `dist/`.
+In Docker, `task up` (dev server, bind-mounted source) or `task dev` (with compose watch) publishes the SPA on `WEB_PORT` (default 3001). `task up:prod` serves the built `dist/` instead. The container proxies `/api` to `http://orchestrator:8090`. There is no `./data` volume. Set `VITE_EXPERIMENT_API_URL` at image build time only when the browser should call the API origin directly (the API must then allow this site's CORS).
 
-## Compose
+## Layout (partly legacy)
 
-`docker compose up` and `task up` publish this SPA on `WEB_PORT`. The frontend service has no `DATA_DIR` and no `./data` volume. `src/frontend` stays on disk and is not mounted.
+The app was migrated from Next.js and the old layout is still in use. Only `src/` is new code.
 
-```bash
-docker compose up --build frontend
-```
+- `src/` holds the Vite entry points, `api.ts`, `wikiCatalog.ts` and `src/shims/`.
+- `app/`, `components/`, `lib/`, `hooks/` and `types/` sit next to `src/`, not inside it. They are the old Next-style tree and are imported through the `@` alias (`vite.config.ts` maps `@` to the frontend root).
+- `src/shims/` (`next-link.tsx`, `next-navigation.ts`, `server-only.ts`) stand in for `next/link`, `next/navigation` and `server-only` so that legacy files compile without Next.js. Next.js itself is not a dependency.
 
-Inside Compose the dev server proxies `/api` to `http://orchestrator:8090` (`VITE_DEV_API_PROXY`). The browser stays on `WEB_PORT` and never sees the data directory. For a static image, change `target: dev` in `compose.spa.yaml` to `target: prod` (`vite preview` of `dist/`). Set `VITE_EXPERIMENT_API_URL` at image build time only when the browser should call the API origin directly; that origin must allow this site's CORS.
+New code should go under `src/`. Moving the legacy folders into `src/` and dropping the shims is open cleanup.

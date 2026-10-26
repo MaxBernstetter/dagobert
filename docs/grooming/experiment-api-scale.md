@@ -2,7 +2,7 @@
 
 ## Problem
 
-A experiment was treated as one fat document: create POSTed up to 20k instance specs; list/detail/poll dragged instance rows; the instance table fanned out HTTP/KPI reads from `report.json`. Sort/filter cannot stay near-real-time at that scale.
+An experiment was treated as one fat document: create POSTed up to 20k instance specs; list/detail/poll dragged instance rows; the instance table fanned out HTTP/KPI reads from `report.json`. Sort/filter cannot stay near-real-time at that scale.
 
 ## Locked decisions
 
