@@ -6,25 +6,17 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/parquet-go/parquet-go"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 const hour = int64(3_600_000)
 
-type hourCandle struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
-}
+type hourCandle = candlefile.FloatRow
 
 func TestReplaySyntheticParquetEmitsBuy(t *testing.T) {
 	dir := t.TempDir()
@@ -170,7 +162,7 @@ func writeHourCandles(t *testing.T, dataDir string, rows []hourCandle) {
 		if err := os.MkdirAll(filepath.Dir(pqPath), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := parquet.WriteFile(pqPath, part); err != nil {
+		if err := candlefile.WriteFloatFile(pqPath, part); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/parquet-go/parquet-go"
 	_ "modernc.org/sqlite"
 
+	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
@@ -77,15 +77,7 @@ func TestCheckRawCoverageRetryableNotReady(t *testing.T) {
 	}
 }
 
-type hourOnly struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
-}
+type hourOnly = candlefile.FloatRow
 
 func writeHourParquet(t *testing.T, path string, opens []int64) {
 	t.Helper()
@@ -96,7 +88,7 @@ func writeHourParquet(t *testing.T, path string, opens []int64) {
 			CloseTime: ot + hourMS - 1,
 		})
 	}
-	if err := parquet.WriteFile(path, rows); err != nil {
+	if err := candlefile.WriteFloatFile(path, rows); err != nil {
 		t.Fatal(err)
 	}
 }
