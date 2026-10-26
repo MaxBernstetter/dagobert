@@ -46,10 +46,12 @@ func main() {
 	benchDir := flag.String("bench", "", "write only a seeded benchmark lake (provider=binance, BTC/USDT) under this directory")
 	benchBars := flag.Int("bars", 5840, "bench: number of 3h bars (5840 = 730 days)")
 	benchSeed := flag.Int64("seed", 110, "bench: random seed")
+	benchHourly := flag.Bool("hourly", false, "bench: write 1h candles (3 per bar) instead of 3h candles")
+	benchGapEvery := flag.Int("gap-every", 0, "bench: omit every Nth candle (0 = none), leaving gaps in the series")
 	flag.BoolVar(&legacy, "legacy", false, "write the old string schema (schema_version 1) instead of decimals")
 	flag.Parse()
 	if *benchDir != "" {
-		writeBenchLake(*benchDir, *benchBars, *benchSeed)
+		writeBenchLake(*benchDir, *benchBars, *benchSeed, *benchHourly, *benchGapEvery)
 		return
 	}
 	const openMs int64 = 1704067200000
@@ -164,18 +166,28 @@ func writeFileInterval(out string, rows []candle, intervalMs int64) {
 
 // writeBenchLake writes a deterministic geometric random walk of 3h bars
 // starting 2024-01-01 UTC into <dir>/parquet, one file per UTC year.
-func writeBenchLake(dir string, bars int, seed int64) {
-	const intervalMs int64 = 10800000
+// With hourly the lake holds 3 1h candles per bar; gapEvery > 0 omits every
+// gapEvery-th candle (the random walk still advances, so only the gap differs).
+func writeBenchLake(dir string, bars int, seed int64, hourly bool, gapEvery int) {
+	intervalMs := int64(10800000)
+	n := bars
+	if hourly {
+		intervalMs = 3600000
+		n = bars * 3
+	}
 	openMs := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
 	rng := rand.New(rand.NewSource(seed))
 	price := 40000.0
 	byYear := map[int][]candle{}
-	for i := 0; i < bars; i++ {
+	for i := 0; i < n; i++ {
 		open := openMs + int64(i)*intervalMs
 		o := price
 		price *= math.Exp(0.0003 + 0.012*rng.NormFloat64())
 		hi := math.Max(o, price) * (1 + 0.004*rng.Float64())
 		lo := math.Min(o, price) * (1 - 0.004*rng.Float64())
+		if gapEvery > 0 && i%gapEvery == gapEvery-1 {
+			continue
+		}
 		year := time.UnixMilli(open).UTC().Year()
 		byYear[year] = append(byYear[year], candle{
 			open, fmtF(o), fmtF(hi), fmtF(lo), fmtF(price),
@@ -185,6 +197,6 @@ func writeBenchLake(dir string, bars int, seed int64) {
 	for year, rows := range byYear {
 		out := filepath.Join(dir, "parquet", "provider=binance", "base=BTC",
 			"quote=USDT", "year="+strconv.Itoa(year), "candles.parquet")
-		writeFile(out, rows)
+		writeFileInterval(out, rows, intervalMs)
 	}
 }
