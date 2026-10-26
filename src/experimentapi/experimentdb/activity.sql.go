@@ -69,6 +69,16 @@ func (q *Queries) DeleteFillsForInstance(ctx context.Context, arg DeleteFillsFor
 	return err
 }
 
+const deleteFillsForInstances = `-- name: DeleteFillsForInstances :exec
+DELETE FROM experiment_instance_fill
+WHERE instance_id = ANY($1::uuid[])
+`
+
+func (q *Queries) DeleteFillsForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteFillsForInstances, dollar_1)
+	return err
+}
+
 const deletePeriodStatsForInstance = `-- name: DeletePeriodStatsForInstance :exec
 DELETE FROM experiment_instance_period_stat
 WHERE instance_id = $1
@@ -79,6 +89,16 @@ func (q *Queries) DeletePeriodStatsForInstance(ctx context.Context, instanceID u
 	return err
 }
 
+const deletePeriodStatsForInstances = `-- name: DeletePeriodStatsForInstances :exec
+DELETE FROM experiment_instance_period_stat
+WHERE instance_id = ANY($1::uuid[])
+`
+
+func (q *Queries) DeletePeriodStatsForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deletePeriodStatsForInstances, dollar_1)
+	return err
+}
+
 const deleteTradeOutcomesForInstance = `-- name: DeleteTradeOutcomesForInstance :exec
 DELETE FROM experiment_trade_outcome
 WHERE instance_id = $1
@@ -86,6 +106,16 @@ WHERE instance_id = $1
 
 func (q *Queries) DeleteTradeOutcomesForInstance(ctx context.Context, instanceID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteTradeOutcomesForInstance, instanceID)
+	return err
+}
+
+const deleteTradeOutcomesForInstances = `-- name: DeleteTradeOutcomesForInstances :exec
+DELETE FROM experiment_trade_outcome
+WHERE instance_id = ANY($1::uuid[])
+`
+
+func (q *Queries) DeleteTradeOutcomesForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteTradeOutcomesForInstances, dollar_1)
 	return err
 }
 

@@ -4,27 +4,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 )
 
-func writeInstancePostgres(
-	cat *experimentRunCatalog,
-	experimentID string,
-	inst store.ExperimentInstance,
-	sym string,
-	report signalrunner.InstanceReport,
-	ws string,
-) error {
-	if !cat.usesPostgres() {
-		return nil
-	}
-	fills, err := signalrunner.LoadStrategyKPIFills(ws, inst.PlaybookKey)
-	if err != nil {
-		return err
-	}
+// activityRows projects a report and its fills onto the Postgres activity tables.
+func activityRows(report signalrunner.InstanceReport, fills []signalrunner.StrategyKPIFill) ([]pgcatalog.PeriodStatRow, []pgcatalog.FillRow, []pgcatalog.TradeOutcomeRow) {
 	stats := periodStatsFromReport(report.Statistics, fills, report.Performance)
 	fillRows := make([]pgcatalog.FillRow, 0, len(fills))
 	for _, f := range fills {
@@ -35,7 +21,7 @@ func writeInstancePostgres(
 			Price: f.Price,
 		})
 	}
-	return cat.pg.ReplaceInstanceActivity(cat.ctx(), experimentID, inst.ID, sym, stats, fillRows, outcomeRows(report.Performance))
+	return stats, fillRows, outcomeRows(report.Performance)
 }
 
 func outcomeRows(perf performance.Result) []pgcatalog.TradeOutcomeRow {

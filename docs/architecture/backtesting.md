@@ -18,12 +18,37 @@ POST /api/v1/experiments/:id/run  →  orchestrator POST /experiment/run
        →  CheckRawCoverage → chunked ingest for retryable gaps → re-check
        →  BuildKPIRange once (warm TI parquet cache when present) → in-memory kpi.Window
        →  worker pool (EXPERIMENT_SIM_WORKERS, default 4) slim FastSimulatedPipelineOpts per instance
-            (shared Window; no signal/action SQLite; fills+wallet only; report.json with run+KPIs+period series)
+            (shared Window; no signal/action SQLite; fills+wallet only; report built in memory)
+       →  persistence stage drains the results in batches (see below)
        →  UpsertExperimentKPIRows once + mark completed
 ```
 
 Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/report.json` (runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder are stored in Postgres (`experiment_instance` counts, period win counts, per-sell outcomes, and the experiment reduction) and read by `GET .../kpis` and `GET .../performance`.
 
+
+### Simulation stages and persistence
+
+The simulate phase is a three-stage pipeline. Database writes never run on the calculation path.
+
+1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines): run the strategy, read the instance fills once from the workspace journal, and build the report (KPIs, statistics, period series) in memory. The result (`instanceResult`: instance, report, fills, timing, error) goes to a queue. Compute workers touch no database and no mutex.
+2. **Queue**: a bounded channel with capacity `min(instances, 4096)` (about 10 KB per result). The send only blocks when more than 4096 results wait for persistence.
+3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` (and the S3 copy) with a pool of 8, then commits the batch in **one transaction**:
+   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on fills, trade outcomes and period stats, `COPY` for the three tables, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter.
+   - SQLite (`store.PersistInstanceBatch`): the same status, timing and metric updates plus progress in one transaction.
+
+Compute and KPI errors reach the database only as `failed` rows in these batches.
+
+**Semantics.** An instance is `completed` only after its batch committed. A failed batch is retried 3 times (backoff 100 ms, 400 ms, 1.6 s), then split in half recursively down to single instances. An instance that still fails is marked `failed` with an error starting `persist:` (and stays `running` if even that write fails); both are picked up by `EXPERIMENT_RETRY_FAILED`. `RunExperimentSimulate` closes the queue when compute finishes and returns only after the persister has drained it, so `RunExperimentFinalize` counts final statuses. Test seams: `PersistCommitHook`, `PersistRetryBackoff`, `SimulateComputeDoneHook` (see `tests/system/experiment/persist_test.go`).
+
+**Measurements** (3000 `ma-cross` instances, 2 years of 1h candles, 22 workers, `tests/system/experiment` `TestBenchPersistGrid`, compose Postgres 16):
+
+| Catalog | Instances | Before (main) | After (this change) |
+|---|---|---|---|
+| SQLite | 3000 | 9 min 4 s | 1 min 44 s |
+| Postgres | 100 | 5 min 8 s | 7.7 s |
+| Postgres | 3000 | not run to completion (about 3 s per instance, roughly 2.6 h extrapolated; a contended partial run completed 132 of 3000 in 25 min) | 2 min 39 s |
+
+Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
 
 ### Sparse lake (exchange holes)
 
