@@ -9,11 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/parquet-go/parquet-go"
-
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/shared"
+	"github.com/MaxBernstetter/dagobert/tests/system/internal/lakefile"
 	_ "modernc.org/sqlite"
 )
 
@@ -23,15 +22,7 @@ const (
 	symbol     = "BTCUSDT"
 )
 
-type hourCandle struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
-}
+type hourCandle = lakefile.Candle
 
 func TestBacktestRunCorrectness(t *testing.T) {
 	dataDir := tempDataDir(t)
@@ -47,7 +38,8 @@ func TestBacktestRunCorrectness(t *testing.T) {
 	defer cat.Close()
 
 	settings := store.DefaultSettings()
-	settings.Base = "BTC"; settings.Quote = "USDT"
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
 	settings.Playbook = "ma-cross"
 	settings.FromMs = 0
 	settings.ToMs = endMs
@@ -138,7 +130,8 @@ func TestSignalConsensusLakeChurn(t *testing.T) {
 	}
 	defer cat.Close()
 	settings := store.DefaultSettings()
-	settings.Base = "BTC"; settings.Quote = "USDT"
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
 	settings.Playbook = "signal-consensus"
 	settings.RedownloadMissing = false
 	rec, err := cat.CreateDraft("churn-cap", "", settings)
@@ -174,7 +167,8 @@ func TestBacktestSignalConsensusEmitsFills(t *testing.T) {
 	defer cat.Close()
 
 	settings := store.DefaultSettings()
-	settings.Base = "BTC"; settings.Quote = "USDT"
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
 	settings.Playbook = "signal-consensus"
 	settings.FromMs = 480 * hour
 	settings.ToMs = endMs
@@ -218,7 +212,8 @@ func TestTwoBacktestsDifferentKPIRanges(t *testing.T) {
 	defer cat.Close()
 
 	short := store.DefaultSettings()
-	short.Base = "BTC"; short.Quote = "USDT"
+	short.Base = "BTC"
+	short.Quote = "USDT"
 	short.FromMs = 0
 	short.ToMs = 48 * hour
 	short.RedownloadMissing = false
@@ -344,7 +339,7 @@ func writeHourlyParquetRows(t *testing.T, dataDir, sym string, rows []hourCandle
 		if err := os.MkdirAll(filepath.Dir(pqPath), 0o777); err != nil {
 			t.Fatal(err)
 		}
-		if err := parquet.WriteFile(pqPath, part); err != nil {
+		if err := lakefile.Write(pqPath, part); err != nil {
 			t.Fatal(err)
 		}
 	}
