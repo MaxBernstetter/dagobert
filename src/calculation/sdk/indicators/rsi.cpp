@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -86,7 +88,7 @@ Column apply_rsi(const CloseSeries &close, std::size_t period) {
 RSI::RSI(std::size_t period_bars) : period_(period_bars) {
   if (period_bars == 0U) {
     std::cerr << "RSI period must be positive: " << period_bars << '\n';
-    std::exit(2);
+    exit_config();
   }
 }
 

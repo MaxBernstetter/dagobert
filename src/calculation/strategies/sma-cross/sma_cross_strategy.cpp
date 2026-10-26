@@ -6,6 +6,8 @@
 
 #include "tradingcopilot/v1/strategy.pb.h"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -23,17 +25,17 @@ constexpr const char *kMaCrossTypeUrl =
 unpack_ma_cross(const tradingcopilot::v1::RunEnvelope &envelope) {
   if (envelope.label() != kMaCrossLabel) {
     std::cerr << "label must be sma-cross: " << envelope.label() << '\n';
-    std::exit(2);
+    exit_config();
   }
   if (envelope.payload().type_url() != kMaCrossTypeUrl) {
     std::cerr << "payload type_url must be " << kMaCrossTypeUrl << ": "
               << envelope.payload().type_url() << '\n';
-    std::exit(2);
+    exit_config();
   }
   tradingcopilot::v1::MaCrossConfig config;
   if (!envelope.payload().UnpackTo(&config)) {
     std::cerr << "payload must unpack to MaCrossConfig\n";
-    std::exit(2);
+    exit_config();
   }
   return config;
 }
@@ -72,8 +74,14 @@ StrategyResult SmaCrossStrategy::calc_backtest(std::span<const Bar> bars) {
     SmaCrossSignal cross{*sizing_};
     Position account{initial_quote()};
     for (const Bar &bar : bars) {
-      cross.step_sized(account, bar, fast.push(bar.close), slow.push(bar.close),
-                       atr.push(bar.high, bar.low, bar.close));
+      const auto fast_mean = fast.push(bar.close);
+      const auto slow_mean = slow.push(bar.close);
+      const auto atr_value = atr.push(bar.high, bar.low, bar.close);
+      if (bar.open_ms < trade_from_ms()) {
+        cross.warm(fast_mean, slow_mean);
+        continue;
+      }
+      cross.step_sized(account, bar, fast_mean, slow_mean, atr_value);
     }
     return strategy_result(account, bars.empty() ? 0.0 : bars.back().close);
   }
@@ -83,7 +91,7 @@ StrategyResult SmaCrossStrategy::calc_backtest(std::span<const Bar> bars) {
   const SmaCrossSeries mask = SmaCrossSignal::evaluate(fast_mean, slow_mean);
 
   Position account{initial_quote()};
-  (void)SmaCrossSignal::actions_from(account, bars, mask);
+  (void)SmaCrossSignal::actions_from(account, bars, mask, trade_from_ms());
   const double mark = bars.empty() ? 0.0 : bars.back().close;
   return strategy_result(account, mark);
 }

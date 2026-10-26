@@ -5,6 +5,7 @@
 
 #include "tradingcopilot/v1/run_envelope.pb.h"
 
+#include <climits>
 #include <cstdint>
 #include <span>
 
@@ -25,12 +26,18 @@ public:
 
   [[nodiscard]] const Quote &initial_quote() const { return initial_quote_; }
 
+  // Bars opening before this are warm-up only: calc_backtest takes no action
+  // on them (sweep mode). Default: trade from the first bar.
+  void set_trade_from(std::int64_t open_ms) { trade_from_ms_ = open_ms; }
+  [[nodiscard]] std::int64_t trade_from_ms() const { return trade_from_ms_; }
+
 protected:
   static void
   require_schema_version(const tradingcopilot::v1::RunEnvelope &envelope);
 
 private:
   Quote initial_quote_;
+  std::int64_t trade_from_ms_{INT64_MIN};
 };
 
 } // namespace dagobert

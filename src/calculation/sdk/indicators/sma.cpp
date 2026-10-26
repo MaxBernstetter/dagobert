@@ -1,5 +1,7 @@
 #include "sma.hpp"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -39,7 +41,7 @@ Series apply_series(const Series &input, std::size_t period) {
 SMA::SMA(std::size_t period_bars) : period_(period_bars) {
   if (period_bars == 0U) {
     std::cerr << "SMA period must be positive: " << period_bars << '\n';
-    std::exit(2);
+    exit_config();
   }
 }
 

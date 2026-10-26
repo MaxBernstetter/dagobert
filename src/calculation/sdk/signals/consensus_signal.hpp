@@ -4,7 +4,9 @@
 #include "sizing.hpp"
 #include "types.hpp"
 
+#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
@@ -84,7 +86,8 @@ public:
   actions_from(Position &account, std::span<const Bar> bars,
                const ConsensusSeries &mask,
                std::optional<sizing::SizingConfig> sizing = std::nullopt,
-               const ConsensusParams &params = {});
+               const ConsensusParams &params = {},
+               std::int64_t trade_from_ms = INT64_MIN);
 
   // Advances one bar; the caller executes the returned rule on its position.
   // This overload is for the unsized path (a sized signal reads equity 0 and

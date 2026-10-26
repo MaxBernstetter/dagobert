@@ -1,5 +1,7 @@
 #include "strategy.hpp"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -10,7 +12,7 @@ void Strategy::require_schema_version(
   if (envelope.schema_version() != kSchemaVersion) {
     std::cerr << "schema_version must be " << kSchemaVersion << ": "
               << envelope.schema_version() << '\n';
-    std::exit(2);
+    exit_config();
   }
 }
 

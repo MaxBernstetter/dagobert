@@ -1,5 +1,7 @@
 #include "ema.hpp"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 
@@ -47,7 +49,7 @@ Column apply_ema(const CloseSeries &close, std::size_t period,
 EMA::EMA(std::size_t period_bars) : period_(period_bars) {
   if (period_bars == 0U) {
     std::cerr << "EMA period must be positive: " << period_bars << '\n';
-    std::exit(2);
+    exit_config();
   }
   multiplier_ = 2.0 / (static_cast<double>(period_) + 1.0);
 }

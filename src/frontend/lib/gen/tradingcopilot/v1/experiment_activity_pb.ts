@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tradingcopilot/v1/experiment_activity.proto.
  */
 export const file_tradingcopilot_v1_experiment_activity: GenFile = /*@__PURE__*/
-  fileDesc("Cit0cmFkaW5nY29waWxvdC92MS9leHBlcmltZW50X2FjdGl2aXR5LnByb3RvEhF0cmFkaW5nY29waWxvdC52MSLUAQocRXhwZXJpbWVudEluc3RhbmNlUGVyaW9kU3RhdBITCgtpbnN0YW5jZV9pZBgBIAEoCRITCgtwZXJpb2Rfa2luZBgCIAEoCRISCgpwZXJpb2Rfa2V5GAMgASgJEhcKCnJldHVybl9wY3QYBCABKAFIAIgBARIYCgt0cmFkZV9jb3VudBgFIAEoBUgBiAEBEhYKCXdpbl9jb3VudBgGIAEoBUgCiAEBQg0KC19yZXR1cm5fcGN0Qg4KDF90cmFkZV9jb3VudEIMCgpfd2luX2NvdW50Ir0BChhFeHBlcmltZW50SW5zdGFuY2VBY3Rpb24SCgoCaWQYASABKAkSFQoNZXhwZXJpbWVudF9pZBgCIAEoCRITCgtpbnN0YW5jZV9pZBgDIAEoCRIOCgZzeW1ib2wYBCABKAkSEwoLYmFyX29wZW5fbXMYBSABKAMSDAoEc2lkZRgGIAEoCRIXCgp3ZWlnaHRfcGN0GAcgASgBSACIAQESDgoGcmVhc29uGAggASgJQg0KC193ZWlnaHRfcGN0It8BChZFeHBlcmltZW50SW5zdGFuY2VGaWxsEgoKAmlkGAEgASgJEhUKDWV4cGVyaW1lbnRfaWQYAiABKAkSEwoLaW5zdGFuY2VfaWQYAyABKAkSFgoJYWN0aW9uX2lkGAQgASgJSACIAQESDgoGc3ltYm9sGAUgASgJEg0KBXRzX21zGAYgASgDEgwKBHNpZGUYByABKAkSCwoDcXR5GAggASgBEg0KBXByaWNlGAkgASgBEgsKA2ZlZRgKIAEoARIRCglmZWVfYXNzZXQYCyABKAlCDAoKX2FjdGlvbl9pZCJTChNMaXN0QWN0aW9uc1Jlc3BvbnNlEjwKB2FjdGlvbnMYASADKAsyKy50cmFkaW5nY29waWxvdC52MS5FeHBlcmltZW50SW5zdGFuY2VBY3Rpb24iTQoRTGlzdEZpbGxzUmVzcG9uc2USOAoFZmlsbHMYASADKAsyKS50cmFkaW5nY29waWxvdC52MS5FeHBlcmltZW50SW5zdGFuY2VGaWxsIlkKF0xpc3RQZXJpb2RTdGF0c1Jlc3BvbnNlEj4KBXN0YXRzGAEgAygLMi8udHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudEluc3RhbmNlUGVyaW9kU3RhdELkAQoVY29tLnRyYWRpbmdjb3BpbG90LnYxQhdFeHBlcmltZW50QWN0aXZpdHlQcm90b1ABWk1naXRodWIuY29tL01heEJlcm5zdGV0dGVyL2RhZ29iZXJ0L3NyYy9nZW4vdHJhZGluZ2NvcGlsb3QvdjE7dHJhZGluZ2NvcGlsb3R2MaICA1RYWKoCEVRyYWRpbmdjb3BpbG90LlYxygIRVHJhZGluZ2NvcGlsb3RcVjHiAh1UcmFkaW5nY29waWxvdFxWMVxHUEJNZXRhZGF0YeoCElRyYWRpbmdjb3BpbG90OjpWMWIGcHJvdG8z");
+  fileDesc("Cit0cmFkaW5nY29waWxvdC92MS9leHBlcmltZW50X2FjdGl2aXR5LnByb3RvEhF0cmFkaW5nY29waWxvdC52MSLUAQocRXhwZXJpbWVudEluc3RhbmNlUGVyaW9kU3RhdBITCgtpbnN0YW5jZV9pZBgBIAEoCRITCgtwZXJpb2Rfa2luZBgCIAEoCRISCgpwZXJpb2Rfa2V5GAMgASgJEhcKCnJldHVybl9wY3QYBCABKAFIAIgBARIYCgt0cmFkZV9jb3VudBgFIAEoBUgBiAEBEhYKCXdpbl9jb3VudBgGIAEoBUgCiAEBQg0KC19yZXR1cm5fcGN0Qg4KDF90cmFkZV9jb3VudEIMCgpfd2luX2NvdW50IokDChhFeHBlcmltZW50SW5zdGFuY2VBY3Rpb24SCgoCaWQYASABKAkSFQoNZXhwZXJpbWVudF9pZBgCIAEoCRITCgtpbnN0YW5jZV9pZBgDIAEoCRIOCgZzeW1ib2wYBCABKAkSEwoLYmFyX29wZW5fbXMYBSABKAMSDAoEc2lkZRgGIAEoCRIXCgp3ZWlnaHRfcGN0GAcgASgBSACIAQESDgoGcmVhc29uGAggASgJEhsKDnF1b3RlX25vdGlvbmFsGAkgASgBSAGIAQESFQoIYmFzZV9xdHkYCiABKAFIAogBARIXCgpzdG9wX3ByaWNlGAsgASgBSAOIAQESGwoOcmFpc2Vfc3RvcHNfYnkYDCABKAFIBIgBARITCgZlcXVpdHkYDSABKAFIBYgBAUINCgtfd2VpZ2h0X3BjdEIRCg9fcXVvdGVfbm90aW9uYWxCCwoJX2Jhc2VfcXR5Qg0KC19zdG9wX3ByaWNlQhEKD19yYWlzZV9zdG9wc19ieUIJCgdfZXF1aXR5It8BChZFeHBlcmltZW50SW5zdGFuY2VGaWxsEgoKAmlkGAEgASgJEhUKDWV4cGVyaW1lbnRfaWQYAiABKAkSEwoLaW5zdGFuY2VfaWQYAyABKAkSFgoJYWN0aW9uX2lkGAQgASgJSACIAQESDgoGc3ltYm9sGAUgASgJEg0KBXRzX21zGAYgASgDEgwKBHNpZGUYByABKAkSCwoDcXR5GAggASgBEg0KBXByaWNlGAkgASgBEgsKA2ZlZRgKIAEoARIRCglmZWVfYXNzZXQYCyABKAlCDAoKX2FjdGlvbl9pZCJTChNMaXN0QWN0aW9uc1Jlc3BvbnNlEjwKB2FjdGlvbnMYASADKAsyKy50cmFkaW5nY29waWxvdC52MS5FeHBlcmltZW50SW5zdGFuY2VBY3Rpb24iTQoRTGlzdEZpbGxzUmVzcG9uc2USOAoFZmlsbHMYASADKAsyKS50cmFkaW5nY29waWxvdC52MS5FeHBlcmltZW50SW5zdGFuY2VGaWxsIlkKF0xpc3RQZXJpb2RTdGF0c1Jlc3BvbnNlEj4KBXN0YXRzGAEgAygLMi8udHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudEluc3RhbmNlUGVyaW9kU3RhdELkAQoVY29tLnRyYWRpbmdjb3BpbG90LnYxQhdFeHBlcmltZW50QWN0aXZpdHlQcm90b1ABWk1naXRodWIuY29tL01heEJlcm5zdGV0dGVyL2RhZ29iZXJ0L3NyYy9nZW4vdHJhZGluZ2NvcGlsb3QvdjE7dHJhZGluZ2NvcGlsb3R2MaICA1RYWKoCEVRyYWRpbmdjb3BpbG90LlYxygIRVHJhZGluZ2NvcGlsb3RcVjHiAh1UcmFkaW5nY29waWxvdFxWMVxHUEJNZXRhZGF0YeoCElRyYWRpbmdjb3BpbG90OjpWMWIGcHJvdG8z");
 
 /**
  * public.experiment_instance_period_stat
@@ -105,6 +105,44 @@ export type ExperimentInstanceAction = Message<"tradingcopilot.v1.ExperimentInst
    * @generated from field: string reason = 8;
    */
   reason: string;
+
+  /**
+   * Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+   * unset for unsized actions. Same names as the live signal body.
+   *
+   * buy: quote to spend
+   *
+   * @generated from field: optional double quote_notional = 9;
+   */
+  quoteNotional?: number | undefined;
+
+  /**
+   * vol_cut: base to sell
+   *
+   * @generated from field: optional double base_qty = 10;
+   */
+  baseQty?: number | undefined;
+
+  /**
+   * buy: stop of the new unit
+   *
+   * @generated from field: optional double stop_price = 11;
+   */
+  stopPrice?: number | undefined;
+
+  /**
+   * pyramid: earlier stops move up by this
+   *
+   * @generated from field: optional double raise_stops_by = 12;
+   */
+  raiseStopsBy?: number | undefined;
+
+  /**
+   * Book equity (quote) at the decision bar close; rescales sized notionals.
+   *
+   * @generated from field: optional double equity = 13;
+   */
+  equity?: number | undefined;
 };
 
 /**

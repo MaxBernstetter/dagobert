@@ -1,5 +1,6 @@
 add_library(
-  dagobert_strategy STATIC strategy.cpp series.cpp sizing_proto.cpp)
+  dagobert_strategy STATIC strategy.cpp series.cpp sizing_proto.cpp report.cpp
+  sweep.cpp)
 target_include_directories(
   dagobert_strategy
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}

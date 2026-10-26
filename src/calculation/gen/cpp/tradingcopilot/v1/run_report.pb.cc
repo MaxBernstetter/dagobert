@@ -241,11 +241,11 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
     {
       PROTOBUF_FIELD_OFFSET(RunReport, _impl_._has_bits_),
       0, // no _extensions_
-      7, 56,  // max_field_number, fast_idx_mask
+      9, 120,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967168,  // skipmap
+      4294966784,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      7,  // num_field_entries
+      9,  // num_field_entries
       5,  // num_aux_entries
       offsetof(ParseTableT_, aux_entries),
       class_data,
@@ -257,8 +257,8 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
     }, {{
       {::_pbi::TcParser::MiniParse, {}},
       // uint32 schema_version = 1 [json_name = "schemaVersion"];
-      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(RunReport, _impl_.schema_version_), 6>(),
-       {8, 6, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(RunReport, _impl_.schema_version_), 8>(),
+       {8, 8, 0,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_)}},
       // string label = 2 [json_name = "label"];
       {::_pbi::TcParser::FastUS1,
@@ -266,7 +266,7 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.label_)}},
       // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
       {::_pbi::TcParser::FastMtS1,
-       {26, 5, 0,
+       {26, 7, 0,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_)}},
       // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
       {::_pbi::TcParser::FastMtR1,
@@ -284,15 +284,29 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
       {::_pbi::TcParser::FastMtR1,
        {58, 3, 4,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.sizing_)}},
+      // string key = 8 [json_name = "key"];
+      {::_pbi::TcParser::FastUS1,
+       {66, 5, 0,
+        PROTOBUF_FIELD_OFFSET(RunReport, _impl_.key_)}},
+      // string error = 9 [json_name = "error"];
+      {::_pbi::TcParser::FastUS1,
+       {74, 6, 0,
+        PROTOBUF_FIELD_OFFSET(RunReport, _impl_.error_)}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
     }}, {{
       // uint32 schema_version = 1 [json_name = "schemaVersion"];
-      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
       // string label = 2 [json_name = "label"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.label_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
-      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.period_stats_), _Internal::kHasBitsOffset + 0, 1, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ExperimentInstanceAction actions = 5 [json_name = "actions"];
@@ -301,6 +315,10 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.fills_), _Internal::kHasBitsOffset + 2, 3, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.sizing_), _Internal::kHasBitsOffset + 3, 4, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+      // string key = 8 [json_name = "key"];
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.key_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // string error = 9 [json_name = "error"];
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.error_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     }},
     {{
         #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -330,9 +348,11 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
         #endif
     }},
     {{
-      "\33\0\5\0\0\0\0\0"
+      "\33\0\5\0\0\0\0\0\3\5\0\0\0\0\0\0"
       "tradingcopilot.v1.RunReport"
       "label"
+      "key"
+      "error"
     }},
   };
 }
@@ -362,6 +382,12 @@ inline constexpr RunReport::Impl_::Impl_(
          }
         ,
         label_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        key_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        error_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         metrics_{nullptr},
@@ -487,7 +513,7 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_._has_bits_),
-        10, // hasbit index offset
+        12, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.schema_version_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.label_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.metrics_),
@@ -495,13 +521,17 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.actions_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.fills_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_),
-        6,
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.key_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.error_),
+        8,
         4,
-        5,
+        7,
         0,
         1,
         2,
         3,
+        5,
+        6,
 };
 
 static const ::_pbi::MigrationSchema
@@ -525,7 +555,7 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto[
     "al\022\035\n\nstop_price\030\004 \001(\001R\tstopPrice\022,\n\022req"
     "uested_risk_pct\030\005 \001(\001R\020requestedRiskPct\022"
     "&\n\017capped_risk_pct\030\006 \001(\001R\rcappedRiskPct\022"
-    "\027\n\007rule_id\030\007 \001(\tR\006ruleId\"\233\003\n\tRunReport\022%"
+    "\027\n\007rule_id\030\007 \001(\tR\006ruleId\"\303\003\n\tRunReport\022%"
     "\n\016schema_version\030\001 \001(\rR\rschemaVersion\022\024\n"
     "\005label\030\002 \001(\tR\005label\022<\n\007metrics\030\003 \001(\0132\".t"
     "radingcopilot.v1.InstanceMetricsR\007metric"
@@ -535,7 +565,8 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto[
     "v1.ExperimentInstanceActionR\007actions\022\?\n\005"
     "fills\030\006 \003(\0132).tradingcopilot.v1.Experime"
     "ntInstanceFillR\005fills\0227\n\006sizing\030\007 \003(\0132\037."
-    "tradingcopilot.v1.ActionSizingR\006sizingB\333"
+    "tradingcopilot.v1.ActionSizingR\006sizing\022\020"
+    "\n\003key\030\010 \001(\tR\003key\022\024\n\005error\030\t \001(\tR\005errorB\333"
     "\001\n\025com.tradingcopilot.v1B\016RunReportProto"
     "P\001ZMgithub.com/MaxBernstetter/dagobert/s"
     "rc/gen/tradingcopilot/v1;tradingcopilotv"
@@ -552,7 +583,7 @@ static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2frun_5freport_2ep
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto = {
     false,
     false,
-    1028,
+    1068,
     descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto,
     "tradingcopilot/v1/run_report.proto",
     &descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto_once,
@@ -946,7 +977,7 @@ void ActionSizing::InternalSwap(ActionSizing* PROTOBUF_RESTRICT PROTOBUF_NONNULL
 void RunReport::clear_metrics() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (_impl_.metrics_ != nullptr) _impl_.metrics_->Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000080U);
 }
 void RunReport::clear_period_stats() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
@@ -1005,7 +1036,9 @@ PROTOBUF_NDEBUG_INLINE RunReport::Impl_::Impl_(
           , arena, from.sizing_
         }
         ,
-        label_(arena, from.label_) {}
+        label_(arena, from.label_),
+        key_(arena, from.key_),
+        error_(arena, from.error_) {}
 
 RunReport::RunReport(
     ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
@@ -1022,7 +1055,7 @@ RunReport::RunReport(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
   ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.metrics_ = (CheckHasBit(cached_has_bits, 0x00000020U))
+  _impl_.metrics_ = (CheckHasBit(cached_has_bits, 0x00000080U))
                  ? Super_::CopyConstruct(arena, *from._impl_.metrics_)
                  : nullptr;
   _impl_.schema_version_ = from._impl_.schema_version_;
@@ -1052,7 +1085,9 @@ PROTOBUF_NDEBUG_INLINE RunReport::Impl_::Impl_(
             PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_)>()
          }
         ,
-        label_(arena) {}
+        label_(arena),
+        key_(arena),
+        error_(arena) {}
 
 inline void RunReport::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -1075,6 +1110,8 @@ inline void RunReport::SharedDtor(MessageLite& self) {
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
   this_._impl_.label_.Destroy();
+  this_._impl_.key_.Destroy();
+  this_._impl_.error_.Destroy();
   delete this_._impl_.metrics_;
   this_._impl_.~Impl_();
 }
@@ -1112,7 +1149,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _impl_.period_stats_.Clear();
     }
@@ -1129,6 +1166,12 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
       this_._impl_.label_.ClearNonDefaultToEmpty();
     }
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      this_._impl_.key_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      this_._impl_.error_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       ABSL_DCHECK(this_._impl_.metrics_ != nullptr);
       this_._impl_.metrics_->Clear();
     }
@@ -1158,7 +1201,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // uint32 schema_version = 1 [json_name = "schemaVersion"];
-  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
     if (this_._internal_schema_version() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
@@ -1177,7 +1220,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
   }
 
   // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
-  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         3, *this_._impl_.metrics_, this_._impl_.metrics_->GetCachedSize(), target,
         stream);
@@ -1231,6 +1274,26 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
     }
   }
 
+  // string key = 8 [json_name = "key"];
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (!this_._internal_key().empty()) {
+      const ::std::string& _s = this_._internal_key();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.RunReport.key");
+      target = stream->WriteStringMaybeAliased(8, _s, target);
+    }
+  }
+
+  // string error = 9 [json_name = "error"];
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (!this_._internal_error().empty()) {
+      const ::std::string& _s = this_._internal_error();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.RunReport.error");
+      target = stream->WriteStringMaybeAliased(9, _s, target);
+    }
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -1254,7 +1317,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       total_size += 1UL * this_._internal_period_stats_size();
@@ -1290,13 +1353,29 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
                                         this_._internal_label());
       }
     }
-    // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
+    // string key = 8 [json_name = "key"];
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (!this_._internal_key().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_key());
+      }
+    }
+    // string error = 9 [json_name = "error"];
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (!this_._internal_error().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_error());
+      }
+    }
+    // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.metrics_);
     }
+  }
+   {
     // uint32 schema_version = 1 [json_name = "schemaVersion"];
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       if (this_._internal_schema_version() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
             this_._internal_schema_version());
@@ -1321,7 +1400,7 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _this->_internal_mutable_period_stats()->InternalMergeFromWithArena(
           ::google::protobuf::MessageLite::internal_visibility(), arena,
@@ -1352,6 +1431,24 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (!from._internal_key().empty()) {
+        _this->_internal_set_key(from._internal_key());
+      } else {
+        if (_this->_impl_.key_.IsDefault()) {
+          _this->_internal_set_key("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (!from._internal_error().empty()) {
+        _this->_internal_set_error(from._internal_error());
+      } else {
+        if (_this->_impl_.error_.IsDefault()) {
+          _this->_internal_set_error("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       ABSL_DCHECK(from._impl_.metrics_ != nullptr);
       if (_this->_impl_.metrics_ == nullptr) {
         _this->_impl_.metrics_ = Super_::CopyConstruct(arena, *from._impl_.metrics_);
@@ -1359,10 +1456,10 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.metrics_->MergeFrom(*from._impl_.metrics_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-      if (from._internal_schema_version() != 0) {
-        _this->_impl_.schema_version_ = from._impl_.schema_version_;
-      }
+  }
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+    if (from._internal_schema_version() != 0) {
+      _this->_impl_.schema_version_ = from._impl_.schema_version_;
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -1389,6 +1486,8 @@ void RunReport::InternalSwap(RunReport* PROTOBUF_RESTRICT PROTOBUF_NONNULL other
   _impl_.fills_.InternalSwap(&other->_impl_.fills_);
   _impl_.sizing_.InternalSwap(&other->_impl_.sizing_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.label_, &other->_impl_.label_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.key_, &other->_impl_.key_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.error_, &other->_impl_.error_, arena);
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_)
       + sizeof(RunReport::_impl_.schema_version_)

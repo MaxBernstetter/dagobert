@@ -3,7 +3,9 @@
 #include "sizing.hpp"
 #include "types.hpp"
 
+#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <utility>
@@ -39,7 +41,8 @@ public:
 
   [[nodiscard]] static std::vector<Action>
   actions_from(Position &account, std::span<const Bar> bars,
-               const SmaCrossSeries &mask);
+               const SmaCrossSeries &mask,
+               std::int64_t trade_from_ms = INT64_MIN);
 
   [[nodiscard]] std::optional<SmaCrossRule>
   apply(std::optional<double> fast, std::optional<double> slow, bool flat);
@@ -51,6 +54,9 @@ public:
   // death_cross, vol_cut, pyramid. Requires sized().
   void step_sized(Position &account, const Bar &bar, std::optional<double> fast,
                   std::optional<double> slow, std::optional<double> atr);
+
+  // Advances the cross state without trading (warm-up bars of a sweep).
+  void warm(std::optional<double> fast, std::optional<double> slow);
 
   void reset();
 

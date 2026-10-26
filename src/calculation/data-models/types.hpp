@@ -39,6 +39,11 @@ struct Action {
   double notional{};
   double requested_risk_pct{};
   double capped_risk_pct{};
+  // Base quantity traded, equity at the decision bar close, and the step by
+  // which a pyramid raised the earlier stops.
+  double base_qty{};
+  double equity{};
+  double raise_stops_by{};
 };
 
 struct Fill {

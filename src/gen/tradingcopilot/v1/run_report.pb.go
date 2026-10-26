@@ -134,7 +134,12 @@ type RunReport struct {
 	Fills         []*ExperimentInstanceFill       `protobuf:"bytes,6,rep,name=fills,proto3" json:"fills,omitempty"`
 	// One entry per action, in order, when `sizing` is configured; empty
 	// otherwise.
-	Sizing        []*ActionSizing `protobuf:"bytes,7,rep,name=sizing,proto3" json:"sizing,omitempty"`
+	Sizing []*ActionSizing `protobuf:"bytes,7,rep,name=sizing,proto3" json:"sizing,omitempty"`
+	// Sweep item key (SweepItem.key); empty in single runs.
+	Key string `protobuf:"bytes,8,opt,name=key,proto3" json:"key,omitempty"`
+	// Non-empty when a sweep item failed (bad envelope or config); the other
+	// report fields are then empty.
+	Error         string `protobuf:"bytes,9,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -218,6 +223,20 @@ func (x *RunReport) GetSizing() []*ActionSizing {
 	return nil
 }
 
+func (x *RunReport) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *RunReport) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_tradingcopilot_v1_run_report_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_run_report_proto_rawDesc = "" +
@@ -231,7 +250,7 @@ const file_tradingcopilot_v1_run_report_proto_rawDesc = "" +
 	"stop_price\x18\x04 \x01(\x01R\tstopPrice\x12,\n" +
 	"\x12requested_risk_pct\x18\x05 \x01(\x01R\x10requestedRiskPct\x12&\n" +
 	"\x0fcapped_risk_pct\x18\x06 \x01(\x01R\rcappedRiskPct\x12\x17\n" +
-	"\arule_id\x18\a \x01(\tR\x06ruleId\"\x9b\x03\n" +
+	"\arule_id\x18\a \x01(\tR\x06ruleId\"\xc3\x03\n" +
 	"\tRunReport\x12%\n" +
 	"\x0eschema_version\x18\x01 \x01(\rR\rschemaVersion\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12<\n" +
@@ -239,7 +258,9 @@ const file_tradingcopilot_v1_run_report_proto_rawDesc = "" +
 	"\fperiod_stats\x18\x04 \x03(\v2/.tradingcopilot.v1.ExperimentInstancePeriodStatR\vperiodStats\x12E\n" +
 	"\aactions\x18\x05 \x03(\v2+.tradingcopilot.v1.ExperimentInstanceActionR\aactions\x12?\n" +
 	"\x05fills\x18\x06 \x03(\v2).tradingcopilot.v1.ExperimentInstanceFillR\x05fills\x127\n" +
-	"\x06sizing\x18\a \x03(\v2\x1f.tradingcopilot.v1.ActionSizingR\x06sizingB\xdb\x01\n" +
+	"\x06sizing\x18\a \x03(\v2\x1f.tradingcopilot.v1.ActionSizingR\x06sizing\x12\x10\n" +
+	"\x03key\x18\b \x01(\tR\x03key\x12\x14\n" +
+	"\x05error\x18\t \x01(\tR\x05errorB\xdb\x01\n" +
 	"\x15com.tradingcopilot.v1B\x0eRunReportProtoP\x01ZMgithub.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1;tradingcopilotv1\xa2\x02\x03TXX\xaa\x02\x11Tradingcopilot.V1\xca\x02\x11Tradingcopilot\\V1\xe2\x02\x1dTradingcopilot\\V1\\GPBMetadata\xea\x02\x12Tradingcopilot::V1b\x06proto3"
 
 var (

@@ -164,11 +164,15 @@ std::optional<ConsensusRule> ConsensusSignal::decide(const ConsensusGate &gate,
 
 std::vector<Action> ConsensusSignal::actions_from(
     Position &account, std::span<const Bar> bars, const ConsensusSeries &mask,
-    std::optional<sizing::SizingConfig> sizing, const ConsensusParams &params) {
+    std::optional<sizing::SizingConfig> sizing, const ConsensusParams &params,
+    std::int64_t trade_from_ms) {
   std::vector<Action> out;
   ConsensusSignal live{std::move(sizing), params};
   const std::size_t count = std::min(bars.size(), mask.gate.size());
   for (std::size_t i = 0; i < count; ++i) {
+    if (bars[i].open_ms < trade_from_ms) {
+      continue;
+    }
     const auto rule =
         live.decide(mask.gate[i], bars[i].close, account.equity(bars[i].close),
                     account.flat());
@@ -218,6 +222,9 @@ void ConsensusSignal::buy_unit(Position &account, const Bar &bar,
   const sizing::RiskPct risk =
       sizing::risk_pct(spend, plan_.equity, plan_.atr, bar.close, *sizing_);
   account.annotate_last_risk(risk.requested, risk.capped);
+  if (rule == ConsensusRule::pyramid) {
+    account.annotate_last_raise(plan_.raise_by);
+  }
   for (sizing::Unit &u : units_) {
     u.stop += plan_.raise_by;
   }

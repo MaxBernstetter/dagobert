@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+import "google/protobuf/any.proto";
+import "tradingcopilot/v1/run_envelope.proto";
+
+// One OHLCV bar handed to a sweep (no lake read).
+message Bar {
+  int64 open_ms = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+  int64 duration_ms = 7;
+  // Closes of the sub-bars inside this bar, for indicators that run on a
+  // finer series (RSI parity). May be empty.
+  repeated double segment_close = 8;
+}
+
+// One strategy configuration of a sweep; `payload` is the strategy's config
+// message (as RunEnvelope.payload).
+message SweepItem {
+  string key = 1;
+  google.protobuf.Any payload = 2;
+}
+
+// Single binary message on stdin of `--sweep`. `base` carries label,
+// schema_version, provider, base, quote and initial_quote shared by all items
+// (its payload is ignored). Bars before trade_from_ms only warm up the
+// indicators; no action is taken on them. The reply is one length-delimited
+// RunReport per item, in order, with `key` set and `fills` empty.
+message SweepRequest {
+  RunEnvelope base = 1;
+  repeated Bar bars = 2;
+  int64 trade_from_ms = 3;
+  repeated SweepItem items = 4;
+}

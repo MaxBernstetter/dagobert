@@ -22,6 +22,14 @@ message ExperimentInstanceAction {
   string side = 6; // buy | sell | flat | other
   optional double weight_pct = 7;
   string reason = 8;
+  // Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+  // unset for unsized actions. Same names as the live signal body.
+  optional double quote_notional = 9; // buy: quote to spend
+  optional double base_qty = 10;      // vol_cut: base to sell
+  optional double stop_price = 11;    // buy: stop of the new unit
+  optional double raise_stops_by = 12; // pyramid: earlier stops move up by this
+  // Book equity (quote) at the decision bar close; rescales sized notionals.
+  optional double equity = 13;
 }
 
 // public.experiment_instance_fill

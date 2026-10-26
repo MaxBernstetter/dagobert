@@ -5,6 +5,8 @@
 
 #include "tradingcopilot/v1/strategy.pb.h"
 
+#include "exit_policy.hpp"
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -43,17 +45,17 @@ tradingcopilot::v1::SignalConsensusConfig
 check_payload(const tradingcopilot::v1::RunEnvelope &envelope) {
   if (envelope.label() != kLabel) {
     std::cerr << "label must be signal-consensus: " << envelope.label() << '\n';
-    std::exit(2);
+    exit_config();
   }
   if (envelope.payload().type_url() != kTypeUrl) {
     std::cerr << "payload type_url must be " << kTypeUrl << ": "
               << envelope.payload().type_url() << '\n';
-    std::exit(2);
+    exit_config();
   }
   tradingcopilot::v1::SignalConsensusConfig config;
   if (!envelope.payload().UnpackTo(&config)) {
     std::cerr << "payload must unpack to SignalConsensusConfig\n";
-    std::exit(2);
+    exit_config();
   }
   return config;
 }
@@ -83,7 +85,7 @@ namespace {
 
 [[noreturn]] void invalid(const std::string &what) {
   std::cerr << "signal-consensus config: " << what << '\n';
-  std::exit(2);
+  exit_config();
 }
 
 } // namespace
@@ -181,7 +183,8 @@ StrategyResult ConsensusStrategy::calc_backtest(std::span<const Bar> bars) {
       params_);
 
   Position account{initial_quote()};
-  (void)ConsensusSignal::actions_from(account, bars, mask, sizing_, params_);
+  (void)ConsensusSignal::actions_from(account, bars, mask, sizing_, params_,
+                                      trade_from_ms());
   const double mark = bars.empty() ? 0.0 : bars.back().close;
   return strategy_result(account, mark);
 }

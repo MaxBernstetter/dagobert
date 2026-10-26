@@ -108,15 +108,23 @@ func (x *ExperimentInstancePeriodStat) GetWinCount() int32 {
 
 // public.experiment_instance_action
 type ExperimentInstanceAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ExperimentId  string                 `protobuf:"bytes,2,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
-	InstanceId    string                 `protobuf:"bytes,3,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
-	Symbol        string                 `protobuf:"bytes,4,opt,name=symbol,proto3" json:"symbol,omitempty"`
-	BarOpenMs     int64                  `protobuf:"varint,5,opt,name=bar_open_ms,json=barOpenMs,proto3" json:"bar_open_ms,omitempty"`
-	Side          string                 `protobuf:"bytes,6,opt,name=side,proto3" json:"side,omitempty"` // buy | sell | flat | other
-	WeightPct     *float64               `protobuf:"fixed64,7,opt,name=weight_pct,json=weightPct,proto3,oneof" json:"weight_pct,omitempty"`
-	Reason        string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ExperimentId string                 `protobuf:"bytes,2,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	InstanceId   string                 `protobuf:"bytes,3,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
+	Symbol       string                 `protobuf:"bytes,4,opt,name=symbol,proto3" json:"symbol,omitempty"`
+	BarOpenMs    int64                  `protobuf:"varint,5,opt,name=bar_open_ms,json=barOpenMs,proto3" json:"bar_open_ms,omitempty"`
+	Side         string                 `protobuf:"bytes,6,opt,name=side,proto3" json:"side,omitempty"` // buy | sell | flat | other
+	WeightPct    *float64               `protobuf:"fixed64,7,opt,name=weight_pct,json=weightPct,proto3,oneof" json:"weight_pct,omitempty"`
+	Reason       string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+	// unset for unsized actions. Same names as the live signal body.
+	QuoteNotional *float64 `protobuf:"fixed64,9,opt,name=quote_notional,json=quoteNotional,proto3,oneof" json:"quote_notional,omitempty"` // buy: quote to spend
+	BaseQty       *float64 `protobuf:"fixed64,10,opt,name=base_qty,json=baseQty,proto3,oneof" json:"base_qty,omitempty"`                  // vol_cut: base to sell
+	StopPrice     *float64 `protobuf:"fixed64,11,opt,name=stop_price,json=stopPrice,proto3,oneof" json:"stop_price,omitempty"`            // buy: stop of the new unit
+	RaiseStopsBy  *float64 `protobuf:"fixed64,12,opt,name=raise_stops_by,json=raiseStopsBy,proto3,oneof" json:"raise_stops_by,omitempty"` // pyramid: earlier stops move up by this
+	// Book equity (quote) at the decision bar close; rescales sized notionals.
+	Equity        *float64 `protobuf:"fixed64,13,opt,name=equity,proto3,oneof" json:"equity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -205,6 +213,41 @@ func (x *ExperimentInstanceAction) GetReason() string {
 		return x.Reason
 	}
 	return ""
+}
+
+func (x *ExperimentInstanceAction) GetQuoteNotional() float64 {
+	if x != nil && x.QuoteNotional != nil {
+		return *x.QuoteNotional
+	}
+	return 0
+}
+
+func (x *ExperimentInstanceAction) GetBaseQty() float64 {
+	if x != nil && x.BaseQty != nil {
+		return *x.BaseQty
+	}
+	return 0
+}
+
+func (x *ExperimentInstanceAction) GetStopPrice() float64 {
+	if x != nil && x.StopPrice != nil {
+		return *x.StopPrice
+	}
+	return 0
+}
+
+func (x *ExperimentInstanceAction) GetRaiseStopsBy() float64 {
+	if x != nil && x.RaiseStopsBy != nil {
+		return *x.RaiseStopsBy
+	}
+	return 0
+}
+
+func (x *ExperimentInstanceAction) GetEquity() float64 {
+	if x != nil && x.Equity != nil {
+		return *x.Equity
+	}
+	return 0
 }
 
 // public.experiment_instance_fill
@@ -484,7 +527,7 @@ const file_tradingcopilot_v1_experiment_activity_proto_rawDesc = "" +
 	"\v_return_pctB\x0e\n" +
 	"\f_trade_countB\f\n" +
 	"\n" +
-	"_win_count\"\x87\x02\n" +
+	"_win_count\"\x8c\x04\n" +
 	"\x18ExperimentInstanceAction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rexperiment_id\x18\x02 \x01(\tR\fexperimentId\x12\x1f\n" +
@@ -495,8 +538,20 @@ const file_tradingcopilot_v1_experiment_activity_proto_rawDesc = "" +
 	"\x04side\x18\x06 \x01(\tR\x04side\x12\"\n" +
 	"\n" +
 	"weight_pct\x18\a \x01(\x01H\x00R\tweightPct\x88\x01\x01\x12\x16\n" +
-	"\x06reason\x18\b \x01(\tR\x06reasonB\r\n" +
-	"\v_weight_pct\"\xb6\x02\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12*\n" +
+	"\x0equote_notional\x18\t \x01(\x01H\x01R\rquoteNotional\x88\x01\x01\x12\x1e\n" +
+	"\bbase_qty\x18\n" +
+	" \x01(\x01H\x02R\abaseQty\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"stop_price\x18\v \x01(\x01H\x03R\tstopPrice\x88\x01\x01\x12)\n" +
+	"\x0eraise_stops_by\x18\f \x01(\x01H\x04R\fraiseStopsBy\x88\x01\x01\x12\x1b\n" +
+	"\x06equity\x18\r \x01(\x01H\x05R\x06equity\x88\x01\x01B\r\n" +
+	"\v_weight_pctB\x11\n" +
+	"\x0f_quote_notionalB\v\n" +
+	"\t_base_qtyB\r\n" +
+	"\v_stop_priceB\x11\n" +
+	"\x0f_raise_stops_byB\t\n" +
+	"\a_equity\"\xb6\x02\n" +
 	"\x16ExperimentInstanceFill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rexperiment_id\x18\x02 \x01(\tR\fexperimentId\x12\x1f\n" +
