@@ -10,9 +10,14 @@
 #include <parquet/exception.h>
 
 #include <algorithm>
+#include <cctype>
+#include <charconv>
 #include <chrono>
+#include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 
 namespace dagobert {
 namespace {
@@ -67,8 +72,30 @@ constexpr const char *kKeyIntervalMs = "trading_copilot.interval_ms";
   }
 }
 
-[[nodiscard]] double parse_decimal_string(const std::string &value) {
-  return std::stod(value);
+// Same contract as std::stod: leading whitespace and '+' are skipped, trailing
+// characters are ignored, no digits throws invalid_argument, overflow throws
+// out_of_range. std::from_chars avoids the locale and strtod cost.
+[[nodiscard]] double parse_decimal_string(std::string_view value) {
+  const char *first = value.data();
+  const char *const last = first + value.size();
+  while (first != last && std::isspace(static_cast<unsigned char>(*first))) {
+    ++first;
+  }
+  if (first != last && *first == '+') {
+    ++first;
+    if (first != last && (*first == '-' || *first == '+')) {
+      throw std::invalid_argument("stod");
+    }
+  }
+  double out = 0.0;
+  const auto res = std::from_chars(first, last, out);
+  if (res.ec == std::errc::invalid_argument) {
+    throw std::invalid_argument("stod");
+  }
+  if (res.ec == std::errc::result_out_of_range) {
+    throw std::out_of_range("stod");
+  }
+  return out;
 }
 
 [[nodiscard]] const arrow::StringArray *
@@ -104,6 +131,8 @@ int64_column(const std::shared_ptr<arrow::Table> &table,
   PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(input, pool, &reader));
 
   std::shared_ptr<arrow::Table> table;
+  // One small file: a thread pool costs more than it saves.
+  reader->set_use_threads(false);
   PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
 
   const std::int64_t footer_interval =
@@ -131,11 +160,11 @@ int64_column(const std::shared_ptr<arrow::Table> &table,
     }
     Bar bar;
     bar.open_ms = open_ms;
-    bar.open = parse_decimal_string(open->GetString(i));
-    bar.high = parse_decimal_string(high->GetString(i));
-    bar.low = parse_decimal_string(low->GetString(i));
-    bar.close = parse_decimal_string(close->GetString(i));
-    bar.volume = parse_decimal_string(volume->GetString(i));
+    bar.open = parse_decimal_string(open->GetView(i));
+    bar.high = parse_decimal_string(high->GetView(i));
+    bar.low = parse_decimal_string(low->GetView(i));
+    bar.close = parse_decimal_string(close->GetView(i));
+    bar.volume = parse_decimal_string(volume->GetView(i));
     if (!close_time->IsNull(i)) {
       const std::int64_t close_ms = close_time->Value(i);
       // Binance close_time is inclusive: open + interval - 1 ms.
@@ -146,7 +175,7 @@ int64_column(const std::shared_ptr<arrow::Table> &table,
     } else if (footer_interval > 0) {
       bar.duration_ms = footer_interval;
     }
-    bars.push_back(bar);
+    bars.push_back(std::move(bar));
   }
 
   std::sort(bars.begin(), bars.end(),
@@ -177,8 +206,13 @@ std::vector<Bar> load_bars_from_lake(const std::string &data_dir,
   for (const int year : years_spanning(from_ms, to_ms)) {
     const std::string path =
         parquet_path(data_dir, provider, base, quote, year);
-    const std::vector<Bar> part = read_parquet_file(path, from_ms, to_ms);
-    all.insert(all.end(), part.begin(), part.end());
+    std::vector<Bar> part = read_parquet_file(path, from_ms, to_ms);
+    if (all.empty()) {
+      all = std::move(part);
+    } else {
+      all.insert(all.end(), std::make_move_iterator(part.begin()),
+                 std::make_move_iterator(part.end()));
+    }
   }
   std::sort(all.begin(), all.end(),
             [](const Bar &a, const Bar &b) { return a.open_ms < b.open_ms; });

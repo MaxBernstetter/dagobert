@@ -1,7 +1,8 @@
-# C++ vs Go benchmark (CALC.25, phase 1: baseline)
+# C++ vs Go benchmark (CALC.25)
 
-Baseline measurements for issue #110. Nothing here optimises code; the
-candidates at the end are evidence-based proposals for phase 2.
+Issue #110. Phase 1 recorded a baseline and profile; phase 2 (section
+"Phase 2: optimisation") applies the cheap fixes and re-measures. The
+baseline sections below are kept as recorded.
 
 ## Run it
 
@@ -84,24 +85,81 @@ Same profile for both strategies (consensus differs by about 5%):
 Bar loading dominates; indicator and strategy math is a few percent of a
 6 ms run.
 
-## Optimisation candidates (not implemented)
+## Phase 2: optimisation
 
-1. Faster decimal parsing in `load_bars_from_lake`: replace `std::stod` with
-   `std::from_chars` (or Arrow's fast float parse). Targets ~50% of
-   instructions. Measure: expected gain up to ~2x on the whole run.
-2. Avoid per-value `std::string` copies when reading the Arrow string
-   columns (read as `string_view`/buffer slices, reserve the bar vector).
-3. At 6 to 7 ms the run is also bound by process start and Parquet footer
-   work; check `perf stat`/`strace -c` before touching compiler flags.
-4. Compiler flags (`-O2` vs `-O3`, LTO, `-march`): compute is ~3% of the run,
-   so expect little; `-march=native` is not applied in the Nix shell anyway.
-   Verify with the harness before keeping any flag.
-5. Vectorised indicator columns: not justified by this profile at this size;
-   revisit with multi-instance sweeps where indicator work repeats per config.
+Changes, all in `src/calculation/data/bars_parquet.cpp` (`scripts/cpp-bench.sh`
+also needed `schemaVersion` 2 in the generated configs, the executables
+reject 1):
 
-Go side, for the experiment path: `prepare` (~200 ms) recomputes all indicators
-per bar over a rolling window and JSON-roundtrips them; this is where the
-production gap comes from, not language speed alone.
+1. `std::stod` replaced by `std::from_chars` (double). Same contract as
+   `stod`: leading whitespace and `+` skipped, trailing characters ignored,
+   no digits throws `invalid_argument`, overflow throws `out_of_range`.
+2. String columns read through `GetView` (no per-value `std::string`), bars
+   moved instead of copied, per-year parts moved into the result.
+3. `reader->set_use_threads(false)`: the file is one small row group, and the
+   baseline run created an Arrow thread (clone3 in `strace`).
+
+Correctness: `task cpp:test` passes unchanged (91 tests, the suite has 91 in
+this tree). The binary `RunReport` on stdout of both executables on the bench
+lake is byte-identical before and after (sha256 `b39091c7...` for sma-cross,
+`5a577dac...` for signal-consensus, taken from the baseline build).
+
+Results, same lake and seeds, 30 runs each, load average about 1 at the start
+of each final run (`uptime`). Machine load matters: intermediate runs below
+were taken while load was 2 to 8 right after builds, so use only the first and
+last row for conclusions.
+
+| step | sma-cross median / p95 ms | consensus median / p95 ms |
+|---|---|---|
+| baseline | 6.5 / 8.3 | 7.4 / 8.8 |
+| 1 from_chars (load 8, noisy) | 5.7 / 6.5 | 6.4 / 7.9 |
+| 1+2 GetView, moves | 5.9 / 6.9 | 6.0 / 6.9 |
+| 1+2+3 no thread pool (load 6, noisy) | 5.4 / 6.4 | 6.0 / 7.1 |
+| final re-run | 6.0 / 6.6 | 6.3 / 7.0 |
+
+Final vs baseline, same session:
+
+| strategy | C++ median ms | C++ p95 ms | C++ RSS MB | Go e2e median ms | Go e2e p95 ms |
+|---|---|---|---|---|---|
+| sma-cross before | 6.5 | 8.3 | 13.0 | 407 | 475 |
+| sma-cross after | 6.0 | 6.6 | 13.1 | 319 | 360 |
+| signal-consensus before | 7.4 | 8.8 | 13.8 | 511 | 610 |
+| signal-consensus after | 6.3 | 7.0 | 13.6 | 468 | 506 |
+
+(Go was not changed; its differences are run-to-run noise on a shared
+machine.) Wall time improves 8 to 15% at the median and the tail shrinks; the
+instruction count drops by 43% (about 45 M to 25.7 M, Callgrind), so the
+wall-clock gain is far smaller than the instruction gain: a 6 ms run is
+dominated by process start, dynamic loading, page faults and file I/O, which
+are not instruction-bound. Step 2 alone: 26.77 M to 25.66 M instructions
+(4%), not separable from noise in wall time.
+
+### Callgrind after (sma-cross, 25.7 M Ir)
+
+| Share of Ir | Where |
+| --- | --- |
+| 20% | `std::from_chars` (double) (was ~50% in `strtod`) |
+| 6% | `parse_decimal_string` wrapper (inlined scanning) |
+| 4% | Arrow `BinaryBuilder` append (Parquet string decode) |
+| ~10% | `malloc`/`free` family |
+| 3% | `memcpy` |
+| 2% | Parquet `DeltaLengthByteArrayDecoder` |
+
+### Tried and rejected
+
+- Nothing was reverted. `-O2` vs `-O3`, LTO and `-march` were not tried:
+  compute is a few percent of the run and `-march=native` is ignored in Nix.
+
+### Remaining candidates
+
+1. Read only the needed columns (`open`, `high`, `low` are unused by
+   sma-cross); saves Parquet decode and parsing for them. Needs the strategy
+   to declare its columns, a larger API change.
+2. Avoid the Arrow `Table` and decode string columns directly (Parquet
+   low-level reader) to cut the builder and malloc cost (~14%).
+3. Remaining wall time is process start and fixed costs; measure with
+   `perf stat` before more tuning. Static linking could cut dynamic loading.
+4. Vectorised indicator columns: only for multi-instance sweeps.
 
 ## Gaps
 
