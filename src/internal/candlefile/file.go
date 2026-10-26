@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"github.com/parquet-go/parquet-go"
@@ -221,4 +222,23 @@ func decoderFor(name string, node parquet.Node, wantFloat bool) (func(parquet.Va
 		}, nil
 	}
 	return nil, fmt.Errorf("candle column %q has unsupported type %s", name, typ)
+}
+
+// WriteFloatFile writes float candles to path in the current schema, rounded to
+// Scale decimals. It is for fixtures and tests that build a lake from floats.
+func WriteFloatFile(path string, rows []FloatRow) error {
+	conv := make([]Row, len(rows))
+	f := func(v float64) string { return strconv.FormatFloat(v, 'f', Scale, 64) }
+	for i, r := range rows {
+		conv[i] = Row{r.OpenTime, f(r.Open), f(r.High), f(r.Low), f(r.Close), f(r.Volume), r.CloseTime}
+	}
+	out, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := Write(out, conv, parquetmeta.Meta{}); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }

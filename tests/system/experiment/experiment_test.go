@@ -11,11 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/parquet-go/parquet-go"
-
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/shared"
+	"github.com/MaxBernstetter/dagobert/tests/system/internal/lakefile"
 	_ "modernc.org/sqlite"
 )
 
@@ -24,15 +23,7 @@ const (
 	symbol = "BTCUSDT"
 )
 
-type hourCandle struct {
-	OpenTime  int64   `parquet:"open_time"`
-	Open      float64 `parquet:"open"`
-	High      float64 `parquet:"high"`
-	Low       float64 `parquet:"low"`
-	Close     float64 `parquet:"close"`
-	Volume    float64 `parquet:"volume"`
-	CloseTime int64   `parquet:"close_time"`
-}
+type hourCandle = lakefile.Candle
 
 func TestStudyMultiInstanceCorrectness(t *testing.T) {
 	dataDir := tempDataDir(t)
@@ -48,7 +39,8 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 	defer cat.Close()
 
 	settings := store.DefaultExperimentSettings()
-	settings.Base = "BTC"; settings.Quote = "USDT"
+	settings.Base = "BTC"
+	settings.Quote = "USDT"
 	settings.FromMs = 0
 	settings.ToMs = endMs
 	settings.RedownloadMissing = false
@@ -217,13 +209,13 @@ func TestStudySignalConsensusThresholds(t *testing.T) {
 	cfgA, _ := json.Marshal(map[string]any{
 		"rsiBull": 52, "rsiBear": 48,
 		"volRatioBull": 1.1, "volRatioBear": 0.85,
-		"atrStopMult": 2.5,
+		"atrStopMult":          2.5,
 		"minBarsFlatAfterSell": 8, "minBarsLongBeforeSell": 4,
 	})
 	cfgB, _ := json.Marshal(map[string]any{
 		"rsiBull": 60, "rsiBear": 40,
 		"volRatioBull": 1.2, "volRatioBear": 0.8,
-		"atrStopMult": 3.0,
+		"atrStopMult":          3.0,
 		"minBarsFlatAfterSell": 4, "minBarsLongBeforeSell": 2,
 	})
 	rec, err := cat.CreateStudy("consensus-thresholds", "", settings, []store.ExperimentInstanceSpec{
@@ -346,7 +338,7 @@ func writeRows(t *testing.T, dataDir string, rows []hourCandle) {
 		if err := os.MkdirAll(filepath.Dir(pqPath), 0o777); err != nil {
 			t.Fatal(err)
 		}
-		if err := parquet.WriteFile(pqPath, part); err != nil {
+		if err := lakefile.Write(pqPath, part); err != nil {
 			t.Fatal(err)
 		}
 	}

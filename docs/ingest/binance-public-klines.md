@@ -118,4 +118,4 @@ Scale 8 is Binance's maximum precision. Prices fit DECIMAL(18,8) (below 1e10). V
 
 Ingest never truncates. A value with more than 8 significant decimals (trailing zeros are fine), with an exponent, or that does not fit its precision makes the run fail with exit 1 and `DETAIL=50`; the log names the open time and the value, and nothing is stored for that run.
 
-Schema version 1 (decimal strings in `open`..`volume`) is still readable: every reader detects the column type. Writers only write version 2.
+Schema version 1 (decimal strings in `open`..`volume`) is still readable: every reader detects the column type. Writers only write version 2. Convert an existing lake with `task data:migrate-candles` (`DATA_DIR`, default `./data`): it rewrites each version 1 file through a temp file and rename after a decimal round-trip check, skips files already converted, and prints `migrated=… skipped=… failed=… rows=…`.

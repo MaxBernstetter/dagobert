@@ -41,6 +41,11 @@ tasks:
     cmds:
       - scripts/cpp-bench.sh {{.RUNS | default "15"}}
 
+  data:migrate-candles:
+    desc: Rewrite legacy string candle files under DATA_DIR (default ./data) in the decimal schema; idempotent, verified, atomic
+    cmds:
+      - go run ./src/cmd/migrate-candles {{.DATA_DIR | default "./data"}}
+
   build:jobs:
     desc: Build the four pipeline job images (orchestrator starts these)
     cmds:
