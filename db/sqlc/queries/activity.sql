@@ -116,3 +116,15 @@ INSERT INTO experiment_instance_action (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8
 );
+
+-- name: DeleteFillsForInstances :exec
+DELETE FROM experiment_instance_fill
+WHERE instance_id = ANY($1::uuid[]);
+
+-- name: DeleteTradeOutcomesForInstances :exec
+DELETE FROM experiment_trade_outcome
+WHERE instance_id = ANY($1::uuid[]);
+
+-- name: DeletePeriodStatsForInstances :exec
+DELETE FROM experiment_instance_period_stat
+WHERE instance_id = ANY($1::uuid[]);

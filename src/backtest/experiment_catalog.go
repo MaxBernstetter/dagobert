@@ -134,3 +134,19 @@ func (c *experimentRunCatalog) UpsertExperimentKPIRows(experimentID string, rows
 	}
 	return c.sqlite.UpsertExperimentKPIRows(experimentID, rows)
 }
+
+// PersistInstanceBatch commits a batch of instance results (and progress) in one transaction.
+func (c *experimentRunCatalog) PersistInstanceBatch(experimentID string, results []instanceResult, progressDone, progressTotal int) error {
+	if c.usesPostgres() {
+		items := make([]pgcatalog.InstanceBatchItem, len(results))
+		for i, r := range results {
+			items[i] = r.pgItem()
+		}
+		return c.pg.PersistInstanceBatch(c.ctx(), experimentID, items, progressDone, progressTotal)
+	}
+	items := make([]store.InstanceBatchItem, len(results))
+	for i, r := range results {
+		items[i] = r.item()
+	}
+	return c.sqlite.PersistInstanceBatch(experimentID, items, progressDone, progressTotal)
+}

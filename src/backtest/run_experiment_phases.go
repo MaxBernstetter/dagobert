@@ -328,92 +328,79 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	}
 	stage(0)
 
-	workers := ExperimentSimWorkers()
-	sem := make(chan struct{}, workers)
-	var (
-		mu   sync.Mutex
-		wg   sync.WaitGroup
-		done int
-	)
-	finished := func() {
-		done++
-		stage(done)
-	}
-	aggMS := signalstore.AggregationDurationMS()
-
+	// Stage 1+2 (compute + KPI) feed a bounded queue; stage 3 (persistence) drains it in batches.
+	// Compute never touches a database. Failures of skipped symbols were already recorded by prepare.
+	var compute []store.ExperimentInstance
+	var precomputed []instanceResult
+	skipped := 0
 	for _, inst := range work {
-		inst := inst
 		sym := store.InstanceSymbol(inst, settings)
 		if _, bad := failedSymbols[sym]; bad {
-			mu.Lock()
-			finished()
-			mu.Unlock()
+			skipped++
 			continue
 		}
-		bundle, ok := bySymbol[sym]
-		if !ok {
-			msg := fmt.Sprintf("no KPI for symbol %s", sym)
-			_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, msg, store.InstanceRunTiming{})
-			mu.Lock()
-			finished()
-			mu.Unlock()
+		if _, ok := bySymbol[sym]; !ok {
+			precomputed = append(precomputed, instanceResult{
+				inst: inst, sym: sym, err: fmt.Errorf("no KPI for symbol %s", sym),
+			})
 			continue
 		}
+		compute = append(compute, inst)
+	}
+	queue := make(chan instanceResult, min(len(work), persistQueueMax))
+	persistDone := make(chan struct{})
+	go func() {
+		defer close(persistDone)
+		runPersister(cat, experimentID, instTotal, skipped, queue)
+	}()
+	for _, r := range precomputed {
+		queue <- r
+	}
+
+	aggMS := signalstore.AggregationDurationMS()
+	startCash := settings.InitialUSDC + settings.InitialUSDT
+	next := make(chan store.ExperimentInstance)
+	var wg sync.WaitGroup
+	for w := 0; w < ExperimentSimWorkers(); w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			ws := store.ExperimentWorkspaceDir(dataDir, inst)
-			opts := &signalrunner.PipelineOpts{
-				StrategyConfig: inst.StrategyConfig,
-				PlaybookKey:    inst.PlaybookKey,
-				Slim:           true,
-				SkipSampler:    true,
-			}
-			runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, bundle.win, inst.Playbook, sym, bundle.closes, opts, nil)
-			timing := store.InstanceRunTiming{StartedAtMs: runRep.StartedAtMs, FinishedAtMs: runRep.FinishedAtMs}
-			var report signalrunner.InstanceReport
-			if err == nil {
-				startCash := settings.InitialUSDC + settings.InitialUSDT
-				var werr error
-				report, werr = signalrunner.BuildAndWriteInstanceReport(
-					ws, runRep, inst.PlaybookKey, sym, from, to, startCash,
-					bundle.win, bundle.closes, aggMS,
-				)
-				if werr != nil {
-					err = werr
-				} else if uerr := uploadInstanceReport(inst.WorkspaceRelPath, ws); uerr != nil {
-					err = uerr
+			for inst := range next {
+				sym := store.InstanceSymbol(inst, settings)
+				bundle := bySymbol[sym]
+				ws := store.ExperimentWorkspaceDir(dataDir, inst)
+				res := instanceResult{inst: inst, sym: sym, ws: ws}
+				opts := &signalrunner.PipelineOpts{
+					StrategyConfig: inst.StrategyConfig,
+					PlaybookKey:    inst.PlaybookKey,
+					Slim:           true,
+					SkipSampler:    true,
 				}
+				runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, bundle.win, inst.Playbook, sym, bundle.closes, opts, nil)
+				res.timing = store.InstanceRunTiming{StartedAtMs: runRep.StartedAtMs, FinishedAtMs: runRep.FinishedAtMs}
+				if err == nil {
+					res.fills, err = signalrunner.LoadInstanceFills(ws, inst.PlaybookKey)
+				}
+				if err == nil {
+					res.report = signalrunner.BuildInstanceReport(
+						runRep, inst.PlaybookKey, sym, from, to, startCash, res.fills, bundle.win, bundle.closes, aggMS,
+					)
+				}
+				res.err = err
+				queue <- res
 			}
-			mu.Lock()
-			defer mu.Unlock()
-			if err != nil {
-				_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, err.Error(), timing)
-				finished()
-				return
-			}
-			if err := cat.MarkExperimentInstanceCompleted(experimentID, inst.ID, timing); err != nil {
-				_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, err.Error(), timing)
-				finished()
-				return
-			}
-			metrics := ListMetricsFromReport(report)
-			if err := cat.UpdateExperimentInstanceMetrics(experimentID, inst.ID, metrics); err != nil {
-				_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, err.Error(), timing)
-				finished()
-				return
-			}
-			if err := writeInstancePostgres(cat, experimentID, inst, sym, report, ws); err != nil {
-				_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, err.Error(), timing)
-				finished()
-				return
-			}
-			finished()
 		}()
 	}
+	for _, inst := range compute {
+		next <- inst
+	}
+	close(next)
 	wg.Wait()
+	if SimulateComputeDoneHook != nil {
+		SimulateComputeDoneHook()
+	}
+	close(queue)
+	<-persistDone
 	return nil
 }
 
