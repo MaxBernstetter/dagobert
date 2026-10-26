@@ -2,6 +2,7 @@ package experiment_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +26,22 @@ func cppSmaCrossBin(t *testing.T) string {
 		}
 	}
 	t.Skip("strategy-sma-cross not built (task cpp:build) and CPP_SMA_CROSS_BIN unset")
+	return ""
+}
+
+// cppSignalConsensusBin returns the C++ consensus executable (the worker image sets CPP_SIGNAL_CONSENSUS_BIN).
+func cppSignalConsensusBin(t *testing.T) string {
+	t.Helper()
+	if p := os.Getenv("CPP_SIGNAL_CONSENSUS_BIN"); p != "" {
+		return p
+	}
+	for _, preset := range []string{"optimized", "debug"} {
+		p, _ := filepath.Abs(filepath.Join("..", "..", "..", "build", preset, "strategies", "consensus", "strategy-signal-consensus"))
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	t.Skip("strategy-signal-consensus not built (task cpp:build) and CPP_SIGNAL_CONSENSUS_BIN unset")
 	return ""
 }
 
@@ -86,7 +103,7 @@ func TestExperimentEngineCppCrashedShardFailsItsInstances(t *testing.T) {
 	}
 }
 
-func TestExperimentEngineCppRejectsUnsupportedPlaybook(t *testing.T) {
+func TestExperimentEngineCppRejectsConsensusZeroCooldown(t *testing.T) {
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
@@ -100,9 +117,9 @@ func TestExperimentEngineCppRejectsUnsupportedPlaybook(t *testing.T) {
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	cfg, _ := json.Marshal(map[string]any{"rsiBull": 52, "rsiBear": 48})
-	rec, err := cat.CreateStudy("consensus", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "consensus", Playbook: "signal-consensus", StrategyConfig: cfg},
+	cfg, _ := json.Marshal(map[string]any{"minBarsFlatAfterSell": 0})
+	rec, err := cat.CreateStudy("zero-cooldown", "", settings, []store.ExperimentInstanceSpec{
+		{Label: "zero-cooldown", Playbook: "signal-consensus", StrategyConfig: cfg},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -110,13 +127,55 @@ func TestExperimentEngineCppRejectsUnsupportedPlaybook(t *testing.T) {
 	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
-	t.Setenv("CPP_SMA_CROSS_BIN", falseBin(t))
+	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", falseBin(t))
 	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
 		t.Fatal("expected failure")
 	}
 	got, _ := cat.GetExperiment(rec.ID)
-	if got.Instances[0].Status != store.StatusFailed || !strings.Contains(got.Instances[0].Error, "does not support playbook") {
+	if got.Instances[0].Status != store.StatusFailed || !strings.Contains(got.Instances[0].Error, "#128") {
 		t.Fatalf("instance status %q error %q", got.Instances[0].Status, got.Instances[0].Error)
+	}
+}
+
+func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
+	bin := cppSignalConsensusBin(t)
+	dataDir := tempDataDir(t)
+	seedLiveMarker(t, dataDir)
+	endMs := 240 * hour
+	writeCrossingParquet(t, dataDir, symbol, endMs)
+	cat, err := store.Open(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cat.Close()
+	settings := store.DefaultExperimentSettings()
+	settings.Base, settings.Quote = "BTC", "USDT"
+	settings.FromMs, settings.ToMs = 0, endMs
+	settings.RedownloadMissing = false
+	var specs []store.ExperimentInstanceSpec
+	for i, rsi := range []float64{50, 52, 55} {
+		cfg, _ := json.Marshal(map[string]any{"rsiBull": rsi})
+		specs = append(specs, store.ExperimentInstanceSpec{Label: fmt.Sprintf("c%d", i), Playbook: "signal-consensus", StrategyConfig: cfg})
+	}
+	rec, err := cat.CreateStudy("consensus", "", settings, specs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("VENUE_SIMULATE", "1")
+	t.Setenv("EXPERIMENT_ENGINE", "cpp")
+	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
+	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := cat.GetExperiment(rec.ID)
+	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != len(specs) {
+		t.Fatalf("status %q error %q counts %v", got.Status, got.Error, countStatus(got))
+	}
+	for _, inst := range got.Instances {
+		if _, err := os.Stat(filepath.Join(store.ExperimentWorkspaceDir(dataDir, inst), "report.json")); err != nil {
+			t.Fatalf("instance %s: %v", inst.Label, err)
+		}
 	}
 }
 

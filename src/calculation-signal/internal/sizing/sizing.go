@@ -4,6 +4,8 @@ package sizing
 import (
 	"fmt"
 	"math"
+
+	pb "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 )
 
 // Documented defaults, applied to omitted (nil) fields only.
@@ -203,4 +205,17 @@ func PyramidAllowed(units []Unit, lastFill, price, equity, atr float64, c Config
 		return 0, false
 	}
 	return n, true
+}
+
+// Proto maps a defaulted Config (see WithDefaults) to the C++ engine's Sizing message.
+func (c Config) Proto() *pb.Sizing {
+	m := &pb.Sizing{
+		UnitRiskPct: c.UnitRiskPct, HeatPct: c.HeatPct, StopAtrMult: c.StopAtrMult,
+		AddAtrMult: c.AddAtrMult, MaxWeightPct: c.MaxWeightPct, MinOrderQuote: c.MinOrderQuote,
+	}
+	if c.MaxUnits != nil {
+		n := int32(*c.MaxUnits)
+		m.MaxUnits = &n
+	}
+	return m
 }

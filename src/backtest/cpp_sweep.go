@@ -13,6 +13,7 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	macross "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/ma-cross"
+	signalconsensus "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/signal-consensus"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	pb "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
@@ -27,32 +28,54 @@ const sweepSchemaVersion = 2
 
 // sweepLabel is the RunEnvelope label of a playbook slug the C++ path supports.
 func sweepLabel(slug string) (string, error) {
-	if slug == "ma-cross" {
+	switch slug {
+	case "ma-cross":
 		return "sma-cross", nil
+	case "signal-consensus":
+		return "signal-consensus", nil
 	}
 	return "", fmt.Errorf("C++ engine does not support playbook %q", slug)
 }
 
 // SweepPayload maps an instance's StrategyConfig to the C++ config message (Any).
-// Only ma-cross is supported; any other playbook is an error, never a silent fallback.
+// Only ma-cross and signal-consensus are supported; any other playbook is an error, never a
+// silent fallback. The full resolved config (defaults applied) is sent.
 func SweepPayload(slug string, strategyConfig []byte) (*anypb.Any, error) {
 	if _, err := sweepLabel(slug); err != nil {
 		return nil, err
+	}
+	if slug == "signal-consensus" {
+		cfg, err := signalconsensus.ParseConfig(strategyConfig)
+		if err != nil {
+			return nil, err
+		}
+		if err := cfg.Validate(0); err != nil {
+			return nil, err
+		}
+		// proto3 cannot tell an explicit 0 from unset and C++ reads 0 as the default (8/4);
+		// Go honours 0. Reject until explicit presence exists (#128).
+		if cfg.MinBarsFlatAfterSell == 0 || cfg.MinBarsLongBeforeSell == 0 {
+			return nil, fmt.Errorf("C++ engine: signal-consensus cooldown 0 is not supported yet (#128); use >= 1 or EXPERIMENT_ENGINE=go")
+		}
+		msg := &pb.SignalConsensusConfig{
+			RsiBull: cfg.RsiBull, RsiBear: cfg.RsiBear,
+			VolRatioBull: cfg.VolRatioBull, VolRatioBear: cfg.VolRatioBear,
+			AtrStopMult:           cfg.AtrStopMult,
+			MinBarsFlatAfterSell:  int32(cfg.MinBarsFlatAfterSell),
+			MinBarsLongBeforeSell: int32(cfg.MinBarsLongBeforeSell),
+		}
+		if cfg.Sizing != nil {
+			msg.Sizing = cfg.Sizing.Proto()
+		}
+		return anypb.New(msg)
 	}
 	cfg, err := macross.ParseConfig(strategyConfig)
 	if err != nil {
 		return nil, err
 	}
 	msg := &pb.MaCrossConfig{FastHr: int32(cfg.FastHr), SlowHr: int32(cfg.SlowHr)}
-	if s := cfg.Sizing; s != nil {
-		msg.Sizing = &pb.Sizing{
-			UnitRiskPct: s.UnitRiskPct, HeatPct: s.HeatPct, StopAtrMult: s.StopAtrMult,
-			AddAtrMult: s.AddAtrMult, MaxWeightPct: s.MaxWeightPct, MinOrderQuote: s.MinOrderQuote,
-		}
-		if s.MaxUnits != nil {
-			n := int32(*s.MaxUnits)
-			msg.Sizing.MaxUnits = &n
-		}
+	if cfg.Sizing != nil {
+		msg.Sizing = cfg.Sizing.Proto()
 	}
 	return anypb.New(msg)
 }

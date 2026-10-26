@@ -38,8 +38,39 @@ func TestReplayActionsSizedNeedsEquity(t *testing.T) {
 }
 
 func TestSweepPayloadRejectsOtherPlaybooks(t *testing.T) {
-	if _, err := SweepPayload("signal-consensus", nil); err == nil {
+	if _, err := SweepPayload("position-sizing", nil); err == nil {
 		t.Fatal("unsupported playbook must fail loudly")
+	}
+}
+
+func TestSweepPayloadSignalConsensus(t *testing.T) {
+	a, err := SweepPayload("signal-consensus", []byte(`{"rsiBull":55,"minBarsFlatAfterSell":3,"sizing":{"maxUnits":2}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m pb.SignalConsensusConfig
+	if err := a.UnmarshalTo(&m); err != nil {
+		t.Fatal(err)
+	}
+	if m.RsiBull != 55 || m.RsiBear != 48 || m.AtrStopMult != 2.5 || m.MinBarsFlatAfterSell != 3 || m.MinBarsLongBeforeSell != 4 {
+		t.Fatalf("resolved config not sent in full: %+v", &m)
+	}
+	if m.Sizing == nil || m.Sizing.MaxUnits == nil || *m.Sizing.MaxUnits != 2 || m.Sizing.UnitRiskPct == nil || *m.Sizing.UnitRiskPct != 1 {
+		t.Fatalf("sizing: %+v", m.Sizing)
+	}
+	if _, err := SweepPayload("signal-consensus", nil); err != nil {
+		t.Fatalf("defaults: %v", err)
+	}
+}
+
+func TestSweepPayloadSignalConsensusRejectsZeroCooldown(t *testing.T) {
+	for _, c := range []string{`{"minBarsFlatAfterSell":0}`, `{"minBarsLongBeforeSell":0}`} {
+		if _, err := SweepPayload("signal-consensus", []byte(c)); err == nil {
+			t.Fatalf("%s must be rejected (#128)", c)
+		}
+	}
+	if _, err := SweepPayload("signal-consensus", []byte(`{"rsiBull":40}`)); err == nil {
+		t.Fatal("invalid config must fail Validate")
 	}
 }
 

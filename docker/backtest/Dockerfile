@@ -45,5 +45,6 @@ FROM gcr.io/distroless/cc-debian13
 COPY --from=build /out/backtest /backtest
 COPY --from=cpp-build /out/strategies/sma-cross/strategy-sma-cross /usr/local/bin/strategy-sma-cross
 COPY --from=cpp-build /out/strategies/consensus/strategy-signal-consensus /usr/local/bin/strategy-signal-consensus
-ENV CPP_SMA_CROSS_BIN=/usr/local/bin/strategy-sma-cross
+ENV CPP_SMA_CROSS_BIN=/usr/local/bin/strategy-sma-cross \
+    CPP_SIGNAL_CONSENSUS_BIN=/usr/local/bin/strategy-signal-consensus
 ENTRYPOINT ["/backtest"]
