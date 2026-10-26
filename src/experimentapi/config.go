@@ -49,14 +49,16 @@ func normalizeMaCrossConfig(raw map[string]interface{}) (*v1.MaCrossConfig, erro
 }
 
 func normalizeSignalConsensusConfig(raw map[string]interface{}) (*v1.SignalConsensusConfig, error) {
+	flat := int32(pickFloat(raw, "minBarsFlatAfterSell", 8))
+	long := int32(pickFloat(raw, "minBarsLongBeforeSell", 4))
 	cfg := &v1.SignalConsensusConfig{
 		RsiBull:               pickFloat(raw, "rsiBull", 52),
 		RsiBear:               pickFloat(raw, "rsiBear", 48),
 		VolRatioBull:          pickFloat(raw, "volRatioBull", 1.1),
 		VolRatioBear:          pickFloat(raw, "volRatioBear", 0.85),
 		AtrStopMult:           pickFloat(raw, "atrStopMult", 2.5),
-		MinBarsFlatAfterSell:  int32(pickFloat(raw, "minBarsFlatAfterSell", 8)),
-		MinBarsLongBeforeSell: int32(pickFloat(raw, "minBarsLongBeforeSell", 4)),
+		MinBarsFlatAfterSell:  &flat,
+		MinBarsLongBeforeSell: &long,
 	}
 	if cfg.RsiBull <= cfg.RsiBear {
 		return cfg, fmt.Errorf("signal-consensus config: rsiBull must be > rsiBear")
@@ -67,7 +69,7 @@ func normalizeSignalConsensusConfig(raw map[string]interface{}) (*v1.SignalConse
 	if cfg.AtrStopMult <= 0 {
 		return cfg, fmt.Errorf("signal-consensus config: atrStopMult must be positive")
 	}
-	if cfg.MinBarsFlatAfterSell < 0 || cfg.MinBarsLongBeforeSell < 0 {
+	if flat < 0 || long < 0 {
 		return cfg, fmt.Errorf("signal-consensus config: cooldowns must be >= 0")
 	}
 	return cfg, nil
@@ -135,7 +137,7 @@ func normalizeInstanceConfig(playbook string, raw map[string]interface{}) (norma
 			"rsiBull": cfg.RsiBull, "rsiBear": cfg.RsiBear,
 			"volRatioBull": cfg.VolRatioBull, "volRatioBear": cfg.VolRatioBear,
 			"atrStopMult":          cfg.AtrStopMult,
-			"minBarsFlatAfterSell": cfg.MinBarsFlatAfterSell, "minBarsLongBeforeSell": cfg.MinBarsLongBeforeSell,
+			"minBarsFlatAfterSell": cfg.GetMinBarsFlatAfterSell(), "minBarsLongBeforeSell": cfg.GetMinBarsLongBeforeSell(),
 		}
 		params := experimentdb.InsertInstanceParams{
 			CfgRsiBull:               pgtype.Float8{Float64: cfg.RsiBull, Valid: true},
@@ -143,8 +145,8 @@ func normalizeInstanceConfig(playbook string, raw map[string]interface{}) (norma
 			CfgVolRatioBull:          pgtype.Float8{Float64: cfg.VolRatioBull, Valid: true},
 			CfgVolRatioBear:          pgtype.Float8{Float64: cfg.VolRatioBear, Valid: true},
 			CfgAtrStopMult:           pgtype.Float8{Float64: cfg.AtrStopMult, Valid: true},
-			CfgMinBarsFlatAfterSell:  pgtype.Int4{Int32: cfg.MinBarsFlatAfterSell, Valid: true},
-			CfgMinBarsLongBeforeSell: pgtype.Int4{Int32: cfg.MinBarsLongBeforeSell, Valid: true},
+			CfgMinBarsFlatAfterSell:  pgtype.Int4{Int32: cfg.GetMinBarsFlatAfterSell(), Valid: true},
+			CfgMinBarsLongBeforeSell: pgtype.Int4{Int32: cfg.GetMinBarsLongBeforeSell(), Valid: true},
 		}
 		return normalizedConfig{
 			Playbook:       slug,

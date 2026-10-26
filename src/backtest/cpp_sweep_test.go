@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"reflect"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -52,7 +53,7 @@ func TestSweepPayloadSignalConsensus(t *testing.T) {
 	if err := a.UnmarshalTo(&m); err != nil {
 		t.Fatal(err)
 	}
-	if m.RsiBull != 55 || m.RsiBear != 48 || m.AtrStopMult != 2.5 || m.MinBarsFlatAfterSell != 3 || m.MinBarsLongBeforeSell != 4 {
+	if m.RsiBull != 55 || m.RsiBear != 48 || m.AtrStopMult != 2.5 || m.MinBarsFlatAfterSell == nil || *m.MinBarsFlatAfterSell != 3 || m.MinBarsLongBeforeSell == nil || *m.MinBarsLongBeforeSell != 4 {
 		t.Fatalf("resolved config not sent in full: %+v", &m)
 	}
 	if m.Sizing == nil || m.Sizing.MaxUnits == nil || *m.Sizing.MaxUnits != 2 || m.Sizing.UnitRiskPct == nil || *m.Sizing.UnitRiskPct != 1 {
@@ -63,11 +64,18 @@ func TestSweepPayloadSignalConsensus(t *testing.T) {
 	}
 }
 
-func TestSweepPayloadSignalConsensusRejectsZeroCooldown(t *testing.T) {
-	for _, c := range []string{`{"minBarsFlatAfterSell":0}`, `{"minBarsLongBeforeSell":0}`} {
-		if _, err := SweepPayload("signal-consensus", []byte(c)); err == nil {
-			t.Fatalf("%s must be rejected (#128)", c)
-		}
+// An explicit 0 cooldown must reach C++ as a present field; absent keeps the default (#128).
+func TestSweepPayloadSignalConsensusKeepsExplicitZeroCooldown(t *testing.T) {
+	a, err := SweepPayload("signal-consensus", []byte(`{"minBarsFlatAfterSell":0,"minBarsLongBeforeSell":0}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m pb.SignalConsensusConfig
+	if err := a.UnmarshalTo(&m); err != nil {
+		t.Fatal(err)
+	}
+	if m.MinBarsFlatAfterSell == nil || *m.MinBarsFlatAfterSell != 0 || m.MinBarsLongBeforeSell == nil || *m.MinBarsLongBeforeSell != 0 {
+		t.Fatalf("explicit 0 lost: %+v", &m)
 	}
 	if _, err := SweepPayload("signal-consensus", []byte(`{"rsiBull":40}`)); err == nil {
 		t.Fatal("invalid config must fail Validate")
@@ -315,6 +323,13 @@ func TestConsensusGoVsCppEquivalence(t *testing.T) {
 		`{"rsiBull":55,"rsiBear":45,"minBarsFlatAfterSell":1,"minBarsLongBeforeSell":1,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":4,"addAtrMult":0.25}}`,
 		`{"atrStopMult":2,"minBarsFlatAfterSell":1,"minBarsLongBeforeSell":1,"sizing":{"unitRiskPct":0.5,"heatPct":0.5,"maxUnits":3,"addAtrMult":0.5}}`,
 	}
+	// Explicit zero cooldowns (#128): C++ must read them as 0, not as the default 8/4.
+	configs = append(configs,
+		`{"minBarsFlatAfterSell":0,"minBarsLongBeforeSell":0}`,
+		`{"minBarsFlatAfterSell":0}`,
+		`{"minBarsLongBeforeSell":0,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":3}}`,
+	)
+	const zeroFrom = 7 // index of the first zero-cooldown config
 	lakes := map[string][]string{
 		"1h":          {"-seed", "7", "-hourly"},
 		"1h-with-gap": {"-seed", "7", "-hourly", "-gap-every", "17"},
@@ -331,6 +346,10 @@ func TestConsensusGoVsCppEquivalence(t *testing.T) {
 			}
 			if total["vol_cut"] == 0 || total["pyramid"] == 0 {
 				t.Fatalf("configs must fire vol_cut and pyramid, fired %v", total)
+			}
+			// Zero cooldowns must change behaviour versus the default 8/4, else this proves nothing.
+			if reflect.DeepEqual(counts[zeroFrom], counts[0]) {
+				t.Fatalf("zero cooldowns behave like the default: %v", counts[0])
 			}
 		})
 	}

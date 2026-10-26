@@ -253,11 +253,11 @@ constexpr SignalConsensusConfig::ParseTableT_ SignalConsensusConfig::InternalGen
       {::_pbi::TcParser::FastF64S2,
        {1729, 5, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.atr_stop_mult_)}},
-      // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+      // optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
       {::_pbi::TcParser::FastV32S2,
        {1736, 6, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_flat_after_sell_)}},
-      // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+      // optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
       {::_pbi::TcParser::FastV32S2,
        {1744, 7, 0,
         PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_)}},
@@ -296,9 +296,9 @@ constexpr SignalConsensusConfig::ParseTableT_ SignalConsensusConfig::InternalGen
       {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.vol_ratio_bear_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double atr_stop_mult = 104 [json_name = "atrStopMult"];
       {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.atr_stop_mult_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-      // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+      // optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
       {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_flat_after_sell_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
-      // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+      // optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
       {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.min_bars_long_before_sell_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
       {PROTOBUF_FIELD_OFFSET(SignalConsensusConfig, _impl_.sizing_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
@@ -665,28 +665,30 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fstrategy_2eproto[] AB
     "\n\020_min_order_quote\"\204\001\n\rMaCrossConfig\022\027\n\007"
     "fast_hr\030\001 \001(\005R\006fastHr\022\027\n\007slow_hr\030\002 \001(\005R\006"
     "slowHr\0226\n\006sizing\030\003 \001(\0132\031.tradingcopilot."
-    "v1.SizingH\000R\006sizing\210\001\001B\t\n\007_sizing\"\362\002\n\025Si"
+    "v1.SizingH\000R\006sizing\210\001\001B\t\n\007_sizing\"\267\003\n\025Si"
     "gnalConsensusConfig\022\031\n\010rsi_bull\030d \001(\001R\007r"
     "siBull\022\031\n\010rsi_bear\030e \001(\001R\007rsiBear\022$\n\016vol"
     "_ratio_bull\030f \001(\001R\014volRatioBull\022$\n\016vol_r"
     "atio_bear\030g \001(\001R\014volRatioBear\022\"\n\ratr_sto"
-    "p_mult\030h \001(\001R\013atrStopMult\0226\n\030min_bars_fl"
-    "at_after_sell\030i \001(\005R\024minBarsFlatAfterSel"
-    "l\0228\n\031min_bars_long_before_sell\030j \001(\005R\025mi"
-    "nBarsLongBeforeSell\0226\n\006sizing\030k \001(\0132\031.tr"
-    "adingcopilot.v1.SizingH\000R\006sizing\210\001\001B\t\n\007_"
-    "sizingB\332\001\n\025com.tradingcopilot.v1B\rStrate"
-    "gyProtoP\001ZMgithub.com/MaxBernstetter/dag"
-    "obert/src/gen/tradingcopilot/v1;tradingc"
-    "opilotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tra"
-    "dingcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMe"
-    "tadata\352\002\022Tradingcopilot::V1b\006proto3"
+    "p_mult\030h \001(\001R\013atrStopMult\022;\n\030min_bars_fl"
+    "at_after_sell\030i \001(\005H\000R\024minBarsFlatAfterS"
+    "ell\210\001\001\022=\n\031min_bars_long_before_sell\030j \001("
+    "\005H\001R\025minBarsLongBeforeSell\210\001\001\0226\n\006sizing\030"
+    "k \001(\0132\031.tradingcopilot.v1.SizingH\002R\006sizi"
+    "ng\210\001\001B\033\n\031_min_bars_flat_after_sellB\034\n\032_m"
+    "in_bars_long_before_sellB\t\n\007_sizingB\332\001\n\025"
+    "com.tradingcopilot.v1B\rStrategyProtoP\001ZM"
+    "github.com/MaxBernstetter/dagobert/src/g"
+    "en/tradingcopilot/v1;tradingcopilotv1\242\002\003"
+    "TXX\252\002\021Tradingcopilot.V1\312\002\021Tradingcopilot"
+    "\\V1\342\002\035Tradingcopilot\\V1\\GPBMetadata\352\002\022Tr"
+    "adingcopilot::V1b\006proto3"
 };
 static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto = {
     false,
     false,
-    1195,
+    1264,
     descriptor_table_protodef_tradingcopilot_2fv1_2fstrategy_2eproto,
     "tradingcopilot/v1/strategy.proto",
     &descriptor_table_tradingcopilot_2fv1_2fstrategy_2eproto_once,
@@ -1424,22 +1426,18 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
     }
   }
 
-  // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+  // optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
   if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-    if (this_._internal_min_bars_flat_after_sell() != 0) {
-      target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteInt32ToArray(
-          105, this_._internal_min_bars_flat_after_sell(), target);
-    }
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        105, this_._internal_min_bars_flat_after_sell(), target);
   }
 
-  // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+  // optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
   if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-    if (this_._internal_min_bars_long_before_sell() != 0) {
-      target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteInt32ToArray(
-          106, this_._internal_min_bars_long_before_sell(), target);
-    }
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        106, this_._internal_min_bars_long_before_sell(), target);
   }
 
   // optional .tradingcopilot.v1.Sizing sizing = 107 [json_name = "sizing"];
@@ -1508,19 +1506,15 @@ PROTOBUF_NOINLINE void SignalConsensusConfig::Clear() {
         total_size += 10;
       }
     }
-    // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+    // optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-      if (this_._internal_min_bars_flat_after_sell() != 0) {
-        total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
-                                        this_._internal_min_bars_flat_after_sell());
-      }
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_min_bars_flat_after_sell());
     }
-    // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+    // optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
     if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      if (this_._internal_min_bars_long_before_sell() != 0) {
-        total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
-                                        this_._internal_min_bars_long_before_sell());
-      }
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_min_bars_long_before_sell());
     }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -1576,14 +1570,10 @@ void SignalConsensusConfig::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-      if (from._internal_min_bars_flat_after_sell() != 0) {
-        _this->_impl_.min_bars_flat_after_sell_ = from._impl_.min_bars_flat_after_sell_;
-      }
+      _this->_impl_.min_bars_flat_after_sell_ = from._impl_.min_bars_flat_after_sell_;
     }
     if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      if (from._internal_min_bars_long_before_sell() != 0) {
-        _this->_impl_.min_bars_long_before_sell_ = from._impl_.min_bars_long_before_sell_;
-      }
+      _this->_impl_.min_bars_long_before_sell_ = from._impl_.min_bars_long_before_sell_;
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;

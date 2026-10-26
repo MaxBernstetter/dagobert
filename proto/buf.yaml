@@ -9,3 +9,8 @@ lint:
 breaking:
   use:
     - FILE
+  # No protos are deployed yet, so explicit-presence changes (#128) need no
+  # compatibility. Drop this exception once the schema is stable.
+  ignore_only:
+    FIELD_SAME_CARDINALITY:
+      - tradingcopilot/v1/strategy.proto

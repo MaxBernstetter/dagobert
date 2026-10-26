@@ -180,14 +180,15 @@ func (x *MaCrossConfig) GetSizing() *Sizing {
 }
 
 type SignalConsensusConfig struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	RsiBull               float64                `protobuf:"fixed64,100,opt,name=rsi_bull,json=rsiBull,proto3" json:"rsi_bull,omitempty"`
-	RsiBear               float64                `protobuf:"fixed64,101,opt,name=rsi_bear,json=rsiBear,proto3" json:"rsi_bear,omitempty"`
-	VolRatioBull          float64                `protobuf:"fixed64,102,opt,name=vol_ratio_bull,json=volRatioBull,proto3" json:"vol_ratio_bull,omitempty"`
-	VolRatioBear          float64                `protobuf:"fixed64,103,opt,name=vol_ratio_bear,json=volRatioBear,proto3" json:"vol_ratio_bear,omitempty"`
-	AtrStopMult           float64                `protobuf:"fixed64,104,opt,name=atr_stop_mult,json=atrStopMult,proto3" json:"atr_stop_mult,omitempty"`
-	MinBarsFlatAfterSell  int32                  `protobuf:"varint,105,opt,name=min_bars_flat_after_sell,json=minBarsFlatAfterSell,proto3" json:"min_bars_flat_after_sell,omitempty"`
-	MinBarsLongBeforeSell int32                  `protobuf:"varint,106,opt,name=min_bars_long_before_sell,json=minBarsLongBeforeSell,proto3" json:"min_bars_long_before_sell,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	RsiBull      float64                `protobuf:"fixed64,100,opt,name=rsi_bull,json=rsiBull,proto3" json:"rsi_bull,omitempty"`
+	RsiBear      float64                `protobuf:"fixed64,101,opt,name=rsi_bear,json=rsiBear,proto3" json:"rsi_bear,omitempty"`
+	VolRatioBull float64                `protobuf:"fixed64,102,opt,name=vol_ratio_bull,json=volRatioBull,proto3" json:"vol_ratio_bull,omitempty"`
+	VolRatioBear float64                `protobuf:"fixed64,103,opt,name=vol_ratio_bear,json=volRatioBear,proto3" json:"vol_ratio_bear,omitempty"`
+	AtrStopMult  float64                `protobuf:"fixed64,104,opt,name=atr_stop_mult,json=atrStopMult,proto3" json:"atr_stop_mult,omitempty"`
+	// Explicit presence: unset keeps the default (8/4), an explicit 0 means no cooldown.
+	MinBarsFlatAfterSell  *int32 `protobuf:"varint,105,opt,name=min_bars_flat_after_sell,json=minBarsFlatAfterSell,proto3,oneof" json:"min_bars_flat_after_sell,omitempty"`
+	MinBarsLongBeforeSell *int32 `protobuf:"varint,106,opt,name=min_bars_long_before_sell,json=minBarsLongBeforeSell,proto3,oneof" json:"min_bars_long_before_sell,omitempty"`
 	// Unset keeps buy_all/sell_all.
 	Sizing        *Sizing `protobuf:"bytes,107,opt,name=sizing,proto3,oneof" json:"sizing,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -260,15 +261,15 @@ func (x *SignalConsensusConfig) GetAtrStopMult() float64 {
 }
 
 func (x *SignalConsensusConfig) GetMinBarsFlatAfterSell() int32 {
-	if x != nil {
-		return x.MinBarsFlatAfterSell
+	if x != nil && x.MinBarsFlatAfterSell != nil {
+		return *x.MinBarsFlatAfterSell
 	}
 	return 0
 }
 
 func (x *SignalConsensusConfig) GetMinBarsLongBeforeSell() int32 {
-	if x != nil {
-		return x.MinBarsLongBeforeSell
+	if x != nil && x.MinBarsLongBeforeSell != nil {
+		return *x.MinBarsLongBeforeSell
 	}
 	return 0
 }
@@ -306,16 +307,18 @@ const file_tradingcopilot_v1_strategy_proto_rawDesc = "" +
 	"\afast_hr\x18\x01 \x01(\x05R\x06fastHr\x12\x17\n" +
 	"\aslow_hr\x18\x02 \x01(\x05R\x06slowHr\x126\n" +
 	"\x06sizing\x18\x03 \x01(\v2\x19.tradingcopilot.v1.SizingH\x00R\x06sizing\x88\x01\x01B\t\n" +
-	"\a_sizing\"\xf2\x02\n" +
+	"\a_sizing\"\xb7\x03\n" +
 	"\x15SignalConsensusConfig\x12\x19\n" +
 	"\brsi_bull\x18d \x01(\x01R\arsiBull\x12\x19\n" +
 	"\brsi_bear\x18e \x01(\x01R\arsiBear\x12$\n" +
 	"\x0evol_ratio_bull\x18f \x01(\x01R\fvolRatioBull\x12$\n" +
 	"\x0evol_ratio_bear\x18g \x01(\x01R\fvolRatioBear\x12\"\n" +
-	"\ratr_stop_mult\x18h \x01(\x01R\vatrStopMult\x126\n" +
-	"\x18min_bars_flat_after_sell\x18i \x01(\x05R\x14minBarsFlatAfterSell\x128\n" +
-	"\x19min_bars_long_before_sell\x18j \x01(\x05R\x15minBarsLongBeforeSell\x126\n" +
-	"\x06sizing\x18k \x01(\v2\x19.tradingcopilot.v1.SizingH\x00R\x06sizing\x88\x01\x01B\t\n" +
+	"\ratr_stop_mult\x18h \x01(\x01R\vatrStopMult\x12;\n" +
+	"\x18min_bars_flat_after_sell\x18i \x01(\x05H\x00R\x14minBarsFlatAfterSell\x88\x01\x01\x12=\n" +
+	"\x19min_bars_long_before_sell\x18j \x01(\x05H\x01R\x15minBarsLongBeforeSell\x88\x01\x01\x126\n" +
+	"\x06sizing\x18k \x01(\v2\x19.tradingcopilot.v1.SizingH\x02R\x06sizing\x88\x01\x01B\x1b\n" +
+	"\x19_min_bars_flat_after_sellB\x1c\n" +
+	"\x1a_min_bars_long_before_sellB\t\n" +
 	"\a_sizingB\xda\x01\n" +
 	"\x15com.tradingcopilot.v1B\rStrategyProtoP\x01ZMgithub.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1;tradingcopilotv1\xa2\x02\x03TXX\xaa\x02\x11Tradingcopilot.V1\xca\x02\x11Tradingcopilot\\V1\xe2\x02\x1dTradingcopilot\\V1\\GPBMetadata\xea\x02\x12Tradingcopilot::V1b\x06proto3"
 

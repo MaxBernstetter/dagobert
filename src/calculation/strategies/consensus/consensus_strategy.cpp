@@ -94,9 +94,8 @@ ConsensusParams
 ConsensusStrategy::params_of(const tradingcopilot::v1::RunEnvelope &envelope) {
   const auto config = check_payload(envelope);
   ConsensusParams p;
-  // proto3 scalars carry no presence: zero means unset. Zero is invalid for
-  // every double except rsi_bear and for no cooldown but 0 itself, so an
-  // explicit zero cooldown reads as the default.
+  // The doubles carry no presence: zero means unset (zero is invalid for all
+  // of them except rsi_bear). The cooldowns use proto3 optional instead.
   const auto pick = [](double v, double fallback) {
     return v == 0.0 ? fallback : v;
   };
@@ -105,15 +104,18 @@ ConsensusStrategy::params_of(const tradingcopilot::v1::RunEnvelope &envelope) {
   p.vol_ratio_bull = pick(config.vol_ratio_bull(), p.vol_ratio_bull);
   p.vol_ratio_bear = pick(config.vol_ratio_bear(), p.vol_ratio_bear);
   p.atr_stop_mult = pick(config.atr_stop_mult(), p.atr_stop_mult);
-  if (config.min_bars_flat_after_sell() < 0 ||
-      config.min_bars_long_before_sell() < 0) {
+  if ((config.has_min_bars_flat_after_sell() &&
+       config.min_bars_flat_after_sell() < 0) ||
+      (config.has_min_bars_long_before_sell() &&
+       config.min_bars_long_before_sell() < 0)) {
     invalid("cooldown bars must be >= 0");
   }
-  if (config.min_bars_flat_after_sell() > 0) {
+  // Cooldowns carry explicit presence: unset keeps the default, 0 is honoured.
+  if (config.has_min_bars_flat_after_sell()) {
     p.min_bars_flat_after_sell =
         static_cast<std::size_t>(config.min_bars_flat_after_sell());
   }
-  if (config.min_bars_long_before_sell() > 0) {
+  if (config.has_min_bars_long_before_sell()) {
     p.min_bars_long_before_sell =
         static_cast<std::size_t>(config.min_bars_long_before_sell());
   }

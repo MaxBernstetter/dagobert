@@ -587,7 +587,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED SignalConsensusConfig final : publi
   void _internal_set_atr_stop_mult(double value);
 
   public:
-  // int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+  // optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+  [[nodiscard]] bool has_min_bars_flat_after_sell() const;
   void clear_min_bars_flat_after_sell() ;
   [[nodiscard]] ::int32_t min_bars_flat_after_sell() const;
   void set_min_bars_flat_after_sell(::int32_t value);
@@ -597,7 +598,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED SignalConsensusConfig final : publi
   void _internal_set_min_bars_flat_after_sell(::int32_t value);
 
   public:
-  // int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+  // optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+  [[nodiscard]] bool has_min_bars_long_before_sell() const;
   void clear_min_bars_long_before_sell() ;
   [[nodiscard]] ::int32_t min_bars_long_before_sell() const;
   void set_min_bars_long_before_sell(::int32_t value);
@@ -1370,7 +1372,11 @@ inline void SignalConsensusConfig::_internal_set_atr_stop_mult(double value) {
   _impl_.atr_stop_mult_ = value;
 }
 
-// int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+// optional int32 min_bars_flat_after_sell = 105 [json_name = "minBarsFlatAfterSell"];
+inline bool SignalConsensusConfig::has_min_bars_flat_after_sell() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  return value;
+}
 inline void SignalConsensusConfig::clear_min_bars_flat_after_sell() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.min_bars_flat_after_sell_ = 0;
@@ -1394,7 +1400,11 @@ inline void SignalConsensusConfig::_internal_set_min_bars_flat_after_sell(::int3
   _impl_.min_bars_flat_after_sell_ = value;
 }
 
-// int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+// optional int32 min_bars_long_before_sell = 106 [json_name = "minBarsLongBeforeSell"];
+inline bool SignalConsensusConfig::has_min_bars_long_before_sell() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000080U);
+  return value;
+}
 inline void SignalConsensusConfig::clear_min_bars_long_before_sell() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.min_bars_long_before_sell_ = 0;

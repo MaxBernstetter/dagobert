@@ -52,18 +52,14 @@ func SweepPayload(slug string, strategyConfig []byte) (*anypb.Any, error) {
 		if err := cfg.Validate(0); err != nil {
 			return nil, err
 		}
-		// proto3 cannot tell an explicit 0 from unset and C++ reads 0 as the default (8/4);
-		// Go honours 0. Reject until explicit presence exists (#128).
-		if cfg.MinBarsFlatAfterSell == 0 || cfg.MinBarsLongBeforeSell == 0 {
-			return nil, fmt.Errorf("C++ engine: signal-consensus cooldown 0 is not supported yet (#128); use >= 1 or EXPERIMENT_ENGINE=go")
-		}
 		msg := &pb.SignalConsensusConfig{
 			RsiBull: cfg.RsiBull, RsiBear: cfg.RsiBear,
 			VolRatioBull: cfg.VolRatioBull, VolRatioBear: cfg.VolRatioBear,
-			AtrStopMult:           cfg.AtrStopMult,
-			MinBarsFlatAfterSell:  int32(cfg.MinBarsFlatAfterSell),
-			MinBarsLongBeforeSell: int32(cfg.MinBarsLongBeforeSell),
+			AtrStopMult: cfg.AtrStopMult,
 		}
+		// Optional fields: always set, so an explicit 0 reaches C++ as 0, not as the default.
+		flat, long := int32(cfg.MinBarsFlatAfterSell), int32(cfg.MinBarsLongBeforeSell)
+		msg.MinBarsFlatAfterSell, msg.MinBarsLongBeforeSell = &flat, &long
 		if cfg.Sizing != nil {
 			msg.Sizing = cfg.Sizing.Proto()
 		}

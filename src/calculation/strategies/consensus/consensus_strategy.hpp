@@ -22,8 +22,9 @@ public:
       std::optional<sizing::SizingConfig> sizing = std::nullopt,
       const ConsensusParams &params = {});
 
-  // Thresholds from the envelope's SignalConsensusConfig. An unset (zero) field
-  // takes the Go playbook default; an invalid set exits 2.
+  // Thresholds from the envelope's SignalConsensusConfig. An unset double (zero)
+  // takes the Go playbook default; the cooldowns use field presence (0 is valid).
+  // An invalid set exits 2.
   [[nodiscard]] static ConsensusParams
   params_of(const tradingcopilot::v1::RunEnvelope &envelope);
 
