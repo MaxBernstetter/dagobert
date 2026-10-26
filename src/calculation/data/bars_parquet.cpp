@@ -3,6 +3,8 @@
 #include <arrow/array.h>
 #include <arrow/io/file.h>
 #include <arrow/table.h>
+#include <arrow/type.h>
+#include <arrow/util/decimal.h>
 #include <arrow/util/key_value_metadata.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/metadata.h>
@@ -98,16 +100,63 @@ constexpr const char *kKeyIntervalMs = "trading_copilot.interval_ms";
   return out;
 }
 
-[[nodiscard]] const arrow::StringArray *
-string_column(const std::shared_ptr<arrow::Table> &table,
+// A price or volume column in either lake schema: legacy decimal strings
+// (schema_version 1) or Parquet DECIMAL(p,8), which Arrow exposes as
+// Decimal128 (schema_version 2). get(i) returns the same double for the same
+// logical value in both.
+class ValueColumn {
+public:
+  ValueColumn(const std::shared_ptr<arrow::Table> &table,
               const std::string &name) {
-  const std::shared_ptr<arrow::ChunkedArray> chunked =
-      table->GetColumnByName(name);
-  if (chunked == nullptr || chunked->num_chunks() != 1) {
-    throw std::runtime_error("missing or chunked column: " + name);
+    const std::shared_ptr<arrow::ChunkedArray> chunked =
+        table->GetColumnByName(name);
+    if (chunked == nullptr || chunked->num_chunks() != 1) {
+      throw std::runtime_error("missing or chunked column: " + name);
+    }
+    array_ = chunked->chunk(0).get();
+    strings_ = dynamic_cast<const arrow::StringArray *>(array_);
+    decimals_ = dynamic_cast<const arrow::Decimal128Array *>(array_);
+    if (strings_ == nullptr && decimals_ == nullptr) {
+      throw std::runtime_error("unsupported column type for " + name + ": " +
+                               array_->type()->ToString());
+    }
+    if (decimals_ != nullptr) {
+      scale_ = static_cast<const arrow::Decimal128Type &>(*decimals_->type())
+                   .scale();
+    }
   }
-  return dynamic_cast<const arrow::StringArray *>(chunked->chunk(0).get());
-}
+
+  [[nodiscard]] double get(std::int64_t i) const {
+    if (strings_ != nullptr) {
+      return parse_decimal_string(strings_->GetView(i));
+    }
+    return decimal_to_double(arrow::Decimal128(decimals_->GetValue(i)), scale_);
+  }
+
+private:
+  // unscaled / 10^scale. Below 2^53 both operands are exact doubles, so the
+  // division is correctly rounded, which is what from_chars gives for the
+  // decimal string. Larger values go through the string.
+  [[nodiscard]] static double decimal_to_double(const arrow::Decimal128 &value,
+                                                std::int32_t scale) {
+    static constexpr std::int64_t kExact = std::int64_t{1} << 53;
+    static constexpr double kPow10[] = {1e0,  1e1,  1e2,  1e3,  1e4,  1e5,
+                                        1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+                                        1e12, 1e13, 1e14, 1e15, 1e16, 1e17,
+                                        1e18, 1e19, 1e20, 1e21, 1e22};
+    const std::int64_t low = static_cast<std::int64_t>(value.low_bits());
+    const bool fits = value.high_bits() == (low < 0 ? -1 : 0);
+    if (fits && low > -kExact && low < kExact && scale >= 0 && scale <= 22) {
+      return static_cast<double>(low) / kPow10[scale];
+    }
+    return parse_decimal_string(value.ToString(scale));
+  }
+
+  const arrow::Array *array_ = nullptr;
+  const arrow::StringArray *strings_ = nullptr;
+  const arrow::Decimal128Array *decimals_ = nullptr;
+  std::int32_t scale_ = 0;
+};
 
 [[nodiscard]] const arrow::Int64Array *
 int64_column(const std::shared_ptr<arrow::Table> &table,
@@ -139,11 +188,11 @@ int64_column(const std::shared_ptr<arrow::Table> &table,
       footer_interval_ms(reader->parquet_reader()->metadata());
 
   const auto *open_time = int64_column(table, "open_time");
-  const auto *open = string_column(table, "open");
-  const auto *high = string_column(table, "high");
-  const auto *low = string_column(table, "low");
-  const auto *close = string_column(table, "close");
-  const auto *volume = string_column(table, "volume");
+  const ValueColumn open(table, "open");
+  const ValueColumn high(table, "high");
+  const ValueColumn low(table, "low");
+  const ValueColumn close(table, "close");
+  const ValueColumn volume(table, "volume");
   const auto *close_time = int64_column(table, "close_time");
 
   const int64_t row_count = table->num_rows();
@@ -160,11 +209,11 @@ int64_column(const std::shared_ptr<arrow::Table> &table,
     }
     Bar bar;
     bar.open_ms = open_ms;
-    bar.open = parse_decimal_string(open->GetView(i));
-    bar.high = parse_decimal_string(high->GetView(i));
-    bar.low = parse_decimal_string(low->GetView(i));
-    bar.close = parse_decimal_string(close->GetView(i));
-    bar.volume = parse_decimal_string(volume->GetView(i));
+    bar.open = open.get(i);
+    bar.high = high.get(i);
+    bar.low = low.get(i);
+    bar.close = close.get(i);
+    bar.volume = volume.get(i);
     if (!close_time->IsNull(i)) {
       const std::int64_t close_ms = close_time->Value(i);
       // Binance close_time is inclusive: open + interval - 1 ms.

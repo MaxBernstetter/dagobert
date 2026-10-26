@@ -14,7 +14,7 @@ task cpp:bench RUNS=15                # or: scripts/cpp-bench.sh 15
 
 The script generates a seeded lake (`go run ./src/calculation/testdata/genlakefixture -bench <dir>`:
 5840 3h BTC/USDT bars = 730 days from 2024-01-01, geometric random walk, seed 110,
-prices stored as strings like the real lake), runs each optimized strategy
+decimal columns as in the real lake since DATA.01; `-legacy` writes the old string schema), runs each optimized strategy
 executable `RUNS` times, runs the Go benchmark `RUNS` times, and writes
 `build/bench/results.json` and `build/bench/results.md`. Configs: sma-cross
 fast 12h / slow 48h; signal-consensus defaults.
@@ -160,6 +160,36 @@ are not instruction-bound. Step 2 alone: 26.77 M to 25.66 M instructions
 3. Remaining wall time is process start and fixed costs; measure with
    `perf stat` before more tuning. Static linking could cut dynamic loading.
 4. Vectorised indicator columns: only for multi-instance sweeps.
+
+## DATA.01: decimal candle columns
+
+Issue #131. The lake stores prices as DECIMAL(18,8) and volume as DECIMAL(28,8)
+instead of strings (format in `docs/ingest/binance-public-klines.md`). The C++
+reader accepts both schemas by column type (`ValueColumn` in
+`bars_parquet.cpp`); decimals below 2^53 unscaled convert with one exact
+division, larger ones through the string path.
+
+Same bench lake (seed 110, 5840 bars, 2 files), old string schema converted with
+`task data:migrate-candles`:
+
+| | strings (before) | decimals (after) |
+|---|---|---|
+| lake size, 2 files | 330,328 B | 154,188 B (-53%) |
+| Go read (TI `lake.Read`, 2 files, median of 30) | 3.42 ms | 2.09 ms |
+| C++ sma-cross median / p95 (100 runs) | 6.1 / 7.8 ms | 4.8 / 5.5 ms |
+| C++ signal-consensus median / p95 (100 runs) | 6.5 / 7.4 ms | 5.2 / 5.9 ms |
+
+Encodings tried on the same data (one file, bytes): plain + Snappy 100,363;
+DELTA_BINARY_PACKED prices + Snappy 76,594 (chosen); additionally
+DELTA_BYTE_ARRAY volume 75,011 (not worth it); plain uncompressed 172,120.
+Wall times were taken on a shared machine (load 9 to 24); read them as a
+direction, not a precise ratio.
+
+`RunReport` stdout sha256 is identical for old binary on old lake, new binary on
+new lake and new binary on old lake (`b39091c7...` sma-cross, `5a577dac...`
+consensus). `genlakefixture` writes `fixtures/lake_legacy` in the old schema; the
+`ParquetBars.DecimalAndLegacySchemasAgree` test checks both load to bit-identical
+doubles, including a volume above int64 at scale 8.
 
 ## Gaps
 
