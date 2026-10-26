@@ -19,7 +19,13 @@ public:
   explicit ConsensusStrategy(
       const tradingcopilot::v1::RunEnvelope &envelope,
       std::int64_t bar_duration_ms,
-      std::optional<sizing::SizingConfig> sizing = std::nullopt);
+      std::optional<sizing::SizingConfig> sizing = std::nullopt,
+      const ConsensusParams &params = {});
+
+  // Thresholds from the envelope's SignalConsensusConfig. An unset (zero) field
+  // takes the Go playbook default; an invalid set exits 2.
+  [[nodiscard]] static ConsensusParams
+  params_of(const tradingcopilot::v1::RunEnvelope &envelope);
 
   // The envelope's optional `sizing` block; exits 2 when it is invalid.
   [[nodiscard]] static std::optional<sizing::SizingConfig>
@@ -38,6 +44,7 @@ private:
   SMA vol_mean_;
   ATR atr_;
   MACD macd_;
+  ConsensusParams params_;
   std::optional<sizing::SizingConfig> sizing_;
   ConsensusSignal consensus_;
   Position book_;

@@ -27,15 +27,16 @@ struct BinaryRun {
 std::string config_json(const std::string &label, double quote,
                         int schema_version = 2,
                         const std::string &type = "SignalConsensusConfig",
-                        const std::string &sizing = "") {
+                        const std::string &sizing = "",
+                        const std::string &fields = "") {
   return R"({"schemaVersion":)" + std::to_string(schema_version) +
          R"(,"label":")" + label +
          R"(","provider":"demo","base":"BTC","quote":"USDT",)"
          R"("fromMs":"1704067200000","toMs":"1704844800000","initialQuote":)" +
          std::to_string(quote) +
          R"(,"payload":{"@type":"type.googleapis.com/tradingcopilot.v1.)" +
-         type + R"(")" + (sizing.empty() ? "" : R"(,"sizing":)" + sizing) +
-         "}}";
+         type + R"(")" + fields +
+         (sizing.empty() ? "" : R"(,"sizing":)" + sizing) + "}}";
 }
 
 BinaryRun run_binary(const std::string &config) {
@@ -153,4 +154,47 @@ TEST(ConsensusExe, InvalidSizingExits2) {
                              "SignalConsensusConfig", R"({"unitRiskPct":3})"));
   EXPECT_EQ(run.exit_code, 2);
   EXPECT_TRUE(run.out.empty());
+}
+
+namespace {
+
+BinaryRun run_fields(const std::string &fields) {
+  return run_binary(config_json("signal-consensus", 1000.0, 1,
+                                "SignalConsensusConfig", "", fields));
+}
+
+} // namespace
+
+TEST(ConsensusExe, ExplicitDefaultThresholdsEqualUnsetThresholds) {
+  const BinaryRun unset = run_binary(config_json("signal-consensus", 1000.0));
+  const BinaryRun set = run_fields(
+      R"(,"rsiBull":52,"rsiBear":48,"volRatioBull":1.1,"volRatioBear":0.85,)"
+      R"("atrStopMult":2.5,"minBarsFlatAfterSell":8,"minBarsLongBeforeSell":4)");
+  ASSERT_EQ(unset.exit_code, 0);
+  ASSERT_EQ(set.exit_code, 0);
+  EXPECT_EQ(set.out, unset.out);
+}
+
+TEST(ConsensusExe, ThresholdsChangeTheReport) {
+  const BinaryRun base = run_binary(config_json("signal-consensus", 1000.0));
+  ASSERT_EQ(base.exit_code, 0);
+  for (const char *fields :
+       {R"(,"atrStopMult":0.1)", R"(,"minBarsLongBeforeSell":40)",
+        R"(,"minBarsFlatAfterSell":60)", R"(,"rsiBear":1,"rsiBull":99)"}) {
+    const BinaryRun run = run_fields(fields);
+    ASSERT_EQ(run.exit_code, 0) << fields;
+    EXPECT_NE(run.out, base.out) << fields;
+  }
+}
+
+TEST(ConsensusExe, InvalidThresholdsExit2) {
+  for (const char *fields :
+       {R"(,"rsiBull":40,"rsiBear":48)", R"(,"rsiBull":101)",
+        R"(,"rsiBear":100)", R"(,"rsiBear":-1)", R"(,"volRatioBull":-1)",
+        R"(,"volRatioBull":0.5,"volRatioBear":0.85)", R"(,"atrStopMult":-1)",
+        R"(,"minBarsFlatAfterSell":-1)", R"(,"minBarsLongBeforeSell":-2)"}) {
+    const BinaryRun run = run_fields(fields);
+    EXPECT_EQ(run.exit_code, 2) << fields;
+    EXPECT_TRUE(run.out.empty()) << fields;
+  }
 }

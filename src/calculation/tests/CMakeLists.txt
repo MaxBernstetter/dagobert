@@ -43,4 +43,5 @@ target_compile_definitions(
   PRIVATE SMA_CROSS_SIZING_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/sma_cross_sizing.json")
 target_compile_definitions(
   dagobert-tests
-  PRIVATE CONSENSUS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_sizing.json")
+  PRIVATE CONSENSUS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_sizing.json"
+          CONSENSUS_PARAMS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_params.json")

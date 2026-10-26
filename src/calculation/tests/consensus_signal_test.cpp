@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <fstream>
 #include <sstream>
+#include <type_traits>
 
 namespace dagobert {
 namespace {
@@ -253,7 +254,8 @@ TEST(ConsensusSizing, BuyBelowMinOrderIsSkipped) {
   cfg.min_order_quote = 1e12;
   const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns());
   Position account{Quote::require(1000.0)};
-  EXPECT_TRUE(ConsensusSignal::actions_from(account, f.bars, mask, cfg).empty());
+  EXPECT_TRUE(
+      ConsensusSignal::actions_from(account, f.bars, mask, cfg).empty());
   cfg.min_order_quote = 0.0;
   Position again{Quote::require(1000.0)};
   EXPECT_FALSE(ConsensusSignal::actions_from(again, f.bars, mask, cfg).empty());
@@ -265,7 +267,8 @@ TEST(ConsensusSizing, NonPositiveStopStillBuysLikeGo) {
   sizing::SizingConfig cfg;
   const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns());
   Position account{Quote::require(100000.0)};
-  const auto actions = ConsensusSignal::actions_from(account, f.bars, mask, cfg);
+  const auto actions =
+      ConsensusSignal::actions_from(account, f.bars, mask, cfg);
   ASSERT_FALSE(actions.empty());
   EXPECT_EQ(actions.front().reason, "consensus_buy");
   EXPECT_LT(actions.front().stop, 0.0);
@@ -305,6 +308,162 @@ TEST(ConsensusSizing, ResetClearsUnitsAndKeepsConfig) {
     }
   }
   expect_matches_go(g, fresh, got);
+}
+
+namespace {
+
+std::vector<Action> run_with(const Fixture &f, const ConsensusParams &p) {
+  const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns(), p);
+  Position account{Quote::require(1000.0)};
+  return ConsensusSignal::actions_from(account, f.bars, mask, std::nullopt, p);
+}
+
+ConsensusParams params_from(const Struct &config) {
+  ConsensusParams p;
+  const auto &m = config.fields();
+  const auto num = [&m](const char *k, auto &out) {
+    if (const auto it = m.find(k); it != m.end()) {
+      out = static_cast<std::remove_reference_t<decltype(out)>>(
+          it->second.number_value());
+    }
+  };
+  num("rsiBull", p.rsi_bull);
+  num("rsiBear", p.rsi_bear);
+  num("volRatioBull", p.vol_ratio_bull);
+  num("volRatioBear", p.vol_ratio_bear);
+  num("atrStopMult", p.atr_stop_mult);
+  num("minBarsFlatAfterSell", p.min_bars_flat_after_sell);
+  num("minBarsLongBeforeSell", p.min_bars_long_before_sell);
+  return p;
+}
+
+Struct load_params_fixture() {
+  std::ifstream in(CONSENSUS_PARAMS_FIXTURE_PATH);
+  std::stringstream text;
+  text << in.rdbuf();
+  Struct root;
+  const auto status =
+      google::protobuf::util::JsonStringToMessage(text.str(), &root);
+  EXPECT_TRUE(status.ok()) << status.message();
+  return root;
+}
+
+} // namespace
+
+TEST(ConsensusParams, DefaultsEqualGoPlaybook) {
+  const ConsensusParams p;
+  EXPECT_EQ(p.rsi_bull, 52.0);
+  EXPECT_EQ(p.rsi_bear, 48.0);
+  EXPECT_EQ(p.vol_ratio_bull, 1.10);
+  EXPECT_EQ(p.vol_ratio_bear, 0.85);
+  EXPECT_EQ(p.atr_stop_mult, 2.5);
+  EXPECT_EQ(p.min_bars_flat_after_sell, 8U);
+  EXPECT_EQ(p.min_bars_long_before_sell, 4U);
+  EXPECT_EQ(run_with(crossing(), p).size(), 2U);
+}
+
+TEST(ConsensusParams, RsiBullGatesEntryWithoutHistogram) {
+  Fixture f = crossing();
+  f.hist.ready.assign(f.hist.ready.size(), 0); // MACD falls back to momentum
+  EXPECT_FALSE(run_with(f, {}).empty());
+  ConsensusParams p;
+  p.rsi_bull = 70.0;
+  EXPECT_TRUE(run_with(f, p).empty());
+}
+
+TEST(ConsensusParams, RsiBearBlocksEntry) {
+  Fixture f = crossing();
+  f.rsi.samples.assign(f.rsi.samples.size(), 40.0);
+  EXPECT_TRUE(run_with(f, {}).empty());
+  ConsensusParams p;
+  p.rsi_bear = 30.0;
+  EXPECT_FALSE(run_with(f, p).empty());
+}
+
+TEST(ConsensusParams, VolRatioBearBlocksEntry) {
+  Fixture f = crossing();
+  f.volume.samples[1] = 0.5;
+  EXPECT_NE(run_with(f, {}).front().bar_open_ms, 1 * 10'800'000);
+  ConsensusParams p;
+  p.vol_ratio_bear = 0.4;
+  EXPECT_EQ(run_with(f, p).front().bar_open_ms, 1 * 10'800'000);
+}
+
+TEST(ConsensusParams, AtrStopMultMovesTheStop) {
+  Fixture f({99, 101, 105, 99, 99, 99, 90});
+  EXPECT_EQ(run_with(f, {}).size(), 2U);
+  ConsensusParams p;
+  p.atr_stop_mult = 20.0;
+  EXPECT_EQ(run_with(f, p).size(), 1U);
+}
+
+TEST(ConsensusParams, MinBarsFlatAfterSellReenters) {
+  ConsensusParams p;
+  p.min_bars_flat_after_sell = 1; // crossing(): sell at 6, cross up at 7
+  const auto actions = run_with(crossing(), p);
+  ASSERT_GE(actions.size(), 3U);
+  EXPECT_EQ(actions[2].bar_open_ms, 7 * 10'800'000);
+}
+
+TEST(ConsensusParams, MinBarsLongBeforeSellExitsEarlier) {
+  ConsensusParams p;
+  p.min_bars_long_before_sell = 2; // crossing(): buy at 1, cross down at 3
+  const auto actions = run_with(crossing(), p);
+  ASSERT_GE(actions.size(), 2U);
+  EXPECT_EQ(actions[1].bar_open_ms, 3 * 10'800'000);
+}
+
+TEST(ConsensusParams, SizedStopFollowsAtrStopMult) {
+  const Fixture f = crossing();
+  ConsensusParams p;
+  p.atr_stop_mult = 4.0;
+  const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns(), p);
+  Position account{Quote::require(100000.0)};
+  const auto actions = ConsensusSignal::actions_from(account, f.bars, mask,
+                                                     sizing::SizingConfig{}, p);
+  ASSERT_FALSE(actions.empty());
+  EXPECT_NEAR(actions.front().stop, 101.0 - 4.0, 1e-9); // close 101, ATR 1
+}
+
+TEST(ConsensusParams, MatchesGoPlaybookForDefaultAndNonDefaultConfig) {
+  const Struct root = load_params_fixture();
+  const Fixture f = GoFixture::build(root);
+  const double quote = root.fields().at("initial_quote").number_value();
+  const auto &cases = root.fields().at("cases").list_value().values();
+  ASSERT_EQ(cases.size(), 2);
+  for (const auto &c : cases) {
+    const auto &fields = c.struct_value().fields();
+    const ConsensusParams p = params_from(fields.at("config").struct_value());
+    const auto &expected = fields.at("expected").list_value().values();
+    const std::string name = fields.at("name").string_value();
+    const ConsensusSeries mask = ConsensusSignal::evaluate(f.columns(), p);
+    Position batch{Quote::require(quote)};
+    const auto actions =
+        ConsensusSignal::actions_from(batch, f.bars, mask, std::nullopt, p);
+
+    ConsensusSignal live{std::nullopt, p};
+    Position streamed{Quote::require(quote)};
+    std::vector<Action> got;
+    for (std::size_t i = 0; i < f.bars.size(); ++i) {
+      if (const auto rule = live.apply(f.sample(i), streamed.flat())) {
+        live.execute(streamed, f.bars[i], *rule);
+        got.push_back(streamed.actions().back());
+      }
+    }
+    ASSERT_EQ(actions.size(), expected.size()) << name;
+    ASSERT_EQ(got.size(), expected.size()) << name;
+    for (std::size_t i = 0; i < actions.size(); ++i) {
+      const auto &e = expected[i].struct_value().fields();
+      const auto at =
+          static_cast<std::int64_t>(e.at("bar_open_ms").number_value());
+      EXPECT_EQ(actions[i].bar_open_ms, at) << name;
+      EXPECT_EQ(got[i].bar_open_ms, at) << name;
+      EXPECT_EQ(actions[i].reason, e.at("reason").string_value()) << name;
+      EXPECT_EQ(batch.fills()[i].side, e.at("side").string_value()) << name;
+      EXPECT_NEAR(batch.fills()[i].qty, e.at("qty").number_value(), 1e-6)
+          << name;
+    }
+  }
 }
 
 } // namespace dagobert

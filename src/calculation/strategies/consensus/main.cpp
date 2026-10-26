@@ -98,8 +98,9 @@ int main(int argc, char **argv) {
   }
 
   const auto sizing = dagobert::ConsensusStrategy::sizing_of(envelope);
-  dagobert::ConsensusStrategy strategy(envelope, bars.front().duration_ms,
-                                       sizing);
+  dagobert::ConsensusStrategy strategy(
+      envelope, bars.front().duration_ms, sizing,
+      dagobert::ConsensusStrategy::params_of(envelope));
   const dagobert::StrategyResult result = strategy.calc_backtest(bars);
 
   tradingcopilot::v1::RunReport report;
