@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"math"
 	"os"
-	"reflect"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
