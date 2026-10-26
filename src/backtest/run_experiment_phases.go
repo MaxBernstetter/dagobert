@@ -274,6 +274,10 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		return fmt.Errorf("no instance ids to simulate")
 	}
 	_ = os.Setenv("VENUE_SIMULATE", "1")
+	engine, err := experimentEngine()
+	if err != nil {
+		return err
+	}
 
 	meta, err := ReadExperimentPrepareMeta(dataDir, experimentID)
 	if err != nil {
@@ -355,6 +359,16 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	}()
 	for _, r := range precomputed {
 		queue <- r
+	}
+
+	if engine == engineCpp {
+		cppSimulate(dataDir, meta, bySymbol, compute, queue)
+		if SimulateComputeDoneHook != nil {
+			SimulateComputeDoneHook()
+		}
+		close(queue)
+		<-persistDone
+		return nil
 	}
 
 	aggMS := signalstore.AggregationDurationMS()
