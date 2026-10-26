@@ -66,4 +66,14 @@ TEST(ATR, ApplyIndicatorMatchesPush) {
   }
 }
 
+TEST(ATR, IsSimpleMeanOfLastNTrueRanges) {
+  // True ranges after the first bar: 4, 3, 6, 8; the window holds the last two.
+  ATR atr{2U};
+  EXPECT_FALSE(atr.push(11.0, 9.0, 10.0).has_value()); // no prev close yet
+  EXPECT_FALSE(atr.push(12.0, 8.0, 10.0).has_value()); // TR 4
+  EXPECT_TRUE(near_relative(3.5, *atr.push(11.5, 8.5, 10.0))); // TR 3
+  EXPECT_TRUE(near_relative(4.5, *atr.push(13.0, 7.0, 10.0))); // TR 6
+  EXPECT_TRUE(near_relative(7.0, *atr.push(14.0, 6.0, 10.0))); // TR 8
+}
+
 } // namespace dagobert
