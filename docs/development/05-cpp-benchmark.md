@@ -195,8 +195,9 @@ doubles, including a volume above int64 at scale 8.
 
 - Go benchmark lives in `src/backtest/bench_test.go` and skips without
   `BENCH_LAKE_DIR`; it is not part of `go test` runs.
-- One synthetic symbol, one config per strategy; trade counts and results of
-  Go and C++ were not cross-checked in this phase.
+- One synthetic symbol, one config per strategy. Go and C++ results are cross-checked by
+  `TestSmaCrossGoVsCppEquivalence` and `TestConsensusGoVsCppEquivalence` in
+  `src/backtest/cpp_sweep_test.go`.
 - Single-process timings include a warm page cache; cold-cache runs not measured.
 
 ## 3000-instance experiment, end to end (issue #158, parent #130)
@@ -247,6 +248,8 @@ Result: with the SQLite catalog the C++ engine meets the target (about 4 to 6 s 
 on SQLite and 3 to 10 s on Postgres, report.json writing 3 ms. The CPU profile of the Postgres run shows
 about 31 percent in pgx `CopyFrom` value encoding (`encodePlanDriverValuer`, `newEncodeError`: a
 `uuid.UUID` per row goes through the `driver.Valuer` path) and about 21 percent in GC.
+
+Catalog comparability: the SQLite catalog (`store.PersistInstanceBatch`) stores only status, timing, list metrics and progress, no fills. The Postgres catalog also COPYs fills, trade outcomes and period stats, about 5 M fills for 3000 instances. SQLite and Postgres timings are therefore not comparable. What fill data to persist is open in #164.
 
 Equality, Go vs cpp (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
 completed): Sharpe, Sortino, CAGR, max drawdown, monthly/yearly return, trades per month, wins, losses,

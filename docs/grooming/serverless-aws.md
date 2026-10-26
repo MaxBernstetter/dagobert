@@ -2,7 +2,7 @@
 
 ## Goal
 
-Run **experiments / experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (Compose locally, **Supabase Free** in prod). Browser talks only to a **Experiment API** — never to the DB or lake directly.
+Run **experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (Compose locally, **Supabase Free** in prod). Browser talks only to an **Experiment API** — never to the DB or lake directly.
 
 | Plane | Local | Prod |
 |-------|--------|------|

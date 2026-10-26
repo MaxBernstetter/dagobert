@@ -6,7 +6,7 @@
 |---|--------|
 | Provider | **Binance** (catalog + candles) |
 | UI flow | Pick **provider** → load that provider’s pairs → fill the market control |
-| List cache | **Next.js** HTTP cache / `revalidate` (pairs change rarely); cache key = provider id |
+| List cache | Cache the list (pairs change rarely); cache key = provider id |
 | Disk layout | **`provider / base / quote`** folders (not a single `pair=` folder) |
 | Saved settings | Store **`base` and `quote` as two fields** (not one formatted string like `BTC-USDT`) |
 | How many pairs | **All** tradeable spot pairs Binance reports; drop impossible ones (e.g. **base = quote**); UI stays usable via **search** + clear row layout |

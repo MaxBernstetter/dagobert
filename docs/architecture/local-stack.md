@@ -1,18 +1,19 @@
 # Local stack
 
-`task up` should leave three processes running. It should not execute a candle by itself.
+`task up` leaves four services running: Floci, Postgres, the orchestrator and the frontend. It should not execute a candle by itself.
 
 ## What stays up
 
 | Process | Role |
 |---|---|
-| Frontend | The Vite SPA (`src/frontend`). Reads through the Experiment API. Does not start jobs. |
-| Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `calculation_signal.sqlite`, `execution.sqlite`. Jobs and the app mount the same directory. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
-| Orchestrator | Floci on host port `FLOCI_PORT` (default 4566), and a starter process that owns the Docker socket. |
+| Frontend | The Vite SPA (`src/frontend`), published on `WEB_PORT` (default 3001). Reads through the Experiment API only; no `./data` mount. Does not start jobs. |
+| Postgres | `postgres:16-alpine` on `POSTGRES_PORT` (default 5432), volume `postgres_data`. Catalog of experiments, instances and fills. The orchestrator mounts the Experiment API when `DATABASE_URL` is set. |
+| Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `calculation_signal.sqlite`, `execution.sqlite`, `backtests.sqlite` (experiment catalog fallback when there is no `DATABASE_URL`) and `data/experiments/<experiment_id>/` (per-instance workspaces). The jobs and the orchestrator mount this directory; the frontend does not. The experiment catalog lives in Postgres. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
+| Orchestrator | Floci on host port `FLOCI_PORT` (default 4566), and a starter process that owns the Docker socket. Also serves the Experiment API on `ORCHESTRATOR_PORT` (default 8090). |
 
-The four job images are runners. They appear when a candle close is due and exit when that stage is done.
+The five job images are runners. They appear when a candle close is due and exit when that stage is done.
 
-Floci DynamoDB and S3 are not part of this change. The jobs already persist on `./data`. Pointing them at Floci is a later change.
+Floci DynamoDB and S3 are not used for job state. The jobs persist on `./data`; pointing them at Floci is out of scope for now.
 
 ## What the orchestrator does
 
@@ -39,12 +40,12 @@ Floci's Lambda cannot see the host Docker socket. The starter is the process tha
 
 Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`, `npm ci` for the frontend) so rebuilds reuse work when only application source changed. The frontend image splits **deps** (lockfile) from **build** (source) so lockfile edits alone do not rerun `npm run build` on unrelated layers.
 
-`compose.yaml` no longer lists the four jobs, and it no longer sets `COMPOSE_OK_ON_ABORT`. The pipeline page keeps reading `pipeline.json` until a later change reads Step Functions history.
+`compose.yaml` does not list the jobs; the orchestrator starts them. Whether `task up` applies Postgres migrations was not verified; run `task db:migrate` if the schema is missing.
 
 ## Acceptance
 
-- `docker compose ps` shows Floci, the starter, and the web app. It does not show the four jobs.
-- `task run` for a new close runs the four images in order. The app shows the action and, when an order is sent, the fill and the balances.
+- `docker compose ps` shows Floci, Postgres, the starter, and the web app. It shows Floci, Postgres, the starter and the web app. It does not show the five jobs.
+- `task run` for a new close runs the five images in order. The app shows the action and, when an order is sent, the fill and the balances.
 - `task run` for a close that is already stored prints `DETAIL=1` for each job, sends no second order, and the execution succeeds.
 - A job that exits `1` fails that state. The retry does not start the earlier jobs again.
 
