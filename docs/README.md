@@ -44,7 +44,7 @@ Index: [development/README.md](development/README.md).
 
 - Ingest: [ingest/binance-public-klines.md](ingest/binance-public-klines.md) (Binance klines, decimal candle schema).
 - Execution: [execution/bybit-eu-demo.md](execution/bybit-eu-demo.md) (Bybit EU demo venue).
-- Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there.
+- Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there. Plans for indicators that have no package yet: [indicators/](indicators/) (bollinger, donchian, returns, realized-volatility, owner decision).
 - Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS, Supabase).
 
 ## Design notes (docs/grooming)
