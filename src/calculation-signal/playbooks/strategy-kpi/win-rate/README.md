@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: Win rate
 unit: ratio
 format: percent
+order: 6
 ---
 
 ## Definition

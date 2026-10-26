@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: CAGR
 unit: ratio
 format: percent
+order: 1
 ---
 
 ## Definition

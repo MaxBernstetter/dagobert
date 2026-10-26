@@ -1,9 +1,6 @@
 import type { BacktestRunStatistics } from "@/lib/backtest-period-stats";
-import {
-  defaultStrategyKpiDefs,
-  formatStrategyKpiValue,
-  type StrategyKpiSet,
-} from "@/lib/strategy-kpi-shared";
+import { strategyKpiDefs } from "@/wikiCatalog";
+import { formatStrategyKpiValue, type StrategyKpiSet } from "@/lib/strategy-kpi-shared";
 
 export function kpiResultValue(set: StrategyKpiSet | null | undefined, slug: string): number | null {
   if (!set) return null;
@@ -56,7 +53,7 @@ export function formatStatRateCell(
 }
 
 /** KPIs suitable for cross-run table comparison (time-normalized or risk). */
-export const BACKTEST_TABLE_KPI_DEFS = defaultStrategyKpiDefs().filter(
+export const BACKTEST_TABLE_KPI_DEFS = strategyKpiDefs().filter(
   (d) => d.slug !== "active-return",
 );
 

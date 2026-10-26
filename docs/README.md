@@ -44,7 +44,7 @@ Index: [development/README.md](development/README.md).
 
 - Ingest: [ingest/binance-public-klines.md](ingest/binance-public-klines.md) (Binance klines, decimal candle schema).
 - Execution: [execution/bybit-eu-demo.md](execution/bybit-eu-demo.md) (Bybit EU demo venue).
-- Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there. Plans for indicators that have no package yet: [indicators/](indicators/) (bollinger, donchian, returns, realized-volatility, owner decision).
+- Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there.
 - Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS, Supabase).
 
 ## Design notes (docs/grooming)
@@ -62,9 +62,8 @@ Current:
 - [ingest-provider-facade.md](grooming/ingest-provider-facade.md), [ingest-fetch-facade-refactor.md](grooming/ingest-fetch-facade-refactor.md), [ingest-list-assets.md](grooming/ingest-list-assets.md), [ingestion-providers-ui.md](grooming/ingestion-providers-ui.md): ingest provider design.
 - [saxo-openapi-evaluation.md](grooming/saxo-openapi-evaluation.md): evaluation of the Saxo OpenAPI.
 
-Superseded or archived (kept for history):
+Archived (kept for history):
 
-- [deploy-supabase.md](grooming/deploy-supabase.md): early deploy plan, older vocabulary.
 - [grooming/archive/](grooming/archive/): closed milestones m1-ingest, m2-process, m3-playbook, m4-paper-fill, m4-ux, m5-schedule, m6-frontend.
 
 ## Per-package READMEs

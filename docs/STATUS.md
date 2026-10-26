@@ -25,7 +25,6 @@ As of 2026-10-26 (main at 448c584). Update this page whenever an epic closes or 
 1. Decide how much fill data to persist per instance: [#164](https://github.com/MaxBernstetter/dagobert/issues/164). It sets the Postgres cost of every large experiment.
 2. Make C++ the default experiment engine, then move the live path to C++ and delete the Go jobs. No issue yet; needs more validation first (see [architecture/backtesting.md](architecture/backtesting.md)).
 3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
-4. Owner decisions pending in [#167](https://github.com/MaxBernstetter/dagobert/issues/167): which duplicate or superseded docs to archive, whether to keep the indicator plans in `docs/indicators/` (bollinger, donchian, returns, realized-volatility: no package exists yet), and `.agent/skills-catalog.md` (555 KB, unreferenced).
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 

@@ -88,6 +88,13 @@ export function wikiStrategyKpis(): StrategyKpiEntry[] {
     .sort((a, b) => a.meta.title.localeCompare(b.meta.title));
 }
 
+/** KPI definitions in table order, read from the strategy-kpi README frontmatter. */
+export function strategyKpiDefs(): StrategyKpiMeta[] {
+  return wikiStrategyKpis()
+    .map((e) => e.meta)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
 export function indicatorSeries(entry: WikiEntry | undefined): IndicatorSeries[] {
   return [...(entry?.meta.series ?? [])].sort((a, b) => a.key.localeCompare(b.key));
 }

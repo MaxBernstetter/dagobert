@@ -1,63 +1,11 @@
-/** Default KPI defs (mirrors Go StrategyKPIRegistry); used when markdown catalog is unavailable. */
-export function defaultStrategyKpiDefs(): StrategyKpiMeta[] {
-  return [
-    {
-      slug: "cagr",
-      title: "CAGR (net)",
-      label: "CAGR",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "percent",
-    },
-    {
-      slug: "max-drawdown",
-      title: "Maximum drawdown",
-      label: "Max DD",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "percent",
-    },
-    {
-      slug: "sharpe",
-      title: "Sharpe ratio",
-      label: "Sharpe",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "decimal",
-    },
-    {
-      slug: "active-return",
-      title: "Active return vs benchmark",
-      label: "vs B&H",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "percent-pts",
-    },
-    {
-      slug: "sortino",
-      title: "Sortino ratio",
-      label: "Sortino",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "decimal",
-    },
-    {
-      slug: "win-rate",
-      title: "Win rate",
-      label: "Win rate",
-      kind: "strategy-kpi",
-      unit: "ratio",
-      format: "percent",
-    },
-  ];
-}
-
 export type StrategyKpiMeta = {
   title: string;
   slug: string;
   kind: string;
   label: string;
   unit?: string;
+  /** Display order in tables; set in the README frontmatter. */
+  order?: number;
   format: "percent" | "decimal" | "percent-pts" | string;
 };
 

@@ -225,4 +225,4 @@ Use a bare `schema "public" {}` (no comment) when scoped to one schema.
 - [Atlas Supabase guide](https://atlasgo.io/guides/postgres/supabase)
 - [HCL directory structure](https://atlasgo.io/faq/hcl-directory-structure)
 - [Supabase connection methods](https://supabase.com/docs/guides/database/connecting-to-postgres)
-- Prior: `docs/grooming/deploy-supabase.md` (whole-platform “don’t host jobs here”); this doc is **DB schema tooling only** for the control plane.
+- Why jobs are not hosted on Supabase: Out of scope in [serverless-aws.md](serverless-aws.md); this doc is **DB schema tooling only** for the control plane.
