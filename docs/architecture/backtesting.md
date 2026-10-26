@@ -50,6 +50,10 @@ Compute and KPI errors reach the database only as `failed` rows in these batches
 
 Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
 
+### KPI worker (actions to KPIs)
+
+For the C++ path (#130) the strategy outcome is a list of sized actions. `src/calculation-signal/runner/kpi_worker.go` turns them into fills and the instance report without disk or database access: `ReplayKPI` replays the actions against the bar closes with the same fill model as simulated execution (`execrunner.SimulateBarWithModel`, quantities read back through the journal strings like the SQLite path) and builds the report with `BuildInstanceReportFromSim`. `RunKPIWorkers` runs a goroutine pool over batches of `KPIJob` and emits one `[]KPIResult` batch per input batch, ready for the persistence stage. It is not yet wired into `RunExperimentSimulate`; sweep scheduling, mapping `ExperimentInstanceAction` to `ReplayAction.Size` (rescaling to wallet equity) and the hand-off to `runPersister` are follow-up work.
+
 ### Sparse lake (exchange holes)
 
 Ingest does **not** synthesize candles. When Binance returns no closed kline for a requested hour, that open time is recorded in `ingest.sqlite` table `unavailable` (detail **32** if nothing was written; detail **30** is transport/retry failure only). Coverage `Ready` allows unavailable hours; only **retryable** missing hours block a experiment/backtest.
