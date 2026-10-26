@@ -182,7 +182,6 @@ struct GoFixture {
     cfg.heat_pct = m.at("heatPct").number_value();
     cfg.max_units = static_cast<int>(m.at("maxUnits").number_value());
     cfg.add_atr_mult = m.at("addAtrMult").number_value();
-    cfg.min_order_quote = 0.0; // Go sizing has no minimum
     for (const auto &e : root.fields().at("expected").list_value().values()) {
       expected.push_back(e.struct_value());
     }

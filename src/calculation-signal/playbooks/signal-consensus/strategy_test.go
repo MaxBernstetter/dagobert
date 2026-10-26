@@ -256,3 +256,32 @@ func TestInvalidSizingErrors(t *testing.T) {
 		t.Fatal("expected invalid sizing error")
 	}
 }
+
+func TestMinOrderQuoteSkipsSizedOrdersButNotExits(t *testing.T) {
+	big := json.RawMessage(`{"sizing":{"maxUnits":2,"minOrderQuote":1000000}}`)
+	units := []sizing.Unit{{Fill: 110, Stop: 105, Qty: 200}}
+	for name, ctx := range map[string]framework.Context{
+		"vol cut": longCtx(112, units, 5000, big),
+		"pyramid": longCtx(112, units, 100000, big),
+	} {
+		if dec, _ := (Strategy{}).Evaluate(ctx); dec.Decision != "no-trade" {
+			t.Errorf("%s below minimum must be skipped: %+v", name, dec)
+		}
+	}
+	if dec, _ := (Strategy{}).Evaluate(longCtx(104, units, 100000, big)); dec.RuleID != "atr_stop" {
+		t.Fatalf("full exit must run: %+v", dec)
+	}
+	buy := framework.Context{
+		Position: "flat", HasPreviousBar: true, PreviousBarClose: 99, BarClose: 110, BarVolume: 120,
+		BarsSinceSell: defaultMinBarsFlatAfterSell, Equity: 100000, StrategyConfig: big,
+		Results:         kit(102, 100, 95, 55, 0.5, 2.0, 100),
+		PreviousResults: kit(100, 99, 94, 50, -0.1, 1.0, 100),
+	}
+	if dec, _ := (Strategy{}).Evaluate(buy); dec.Decision != "no-trade" {
+		t.Fatalf("buy below minimum must be skipped: %+v", dec)
+	}
+	buy.StrategyConfig = json.RawMessage(`{"sizing":{"minOrderQuote":0}}`)
+	if dec, _ := (Strategy{}).Evaluate(buy); dec.Decision != "buy" {
+		t.Fatalf("explicit 0 disables the minimum: %+v", dec)
+	}
+}

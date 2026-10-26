@@ -19,7 +19,7 @@ Return is judged later, on the same symbol and range as the current rules, with 
 
 ## Buy
 
-Buy when the playbook's entry is true and a stop price exists. Size that buy so a fill of the stop loses `unitRiskPct` of equity at entry. Skip the buy when the resulting order is below the venue minimum.
+Buy when the playbook's entry is true and a stop price exists. Size that buy so a fill of the stop loses `unitRiskPct` of equity at entry. Skip the buy when the resulting order is below `minOrderQuote`.
 
 A later rise in the mark does not increase the open trade. The next entry is sized from equity at that entry.
 
@@ -62,8 +62,9 @@ These fields sit under `sizing` in the strategy config. Omitting `sizing` keeps 
 | `stopAtrMult` | 2 | positive | Stop distance in ATR(24h) |
 | `addAtrMult` | 0.5 | positive | Favourable move required before another unit |
 | `maxWeightPct` | 100 | up to 100 | Notional cap, percent of equity |
+| `minOrderQuote` | 1 | 0 or more | Smallest sized order in quote; 0 disables the strategy minimum |
 
-Cash reserve and minimum order stay venue limits.
+A sized buy, a pyramid buy or a `vol_cut` partial sell worth less than `minOrderQuote` is skipped (the bar does nothing). Full exits (`atr_stop`, cross sells) always run. The playbooks apply this in the signal job and in the backtest, the same way as the C++ SDK. The venue minimum (`MinOrderQuote` in market-action) stays a separate, independent floor on the actual order; cash reserve is a venue limit too.
 
 `unitRiskPct` of 1 and `maxUnits` of 1 is one entry, one percent of equity to the stop, and no pyramid. Four units at 0.5% fit under the 2% heat cap. The 2% cap is the ceiling for the whole position, because one instance holds one symbol.
 
@@ -108,4 +109,4 @@ The pure maths lives in `src/calculation-signal/internal/sizing`; `position-sizi
 - Equity is cash plus base at the bar mark. A decision may carry `QuoteNotional`, `BaseQty` and `StopPrice`; market-action caps a notional by cash above the reserve and skips a buy below the venue minimum.
 - The backtest loop tracks open units from simulated fills. The live job reads `STRATEGY_CONFIG` (playbook JSON with `sizing`; unset keeps the legacy signal) and rebuilds open units from the fill journal and the stored signal at each fill (`stop_price`, `raise_stops_by`, `base_qty`), with the same rules: stops only rise, a partial sell scales every unit, a full exit or a remainder below the venue minimum clears them. A malformed config exits with detail 41 and writes no signal.
 - Live equity is the `EQUITY` env value (quote units) when set, else the paper wallet marked at the bar close, else 0, which skips a sized entry. The signal body carries `quote_notional`, `base_qty`, `stop_price` and `raise_stops_by` only for sized decisions, and market-action passes the first two to its allocator. Live Bybit equity is not read by the signal job (it holds no credentials).
-- The C++ SDK applies the signal-consensus rules in `ConsensusSignal` (`src/calculation/sdk/signals`) when a `SizingConfig` is passed, with `stopAtrMult` set to the configured `atrStopMult` (`ConsensusParams`, default 2.5). Per bar: `atr_stop` (the fill-based stop, outside the min-bars-long gate), `consensus_sell`, `vol_cut`, `pyramid`. Without a config it keeps `buy_all` and `sell_all`. `tests/fixtures/consensus_sizing.json` holds Go-generated expected fills (regenerate with `CONSENSUS_FIXTURE_WRITE=1`, see `cpp_fixture_test.go`). The C++ `SizingConfig` has an optional `minOrderQuote` (default 1.0 quote, validated >= 0): a sized buy, pyramid buy or vol_cut partial sell worth less is skipped, while full exits always run. A non-positive stop price does not block a buy (it never triggers), as in Go. Go `sizing.Config` has no `minOrderQuote` yet: Go enforces the venue minimum in market-action, so the C++ default differs from Go until a follow-up adds the field to Go. The Go-generated fixtures run with `minOrderQuote` 0. The proto `Sizing` message carries `minOrderQuote` (default 1.0 when absent).
+- The C++ SDK applies the signal-consensus rules in `ConsensusSignal` (`src/calculation/sdk/signals`) when a `SizingConfig` is passed, with `stopAtrMult` set to the configured `atrStopMult` (`ConsensusParams`, default 2.5). Per bar: `atr_stop` (the fill-based stop, outside the min-bars-long gate), `consensus_sell`, `vol_cut`, `pyramid`. Without a config it keeps `buy_all` and `sell_all`. `tests/fixtures/consensus_sizing.json` holds Go-generated expected fills (regenerate with `CONSENSUS_FIXTURE_WRITE=1`, see `cpp_fixture_test.go`). The C++ and Go `SizingConfig` both have an optional `minOrderQuote` (default 1.0 quote, validated >= 0): a sized buy, pyramid buy or vol_cut partial sell worth less is skipped, while full exits always run. A non-positive stop price does not block a buy (it never triggers), as in Go. The Go-generated fixtures run with the default minimum. The proto `Sizing` message carries `minOrderQuote` (default 1.0 when absent).
