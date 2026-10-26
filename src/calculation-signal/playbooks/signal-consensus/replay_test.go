@@ -152,6 +152,11 @@ func writeSyntheticParquet(t *testing.T, dataDir string, endMs int64) {
 			Close: price, Volume: vol, CloseTime: ot + hour - 1,
 		})
 	}
+	writeHourCandles(t, dataDir, rows)
+}
+
+func writeHourCandles(t *testing.T, dataDir string, rows []hourCandle) {
+	t.Helper()
 	byYear := map[int][]hourCandle{}
 	for _, r := range rows {
 		y := shared.YearUTC(r.OpenTime)

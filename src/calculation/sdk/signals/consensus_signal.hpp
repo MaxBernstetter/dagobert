@@ -34,6 +34,9 @@ struct ConsensusColumns {
   const Column &vol_mean;
   const Column &atr;
   const Column &hist;
+  // Per bar: 1 when the bar directly follows the previous one. Null means
+  // every bar does. The Go playbook does not trade a bar after a gap.
+  const std::vector<char> *prior{nullptr};
 };
 
 // One bar of the same inputs for streaming use.
@@ -47,6 +50,8 @@ struct ConsensusSample {
   std::optional<double> vol_mean;
   std::optional<double> atr;
   std::optional<double> hist;
+  // False when a bar is missing before this one: no decision on this bar.
+  bool prior{true};
 };
 
 // Per-bar gate outcome before position state and cooldowns are applied.

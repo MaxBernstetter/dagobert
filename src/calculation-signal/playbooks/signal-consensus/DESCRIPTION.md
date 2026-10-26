@@ -25,6 +25,21 @@ price_source: binance
 
 Uses the default Experiment Suite aggregation (`AGGREGATION_DURATION_MS` unset → 3h).
 
+### Series as computed (decision per window)
+
+The playbook reads the technical-indicator job's series, and those are not the textbook indicators. Their behaviour is the specification for now and the C++ executable reproduces it (checked on 700+ bars, see `cpp_equivalence_fixture_test.go`). Each row is a known property, not a validated design choice; changing one is a separate decision for the owner.
+
+| Series | Definition on 3h bars | Ready when |
+|--------|-----------------------|------------|
+| bars | Candles of the lake (1h) grouped at UTC multiples of 3h; a bar exists only when all its source candles exist, so a missing hour drops the bar and the next bar follows it in every window. Volume is the sum, close the last candle's close. | |
+| `sma-Nh` | Mean of the last N/3 bar closes (4, 8, 16 for 12h, 24h, 48h). | N/3 bars |
+| `atr-24h` | Mean of the last 8 true ranges (true range uses the previous bar's close). The Wilder loop seeds on the last 8 and has nothing left to smooth, so it is a plain mean. | 9 bars |
+| `rsi-3h` | Mean gain over mean loss of the three 1h closes inside the current 3h bar (two deltas); 50 when flat, 100 without losses. It does not look at earlier bars. | 2 or more source closes (never on a 3h lake) |
+| `volume-mean-3h` | Mean of the last one bar volume, i.e. the bar's own volume. The ratio is exactly 1, so the volume vote is neutral unless `volRatioBear` >= 1 (bear, entries blocked) or `volRatioBull` <= 1 (bull). | 1 bar |
+| `macd-histogram-3h` | 12h/24h/9h = 4/8/3 bars. Fast and slow EMAs each seed on only the last 4 (8) closes; the signal EMA seeds on the last 3 MACD values; histogram = MACD minus signal. | 11 bars |
+
+KPI rows keep a trailing window of 16 bars (the longest series, 48h), so no series depends on earlier history. A bar after a gap (previous 3h bar missing) is not traded.
+
 ## Rules (v10)
 
 | Rule | Condition | Signal |

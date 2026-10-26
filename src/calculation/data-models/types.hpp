@@ -17,6 +17,9 @@ struct Bar {
   double close{};
   double volume{};
   std::int64_t duration_ms{};
+  // Close of each source candle inside an aggregated bar, in time order (see
+  // aggregate_bars). Empty for bars read as they are stored.
+  std::vector<double> segment_close;
 };
 
 struct Column {

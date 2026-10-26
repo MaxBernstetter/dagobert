@@ -1,6 +1,6 @@
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Arrow.cmake)
 
-add_library(dagobert_bars_parquet STATIC bars_parquet.cpp)
+add_library(dagobert_bars_parquet STATIC bars_parquet.cpp bars_aggregate.cpp)
 target_include_directories(
   dagobert_bars_parquet
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}

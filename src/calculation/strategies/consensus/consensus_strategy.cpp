@@ -16,16 +16,26 @@ constexpr const char *kLabel = "signal-consensus";
 constexpr const char *kTypeUrl =
     "type.googleapis.com/tradingcopilot.v1.SignalConsensusConfig";
 
-// Hours baked into the Go playbook; RSI and the MACD periods are in bars.
+// Hours baked into the Go playbook and the technical-indicator job.
 constexpr std::int32_t kSignalHr = 12;
 constexpr std::int32_t kRegimeHr = 24;
 constexpr std::int32_t kMacroHr = 48;
 constexpr std::int32_t kAtrHr = 24;
-constexpr std::int32_t kVolumeMeanHr = 24;
-constexpr std::size_t kRsiPeriod = 14;
-constexpr std::size_t kMacdFast = 12;
-constexpr std::size_t kMacdSlow = 26;
-constexpr std::size_t kMacdSignal = 9;
+constexpr std::int32_t kVolumeMeanHr = 3;
+constexpr std::int32_t kMacdFastHr = 12;
+constexpr std::int32_t kMacdSlowHr = 24;
+constexpr std::int32_t kMacdSignalHr = 9;
+
+ConsensusWindows windows_for(std::int64_t bar_duration_ms) {
+  return {.signal = bars_for(kSignalHr, bar_duration_ms),
+          .regime = bars_for(kRegimeHr, bar_duration_ms),
+          .macro = bars_for(kMacroHr, bar_duration_ms),
+          .atr = bars_for(kAtrHr, bar_duration_ms),
+          .volume_mean = bars_for(kVolumeMeanHr, bar_duration_ms),
+          .macd_fast = bars_for(kMacdFastHr, bar_duration_ms),
+          .macd_slow = bars_for(kMacdSlowHr, bar_duration_ms),
+          .macd_signal = bars_for(kMacdSignalHr, bar_duration_ms)};
+}
 
 // Validates label and payload type and returns the config. The thresholds are
 // read by params_of and sizing_of.
@@ -54,13 +64,9 @@ ConsensusStrategy::ConsensusStrategy(
     const tradingcopilot::v1::RunEnvelope &envelope,
     std::int64_t bar_duration_ms, std::optional<sizing::SizingConfig> sizing,
     const ConsensusParams &params)
-    : Strategy(envelope), signal_(bars_for(kSignalHr, bar_duration_ms)),
-      regime_(bars_for(kRegimeHr, bar_duration_ms)),
-      macro_(bars_for(kMacroHr, bar_duration_ms)), rsi_(kRsiPeriod),
-      vol_mean_(bars_for(kVolumeMeanHr, bar_duration_ms)),
-      atr_(bars_for(kAtrHr, bar_duration_ms)),
-      macd_(kMacdFast, kMacdSlow, kMacdSignal), params_(params),
-      sizing_(sizing), consensus_(sizing, params), book_(initial_quote()) {
+    : Strategy(envelope), features_(windows_for(bar_duration_ms)),
+      params_(params), sizing_(sizing), consensus_(sizing, params),
+      book_(initial_quote()) {
   check_payload(envelope);
 }
 
@@ -135,23 +141,44 @@ StrategyResult ConsensusStrategy::calc_backtest(std::span<const Bar> bars) {
   }
   const CloseSeries close = closes_of(bars);
   const VolumeSeries volume = volumes_of(bars);
-  std::vector<double> high;
-  std::vector<double> low;
-  for (const Bar &bar : bars) {
-    high.push_back(bar.high);
-    low.push_back(bar.low);
+  const std::size_t count = bars.size();
+  const auto column = [count] {
+    Column c;
+    c.samples.assign(count, 0.0);
+    c.ready.assign(count, 0);
+    return c;
+  };
+  Column signal = column();
+  Column regime = column();
+  Column macro = column();
+  Column rsi = column();
+  Column vol_mean = column();
+  Column atr = column();
+  Column hist = column();
+  std::vector<char> prior(count, 0);
+  const auto put = [](Column &col, std::size_t i,
+                      const std::optional<double> &v) {
+    if (v) {
+      col.samples[i] = *v;
+      col.ready[i] = 1;
+    }
+  };
+  ConsensusFeatures features = features_;
+  features.reset();
+  for (std::size_t i = 0; i < count; ++i) {
+    const ConsensusSample s = features.push(bars[i]);
+    put(signal, i, s.signal);
+    put(regime, i, s.regime);
+    put(macro, i, s.macro);
+    put(rsi, i, s.rsi);
+    put(vol_mean, i, s.vol_mean);
+    put(atr, i, s.atr);
+    put(hist, i, s.hist);
+    prior[i] = s.prior ? 1 : 0;
   }
-  const Column signal = signal_.apply_indicator(close);
-  const Column regime = regime_.apply_indicator(close);
-  const Column macro = macro_.apply_indicator(close);
-  const Column rsi = rsi_.apply_indicator(close);
-  const Column vol_mean = vol_mean_.apply_indicator(volume);
-  const Column atr = atr_.apply_indicator(high, low, close);
-  const MacdColumns macd = macd_.apply_indicator(close);
-  const ConsensusSeries mask =
-      ConsensusSignal::evaluate({close, volume, signal, regime, macro, rsi,
-                                 vol_mean, atr, macd.histogram},
-                                params_);
+  const ConsensusSeries mask = ConsensusSignal::evaluate(
+      {close, volume, signal, regime, macro, rsi, vol_mean, atr, hist, &prior},
+      params_);
 
   Position account{initial_quote()};
   (void)ConsensusSignal::actions_from(account, bars, mask, sizing_, params_);
@@ -161,15 +188,7 @@ StrategyResult ConsensusStrategy::calc_backtest(std::span<const Bar> bars) {
 
 StrategyResult ConsensusStrategy::calc_live(const Bar &bar) {
   require_finite_close(bar);
-  const ConsensusSample sample{bar.close,
-                               bar.volume,
-                               signal_.push(bar.close),
-                               regime_.push(bar.close),
-                               macro_.push(bar.close),
-                               rsi_.push(bar.close),
-                               vol_mean_.push(bar.volume),
-                               atr_.push(bar.high, bar.low, bar.close),
-                               macd_.push(bar.close).histogram};
+  const ConsensusSample sample = features_.push(bar);
   const auto rule = sizing_ ? consensus_.apply(sample, book_)
                             : consensus_.apply(sample, book_.flat());
   if (rule) {
@@ -179,13 +198,7 @@ StrategyResult ConsensusStrategy::calc_live(const Bar &bar) {
 }
 
 void ConsensusStrategy::reset() {
-  signal_.reset();
-  regime_.reset();
-  macro_.reset();
-  rsi_.reset();
-  vol_mean_.reset();
-  atr_.reset();
-  macd_.reset();
+  features_.reset();
   consensus_.reset();
   book_ = Position{initial_quote()};
 }
