@@ -5,7 +5,7 @@ package tradingcopilot.v1;
 // Strategy configs map to experiment_instance.cfg_* columns (no jsonb).
 // Field numbers 1–99 reserved for ma-cross; 100–199 signal-consensus; 200+ future playbooks.
 
-// Position sizing options (docs/v2/features/position-sizing.md). Every field
+// Position sizing options (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md). Every field
 // is optional: an unset field takes its documented default, an explicit value
 // (including 0) is validated. The strategy executables exit 2 on an invalid
 // value.

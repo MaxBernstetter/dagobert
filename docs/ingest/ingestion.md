@@ -43,7 +43,7 @@ Each row is a fixed-order array of 12 fields. The job stores the first seven:
 | 6 | close time (ms, UTC) | yes |
 | 7–11 | quote volume, trade count, taker buy volumes, ignore | no |
 
-Prices and volumes arrive as decimal strings. They are validated and stored as fixed-scale decimals (scale 8), see [Candle file format](../../ingest/binance-public-klines.md#candle-file-format).
+Prices and volumes arrive as decimal strings. They are validated and stored as fixed-scale decimals (scale 8), see [Candle file format](binance-public-klines.md#candle-file-format).
 
 ## Symbol rules
 
@@ -103,4 +103,4 @@ Redirects are followed only within the same host, up to two hops.
 | `INGEST_PROVIDER` | Provider id when `-provider` is not given. |
 | `DATA_DIR` | Root of `parquet/` and `ingest.sqlite`. |
 
-Related: [backtesting](backtesting.md)
+Related: [backtesting](../architecture/backtesting.md)

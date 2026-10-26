@@ -117,7 +117,7 @@ type ExperimentInstanceAction struct {
 	Side         string                 `protobuf:"bytes,6,opt,name=side,proto3" json:"side,omitempty"` // buy | sell | flat | other
 	WeightPct    *float64               `protobuf:"fixed64,7,opt,name=weight_pct,json=weightPct,proto3,oneof" json:"weight_pct,omitempty"`
 	Reason       string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
-	// Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+	// Sizing fields of a sized decision (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md);
 	// unset for unsized actions. Same names as the live signal body.
 	QuoteNotional *float64 `protobuf:"fixed64,9,opt,name=quote_notional,json=quoteNotional,proto3,oneof" json:"quote_notional,omitempty"` // buy: quote requested, before the cash clamp
 	BaseQty       *float64 `protobuf:"fixed64,10,opt,name=base_qty,json=baseQty,proto3,oneof" json:"base_qty,omitempty"`                  // vol_cut: base to sell

@@ -107,7 +107,7 @@ export type ExperimentInstanceAction = Message<"tradingcopilot.v1.ExperimentInst
   reason: string;
 
   /**
-   * Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+   * Sizing fields of a sized decision (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md);
    * unset for unsized actions. Same names as the live signal body.
    *
    * buy: quote requested, before the cash clamp

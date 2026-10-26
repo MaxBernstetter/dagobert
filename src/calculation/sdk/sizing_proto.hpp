@@ -16,7 +16,7 @@ namespace dagobert {
 [[nodiscard]] sizing::SizingConfig
 sizing_from_proto(const tradingcopilot::v1::Sizing &proto);
 
-// Appends one ActionSizing per action (docs/v2/features/position-sizing.md).
+// Appends one ActionSizing per action (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md).
 void write_sizing_output(const std::vector<Action> &actions,
                          tradingcopilot::v1::RunReport &report);
 

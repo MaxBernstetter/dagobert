@@ -22,7 +22,7 @@ message ExperimentInstanceAction {
   string side = 6; // buy | sell | flat | other
   optional double weight_pct = 7;
   string reason = 8;
-  // Sizing fields of a sized decision (docs/v2/features/position-sizing.md);
+  // Sizing fields of a sized decision (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md);
   // unset for unsized actions. Same names as the live signal body.
   optional double quote_notional = 9; // buy: quote requested, before the cash clamp
   optional double base_qty = 10;      // vol_cut: base to sell

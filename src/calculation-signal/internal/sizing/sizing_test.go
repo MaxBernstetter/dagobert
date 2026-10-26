@@ -41,7 +41,7 @@ func near(a, b float64) bool { return math.Abs(a-b) <= 1e-6*math.Max(1, math.Abs
 func p[T any](v T) *T { return &v }
 
 func TestVectors(t *testing.T) {
-	raw, err := os.ReadFile("../../../../docs/v2/features/position-sizing-vectors.json")
+	raw, err := os.ReadFile("../../playbooks/position-sizing/position-sizing-vectors.json")
 	if err != nil {
 		t.Fatal(err)
 	}

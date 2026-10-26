@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Position sizing options (docs/v2/features/position-sizing.md). Every field
+// Position sizing options (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md). Every field
 // is optional: an unset field takes its documented default, an explicit value
 // (including 0) is validated. The strategy executables exit 2 on an invalid
 // value.

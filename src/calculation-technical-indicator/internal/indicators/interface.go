@@ -6,6 +6,18 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
 )
 
+// Units say what a result is compared with. A playbook may compare two results
+// only when the unit matches; nothing rescales a price into an index.
+//
+//	price   same unit as the bar close
+//	amount  a quantity, such as base-asset volume
+//	ratio   a change relative to a base, not a price
+//	index   a bounded scale, such as RSI
+//
+// A definition is a parameter object (type plus parameters, `time_frame_hr` a
+// positive multiple of 3), not a column name. It is stored canonically (keys
+// sorted, no extra keys, integer numbers); objects with the same canonical text
+// are one node in the calculation graph.
 const (
 	UnitPrice  = "price"
 	UnitAmount = "amount"

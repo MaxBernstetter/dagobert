@@ -86,7 +86,7 @@ Backfill from existing `report.json` is a follow-up (not required to ship).
 - Keeping `report.json` as the UI source of truth (stats live in Postgres; charts OHLC/TI from lake)
 - SSE
 
-Catalog storage implementation: [`serverless-aws.md`](serverless-aws.md) (steps 7+); decisions: [`postgres-control-plane.md`](postgres-control-plane.md).
+Catalog storage implementation: [`serverless-aws.md`](serverless-aws.md) (steps 7+).
 
 ## Acceptance
 

@@ -54,4 +54,4 @@ Database and codegen: `task db:diff name=...` (Atlas, edit HCL in `db/`), `task 
 
 @AGENTS.md
 
-Start with `docs/README.md` (index) and `docs/STATUS.md` (current state). Where project docs live: `docs/architecture/` (design), `docs/grooming/` (milestone notes; closed ones are archived), `docs/indicators/` and `docs/ingest/` (contracts).
+Start with `docs/README.md` (index) and `docs/STATUS.md` (current state). Where project docs live: `docs/architecture/` (design), `docs/grooming/` (milestone notes; closed ones are archived), `docs/ingest/` and `docs/execution/` (contracts). Wiki content lives only in the markdown files the Wiki renders (indicator `README.md`, playbook `DESCRIPTION.md`, strategy-KPI `README.md`); they are source code, see `docs/architecture/wiki-catalog.md`.
