@@ -16,7 +16,6 @@ services:
       - ./src/frontend:/repo/src/frontend
       - ./src/calculation-technical-indicator:/repo/src/calculation-technical-indicator:ro
       - ./src/calculation-signal:/repo/src/calculation-signal:ro
-      - ./docs/v2/features:/repo/docs/v2/features:ro
     develop:
       watch:
         - action: sync

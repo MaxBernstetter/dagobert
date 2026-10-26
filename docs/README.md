@@ -22,9 +22,7 @@ One line per document, grouped by purpose. Current state and next steps: [STATUS
 
 ## Features and specs
 
-- [v2/features/ingestion.md](v2/features/ingestion.md): ingestion feature spec.
-- [v2/features/position-sizing.md](v2/features/position-sizing.md): position sizing method (unit risk, heat, max units); test vectors in [v2/features/position-sizing-vectors.json](v2/features/position-sizing-vectors.json).
-- [v2/features/backtesting.md](v2/features/backtesting.md): backtesting feature spec (overlaps architecture/backtesting.md).
+- [ingest/ingestion.md](ingest/ingestion.md): ingestion feature spec.
 - Playbooks: [ma-cross](../src/calculation-signal/playbooks/ma-cross/DESCRIPTION.md), [signal-consensus](../src/calculation-signal/playbooks/signal-consensus/DESCRIPTION.md), [position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md).
 - Strategy KPIs: [active-return](../src/calculation-signal/playbooks/strategy-kpi/active-return/README.md), [cagr](../src/calculation-signal/playbooks/strategy-kpi/cagr/README.md), [max-drawdown](../src/calculation-signal/playbooks/strategy-kpi/max-drawdown/README.md), [sharpe](../src/calculation-signal/playbooks/strategy-kpi/sharpe/README.md), [sortino](../src/calculation-signal/playbooks/strategy-kpi/sortino/README.md), [win-rate](../src/calculation-signal/playbooks/strategy-kpi/win-rate/README.md).
 
@@ -39,7 +37,6 @@ Index: [development/README.md](development/README.md).
 - [development/principles/README.md](development/principles/README.md): planning and implementation principles and the Definition of done.
 - [development/05-cpp-benchmark.md](development/05-cpp-benchmark.md): C++ versus Go benchmark and Postgres persistence cost.
 - [development/protobuf.md](development/protobuf.md): protobuf and Buf contracts.
-- [development/run-backtest.md](development/run-backtest.md): run a backtest or experiment locally.
 - [development/seed-demo-year.md](development/seed-demo-year.md): seed one year of demo history.
 - [../tools/claude-plugin/README.md](../tools/claude-plugin/README.md): the agent plugin (groomer, planner, validator, worker).
 
@@ -47,7 +44,7 @@ Index: [development/README.md](development/README.md).
 
 - Ingest: [ingest/binance-public-klines.md](ingest/binance-public-klines.md) (Binance klines, decimal candle schema).
 - Execution: [execution/bybit-eu-demo.md](execution/bybit-eu-demo.md) (Bybit EU demo venue).
-- Indicators: [indicators/schema.md](indicators/schema.md) plus one page per indicator: [atr](indicators/atr.md), [bollinger](indicators/bollinger.md), [close-distance](indicators/close-distance.md), [donchian](indicators/donchian.md), [ema](indicators/ema.md), [macd](indicators/macd.md), [realized-volatility](indicators/realized-volatility.md), [returns](indicators/returns.md), [rsi](indicators/rsi.md), [sma](indicators/sma.md), [volume](indicators/volume.md).
+- Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there.
 - Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS, Supabase).
 
 ## Design notes (docs/grooming)
@@ -67,9 +64,7 @@ Current:
 
 Superseded or archived (kept for history):
 
-- [backtesting.md](grooming/backtesting.md): superseded by architecture/backtesting.md.
 - [deploy-supabase.md](grooming/deploy-supabase.md): early deploy plan, older vocabulary.
-- [postgres-control-plane.md](grooming/postgres-control-plane.md): redirect stub.
 - [grooming/archive/](grooming/archive/): closed milestones m1-ingest, m2-process, m3-playbook, m4-paper-fill, m4-ux, m5-schedule, m6-frontend.
 
 ## Per-package READMEs

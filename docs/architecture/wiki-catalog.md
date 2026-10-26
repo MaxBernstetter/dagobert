@@ -2,6 +2,16 @@
 
 ## Goal
 
+**The Wiki markdown is source code.** Wiki content lives only in the files the frontend renders and nowhere else: do not restate it in `docs/`. `src/frontend/src/wikiCatalog.ts` loads them with `import.meta.glob`:
+
+| Glob | Wiki page |
+|---|---|
+| `src/calculation-technical-indicator/internal/indicators/*/README.md` | indicators (`readme_sync_test.go` checks `series` against the code) |
+| `src/calculation-signal/playbooks/*/DESCRIPTION.md` | playbooks and Position Sizing |
+| `src/calculation-signal/playbooks/strategy-kpi/*/README.md` | strategy KPIs |
+
+Change a glob and this table together.
+
 Every **indicator formula** and every **playbook** has a folder with documentation beside the code. Aggregation time (`time_frame_hr`) is a parameter of the formula, not a separate indicator type. Deployed calculation keys such as `sma-6h` label a specific series for operators and the Wiki; KPI rows identify values by JSON `def` only.
 
 ## Layout
@@ -18,7 +28,7 @@ src/calculation-signal/playbooks/<slug>/
   <slug>.yaml
   DESCRIPTION.md
 src/calculation-signal/playbooks/position-sizing/
-  DESCRIPTION.md            # symlink to docs/v2/features/position-sizing.md
+  DESCRIPTION.md            # the real file (kind: method); position-sizing-vectors.json sits beside it as a test fixture
 src/calculation-signal/playbooks/strategy-kpi/<slug>/
   README.md                 # strategy KPI doc (`kind: strategy-kpi` in frontmatter)
 ```
@@ -33,13 +43,6 @@ Indicator formulas use `README.md` with YAML frontmatter (`slug` = formula, not 
 
 Render with **react-markdown**, **remark-gfm**, **remark-math**, **rehype-katex**. See earlier syntax table in git history.
 
-## Runtime paths
-
-| Variable | Default | Docker Compose |
-|----------|---------|----------------|
-| `WIKI_CATALOG_DIR` | `<repo>/src/calculation-technical-indicator/internal/indicators` | `/wiki/calculation-technical-indicator/internal/indicators` |
-| `WIKI_PLAYBOOKS_DIR` | `<repo>/src/calculation-signal/playbooks` | `/wiki/playbooks` |
-
 ## Wiki routes
 
 | Route | Content |
@@ -47,10 +50,10 @@ Render with **react-markdown**, **remark-gfm**, **remark-math**, **rehype-katex*
 | `/wiki` | Four sections in a 2×2 grid: Technical indicators, Market Action, Position Sizing, Strategy performance indicators. A narrow viewport stacks them in that order. |
 | `/wiki/indicators/[formula]` | README + table from `instances/*.json` |
 | `/wiki/playbooks/[slug]` | Market Action playbook DESCRIPTION |
-| `/wiki/playbooks/position-sizing` | Position Sizing section. Same text as `docs/v2/features/position-sizing.md` (`kind: method`). |
+| `/wiki/playbooks/position-sizing` | Position Sizing section. Rendered from `src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md` (`kind: method`). |
 | `/wiki/strategy-kpi/[slug]` | Strategy KPI README |
 
-Strategy KPI markdown is under `playbooks/strategy-kpi/` (same volume as `WIKI_PLAYBOOKS_DIR`). Optional `STRATEGY_KPI_DIR` overrides the catalog path.
+The dev frontend container mounts `src/calculation-technical-indicator` and `src/calculation-signal` (`compose.override.yaml`) so the globs resolve.
 
 ## Quality bar
 

@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Sizing output of one action (docs/v2/features/position-sizing.md). Present
+// Sizing output of one action (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md). Present
 // only when the run's config set `sizing`.
 type ActionSizing struct {
 	state protoimpl.MessageState `protogen:"open.v1"`

@@ -7,7 +7,7 @@ As of 2026-10-26 (main at 448c584). Update this page whenever an epic closes or 
 - **Live pipeline.** Five Go job containers per 3-hour UTC candle: ingest, technical indicators, signal, market action, execution. The orchestrator runs them in order and places a paper order on the Bybit EU demo host.
 - **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. The Go engine is the default. The C++ engine is opt-in with `EXPERIMENT_ENGINE=cpp` and covers `ma-cross` and `signal-consensus`; it is equivalence-tested against Go (`TestSmaCrossGoVsCppEquivalence`, `TestConsensusGoVsCppEquivalence`).
 - **Decimal candles.** Parquet candles use fixed-scale decimals; the reader also accepts the old string schema (`task data:migrate-candles`).
-- **Position sizing.** Unit risk, heat and max units, in both engines ([position-sizing](v2/features/position-sizing.md)).
+- **Position sizing.** Unit risk, heat and max units, in both engines ([position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md)).
 
 ## Deliberately not done
 
@@ -25,7 +25,7 @@ As of 2026-10-26 (main at 448c584). Update this page whenever an epic closes or 
 1. Decide how much fill data to persist per instance: [#164](https://github.com/MaxBernstetter/dagobert/issues/164). It sets the Postgres cost of every large experiment.
 2. Make C++ the default experiment engine, then move the live path to C++ and delete the Go jobs. No issue yet; needs more validation first (see [architecture/backtesting.md](architecture/backtesting.md)).
 3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
-4. Owner decisions pending in [#167](https://github.com/MaxBernstetter/dagobert/issues/167): which duplicate or superseded docs to archive, what to do with `docs/indicators/` versus the per-indicator READMEs, and `.agent/skills-catalog.md` (555 KB, unreferenced).
+4. Owner decisions pending in [#167](https://github.com/MaxBernstetter/dagobert/issues/167): which duplicate or superseded docs to archive, whether to keep the indicator plans in `docs/indicators/` (bollinger, donchian, returns, realized-volatility: no package exists yet), and `.agent/skills-catalog.md` (555 KB, unreferenced).
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 

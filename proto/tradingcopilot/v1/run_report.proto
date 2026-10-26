@@ -5,7 +5,7 @@ package tradingcopilot.v1;
 import "tradingcopilot/v1/experiment_activity.proto";
 import "tradingcopilot/v1/experiment_instance.proto";
 
-// Sizing output of one action (docs/v2/features/position-sizing.md). Present
+// Sizing output of one action (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md). Present
 // only when the run's config set `sizing`.
 message ActionSizing {
   // Identifies the action: same bar and side as the entry in `actions`.

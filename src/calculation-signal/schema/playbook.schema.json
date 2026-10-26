@@ -18,7 +18,7 @@
   },
   "$defs": {
     "sizing": {
-      "description": "Optional risk sizing under a strategy config's `sizing` key (docs/v2/features/position-sizing.md). Omitting it keeps the single target weight and full exit. An omitted field takes its default; an explicit 0 is rejected by range. heatPct must be at least unitRiskPct, checked in code. The Decision fields requestedRiskPct and cappedRiskPct are diagnostics set by the sizing core, not config.",
+      "description": "Optional risk sizing under a strategy config's `sizing` key (src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md). Omitting it keeps the single target weight and full exit. An omitted field takes its default; an explicit 0 is rejected by range. heatPct must be at least unitRiskPct, checked in code. The Decision fields requestedRiskPct and cappedRiskPct are diagnostics set by the sizing core, not config.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

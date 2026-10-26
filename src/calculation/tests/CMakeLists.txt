@@ -37,7 +37,7 @@ include(GoogleTest)
 gtest_discover_tests(dagobert-tests DISCOVERY_MODE PRE_TEST)
 target_compile_definitions(
   dagobert-tests
-  PRIVATE SIZING_VECTORS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/v2/features/position-sizing-vectors.json")
+  PRIVATE SIZING_VECTORS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../src/calculation-signal/playbooks/position-sizing/position-sizing-vectors.json")
 target_compile_definitions(
   dagobert-tests
   PRIVATE SMA_CROSS_SIZING_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/sma_cross_sizing.json")

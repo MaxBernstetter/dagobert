@@ -14,7 +14,7 @@ Not a migration implementation plan for existing SQLite/DDB data — schema tool
 
 ## Locked choices
 
-Canonical ladder: [`serverless-aws.md`](serverless-aws.md) (steps **7–8** done; **9** = sqlc Experiment API next). Decision summary: [`postgres-control-plane.md`](postgres-control-plane.md).
+Canonical ladder: [`serverless-aws.md`](serverless-aws.md) (steps **7–8** done; **9** = sqlc Experiment API next).
 
 | Item | Choice |
 |------|--------|

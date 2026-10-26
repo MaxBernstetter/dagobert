@@ -1,4 +1,4 @@
-// Package sizing holds the pure risk-sizing maths from docs/v2/features/position-sizing.md.
+// Package sizing holds the pure risk-sizing maths from src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md.
 package sizing
 
 import (

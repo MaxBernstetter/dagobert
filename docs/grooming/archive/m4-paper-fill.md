@@ -1,6 +1,6 @@
 # M4 — Paper fill
 
-Execution service. Venue details live in [bybit-eu-demo.md](../execution/bybit-eu-demo.md). What the trader sees is [m4-ux.md](m4-ux.md).
+Execution service. Venue details live in [bybit-eu-demo.md](../../execution/bybit-eu-demo.md). What the trader sees is [m4-ux.md](m4-ux.md).
 
 ## Service boundary
 
