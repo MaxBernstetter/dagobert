@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace dagobert {
@@ -21,13 +22,16 @@ bars_of(const tradingcopilot::v1::SweepRequest &request) {
   std::vector<Bar> bars;
   bars.reserve(static_cast<std::size_t>(request.bars_size()));
   for (const auto &bar : request.bars()) {
+    std::vector<double> segments(bar.segment_close().begin(),
+                                 bar.segment_close().end());
     bars.push_back({.open_ms = bar.open_ms(),
                     .open = bar.open(),
                     .high = bar.high(),
                     .low = bar.low(),
                     .close = bar.close(),
                     .volume = bar.volume(),
-                    .duration_ms = bar.duration_ms()});
+                    .duration_ms = bar.duration_ms(),
+                    .segment_close = std::move(segments)});
   }
   return bars;
 }

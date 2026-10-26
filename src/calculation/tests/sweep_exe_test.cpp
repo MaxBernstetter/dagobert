@@ -2,6 +2,7 @@
 // single runs of the same executable.
 #include <gtest/gtest.h>
 
+#include "bars_aggregate.hpp"
 #include "bars_parquet.hpp"
 
 #include "tradingcopilot/v1/run_report.pb.h"
@@ -30,18 +31,21 @@ const fs::path kLake =
     fs::path(__FILE__).parent_path() / "fixtures" / "lake_consensus";
 constexpr std::int64_t kFrom = 1704067200000;
 constexpr std::int64_t kTo = 1704844800000;
+constexpr std::int64_t kHourMs = 3'600'000;
+constexpr std::int64_t kBarMs = 10'800'000;
 
 struct Strategy {
   std::string bin;
   std::string label;
   std::string type;
   std::string body; // config fields before the optional sizing block
+  bool aggregate;   // consensus decides on 3h bars built from 1h candles
 };
 
 const Strategy kSmaCross{SMA_CROSS_BIN, "sma-cross", "MaCrossConfig",
-                         R"("fastHr":3,"slowHr":6)"};
+                         R"("fastHr":3,"slowHr":6)", false};
 const Strategy kConsensus{CONSENSUS_BIN, "signal-consensus",
-                          "SignalConsensusConfig", R"("rsiBull":60)"};
+                          "SignalConsensusConfig", R"("rsiBull":60)", true};
 
 std::string envelope_json(const Strategy &s, const std::string &sizing,
                           const std::string &type_override = "") {
@@ -94,8 +98,12 @@ SweepRequest request_of(const Strategy &s,
   SweepRequest request;
   *request.mutable_base() = parse(envelope_json(s, ""));
   request.mutable_base()->clear_payload();
-  for (const auto &bar : dagobert::load_bars_from_lake(
-           kLake.string(), "demo", "BTC", "USDT", kFrom, kTo)) {
+  std::vector<dagobert::Bar> bars = dagobert::load_bars_from_lake(
+      kLake.string(), "demo", "BTC", "USDT", kFrom, kTo);
+  if (s.aggregate) {
+    bars = dagobert::aggregate_bars(bars, kHourMs, kBarMs);
+  }
+  for (const auto &bar : bars) {
     auto *out = request.add_bars();
     out->set_open_ms(bar.open_ms);
     out->set_open(bar.open);
@@ -104,6 +112,9 @@ SweepRequest request_of(const Strategy &s,
     out->set_close(bar.close);
     out->set_volume(bar.volume);
     out->set_duration_ms(bar.duration_ms);
+    for (const double close : bar.segment_close) {
+      out->add_segment_close(close);
+    }
   }
   request.set_trade_from_ms(trade_from_ms);
   int index = 0;
