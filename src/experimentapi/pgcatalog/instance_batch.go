@@ -2,7 +2,6 @@ package pgcatalog
 
 import (
 	"context"
-	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/google/uuid"
@@ -39,7 +38,7 @@ WHERE e.experiment_id = $1 AND e.id = t.id`
 
 const updateProgressSQL = `
 UPDATE experiment SET progress_stage = $2, progress_stages = $3, progress_stage_label = $4,
-  progress_instance_done = $5, progress_instance_total = $6
+  progress_instance_done = GREATEST(progress_instance_done, $5), progress_instance_total = $6
 WHERE id = $1`
 
 func nz(ms int64) *int64 {
@@ -88,7 +87,7 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 		return err
 	}
 
-	var fillRows, outcomeRows, statRows [][]any
+	var statRows [][]any
 	status := make([]string, n)
 	errs := make([]string, n)
 	started := make([]*int64, n)
@@ -118,24 +117,10 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 		f8[8][i], f8[9][i] = m.TradesPerMonthAvg, m.TradesPerMonthMed
 		i4[0][i], i4[1][i], i4[2][i] = m.Wins, m.Losses, m.Breakeven
 		f4[0][i], f4[1][i], f4[2][i], f4[3][i] = f32(m.MonthlyWinRateAvg), f32(m.MonthlyWinRateMed), f32(m.YearlyWinRateAvg), f32(m.YearlyWinRateMed)
-		for _, f := range it.Fills {
-			side := strings.ToLower(strings.TrimSpace(f.Side))
-			if side == "" {
-				continue
-			}
-			fillRows = append(fillRows, []any{uuid.New(), sid, ids[i], nil, it.Symbol, f.TsMs, side, f.Qty, f.Price, 0.0, ""})
-		}
-		for ord, o := range it.Outcomes {
-			var pct any
-			if o.Percent != nil {
-				pct = *o.Percent
-			}
-			outcomeRows = append(outcomeRows, []any{ids[i], int32(ord), o.Side, o.Quote, pct})
-		}
 		seen := map[string]int{}
 		var rows [][]any
 		for _, p := range it.Stats {
-			row := []any{ids[i], p.Kind, p.Key, ptrAny(p.ReturnPct), ptrAny(p.TradeCount), ptrAny(p.WinCount)}
+			row := []any{pgUUID(ids[i]), p.Kind, p.Key, ptrAny(p.ReturnPct), ptrAny(p.TradeCount), ptrAny(p.WinCount)}
 			k := p.Kind + "\x00" + p.Key
 			if at, ok := seen[k]; ok {
 				rows[at] = row
@@ -146,24 +131,22 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 		}
 		statRows = append(statRows, rows...)
 	}
-	copyRows := func(table string, cols []string, rows [][]any) error {
-		if len(rows) == 0 {
-			return nil
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_instance_fill"},
+		[]string{"id", "experiment_id", "instance_id", "action_id", "symbol", "ts_ms", "side", "qty", "price", "fee", "fee_asset"},
+		&fillSource{items: items, ids: ids, exp: pgUUID(sid), cur: -1}); err != nil {
+		return err
+	}
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_trade_outcome"},
+		[]string{"instance_id", "ordinal", "side", "quote", "percent"},
+		&outcomeSource{items: items, ids: ids, cur: -1}); err != nil {
+		return err
+	}
+	if len(statRows) > 0 {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_instance_period_stat"},
+			[]string{"instance_id", "period_kind", "period_key", "return_pct", "trade_count", "win_count"},
+			pgx.CopyFromRows(statRows)); err != nil {
+			return err
 		}
-		_, err := tx.CopyFrom(ctx, pgx.Identifier{table}, cols, pgx.CopyFromRows(rows))
-		return err
-	}
-	if err := copyRows("experiment_instance_fill",
-		[]string{"id", "experiment_id", "instance_id", "action_id", "symbol", "ts_ms", "side", "qty", "price", "fee", "fee_asset"}, fillRows); err != nil {
-		return err
-	}
-	if err := copyRows("experiment_trade_outcome",
-		[]string{"instance_id", "ordinal", "side", "quote", "percent"}, outcomeRows); err != nil {
-		return err
-	}
-	if err := copyRows("experiment_instance_period_stat",
-		[]string{"instance_id", "period_kind", "period_key", "return_pct", "trade_count", "win_count"}, statRows); err != nil {
-		return err
 	}
 	dur := make([]*int64, n)
 	for i, it := range items {

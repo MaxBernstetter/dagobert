@@ -233,8 +233,10 @@ average 7 to 14 during all runs, so treat the numbers as upper bounds.
 | cpp, walk lake | SQLite | 100 | 2.2, 2.3, 2.5 | 2.3 |
 | cpp, walk lake | SQLite | 3000 | 12.1 (cold), 5.7, 5.6 | 5.7 |
 | cpp, zigzag lake | SQLite | 3000 | 8.3 (cold), 8.5, 4.2, 4.3, 3.9, 4.0 | 4.2 |
-| cpp, zigzag lake | Postgres | 3000 | 55, 66, 69 | 66 |
+| cpp, zigzag lake | Postgres | 3000 | 55, 66, 69 (#161); 210, 193, 195 (#162, same host, later) | 66 (#161) / 195 (#162) |
 | cpp, walk lake | Postgres | 3000 | 229 (one run) | 229 |
+| cpp, zigzag lake | Postgres, after #162 | 3000 | 80, 101, 112 | 101 |
+| cpp, walk lake | Postgres, after #162 | 3000 | 147, 112, 98 | 112 |
 
 The Go 3000 figure is measured on the zigzag lake only; the walk-lake Go figure is a linear extrapolation
 from 100 instances (not measured). Go on Postgres at 100 instances: 15.2 and 7.9 s, same order as SQLite.
@@ -255,3 +257,39 @@ Follow-ups (not done here): encode UUIDs as `pgtype.UUID`/`[16]byte` in the COPY
 per-fill `uuid.New()`; consider COPY of fills only for sampled instances or a coarser row model; run the
 Postgres case against a database without the dev stack on the same host. The fixture trades 10 to 20 times
 more than real data, so the Postgres number is a worst case.
+
+## Postgres persistence cost (issue #162, parent #130)
+
+Changes, no change to stored rows: COPY rows stream through `pgx.CopyFromSource` implementations
+(`src/experimentapi/pgcatalog/copy_source.go`) instead of `[][]any`, UUIDs are `pgtype.UUID` (the
+`uuid.UUID` `driver.Valuer` path was the 31 percent), fill IDs come from one bulk `crypto/rand` read per
+256 IDs (still random v4), and up to 4 batches commit concurrently on separate connections on Postgres
+(`persistParallelPG`; SQLite stays at 1). Each batch is still one transaction over disjoint instances,
+retry and bisection run inside the batch, and the progress counter is claimed per attempt and written with
+`GREATEST` so it never goes backwards.
+
+Same harness and host as above, 3000 instances, 3 runs each, median:
+
+| lake | before (#162 re-run) | after | 
+|---|---|---|
+| zigzag | 210, 193, 195 s (195) | 80, 101, 112 s (101) |
+| walk | 229 s (one run, #161) | 147, 112, 98 s (112) |
+| zigzag, 600 instances, one run | 42.6 s | 17.4 s |
+
+The shared dev stack makes the absolute numbers swing (the #161 zigzag figure of 66 s was measured on an
+emptier database; the same code took 195 s later). Target (about 10 s) is not met on Postgres.
+
+Where the server time goes (psql, 1 M fill rows into a scratch copy of the schema, one backend):
+22.2 s with both foreign keys and both indexes, 5.8 s without the two foreign keys, 4.8 s also without the
+`(instance_id, ts_ms)` index (row generation alone 0.6 s). The two RI triggers (`experiment_id`,
+`instance_id`) cost about 75 percent of the COPY, the secondary index about 5 percent, the random UUID
+primary key the rest. A COPY backend sits at 100 percent of one core; `synchronous_commit=off` on the
+bench database changed nothing (17.0 vs 17.4 s), so WAL flushes are not the limit. The dev Postgres runs
+defaults (shared_buffers 128 MB, max_wal_size 1 GB).
+
+Equality: a seeded 400-instance walk run persisted identical row counts and checksums before and after
+(fills 320000, outcomes 160000, period stats 4800, instance metrics 400, progress 400/400).
+
+Options not implemented (they change schema or behaviour, owner decision): drop the redundant
+`experiment_instance_fill.experiment_id` FK or both fill FKs (the `instance_id` cascade already covers
+deletion); persist fills only for sampled or top-N instances; coarser fill rows.
