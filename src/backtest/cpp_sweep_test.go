@@ -76,16 +76,22 @@ func TestSweepPayloadSignalConsensusRejectsZeroCooldown(t *testing.T) {
 
 func cppBinary(t *testing.T) string {
 	t.Helper()
-	if p := os.Getenv("CPP_SMA_CROSS_BIN"); p != "" {
+	return cppBinaryFor(t, "CPP_SMA_CROSS_BIN", "sma-cross", "sma-cross")
+}
+
+// cppBinaryFor resolves strategies/<dir>/strategy-<name> from env or the build presets, else skips.
+func cppBinaryFor(t *testing.T, env, dir, name string) string {
+	t.Helper()
+	if p := os.Getenv(env); p != "" {
 		return p
 	}
 	for _, preset := range []string{"optimized", "debug"} {
-		p, _ := filepath.Abs(filepath.Join("..", "..", "build", preset, "strategies", "sma-cross", "strategy-sma-cross"))
+		p, _ := filepath.Abs(filepath.Join("..", "..", "build", preset, "strategies", dir, "strategy-"+name))
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
-	t.Skip("strategy-sma-cross not built (task cpp:build) and CPP_SMA_CROSS_BIN unset")
+	t.Skipf("strategy-%s not built (task cpp:build) and %s unset", name, env)
 	return ""
 }
 
@@ -135,9 +141,38 @@ func compareJSON(t *testing.T, path string, a, b any, tol float64) {
 // (heat_base_per_equity) and rescales pyramid notionals, see signalrunner.planReplay.
 func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 	bin := cppBinary(t)
+	configs := []string{
+		`{"fastHr":12,"slowHr":48}`,
+		`{"fastHr":3,"slowHr":6}`,
+		`{"fastHr":12,"slowHr":48,"sizing":{"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":1,"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
+		`{"fastHr":12,"slowHr":48,"sizing":{}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":3}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":2}}`,
+		`{"fastHr":3,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":4,"addAtrMult":0.25}}`,
+		`{"fastHr":12,"slowHr":24,"sizing":{"unitRiskPct":0.75,"heatPct":1.5,"maxUnits":3,"stopAtrMult":1}}`,
+	}
+	rules := map[string]int{}
+	for _, c := range goVsCppEquivalence(t, bin, "ma-cross", []string{"-seed", "7"}, configs) {
+		for k, v := range c {
+			rules[k] += v
+		}
+	}
+	if rules["vol_cut"] == 0 || rules["pyramid"] == 0 {
+		t.Fatalf("configs must fire vol_cut and pyramid, fired %v", rules)
+	}
+	t.Logf("rules fired: %v", rules)
+}
+
+// goVsCppEquivalence runs every config on the Go experiment path and on the C++ sweep -> actions
+// -> ReplayKPI path over one seeded lake (genlakefixture -bench with lakeArgs) and compares them.
+// It returns the C++ action reasons counted per config.
+func goVsCppEquivalence(t *testing.T, bin, playbook string, lakeArgs, configs []string) []map[string]int {
+	t.Helper()
 	_ = os.Setenv("VENUE_SIMULATE", "1")
 	dataDir := t.TempDir()
-	gen := exec.Command("go", "run", "./src/calculation/testdata/genlakefixture", "-bench", dataDir, "-bars", "1500", "-seed", "7")
+	genArgs := append([]string{"run", "./src/calculation/testdata/genlakefixture", "-bench", dataDir, "-bars", "1500"}, lakeArgs...)
+	gen := exec.Command("go", genArgs...)
 	gen.Dir = filepath.Join("..", "..")
 	if out, err := gen.CombinedOutput(); err != nil {
 		t.Fatalf("lake fixture: %v\n%s", err, out)
@@ -179,20 +214,9 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 		t.Fatalf("bar window mismatch: %d bars vs %d indicator rows", len(replayBars), len(closes))
 	}
 
-	configs := []string{
-		`{"fastHr":12,"slowHr":48}`,
-		`{"fastHr":3,"slowHr":6}`,
-		`{"fastHr":12,"slowHr":48,"sizing":{"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
-		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":1,"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
-		`{"fastHr":12,"slowHr":48,"sizing":{}}`,
-		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":3}}`,
-		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":0.5,"maxUnits":2}}`,
-		`{"fastHr":3,"slowHr":12,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":4,"addAtrMult":0.25}}`,
-		`{"fastHr":12,"slowHr":24,"sizing":{"unitRiskPct":0.75,"heatPct":1.5,"maxUnits":3,"stopAtrMult":1}}`,
-	}
 	items := make([]SweepItemSpec, len(configs))
 	for i, c := range configs {
-		items[i] = SweepItemSpec{Key: c, Playbook: "ma-cross", StrategyConfig: []byte(c)}
+		items[i] = SweepItemSpec{Key: c, Playbook: playbook, StrategyConfig: []byte(c)}
 	}
 	req, err := BuildSweepRequest(settings, "BTC", "USDT", br, startCash, items)
 	if err != nil {
@@ -203,16 +227,13 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rules := map[string]int{}
-	for _, rep := range reports {
+	counts := make([]map[string]int, len(reports))
+	for i, rep := range reports {
+		counts[i] = map[string]int{}
 		for _, a := range rep.Actions {
-			rules[a.Reason]++
+			counts[i][a.Reason]++
 		}
 	}
-	if rules["vol_cut"] == 0 || rules["pyramid"] == 0 {
-		t.Fatalf("configs must fire vol_cut and pyramid, fired %v", rules)
-	}
-	t.Logf("rules fired: %v", rules)
 
 	for i, cfg := range configs {
 		t.Run(cfg, func(t *testing.T) {
@@ -224,23 +245,23 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			opts := &signalrunner.PipelineOpts{StrategyConfig: []byte(cfg), PlaybookKey: "ma-cross", Slim: true, SkipSampler: true}
-			runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, win, "ma-cross", "BTCUSDT", closes, opts, nil)
+			opts := &signalrunner.PipelineOpts{StrategyConfig: []byte(cfg), PlaybookKey: playbook, Slim: true, SkipSampler: true}
+			runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, win, playbook, "BTCUSDT", closes, opts, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			goFills, err := signalrunner.LoadInstanceFills(ws, "ma-cross")
+			goFills, err := signalrunner.LoadInstanceFills(ws, playbook)
 			if err != nil {
 				t.Fatal(err)
 			}
-			goRep := signalrunner.BuildInstanceReport(runRep, "ma-cross", "BTCUSDT", from, to, startCash, goFills, win, closes, aggMS)
+			goRep := signalrunner.BuildInstanceReport(runRep, playbook, "BTCUSDT", from, to, startCash, goFills, win, closes, aggMS)
 
 			actions, err := ReplayActions(reports[i], aggMS)
 			if err != nil {
 				t.Fatal(err)
 			}
 			res := signalrunner.ReplayKPI(signalrunner.KPIJob{
-				Key: cfg, Playbook: "ma-cross", Symbol: "BTCUSDT", FromMs: from, ToMs: to, StartCash: startCash,
+				Key: cfg, Playbook: playbook, Symbol: "BTCUSDT", FromMs: from, ToMs: to, StartCash: startCash,
 				Coins: wallet.Coins, Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
 				Actions: actions, Bars: replayBars, Run: runRep,
 			})
@@ -272,6 +293,45 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 			_ = json.Unmarshal(gb, &gj)
 			_ = json.Unmarshal(cb, &cj)
 			compareJSON(t, "report", gj, cj, 1e-6)
+		})
+	}
+	return counts
+}
+
+// TestConsensusGoVsCppEquivalence is TestSmaCrossGoVsCppEquivalence for signal-consensus (#130,
+// CALC.30): default, changed-threshold and sized configs over two lakes: 1h
+// candles (RSI sees the three closes of a bar) and 1h candles with every 17th candle missing
+// (a missing hour drops its 3h bar, and the bar after a gap is not traded). Tolerances as above.
+// A 3h-candle lake is not used: rsi-3h is never ready on it, so neither side trades.
+// The configs must fire vol_cut and pyramid on every lake, or the test proves too little.
+func TestConsensusGoVsCppEquivalence(t *testing.T) {
+	bin := cppBinaryFor(t, "CPP_SIGNAL_CONSENSUS_BIN", "consensus", "signal-consensus")
+	configs := []string{
+		`{}`,
+		`{"rsiBull":55,"rsiBear":45,"atrStopMult":1.5,"minBarsFlatAfterSell":2,"minBarsLongBeforeSell":1}`,
+		`{"volRatioBull":0.95,"volRatioBear":0.9}`,
+		`{"sizing":{"unitRiskPct":1,"heatPct":2,"maxUnits":1}}`,
+		`{"atrStopMult":1.5,"sizing":{"unitRiskPct":0.5,"maxUnits":3}}`,
+		`{"rsiBull":55,"rsiBear":45,"minBarsFlatAfterSell":1,"minBarsLongBeforeSell":1,"sizing":{"unitRiskPct":0.5,"heatPct":1,"maxUnits":4,"addAtrMult":0.25}}`,
+		`{"atrStopMult":2,"minBarsFlatAfterSell":1,"minBarsLongBeforeSell":1,"sizing":{"unitRiskPct":0.5,"heatPct":0.5,"maxUnits":3,"addAtrMult":0.5}}`,
+	}
+	lakes := map[string][]string{
+		"1h":          {"-seed", "7", "-hourly"},
+		"1h-with-gap": {"-seed", "7", "-hourly", "-gap-every", "17"},
+	}
+	for _, name := range []string{"1h", "1h-with-gap"} {
+		t.Run(name, func(t *testing.T) {
+			counts := goVsCppEquivalence(t, bin, "signal-consensus", lakes[name], configs)
+			total := map[string]int{}
+			for i, c := range counts {
+				t.Logf("config %d rules: %v", i, c)
+				for k, v := range c {
+					total[k] += v
+				}
+			}
+			if total["vol_cut"] == 0 || total["pyramid"] == 0 {
+				t.Fatalf("configs must fire vol_cut and pyramid, fired %v", total)
+			}
 		})
 	}
 }
