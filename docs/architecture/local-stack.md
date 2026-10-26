@@ -40,7 +40,7 @@ Floci's Lambda cannot see the host Docker socket. The starter is the process tha
 
 Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`, `npm ci` for the frontend) so rebuilds reuse work when only application source changed. The frontend image splits **deps** (lockfile) from **build** (source) so lockfile edits alone do not rerun `npm run build` on unrelated layers.
 
-`compose.yaml` does not list the jobs; the orchestrator starts them. Whether `task up` applies Postgres migrations was not verified; run `task db:migrate` if the schema is missing.
+`compose.yaml` does not list the jobs; the orchestrator starts them. Nothing applies the Postgres migrations automatically; run `task db:migrate` after the first `task up` (needs the Atlas CLI, which is not in the devbox shell) and after new migrations.
 
 ## Acceptance
 
