@@ -64,8 +64,9 @@ bool HigherTrend::apply(double close, std::optional<double> regime,
   return close > *regime && close > *macro && *regime > *macro;
 }
 
-std::vector<Vote> RsiVote::evaluate(const Column &rsi) {
-  RsiVote gate;
+std::vector<Vote> RsiVote::evaluate(const Column &rsi,
+                                    const ConsensusParams &params) {
+  RsiVote gate{params};
   std::vector<Vote> out(rsi.samples.size(), Vote::neutral);
   for (std::size_t i = 0; i < out.size(); ++i) {
     out[i] = gate.apply(at(rsi, i));
@@ -76,9 +77,10 @@ std::vector<Vote> RsiVote::evaluate(const Column &rsi) {
 Vote RsiVote::apply(std::optional<double> rsi) {
   Vote out = Vote::neutral;
   if (rsi) {
-    if (*rsi >= kRsiBull || (*rsi > 50.0 && prev_ && *rsi > *prev_)) {
+    if (*rsi >= params_.rsi_bull || (*rsi > 50.0 && prev_ && *rsi > *prev_)) {
       out = Vote::bull;
-    } else if (*rsi <= kRsiBear || (*rsi < 50.0 && prev_ && *rsi < *prev_)) {
+    } else if (*rsi <= params_.rsi_bear ||
+               (*rsi < 50.0 && prev_ && *rsi < *prev_)) {
       out = Vote::bear;
     }
   }
@@ -89,25 +91,27 @@ Vote RsiVote::apply(std::optional<double> rsi) {
 void RsiVote::reset() { prev_.reset(); }
 
 std::vector<Vote> VolumeRatio::evaluate(const VolumeSeries &volume,
-                                        const Column &mean) {
+                                        const Column &mean,
+                                        const ConsensusParams &params) {
   std::vector<Vote> out(volume.samples.size(), Vote::neutral);
   for (std::size_t i = 0; i < out.size(); ++i) {
     if (volume.ready[i]) {
-      out[i] = apply(volume.samples[i], at(mean, i));
+      out[i] = apply(volume.samples[i], at(mean, i), params);
     }
   }
   return out;
 }
 
-Vote VolumeRatio::apply(double volume, std::optional<double> mean) {
+Vote VolumeRatio::apply(double volume, std::optional<double> mean,
+                        const ConsensusParams &params) {
   if (!mean || volume <= 0.0 || *mean <= 0.0) {
     return Vote::neutral;
   }
   const double ratio = volume / *mean;
-  if (ratio >= kVolRatioBull) {
+  if (ratio >= params.vol_ratio_bull) {
     return Vote::bull;
   }
-  return ratio <= kVolRatioBear ? Vote::bear : Vote::neutral;
+  return ratio <= params.vol_ratio_bear ? Vote::bear : Vote::neutral;
 }
 
 std::vector<char> MacdSign::evaluate(const Column &histogram,
@@ -124,18 +128,19 @@ bool MacdSign::apply(std::optional<double> histogram, Vote momentum) {
 }
 
 std::vector<char> AtrStop::evaluate(const CloseSeries &close,
-                                    const Column &baseline, const Column &atr) {
+                                    const Column &baseline, const Column &atr,
+                                    const ConsensusParams &params) {
   std::vector<char> out(close.samples.size(), 0);
   for (std::size_t i = 0; i < out.size(); ++i) {
-    out[i] =
-        close.ready[i] && apply(close.samples[i], at(baseline, i), at(atr, i));
+    out[i] = close.ready[i] &&
+             apply(close.samples[i], at(baseline, i), at(atr, i), params);
   }
   return out;
 }
 
 bool AtrStop::apply(double close, std::optional<double> baseline,
-                    std::optional<double> atr) {
-  return baseline && atr && close < *baseline - kAtrStopMult * *atr;
+                    std::optional<double> atr, const ConsensusParams &params) {
+  return baseline && atr && close < *baseline - params.atr_stop_mult * *atr;
 }
 
 } // namespace dagobert

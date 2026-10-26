@@ -34,18 +34,20 @@ namespace {
 
 } // namespace
 
-ConsensusSeries ConsensusSignal::evaluate(const ConsensusColumns &in) {
+ConsensusSeries ConsensusSignal::evaluate(const ConsensusColumns &in,
+                                          const ConsensusParams &params) {
   const std::size_t count = in.close.samples.size();
   ConsensusSeries out;
   out.gate.assign(count, ConsensusGate{});
   const std::vector<Cross> cross = BaselineCross::evaluate(in.close, in.signal);
   const std::vector<char> trend =
       HigherTrend::evaluate(in.close, in.regime, in.macro);
-  const std::vector<Vote> momentum = RsiVote::evaluate(in.rsi);
+  const std::vector<Vote> momentum = RsiVote::evaluate(in.rsi, params);
   const std::vector<Vote> volume =
-      VolumeRatio::evaluate(in.volume, in.vol_mean);
+      VolumeRatio::evaluate(in.volume, in.vol_mean, params);
   const std::vector<char> macd = MacdSign::evaluate(in.hist, momentum);
-  const std::vector<char> stop = AtrStop::evaluate(in.close, in.signal, in.atr);
+  const std::vector<char> stop =
+      AtrStop::evaluate(in.close, in.signal, in.atr, params);
   for (std::size_t i = 0; i < count; ++i) {
     if (i >= cross.size() || i >= trend.size() || i >= momentum.size() ||
         i >= volume.size() || i >= macd.size() || i >= stop.size()) {
@@ -58,10 +60,11 @@ ConsensusSeries ConsensusSignal::evaluate(const ConsensusColumns &in) {
   return out;
 }
 
-ConsensusSignal::ConsensusSignal(std::optional<sizing::SizingConfig> sizing)
-    : sizing_(std::move(sizing)) {
+ConsensusSignal::ConsensusSignal(std::optional<sizing::SizingConfig> sizing,
+                                 const ConsensusParams &params)
+    : params_(params), rsi_vote_(params), sizing_(std::move(sizing)) {
   if (sizing_) {
-    sizing_->stop_atr_mult = kAtrStopMult;
+    sizing_->stop_atr_mult = params_.atr_stop_mult;
   }
 }
 
@@ -76,7 +79,7 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
   const double atr = gate.atr.value_or(0.0);
   if (flat) {
     if (!gate.entry || !has_atr ||
-        (last_sell_ && i - *last_sell_ < kMinBarsFlatAfterSell)) {
+        (last_sell_ && i - *last_sell_ < params_.min_bars_flat_after_sell)) {
       return std::nullopt;
     }
     const double n = sizing::notional(equity, atr, close, cfg);
@@ -100,7 +103,7 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
     return ConsensusRule::atr_stop;
   }
   if (gate.cross_down &&
-      (!last_buy_ || i - *last_buy_ >= kMinBarsLongBeforeSell)) {
+      (!last_buy_ || i - *last_buy_ >= params_.min_bars_long_before_sell)) {
     return ConsensusRule::consensus_sell;
   }
   if (!has_atr) {
@@ -139,10 +142,11 @@ std::optional<ConsensusRule> ConsensusSignal::decide(const ConsensusGate &gate,
     rule = decide_sized(gate, close, equity, flat, i);
   } else if (flat) {
     if (gate.entry &&
-        (!last_sell_ || i - *last_sell_ >= kMinBarsFlatAfterSell)) {
+        (!last_sell_ || i - *last_sell_ >= params_.min_bars_flat_after_sell)) {
       rule = ConsensusRule::consensus_buy;
     }
-  } else if (!last_buy_ || i - *last_buy_ >= kMinBarsLongBeforeSell) {
+  } else if (!last_buy_ ||
+             i - *last_buy_ >= params_.min_bars_long_before_sell) {
     if (gate.cross_down) {
       rule = ConsensusRule::consensus_sell;
     } else if (gate.atr_stop) {
@@ -157,12 +161,11 @@ std::optional<ConsensusRule> ConsensusSignal::decide(const ConsensusGate &gate,
   return rule;
 }
 
-std::vector<Action>
-ConsensusSignal::actions_from(Position &account, std::span<const Bar> bars,
-                              const ConsensusSeries &mask,
-                              std::optional<sizing::SizingConfig> sizing) {
+std::vector<Action> ConsensusSignal::actions_from(
+    Position &account, std::span<const Bar> bars, const ConsensusSeries &mask,
+    std::optional<sizing::SizingConfig> sizing, const ConsensusParams &params) {
   std::vector<Action> out;
-  ConsensusSignal live{std::move(sizing)};
+  ConsensusSignal live{std::move(sizing), params};
   const std::size_t count = std::min(bars.size(), mask.gate.size());
   for (std::size_t i = 0; i < count; ++i) {
     const auto rule =
@@ -181,9 +184,9 @@ std::optional<ConsensusRule> ConsensusSignal::apply(const ConsensusSample &in,
   const Cross cross = cross_.apply(in.close, in.signal);
   const Vote momentum = rsi_vote_.apply(in.rsi);
   const bool trend = HigherTrend::apply(in.close, in.regime, in.macro);
-  const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean);
+  const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean, params_);
   const bool macd = MacdSign::apply(in.hist, momentum);
-  const bool stop = AtrStop::apply(in.close, in.signal, in.atr);
+  const bool stop = AtrStop::apply(in.close, in.signal, in.atr, params_);
   const bool valid = in.signal.has_value() && in.rsi.has_value();
   return decide(
       combine(cross, trend, macd, momentum, volume, stop, valid, in.atr),
@@ -195,9 +198,9 @@ std::optional<ConsensusRule> ConsensusSignal::apply(const ConsensusSample &in,
   const Cross cross = cross_.apply(in.close, in.signal);
   const Vote momentum = rsi_vote_.apply(in.rsi);
   const bool trend = HigherTrend::apply(in.close, in.regime, in.macro);
-  const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean);
+  const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean, params_);
   const bool macd = MacdSign::apply(in.hist, momentum);
-  const bool stop = AtrStop::apply(in.close, in.signal, in.atr);
+  const bool stop = AtrStop::apply(in.close, in.signal, in.atr, params_);
   const bool valid = in.signal.has_value() && in.rsi.has_value();
   return decide(
       combine(cross, trend, macd, momentum, volume, stop, valid, in.atr),
@@ -256,6 +259,6 @@ void ConsensusSignal::execute(Position &account, const Bar &bar,
   }
 }
 
-void ConsensusSignal::reset() { *this = ConsensusSignal{sizing_}; }
+void ConsensusSignal::reset() { *this = ConsensusSignal{sizing_, params_}; }
 
 } // namespace dagobert

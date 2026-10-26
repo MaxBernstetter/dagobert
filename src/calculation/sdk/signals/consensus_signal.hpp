@@ -22,9 +22,6 @@ enum class ConsensusRule {
   pyramid
 };
 
-inline constexpr std::size_t kMinBarsFlatAfterSell = 8;
-inline constexpr std::size_t kMinBarsLongBeforeSell = 4;
-
 // Indicator columns the consensus signal reads (signal = SMA12, regime = SMA24,
 // macro = SMA48, vol_mean = volume mean, hist = MACD histogram).
 struct ConsensusColumns {
@@ -69,17 +66,20 @@ struct ConsensusSeries {
 class ConsensusSignal {
 public:
   // Without `sizing` the signal buys and sells the whole position. With it,
-  // entries are sized from the ATR stop (stopAtrMult = kAtrStopMult) and each
-  // bar does one of: atr_stop, consensus_sell, vol_cut, pyramid.
+  // entries are sized from the ATR stop (stopAtrMult = params.atr_stop_mult)
+  // and each bar does one of: atr_stop, consensus_sell, vol_cut, pyramid.
   ConsensusSignal() = default;
-  explicit ConsensusSignal(std::optional<sizing::SizingConfig> sizing);
+  explicit ConsensusSignal(std::optional<sizing::SizingConfig> sizing,
+                           const ConsensusParams &params = {});
 
-  [[nodiscard]] static ConsensusSeries evaluate(const ConsensusColumns &in);
+  [[nodiscard]] static ConsensusSeries
+  evaluate(const ConsensusColumns &in, const ConsensusParams &params = {});
 
   [[nodiscard]] static std::vector<Action>
   actions_from(Position &account, std::span<const Bar> bars,
                const ConsensusSeries &mask,
-               std::optional<sizing::SizingConfig> sizing = std::nullopt);
+               std::optional<sizing::SizingConfig> sizing = std::nullopt,
+               const ConsensusParams &params = {});
 
   // Advances one bar; the caller executes the returned rule on its position.
   // This overload is for the unsized path (a sized signal reads equity 0 and
@@ -110,6 +110,7 @@ private:
                bool flat, std::size_t i);
   void buy_unit(Position &account, const Bar &bar, ConsensusRule rule);
 
+  ConsensusParams params_;
   BaselineCross cross_;
   RsiVote rsi_vote_;
   std::size_t bar_{};

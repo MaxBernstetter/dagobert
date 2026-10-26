@@ -102,4 +102,41 @@ TEST(ConsensusGates, AtrStopSeriesMatchesSample) {
   EXPECT_EQ(batch, (std::vector<char>{0, 1, 0, 1}));
 }
 
+TEST(ConsensusParams, RsiBullChangesVote) {
+  ConsensusParams p;
+  EXPECT_EQ(RsiVote{p}.apply(53.0), Vote::bull);
+  p.rsi_bull = 60.0;
+  EXPECT_EQ(RsiVote{p}.apply(53.0), Vote::neutral);
+  EXPECT_EQ(RsiVote{p}.apply(61.0), Vote::bull);
+}
+
+TEST(ConsensusParams, RsiBearChangesVote) {
+  ConsensusParams p;
+  EXPECT_EQ(RsiVote{p}.apply(47.0), Vote::bear);
+  p.rsi_bear = 40.0;
+  EXPECT_EQ(RsiVote{p}.apply(47.0), Vote::neutral);
+  EXPECT_EQ(RsiVote{p}.apply(39.0), Vote::bear);
+}
+
+TEST(ConsensusParams, VolRatioBullChangesVote) {
+  ConsensusParams p;
+  EXPECT_EQ(VolumeRatio::apply(1.2, 1.0, p), Vote::bull);
+  p.vol_ratio_bull = 1.5;
+  EXPECT_EQ(VolumeRatio::apply(1.2, 1.0, p), Vote::neutral);
+}
+
+TEST(ConsensusParams, VolRatioBearChangesVote) {
+  ConsensusParams p;
+  EXPECT_EQ(VolumeRatio::apply(0.8, 1.0, p), Vote::bear);
+  p.vol_ratio_bear = 0.5;
+  EXPECT_EQ(VolumeRatio::apply(0.8, 1.0, p), Vote::neutral);
+}
+
+TEST(ConsensusParams, AtrStopMultChangesStop) {
+  ConsensusParams p;
+  EXPECT_FALSE(AtrStop::apply(96.0, 100.0, 2.0, p)); // stop at 95
+  p.atr_stop_mult = 1.0;
+  EXPECT_TRUE(AtrStop::apply(96.0, 100.0, 2.0, p)); // stop at 98
+}
+
 } // namespace dagobert
