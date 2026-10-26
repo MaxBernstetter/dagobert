@@ -69,4 +69,31 @@ TEST(ConsensusStrategy, BacktestMatchesLive) {
   EXPECT_GE(batch.fills.size(), 3U);
 }
 
+TEST(ConsensusStrategy, CooldownDefaultsWhenUnset) {
+  const auto p = ConsensusStrategy::params_of(envelope());
+  EXPECT_EQ(p.min_bars_flat_after_sell, 8U);
+  EXPECT_EQ(p.min_bars_long_before_sell, 4U);
+}
+
+TEST(ConsensusStrategy, ExplicitZeroCooldownIsHonoured) {
+  tradingcopilot::v1::RunEnvelope env = envelope();
+  tradingcopilot::v1::SignalConsensusConfig config;
+  config.set_min_bars_flat_after_sell(0);
+  config.set_min_bars_long_before_sell(0);
+  ASSERT_TRUE(env.mutable_payload()->PackFrom(config));
+  const auto p = ConsensusStrategy::params_of(env);
+  EXPECT_EQ(p.min_bars_flat_after_sell, 0U);
+  EXPECT_EQ(p.min_bars_long_before_sell, 0U);
+}
+
+TEST(ConsensusStrategy, ExplicitCooldownIsHonoured) {
+  tradingcopilot::v1::RunEnvelope env = envelope();
+  tradingcopilot::v1::SignalConsensusConfig config;
+  config.set_min_bars_flat_after_sell(3);
+  ASSERT_TRUE(env.mutable_payload()->PackFrom(config));
+  const auto p = ConsensusStrategy::params_of(env);
+  EXPECT_EQ(p.min_bars_flat_after_sell, 3U);
+  EXPECT_EQ(p.min_bars_long_before_sell, 4U);
+}
+
 } // namespace dagobert

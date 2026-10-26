@@ -33,8 +33,9 @@ message SignalConsensusConfig {
   double vol_ratio_bull = 102;
   double vol_ratio_bear = 103;
   double atr_stop_mult = 104;
-  int32 min_bars_flat_after_sell = 105;
-  int32 min_bars_long_before_sell = 106;
+  // Explicit presence: unset keeps the default (8/4), an explicit 0 means no cooldown.
+  optional int32 min_bars_flat_after_sell = 105;
+  optional int32 min_bars_long_before_sell = 106;
   // Unset keeps buy_all/sell_all.
   optional Sizing sizing = 107;
 }

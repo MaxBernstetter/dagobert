@@ -220,11 +220,13 @@ func InstanceFromDB(i experimentdb.ExperimentInstance) *v1.ExperimentInstance {
 			ok = true
 		}
 		if i.CfgMinBarsFlatAfterSell.Valid {
-			cfg.MinBarsFlatAfterSell = i.CfgMinBarsFlatAfterSell.Int32
+			v := i.CfgMinBarsFlatAfterSell.Int32
+			cfg.MinBarsFlatAfterSell = &v
 			ok = true
 		}
 		if i.CfgMinBarsLongBeforeSell.Valid {
-			cfg.MinBarsLongBeforeSell = i.CfgMinBarsLongBeforeSell.Int32
+			v := i.CfgMinBarsLongBeforeSell.Int32
+			cfg.MinBarsLongBeforeSell = &v
 			ok = true
 		}
 		if ok {

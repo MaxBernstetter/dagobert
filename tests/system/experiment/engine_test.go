@@ -103,7 +103,9 @@ func TestExperimentEngineCppCrashedShardFailsItsInstances(t *testing.T) {
 	}
 }
 
-func TestExperimentEngineCppRejectsConsensusZeroCooldown(t *testing.T) {
+// An explicit cooldown of 0 reaches the C++ engine as 0 (proto optional presence, #128) and runs.
+func TestExperimentEngineCppRunsConsensusZeroCooldown(t *testing.T) {
+	bin := cppSignalConsensusBin(t)
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
@@ -117,7 +119,7 @@ func TestExperimentEngineCppRejectsConsensusZeroCooldown(t *testing.T) {
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	cfg, _ := json.Marshal(map[string]any{"minBarsFlatAfterSell": 0})
+	cfg, _ := json.Marshal(map[string]any{"minBarsFlatAfterSell": 0, "minBarsLongBeforeSell": 0})
 	rec, err := cat.CreateStudy("zero-cooldown", "", settings, []store.ExperimentInstanceSpec{
 		{Label: "zero-cooldown", Playbook: "signal-consensus", StrategyConfig: cfg},
 	})
@@ -127,12 +129,12 @@ func TestExperimentEngineCppRejectsConsensusZeroCooldown(t *testing.T) {
 	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
-	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", falseBin(t))
-	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
-		t.Fatal("expected failure")
+	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
+	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
+		t.Fatal(err)
 	}
 	got, _ := cat.GetExperiment(rec.ID)
-	if got.Instances[0].Status != store.StatusFailed || !strings.Contains(got.Instances[0].Error, "#128") {
+	if got.Instances[0].Status != store.StatusCompleted {
 		t.Fatalf("instance status %q error %q", got.Instances[0].Status, got.Instances[0].Error)
 	}
 }
