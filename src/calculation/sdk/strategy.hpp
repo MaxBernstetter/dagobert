@@ -5,9 +5,13 @@
 
 #include "tradingcopilot/v1/run_envelope.pb.h"
 
+#include <cstdint>
 #include <span>
 
 namespace dagobert {
+
+// Current RunEnvelope/RunReport contract version.
+inline constexpr std::uint32_t kSchemaVersion = 2;
 
 class Strategy {
 public:

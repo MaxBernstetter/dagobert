@@ -29,6 +29,8 @@ namespace _fl = ::google::protobuf::internal::field_layout;
 namespace {
 PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
     file_reflection_data[] = {
+        // ::tradingcopilot::v1::ActionSizing
+        {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto, /* tracker*/ nullptr,},
         // ::tradingcopilot::v1::RunReport
         {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto, /* tracker*/ nullptr,},
 };
@@ -36,6 +38,197 @@ PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
 #endif
 namespace tradingcopilot {
 namespace v1 {
+class ActionSizing::_Internal {
+ public:
+  using HasBits = decltype(::std::declval<ActionSizing>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_._has_bits_);
+};
+
+constexpr ActionSizing::ParseTableT_ ActionSizing::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
+  return ParseTableT_{
+    {
+      PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_._has_bits_),
+      0, // no _extensions_
+      7, 56,  // max_field_number, fast_idx_mask
+      offsetof(ParseTableT_, field_lookup_table),
+      4294967168,  // skipmap
+      offsetof(ParseTableT_, field_entries),
+      7,  // num_field_entries
+      0,  // num_aux_entries
+      offsetof(ParseTableT_, field_names),  // no aux_entries
+      class_data,
+      nullptr,  // post_loop_handler
+      ::_pbi::TcParser::MpUnknownFields,  // fallback
+      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ActionSizing>(),  // to_prefetch
+      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+    }, {{
+      {::_pbi::TcParser::MiniParse, {}},
+      // int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(ActionSizing, _impl_.bar_open_ms_), 2>(),
+       {8, 2, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.bar_open_ms_)}},
+      // string side = 2 [json_name = "side"];
+      {::_pbi::TcParser::FastUS1,
+       {18, 0, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.side_)}},
+      // double notional = 3 [json_name = "notional"];
+      {::_pbi::TcParser::FastF64S1,
+       {25, 3, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.notional_)}},
+      // double stop_price = 4 [json_name = "stopPrice"];
+      {::_pbi::TcParser::FastF64S1,
+       {33, 4, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.stop_price_)}},
+      // double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+      {::_pbi::TcParser::FastF64S1,
+       {41, 5, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.requested_risk_pct_)}},
+      // double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+      {::_pbi::TcParser::FastF64S1,
+       {49, 6, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.capped_risk_pct_)}},
+      // string rule_id = 7 [json_name = "ruleId"];
+      {::_pbi::TcParser::FastUS1,
+       {58, 1, 0,
+        PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.rule_id_)}},
+    }}, {{
+      65535, 65535
+    }}, {{
+      // int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.bar_open_ms_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
+      // string side = 2 [json_name = "side"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.side_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // double notional = 3 [json_name = "notional"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.notional_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // double stop_price = 4 [json_name = "stopPrice"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.stop_price_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.requested_risk_pct_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.capped_risk_pct_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // string rule_id = 7 [json_name = "ruleId"];
+      {PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.rule_id_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    }},
+    // no aux_entries
+    {{
+      "\36\0\4\0\0\0\0\7"
+      "tradingcopilot.v1.ActionSizing"
+      "side"
+      "rule_id"
+    }},
+  };
+}
+
+
+inline constexpr ActionSizing::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    ::_pbi::ConstantInitialized) noexcept
+      : side_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        rule_id_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        bar_open_ms_{::int64_t{0}},
+        notional_{0},
+        stop_price_{0},
+        requested_risk_pct_{0},
+        capped_risk_pct_{0} {}
+
+template <typename>
+constexpr ActionSizing::ActionSizing(::_pbi::ConstantInitialized,
+                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
+    : Super_(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          class_data
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          ),
+      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
+}
+inline void* PROTOBUF_NONNULL ActionSizing::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) ActionSizing(arena);
+}
+constexpr auto ActionSizing::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(ActionSizing), alignof(ActionSizing));
+}
+constexpr auto ActionSizing::InternalGenerateClassData_(
+    const MessageLite& prototype,
+    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
+  return ::google::protobuf::internal::ClassDataFull{
+      ::google::protobuf::internal::ClassData{
+          &prototype,
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+          &_table_.header,
+#else
+          tc_table,
+#endif
+          nullptr,  // IsInitialized
+          &ActionSizing::MergeImpl,
+          Super_::GetNewImpl<ActionSizing>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &ActionSizing::SharedDtor,
+          Super_::GetClearImpl<ActionSizing>(), &ActionSizing::ByteSizeLong,
+              &ActionSizing::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_._cached_size_),
+          false,
+      },
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+      &file_reflection_data[0],
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+      &::_pbi::kDescriptorMethods,
+      &descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto,
+      nullptr,  // tracker
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  };
+}
+struct ActionSizingGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
+  constexpr ActionSizingGlobalsTypeInternal()
+      :
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+        _default(::_pbi::ConstantInitialized{},
+                 ActionSizing_class_data_.base())
+#else   // !PROTOBUF_MESSAGE_GLOBALS
+        MessageGlobalsBase(ActionSizing::InternalGenerateClassData_(
+            _default, &ActionSizing_globals_._table.header)),
+        _default(::_pbi::ConstantInitialized{}, GetClassData()),
+        _table(::_pbi::PrivateAccess::GenerateParseTable<ActionSizing>(
+            GetClassData()))
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+  {
+  }
+  ~ActionSizingGlobalsTypeInternal() {}
+  union {
+    alignas(::_pbi::kMaxMessageAlignment) ActionSizing _default;
+  };
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  decltype(::_pbi::PrivateAccess::GenerateParseTable<ActionSizing>(
+      ::std::declval<const ::_pbi::ClassData*>())) _table;
+#endif
+};
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+static_assert(PROTOBUF_FIELD_OFFSET(ActionSizingGlobalsTypeInternal, _default) ==
+              ::_pbi::MessageGlobalsBase::OffsetToDefault());
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST ActionSizingGlobalsTypeInternal ActionSizing_globals_
+        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+namespace {
+const ::_pbi::ClassData* ActionSizing_get_class_data() {
+#ifdef PROTOBUF_MESSAGE_GLOBALS
+  return ActionSizing_globals_.GetClassData();
+#else
+  return ActionSizing_class_data_.base();
+#endif  // PROTOBUF_MESSAGE_GLOBALS
+}
+}  // namespace
+#endif  // PROTOBUF_CUSTOM_VTABLE
 class RunReport::_Internal {
  public:
   using HasBits = decltype(::std::declval<RunReport>()._impl_._has_bits_);
@@ -48,12 +241,12 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
     {
       PROTOBUF_FIELD_OFFSET(RunReport, _impl_._has_bits_),
       0, // no _extensions_
-      6, 56,  // max_field_number, fast_idx_mask
+      7, 56,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967232,  // skipmap
+      4294967168,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      6,  // num_field_entries
-      4,  // num_aux_entries
+      7,  // num_field_entries
+      5,  // num_aux_entries
       offsetof(ParseTableT_, aux_entries),
       class_data,
       nullptr,  // post_loop_handler
@@ -64,16 +257,16 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
     }, {{
       {::_pbi::TcParser::MiniParse, {}},
       // uint32 schema_version = 1 [json_name = "schemaVersion"];
-      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(RunReport, _impl_.schema_version_), 5>(),
-       {8, 5, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(RunReport, _impl_.schema_version_), 6>(),
+       {8, 6, 0,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_)}},
       // string label = 2 [json_name = "label"];
       {::_pbi::TcParser::FastUS1,
-       {18, 3, 0,
+       {18, 4, 0,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.label_)}},
       // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
       {::_pbi::TcParser::FastMtS1,
-       {26, 4, 0,
+       {26, 5, 0,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_)}},
       // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
       {::_pbi::TcParser::FastMtR1,
@@ -87,22 +280,27 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
       {::_pbi::TcParser::FastMtR1,
        {50, 2, 3,
         PROTOBUF_FIELD_OFFSET(RunReport, _impl_.fills_)}},
-      {::_pbi::TcParser::MiniParse, {}},
+      // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
+      {::_pbi::TcParser::FastMtR1,
+       {58, 3, 4,
+        PROTOBUF_FIELD_OFFSET(RunReport, _impl_.sizing_)}},
     }}, {{
       65535, 65535
     }}, {{
       // uint32 schema_version = 1 [json_name = "schemaVersion"];
-      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
       // string label = 2 [json_name = "label"];
-      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.label_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.label_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
-      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.metrics_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.period_stats_), _Internal::kHasBitsOffset + 0, 1, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ExperimentInstanceAction actions = 5 [json_name = "actions"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.actions_), _Internal::kHasBitsOffset + 1, 2, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
       // repeated .tradingcopilot.v1.ExperimentInstanceFill fills = 6 [json_name = "fills"];
       {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.fills_), _Internal::kHasBitsOffset + 2, 3, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+      // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
+      {PROTOBUF_FIELD_OFFSET(RunReport, _impl_.sizing_), _Internal::kHasBitsOffset + 3, 4, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
     }},
     {{
         #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -124,6 +322,11 @@ constexpr RunReport::ParseTableT_ RunReport::InternalGenerateParseTable_(const :
         {::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentInstanceFill>()},
         #else
         {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::ExperimentInstanceFill_globals_},
+        #endif
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::ActionSizing>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::ActionSizing_globals_},
         #endif
     }},
     {{
@@ -151,6 +354,11 @@ inline constexpr RunReport::Impl_::Impl_(
         fills_ { visibility, ::_pbi::InternalMetadataOffset::Build<
             ::tradingcopilot::v1::RunReport,
             PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.fills_)>()
+         }
+        ,
+        sizing_ { visibility, ::_pbi::InternalMetadataOffset::Build<
+            ::tradingcopilot::v1::RunReport,
+            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_)>()
          }
         ,
         label_(
@@ -200,7 +408,7 @@ constexpr auto RunReport::InternalGenerateClassData_(
           false,
       },
 #ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[0],
+      &file_reflection_data[1],
 #else   // !PROTOBUF_MESSAGE_GLOBALS
       &::_pbi::kDescriptorMethods,
       &descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto,
@@ -261,28 +469,49 @@ const ::uint32_t
     TableStruct_tradingcopilot_2fv1_2frun_5freport_2eproto::offsets[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
         protodesc_cold) = {
         0x081, // bitmap
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_._has_bits_),
+        10, // hasbit index offset
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.bar_open_ms_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.side_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.notional_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.stop_price_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.requested_risk_pct_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.capped_risk_pct_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ActionSizing, _impl_.rule_id_),
+        2,
+        0,
+        3,
+        4,
+        5,
+        6,
+        1,
+        0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_._has_bits_),
-        9, // hasbit index offset
+        10, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.schema_version_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.label_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.metrics_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.period_stats_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.actions_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.fills_),
-        5,
-        3,
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_),
+        6,
         4,
+        5,
         0,
         1,
         2,
+        3,
 };
 
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-        {0, sizeof(::tradingcopilot::v1::RunReport)},
+        {0, sizeof(::tradingcopilot::v1::ActionSizing)},
+        {17, sizeof(::tradingcopilot::v1::RunReport)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
+        &::tradingcopilot::v1::ActionSizing_globals_,
         &::tradingcopilot::v1::RunReport_globals_,
 };
 const char descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
@@ -290,22 +519,29 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto[
     "\n\"tradingcopilot/v1/run_report.proto\022\021tr"
     "adingcopilot.v1\032+tradingcopilot/v1/exper"
     "iment_activity.proto\032+tradingcopilot/v1/"
-    "experiment_instance.proto\"\342\002\n\tRunReport\022"
-    "%\n\016schema_version\030\001 \001(\rR\rschemaVersion\022\024"
-    "\n\005label\030\002 \001(\tR\005label\022<\n\007metrics\030\003 \001(\0132\"."
-    "tradingcopilot.v1.InstanceMetricsR\007metri"
-    "cs\022R\n\014period_stats\030\004 \003(\0132/.tradingcopilo"
-    "t.v1.ExperimentInstancePeriodStatR\013perio"
-    "dStats\022E\n\007actions\030\005 \003(\0132+.tradingcopilot"
-    ".v1.ExperimentInstanceActionR\007actions\022\?\n"
-    "\005fills\030\006 \003(\0132).tradingcopilot.v1.Experim"
-    "entInstanceFillR\005fillsB\333\001\n\025com.tradingco"
-    "pilot.v1B\016RunReportProtoP\001ZMgithub.com/M"
-    "axBernstetter/dagobert/src/gen/tradingco"
-    "pilot/v1;tradingcopilotv1\242\002\003TXX\252\002\021Tradin"
-    "gcopilot.V1\312\002\021Tradingcopilot\\V1\342\002\035Tradin"
-    "gcopilot\\V1\\GPBMetadata\352\002\022Tradingcopilot"
-    "::V1b\006proto3"
+    "experiment_instance.proto\"\354\001\n\014ActionSizi"
+    "ng\022\036\n\013bar_open_ms\030\001 \001(\003R\tbarOpenMs\022\022\n\004si"
+    "de\030\002 \001(\tR\004side\022\032\n\010notional\030\003 \001(\001R\010notion"
+    "al\022\035\n\nstop_price\030\004 \001(\001R\tstopPrice\022,\n\022req"
+    "uested_risk_pct\030\005 \001(\001R\020requestedRiskPct\022"
+    "&\n\017capped_risk_pct\030\006 \001(\001R\rcappedRiskPct\022"
+    "\027\n\007rule_id\030\007 \001(\tR\006ruleId\"\233\003\n\tRunReport\022%"
+    "\n\016schema_version\030\001 \001(\rR\rschemaVersion\022\024\n"
+    "\005label\030\002 \001(\tR\005label\022<\n\007metrics\030\003 \001(\0132\".t"
+    "radingcopilot.v1.InstanceMetricsR\007metric"
+    "s\022R\n\014period_stats\030\004 \003(\0132/.tradingcopilot"
+    ".v1.ExperimentInstancePeriodStatR\013period"
+    "Stats\022E\n\007actions\030\005 \003(\0132+.tradingcopilot."
+    "v1.ExperimentInstanceActionR\007actions\022\?\n\005"
+    "fills\030\006 \003(\0132).tradingcopilot.v1.Experime"
+    "ntInstanceFillR\005fills\0227\n\006sizing\030\007 \003(\0132\037."
+    "tradingcopilot.v1.ActionSizingR\006sizingB\333"
+    "\001\n\025com.tradingcopilot.v1B\016RunReportProto"
+    "P\001ZMgithub.com/MaxBernstetter/dagobert/s"
+    "rc/gen/tradingcopilot/v1;tradingcopilotv"
+    "1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tradingcop"
+    "ilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMetadata\352"
+    "\002\022Tradingcopilot::V1b\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto_deps[2] = {
@@ -316,13 +552,13 @@ static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2frun_5freport_2ep
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto = {
     false,
     false,
-    732,
+    1028,
     descriptor_table_protodef_tradingcopilot_2fv1_2frun_5freport_2eproto,
     "tradingcopilot/v1/run_report.proto",
     &descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto_once,
     descriptor_table_tradingcopilot_2fv1_2frun_5freport_2eproto_deps,
     2,
-    1,
+    2,
     schemas,
     file_message_globals,
     TableStruct_tradingcopilot_2fv1_2frun_5freport_2eproto::offsets,
@@ -333,10 +569,384 @@ namespace tradingcopilot {
 namespace v1 {
 // ===================================================================
 
+ActionSizing::ActionSizing(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : Super_(arena, ActionSizing_get_class_data()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : Super_(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.ActionSizing)
+}
+PROTOBUF_NDEBUG_INLINE ActionSizing::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    [[maybe_unused]] const ::tradingcopilot::v1::ActionSizing& from_msg)
+      : _has_bits_{from._has_bits_},
+        side_(arena, from.side_),
+        rule_id_(arena, from.rule_id_) {}
+
+ActionSizing::ActionSizing(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const ActionSizing& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : Super_(arena, ActionSizing_get_class_data()) {
+
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : Super_(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  ActionSizing* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::memcpy(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, bar_open_ms_),
+           reinterpret_cast<const char*>(&from._impl_) +
+               offsetof(Impl_, bar_open_ms_),
+           offsetof(Impl_, capped_risk_pct_) -
+               offsetof(Impl_, bar_open_ms_) +
+               sizeof(Impl_::capped_risk_pct_));
+
+  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ActionSizing)
+}
+PROTOBUF_NDEBUG_INLINE ActionSizing::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+      : side_(arena),
+        rule_id_(arena) {}
+
+inline void ActionSizing::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  ::memset(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, bar_open_ms_),
+           0,
+           offsetof(Impl_, capped_risk_pct_) -
+               offsetof(Impl_, bar_open_ms_) +
+               sizeof(Impl_::capped_risk_pct_));
+}
+ActionSizing::~ActionSizing() {
+  // @@protoc_insertion_point(destructor:tradingcopilot.v1.ActionSizing)
+  SharedDtor(*this);
+}
+inline void ActionSizing::SharedDtor(MessageLite& self) {
+  ActionSizing& this_ = static_cast<ActionSizing&>(self);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.side_.Destroy();
+  this_._impl_.rule_id_.Destroy();
+  this_._impl_.~Impl_();
+}
+
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
+    ::google::protobuf::internal::ClassDataFull ActionSizing_class_data_ =
+        ActionSizing::InternalGenerateClassData_(ActionSizing_globals_._default);
+
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+ActionSizing::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&ActionSizing_class_data_);
+  ::google::protobuf::internal::PrefetchToLocalCache(ActionSizing_class_data_.tc_table);
+  return ActionSizing_class_data_.base();
+}
+#else
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+ActionSizing::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&ActionSizing_globals_);
+  ::google::protobuf::internal::PrefetchToLocalCache(
+      ::google::protobuf::internal::MessageGlobalsBase::ToParseTableBase(&ActionSizing_globals_));
+  return ActionSizing_globals_.GetClassData();
+}
+#endif  // !PROTOBUF_MESSAGE_GLOBALS
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_CONSTINIT
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const ActionSizing::ParseTableT_
+    ActionSizing::_table_ =
+        ActionSizing::InternalGenerateParseTable_(ActionSizing_class_data_.base());
+#endif  // !PROTOBUF_MESSAGE_GLOBALS
+PROTOBUF_NOINLINE void ActionSizing::Clear() {
+  auto& this_ [[maybe_unused]] = *this;
+  // @@protoc_insertion_point(message_clear_start:tradingcopilot.v1.ActionSizing)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      this_._impl_.side_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      this_._impl_.rule_id_.ClearNonDefaultToEmpty();
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007cU)) {
+    ::memset(&this_._impl_.bar_open_ms_, 0,
+             static_cast<::size_t>(
+                 reinterpret_cast<char*>(&this_._impl_.capped_risk_pct_) -
+                 reinterpret_cast<char*>(&this_._impl_.bar_open_ms_)) +
+                 sizeof(_impl_.capped_risk_pct_));
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL ActionSizing::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const ActionSizing& this_ = static_cast<const ActionSizing&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL ActionSizing::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const ActionSizing& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(serialize_to_array_start:tradingcopilot.v1.ActionSizing)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (this_._internal_bar_open_ms() != 0) {
+      target =
+          ::google::protobuf::internal::WireFormatLite::WriteInt64ToArrayWithField<1>(
+              stream, this_._internal_bar_open_ms(), target);
+    }
+  }
+
+  // string side = 2 [json_name = "side"];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (!this_._internal_side().empty()) {
+      const ::std::string& _s = this_._internal_side();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ActionSizing.side");
+      target = stream->WriteStringMaybeAliased(2, _s, target);
+    }
+  }
+
+  // double notional = 3 [json_name = "notional"];
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_notional()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          3, this_._internal_notional(), target);
+    }
+  }
+
+  // double stop_price = 4 [json_name = "stopPrice"];
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_stop_price()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          4, this_._internal_stop_price(), target);
+    }
+  }
+
+  // double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_requested_risk_pct()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          5, this_._internal_requested_risk_pct(), target);
+    }
+  }
+
+  // double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_capped_risk_pct()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          6, this_._internal_capped_risk_pct(), target);
+    }
+  }
+
+  // string rule_id = 7 [json_name = "ruleId"];
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (!this_._internal_rule_id().empty()) {
+      const ::std::string& _s = this_._internal_rule_id();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ActionSizing.rule_id");
+      target = stream->WriteStringMaybeAliased(7, _s, target);
+    }
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:tradingcopilot.v1.ActionSizing)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t ActionSizing::ByteSizeLong(const MessageLite& base) {
+  const ActionSizing& this_ = static_cast<const ActionSizing&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t ActionSizing::ByteSizeLong() const {
+  const ActionSizing& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:tradingcopilot.v1.ActionSizing)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+    // string side = 2 [json_name = "side"];
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!this_._internal_side().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_side());
+      }
+    }
+    // string rule_id = 7 [json_name = "ruleId"];
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!this_._internal_rule_id().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_rule_id());
+      }
+    }
+    // int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (this_._internal_bar_open_ms() != 0) {
+        total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+            this_._internal_bar_open_ms());
+      }
+    }
+    // double notional = 3 [json_name = "notional"];
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_notional()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double stop_price = 4 [json_name = "stopPrice"];
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_stop_price()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_requested_risk_pct()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_capped_risk_pct()) != 0) {
+        total_size += 9;
+      }
+    }
+  }
+  return this_.MaybeComputeUnknownFieldsSize(total_size,
+                                             &this_._impl_._cached_size_);
+}
+
+void ActionSizing::MergeImpl(::google::protobuf::MessageLite& to_msg,
+                      const ::google::protobuf::MessageLite& from_msg) {
+   auto* const _this = static_cast<ActionSizing*>(&to_msg);
+  auto& from = static_cast<const ActionSizing&>(from_msg);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    from.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.ActionSizing)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!from._internal_side().empty()) {
+        _this->_internal_set_side(from._internal_side());
+      } else {
+        if (_this->_impl_.side_.IsDefault()) {
+          _this->_internal_set_side("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (!from._internal_rule_id().empty()) {
+        _this->_internal_set_rule_id(from._internal_rule_id());
+      } else {
+        if (_this->_impl_.rule_id_.IsDefault()) {
+          _this->_internal_set_rule_id("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (from._internal_bar_open_ms() != 0) {
+        _this->_impl_.bar_open_ms_ = from._impl_.bar_open_ms_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_notional()) != 0) {
+        _this->_impl_.notional_ = from._impl_.notional_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_stop_price()) != 0) {
+        _this->_impl_.stop_price_ = from._impl_.stop_price_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_requested_risk_pct()) != 0) {
+        _this->_impl_.requested_risk_pct_ = from._impl_.requested_risk_pct_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_capped_risk_pct()) != 0) {
+        _this->_impl_.capped_risk_pct_ = from._impl_.capped_risk_pct_;
+      }
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+}
+
+void ActionSizing::CopyFrom(const ActionSizing& from) {
+  // @@protoc_insertion_point(class_specific_copy_from_start:tradingcopilot.v1.ActionSizing)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void ActionSizing::InternalSwap(ActionSizing* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using ::std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.side_, &other->_impl_.side_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.rule_id_, &other->_impl_.rule_id_, arena);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.capped_risk_pct_)
+      + sizeof(ActionSizing::_impl_.capped_risk_pct_)
+      - PROTOBUF_FIELD_OFFSET(ActionSizing, _impl_.bar_open_ms_)>(
+          reinterpret_cast<char*>(&_impl_.bar_open_ms_),
+          reinterpret_cast<char*>(&other->_impl_.bar_open_ms_));
+}
+
+::google::protobuf::Metadata ActionSizing::GetMetadata() const {
+  return Super_::GetMetadataImpl(GetClassData()->full());
+}
+// ===================================================================
+
 void RunReport::clear_metrics() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (_impl_.metrics_ != nullptr) _impl_.metrics_->Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
 }
 void RunReport::clear_period_stats() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
@@ -388,6 +998,13 @@ PROTOBUF_NDEBUG_INLINE RunReport::Impl_::Impl_(
           , arena, from.fills_
         }
         ,
+        sizing_ {
+          visibility, ::_pbi::InternalMetadataOffset::Build<
+              ::tradingcopilot::v1::RunReport,
+              PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_)>()
+          , arena, from.sizing_
+        }
+        ,
         label_(arena, from.label_) {}
 
 RunReport::RunReport(
@@ -405,7 +1022,7 @@ RunReport::RunReport(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
   ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.metrics_ = (CheckHasBit(cached_has_bits, 0x00000010U))
+  _impl_.metrics_ = (CheckHasBit(cached_has_bits, 0x00000020U))
                  ? Super_::CopyConstruct(arena, *from._impl_.metrics_)
                  : nullptr;
   _impl_.schema_version_ = from._impl_.schema_version_;
@@ -428,6 +1045,11 @@ PROTOBUF_NDEBUG_INLINE RunReport::Impl_::Impl_(
         fills_ { visibility, ::_pbi::InternalMetadataOffset::Build<
             ::tradingcopilot::v1::RunReport,
             PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.fills_)>()
+         }
+        ,
+        sizing_ { visibility, ::_pbi::InternalMetadataOffset::Build<
+            ::tradingcopilot::v1::RunReport,
+            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunReport, _impl_.sizing_)>()
          }
         ,
         label_(arena) {}
@@ -490,7 +1112,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _impl_.period_stats_.Clear();
     }
@@ -501,9 +1123,12 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
       _impl_.fills_.Clear();
     }
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
-      this_._impl_.label_.ClearNonDefaultToEmpty();
+      _impl_.sizing_.Clear();
     }
     if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      this_._impl_.label_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       ABSL_DCHECK(this_._impl_.metrics_ != nullptr);
       this_._impl_.metrics_->Clear();
     }
@@ -533,7 +1158,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // uint32 schema_version = 1 [json_name = "schemaVersion"];
-  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
     if (this_._internal_schema_version() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
@@ -542,7 +1167,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
   }
 
   // string label = 2 [json_name = "label"];
-  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
     if (!this_._internal_label().empty()) {
       const ::std::string& _s = this_._internal_label();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -552,7 +1177,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
   }
 
   // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
-  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         3, *this_._impl_.metrics_, this_._impl_.metrics_->GetCachedSize(), target,
         stream);
@@ -594,6 +1219,18 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
     }
   }
 
+  // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    for (unsigned i = 0, n = static_cast<unsigned>(
+                             this_._internal_sizing_size());
+         i < n; i++) {
+      const auto& repfield = this_._internal_sizing().Get(i);
+      target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+          7, repfield, repfield.GetCachedSize(), target,
+          stream);
+    }
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -617,7 +1254,7 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
     // repeated .tradingcopilot.v1.ExperimentInstancePeriodStat period_stats = 4 [json_name = "periodStats"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       total_size += 1UL * this_._internal_period_stats_size();
@@ -639,20 +1276,27 @@ PROTOBUF_NOINLINE void RunReport::Clear() {
         total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
       }
     }
-    // string label = 2 [json_name = "label"];
+    // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      total_size += 1UL * this_._internal_sizing_size();
+      for (const auto& msg : this_._internal_sizing()) {
+        total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+      }
+    }
+    // string label = 2 [json_name = "label"];
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (!this_._internal_label().empty()) {
         total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_label());
       }
     }
     // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.metrics_);
     }
     // uint32 schema_version = 1 [json_name = "schemaVersion"];
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (this_._internal_schema_version() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
             this_._internal_schema_version());
@@ -677,7 +1321,7 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _this->_internal_mutable_period_stats()->InternalMergeFromWithArena(
           ::google::protobuf::MessageLite::internal_visibility(), arena,
@@ -694,6 +1338,11 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
           from._internal_fills());
     }
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      _this->_internal_mutable_sizing()->InternalMergeFromWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), arena,
+          from._internal_sizing());
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (!from._internal_label().empty()) {
         _this->_internal_set_label(from._internal_label());
       } else {
@@ -702,7 +1351,7 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
         }
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       ABSL_DCHECK(from._impl_.metrics_ != nullptr);
       if (_this->_impl_.metrics_ == nullptr) {
         _this->_impl_.metrics_ = Super_::CopyConstruct(arena, *from._impl_.metrics_);
@@ -710,7 +1359,7 @@ void RunReport::MergeImpl(::google::protobuf::MessageLite& to_msg,
         _this->_impl_.metrics_->MergeFrom(*from._impl_.metrics_);
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (from._internal_schema_version() != 0) {
         _this->_impl_.schema_version_ = from._impl_.schema_version_;
       }
@@ -738,6 +1387,7 @@ void RunReport::InternalSwap(RunReport* PROTOBUF_RESTRICT PROTOBUF_NONNULL other
   _impl_.period_stats_.InternalSwap(&other->_impl_.period_stats_);
   _impl_.actions_.InternalSwap(&other->_impl_.actions_);
   _impl_.fills_.InternalSwap(&other->_impl_.fills_);
+  _impl_.sizing_.InternalSwap(&other->_impl_.sizing_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.label_, &other->_impl_.label_, arena);
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(RunReport, _impl_.schema_version_)

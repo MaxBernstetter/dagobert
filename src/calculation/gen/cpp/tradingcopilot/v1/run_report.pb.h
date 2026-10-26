@@ -48,6 +48,14 @@ extern const ::google::protobuf::internal::DescriptorTable descriptor_table_trad
 }  // extern "C"
 namespace tradingcopilot {
 namespace v1 {
+class ActionSizing;
+struct ActionSizingGlobalsTypeInternal;
+#ifndef PROTOBUF_MESSAGE_GLOBALS
+extern ActionSizingGlobalsTypeInternal ActionSizing_globals_;
+extern const ::google::protobuf::internal::ClassDataFull ActionSizing_class_data_;
+#else
+extern const ActionSizingGlobalsTypeInternal ActionSizing_globals_;
+#endif  // PROTOBUF_MESSAGE_GLOBALS
 class RunReport;
 struct RunReportGlobalsTypeInternal;
 #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -69,6 +77,289 @@ namespace v1 {
 // ===================================================================
 
 
+// -------------------------------------------------------------------
+
+class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ActionSizing final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:tradingcopilot.v1.ActionSizing) */ {
+  using Super_ = ::google::protobuf::Message;
+
+ public:
+  inline ActionSizing() : ActionSizing(nullptr) {}
+  ~ActionSizing() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(ActionSizing* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(ActionSizing));
+  }
+#endif
+
+  template <typename = void>
+  explicit constexpr ActionSizing(::google::protobuf::internal::ConstantInitialized,
+                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+                               class_data);
+
+  inline ActionSizing(const ActionSizing& from) : ActionSizing(nullptr, from) {}
+  inline ActionSizing(ActionSizing&& from) noexcept : ActionSizing(nullptr, ::std::move(from)) {}
+  inline ActionSizing& operator=(const ActionSizing& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline ActionSizing& operator=(ActionSizing&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
+  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
+  GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  [[nodiscard]] static const ActionSizing& default_instance() {
+    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<ActionSizing>(&ActionSizing_globals_);
+  }
+  static constexpr int kIndexInFileMessages = 0;
+  friend void swap(ActionSizing& a, ActionSizing& b) { a.Swap(&b); }
+  inline void Swap(ActionSizing* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(ActionSizing* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  [[nodiscard]] ActionSizing* PROTOBUF_NONNULL
+  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return Super_::DefaultConstruct<ActionSizing>(arena);
+  }
+  using Super_::CopyFrom;
+  void CopyFrom(const ActionSizing& from);
+  using Super_::MergeFrom;
+  void MergeFrom(const ActionSizing& from) { ActionSizing::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  [[nodiscard]] bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] ::size_t ByteSizeLong() const final;
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] int GetCachedSize() const {
+    return _impl_._cached_size_.Get();
+  }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(ActionSizing* PROTOBUF_NONNULL other);
+ private:
+  static ::absl::string_view FullMessageName() { return "tradingcopilot.v1.ActionSizing"; }
+
+  explicit ActionSizing(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  ActionSizing(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ActionSizing& from);
+  ActionSizing(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ActionSizing&& from) noexcept
+      : ActionSizing(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_(
+      const MessageLite& prototype,
+      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
+
+  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kSideFieldNumber = 2,
+    kRuleIdFieldNumber = 7,
+    kBarOpenMsFieldNumber = 1,
+    kNotionalFieldNumber = 3,
+    kStopPriceFieldNumber = 4,
+    kRequestedRiskPctFieldNumber = 5,
+    kCappedRiskPctFieldNumber = 6,
+  };
+  // string side = 2 [json_name = "side"];
+  void clear_side() ;
+  [[nodiscard]] const ::std::string& side() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_side(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_side();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_side();
+  void set_allocated_side(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_side() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_side(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_side();
+
+  public:
+  // string rule_id = 7 [json_name = "ruleId"];
+  void clear_rule_id() ;
+  [[nodiscard]] const ::std::string& rule_id() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_rule_id(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_rule_id();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_rule_id();
+  void set_allocated_rule_id(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_rule_id() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_rule_id(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_rule_id();
+
+  public:
+  // int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+  void clear_bar_open_ms() ;
+  [[nodiscard]] ::int64_t bar_open_ms() const;
+  void set_bar_open_ms(::int64_t value);
+
+  private:
+  ::int64_t _internal_bar_open_ms() const;
+  void _internal_set_bar_open_ms(::int64_t value);
+
+  public:
+  // double notional = 3 [json_name = "notional"];
+  void clear_notional() ;
+  [[nodiscard]] double notional() const;
+  void set_notional(double value);
+
+  private:
+  double _internal_notional() const;
+  void _internal_set_notional(double value);
+
+  public:
+  // double stop_price = 4 [json_name = "stopPrice"];
+  void clear_stop_price() ;
+  [[nodiscard]] double stop_price() const;
+  void set_stop_price(double value);
+
+  private:
+  double _internal_stop_price() const;
+  void _internal_set_stop_price(double value);
+
+  public:
+  // double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+  void clear_requested_risk_pct() ;
+  [[nodiscard]] double requested_risk_pct() const;
+  void set_requested_risk_pct(double value);
+
+  private:
+  double _internal_requested_risk_pct() const;
+  void _internal_set_requested_risk_pct(double value);
+
+  public:
+  // double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+  void clear_capped_risk_pct() ;
+  [[nodiscard]] double capped_risk_pct() const;
+  void set_capped_risk_pct(double value);
+
+  private:
+  double _internal_capped_risk_pct() const;
+  void _internal_set_capped_risk_pct(double value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ActionSizing)
+ private:
+  class _Internal;
+  using ParseTableT_ =
+      ::google::protobuf::internal::TcParseTable<3, 7,
+                          0, 50,
+                          2>;
+  static constexpr ParseTableT_ InternalGenerateParseTable_(
+      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
+  friend class ::google::protobuf::internal::TcParser;
+  #ifndef PROTOBUF_MESSAGE_GLOBALS
+  static const ParseTableT_ _table_;
+  #endif
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  friend ::google::protobuf::internal::PrivateAccess;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const ActionSizing& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr side_;
+    ::google::protobuf::internal::ArenaStringPtr rule_id_;
+    ::int64_t bar_open_ms_;
+    double notional_;
+    double stop_price_;
+    double requested_risk_pct_;
+    double capped_risk_pct_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_tradingcopilot_2fv1_2frun_5freport_2eproto;
+};
 // -------------------------------------------------------------------
 
 class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::protobuf::Message
@@ -129,7 +420,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
   [[nodiscard]] static const RunReport& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<RunReport>(&RunReport_globals_);
   }
-  static constexpr int kIndexInFileMessages = 0;
+  static constexpr int kIndexInFileMessages = 1;
   friend void swap(RunReport& a, RunReport& b) { a.Swap(&b); }
   inline void Swap(RunReport* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -222,6 +513,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
     kPeriodStatsFieldNumber = 4,
     kActionsFieldNumber = 5,
     kFillsFieldNumber = 6,
+    kSizingFieldNumber = 7,
     kLabelFieldNumber = 2,
     kMetricsFieldNumber = 3,
     kSchemaVersionFieldNumber = 1,
@@ -286,6 +578,26 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
   ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ExperimentInstanceFill>* PROTOBUF_NONNULL _internal_mutable_fills();
 
   public:
+  // repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
+  [[nodiscard]] int sizing_size() const;
+  private:
+  int _internal_sizing_size() const;
+
+  public:
+  void clear_sizing() ;
+  [[nodiscard]] const ::tradingcopilot::v1::ActionSizing& sizing(int index) const;
+  [[nodiscard]] ::tradingcopilot::v1::ActionSizing* PROTOBUF_NONNULL mutable_sizing(int index);
+  ::tradingcopilot::v1::ActionSizing* PROTOBUF_NONNULL add_sizing();
+  [[nodiscard]] const ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>&
+  sizing() const;
+  [[nodiscard]] ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>* PROTOBUF_NONNULL
+  mutable_sizing();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>& _internal_sizing() const;
+  ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>* PROTOBUF_NONNULL _internal_mutable_sizing();
+
+  public:
   // string label = 2 [json_name = "label"];
   void clear_label() ;
   [[nodiscard]] const ::std::string& label() const;
@@ -330,8 +642,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<3, 6,
-                          4, 41,
+      ::google::protobuf::internal::TcParseTable<3, 7,
+                          5, 41,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
       const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
@@ -362,6 +674,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
     ::google::protobuf::RepeatedPtrField< ::tradingcopilot::v1::ExperimentInstancePeriodStat > period_stats_;
     ::google::protobuf::RepeatedPtrField< ::tradingcopilot::v1::ExperimentInstanceAction > actions_;
     ::google::protobuf::RepeatedPtrField< ::tradingcopilot::v1::ExperimentInstanceFill > fills_;
+    ::google::protobuf::RepeatedPtrField< ::tradingcopilot::v1::ActionSizing > sizing_;
     ::google::protobuf::internal::ArenaStringPtr label_;
     ::tradingcopilot::v1::InstanceMetrics* PROTOBUF_NULLABLE metrics_;
     ::uint32_t schema_version_;
@@ -385,13 +698,265 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunReport final : public ::google::
 #endif  // __GNUC__
 // -------------------------------------------------------------------
 
+// ActionSizing
+
+// int64 bar_open_ms = 1 [json_name = "barOpenMs"];
+inline void ActionSizing::clear_bar_open_ms() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.bar_open_ms_ = ::int64_t{0};
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+}
+inline ::int64_t ActionSizing::bar_open_ms() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.bar_open_ms)
+  return _internal_bar_open_ms();
+}
+inline void ActionSizing::set_bar_open_ms(::int64_t value) {
+  _internal_set_bar_open_ms(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.bar_open_ms)
+}
+inline ::int64_t ActionSizing::_internal_bar_open_ms() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.bar_open_ms_;
+}
+inline void ActionSizing::_internal_set_bar_open_ms(::int64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.bar_open_ms_ = value;
+}
+
+// string side = 2 [json_name = "side"];
+inline void ActionSizing::clear_side() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.side_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+}
+inline const ::std::string& ActionSizing::side() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.side)
+  return _internal_side();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void ActionSizing::set_side(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  _impl_.side_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.side)
+}
+inline ::std::string* PROTOBUF_NONNULL ActionSizing::mutable_side()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::std::string* _s = _internal_mutable_side();
+  // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.ActionSizing.side)
+  return _s;
+}
+inline const ::std::string& ActionSizing::_internal_side() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.side_.Get();
+}
+inline void ActionSizing::_internal_set_side(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.side_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL ActionSizing::_internal_mutable_side() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.side_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE ActionSizing::release_side() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tradingcopilot.v1.ActionSizing.side)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000001U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  auto* released = _impl_.side_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.side_.Set("", GetArena());
+  }
+  return released;
+}
+inline void ActionSizing::set_allocated_side(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  _impl_.side_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.side_.IsDefault()) {
+    _impl_.side_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.ActionSizing.side)
+}
+
+// double notional = 3 [json_name = "notional"];
+inline void ActionSizing::clear_notional() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.notional_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+}
+inline double ActionSizing::notional() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.notional)
+  return _internal_notional();
+}
+inline void ActionSizing::set_notional(double value) {
+  _internal_set_notional(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.notional)
+}
+inline double ActionSizing::_internal_notional() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.notional_;
+}
+inline void ActionSizing::_internal_set_notional(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.notional_ = value;
+}
+
+// double stop_price = 4 [json_name = "stopPrice"];
+inline void ActionSizing::clear_stop_price() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stop_price_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+}
+inline double ActionSizing::stop_price() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.stop_price)
+  return _internal_stop_price();
+}
+inline void ActionSizing::set_stop_price(double value) {
+  _internal_set_stop_price(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.stop_price)
+}
+inline double ActionSizing::_internal_stop_price() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.stop_price_;
+}
+inline void ActionSizing::_internal_set_stop_price(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stop_price_ = value;
+}
+
+// double requested_risk_pct = 5 [json_name = "requestedRiskPct"];
+inline void ActionSizing::clear_requested_risk_pct() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.requested_risk_pct_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+}
+inline double ActionSizing::requested_risk_pct() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.requested_risk_pct)
+  return _internal_requested_risk_pct();
+}
+inline void ActionSizing::set_requested_risk_pct(double value) {
+  _internal_set_requested_risk_pct(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.requested_risk_pct)
+}
+inline double ActionSizing::_internal_requested_risk_pct() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.requested_risk_pct_;
+}
+inline void ActionSizing::_internal_set_requested_risk_pct(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.requested_risk_pct_ = value;
+}
+
+// double capped_risk_pct = 6 [json_name = "cappedRiskPct"];
+inline void ActionSizing::clear_capped_risk_pct() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.capped_risk_pct_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+}
+inline double ActionSizing::capped_risk_pct() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.capped_risk_pct)
+  return _internal_capped_risk_pct();
+}
+inline void ActionSizing::set_capped_risk_pct(double value) {
+  _internal_set_capped_risk_pct(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.capped_risk_pct)
+}
+inline double ActionSizing::_internal_capped_risk_pct() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.capped_risk_pct_;
+}
+inline void ActionSizing::_internal_set_capped_risk_pct(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.capped_risk_pct_ = value;
+}
+
+// string rule_id = 7 [json_name = "ruleId"];
+inline void ActionSizing::clear_rule_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rule_id_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+}
+inline const ::std::string& ActionSizing::rule_id() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ActionSizing.rule_id)
+  return _internal_rule_id();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void ActionSizing::set_rule_id(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.rule_id_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ActionSizing.rule_id)
+}
+inline ::std::string* PROTOBUF_NONNULL ActionSizing::mutable_rule_id()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_rule_id();
+  // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.ActionSizing.rule_id)
+  return _s;
+}
+inline const ::std::string& ActionSizing::_internal_rule_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.rule_id_.Get();
+}
+inline void ActionSizing::_internal_set_rule_id(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rule_id_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL ActionSizing::_internal_mutable_rule_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.rule_id_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE ActionSizing::release_rule_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tradingcopilot.v1.ActionSizing.rule_id)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.rule_id_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.rule_id_.Set("", GetArena());
+  }
+  return released;
+}
+inline void ActionSizing::set_allocated_rule_id(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.rule_id_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.rule_id_.IsDefault()) {
+    _impl_.rule_id_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.ActionSizing.rule_id)
+}
+
+// -------------------------------------------------------------------
+
 // RunReport
 
 // uint32 schema_version = 1 [json_name = "schemaVersion"];
 inline void RunReport::clear_schema_version() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.schema_version_ = 0u;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
 }
 inline ::uint32_t RunReport::schema_version() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.RunReport.schema_version)
@@ -399,7 +964,7 @@ inline ::uint32_t RunReport::schema_version() const {
 }
 inline void RunReport::set_schema_version(::uint32_t value) {
   _internal_set_schema_version(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.RunReport.schema_version)
 }
 inline ::uint32_t RunReport::_internal_schema_version() const {
@@ -415,7 +980,7 @@ inline void RunReport::_internal_set_schema_version(::uint32_t value) {
 inline void RunReport::clear_label() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.label_.ClearToEmpty();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
 }
 inline const ::std::string& RunReport::label() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -425,13 +990,13 @@ inline const ::std::string& RunReport::label() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void RunReport::set_label(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   _impl_.label_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.RunReport.label)
 }
 inline ::std::string* PROTOBUF_NONNULL RunReport::mutable_label()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   ::std::string* _s = _internal_mutable_label();
   // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.RunReport.label)
   return _s;
@@ -451,10 +1016,10 @@ inline ::std::string* PROTOBUF_NONNULL RunReport::_internal_mutable_label() {
 inline ::std::string* PROTOBUF_NULLABLE RunReport::release_label() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:tradingcopilot.v1.RunReport.label)
-  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000008U)) {
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000010U)) {
     return nullptr;
   }
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
   auto* released = _impl_.label_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.label_.Set("", GetArena());
@@ -464,9 +1029,9 @@ inline ::std::string* PROTOBUF_NULLABLE RunReport::release_label() {
 inline void RunReport::set_allocated_label(::std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
   }
   _impl_.label_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.label_.IsDefault()) {
@@ -477,7 +1042,7 @@ inline void RunReport::set_allocated_label(::std::string* PROTOBUF_NULLABLE valu
 
 // .tradingcopilot.v1.InstanceMetrics metrics = 3 [json_name = "metrics"];
 inline bool RunReport::has_metrics() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000020U);
   PROTOBUF_ASSUME(!value || _impl_.metrics_ != nullptr);
   return value;
 }
@@ -498,16 +1063,16 @@ inline void RunReport::unsafe_arena_set_allocated_metrics(
   }
   _impl_.metrics_ = reinterpret_cast<::tradingcopilot::v1::InstanceMetrics*>(value);
   if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tradingcopilot.v1.RunReport.metrics)
 }
 inline ::tradingcopilot::v1::InstanceMetrics* PROTOBUF_NULLABLE RunReport::release_metrics() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
 
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   ::tradingcopilot::v1::InstanceMetrics* released = _impl_.metrics_;
   _impl_.metrics_ = nullptr;
   if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
@@ -527,7 +1092,7 @@ inline ::tradingcopilot::v1::InstanceMetrics* PROTOBUF_NULLABLE RunReport::unsaf
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:tradingcopilot.v1.RunReport.metrics)
 
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   ::tradingcopilot::v1::InstanceMetrics* temp = _impl_.metrics_;
   _impl_.metrics_ = nullptr;
   return temp;
@@ -542,7 +1107,7 @@ inline ::tradingcopilot::v1::InstanceMetrics* PROTOBUF_NONNULL RunReport::_inter
 }
 inline ::tradingcopilot::v1::InstanceMetrics* PROTOBUF_NONNULL RunReport::mutable_metrics()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   ::tradingcopilot::v1::InstanceMetrics* _msg = _internal_mutable_metrics();
   // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.RunReport.metrics)
   return _msg;
@@ -559,9 +1124,9 @@ inline void RunReport::set_allocated_metrics(::tradingcopilot::v1::InstanceMetri
     if (message_arena != submessage_arena) {
       value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
     }
-    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+    SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
+    ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
   }
 
   _impl_.metrics_ = reinterpret_cast<::tradingcopilot::v1::InstanceMetrics*>(value);
@@ -716,6 +1281,61 @@ inline ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ExperimentInst
 RunReport::_internal_mutable_fills() {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return &_impl_.fills_;
+}
+
+// repeated .tradingcopilot.v1.ActionSizing sizing = 7 [json_name = "sizing"];
+inline int RunReport::_internal_sizing_size() const {
+  return _internal_sizing().size();
+}
+inline int RunReport::sizing_size() const {
+  return _internal_sizing_size();
+}
+inline void RunReport::clear_sizing() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.sizing_.Clear();
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+}
+inline const ::tradingcopilot::v1::ActionSizing& RunReport::sizing(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.RunReport.sizing)
+  return _internal_sizing().Get(index);
+}
+inline ::tradingcopilot::v1::ActionSizing* PROTOBUF_NONNULL RunReport::mutable_sizing(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.RunReport.sizing)
+  return _internal_mutable_sizing()->Mutable(index);
+}
+inline ::tradingcopilot::v1::ActionSizing* PROTOBUF_NONNULL RunReport::add_sizing()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::tradingcopilot::v1::ActionSizing* _add =
+      _internal_mutable_sizing()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_add:tradingcopilot.v1.RunReport.sizing)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>& RunReport::sizing() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:tradingcopilot.v1.RunReport.sizing)
+  return _internal_sizing();
+}
+inline ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>* PROTOBUF_NONNULL
+RunReport::mutable_sizing() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_mutable_list:tradingcopilot.v1.RunReport.sizing)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_sizing();
+}
+inline const ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>&
+RunReport::_internal_sizing() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.sizing_;
+}
+inline ::google::protobuf::RepeatedPtrField<::tradingcopilot::v1::ActionSizing>* PROTOBUF_NONNULL
+RunReport::_internal_mutable_sizing() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.sizing_;
 }
 
 #ifdef __GNUC__

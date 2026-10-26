@@ -7,9 +7,9 @@ namespace dagobert {
 
 void Strategy::require_schema_version(
     const tradingcopilot::v1::RunEnvelope &envelope) {
-  if (envelope.schema_version() != 1U) {
-    std::cerr << "schema_version must be 1: " << envelope.schema_version()
-              << '\n';
+  if (envelope.schema_version() != kSchemaVersion) {
+    std::cerr << "schema_version must be " << kSchemaVersion << ": "
+              << envelope.schema_version() << '\n';
     std::exit(2);
   }
 }

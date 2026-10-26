@@ -5,7 +5,27 @@ package tradingcopilot.v1;
 import "tradingcopilot/v1/experiment_activity.proto";
 import "tradingcopilot/v1/experiment_instance.proto";
 
-// Binary stdout payload from a strategy backtest run.
+// Sizing output of one action (docs/v2/features/position-sizing.md). Present
+// only when the run's config set `sizing`.
+message ActionSizing {
+  // Identifies the action: same bar and side as the entry in `actions`.
+  int64 bar_open_ms = 1;
+  string side = 2;
+  // Quote value of the order (qty * price).
+  double notional = 3;
+  // Stop price of a buy; 0 for sells.
+  double stop_price = 4;
+  // Configured risk per unit, percent of equity; 0 for sells.
+  double requested_risk_pct = 5;
+  // Risk the notional carries at its stop after the weight cap, percent of
+  // equity; 0 for sells.
+  double capped_risk_pct = 6;
+  // Rule that produced the action (golden_cross, atr_stop, pyramid, ...).
+  string rule_id = 7;
+}
+
+// Binary stdout payload from a strategy backtest run. schema_version 2 adds
+// `sizing`; the executables accept only the current version.
 message RunReport {
   uint32 schema_version = 1;
   string label = 2;
@@ -13,4 +33,7 @@ message RunReport {
   repeated ExperimentInstancePeriodStat period_stats = 4;
   repeated ExperimentInstanceAction actions = 5;
   repeated ExperimentInstanceFill fills = 6;
+  // One entry per action, in order, when `sizing` is configured; empty
+  // otherwise.
+  repeated ActionSizing sizing = 7;
 }

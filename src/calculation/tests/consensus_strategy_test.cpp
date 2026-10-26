@@ -23,7 +23,7 @@ std::vector<Bar> fixture_bars() {
 
 tradingcopilot::v1::RunEnvelope envelope() {
   tradingcopilot::v1::RunEnvelope out;
-  out.set_schema_version(1);
+  out.set_schema_version(2);
   out.set_label("signal-consensus");
   out.set_initial_quote(1000.0);
   tradingcopilot::v1::SignalConsensusConfig config;

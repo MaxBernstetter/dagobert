@@ -1,5 +1,7 @@
 #include "sizing_proto.hpp"
 
+#include <magic_enum/magic_enum.hpp>
+
 #include <cstdlib>
 #include <iostream>
 
@@ -34,6 +36,20 @@ sizing_from_proto(const tradingcopilot::v1::Sizing &proto) {
     std::exit(2);
   }
   return cfg;
+}
+
+void write_sizing_output(const std::vector<Action> &actions,
+                         tradingcopilot::v1::RunReport &report) {
+  for (const Action &action : actions) {
+    auto *out = report.add_sizing();
+    out->set_bar_open_ms(action.bar_open_ms);
+    out->set_side(std::string(magic_enum::enum_name(action.side)));
+    out->set_notional(action.notional);
+    out->set_stop_price(action.stop);
+    out->set_requested_risk_pct(action.requested_risk_pct);
+    out->set_capped_risk_pct(action.capped_risk_pct);
+    out->set_rule_id(action.reason);
+  }
 }
 
 } // namespace dagobert

@@ -84,7 +84,7 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
     if (!(n > 0.0) || sizing::below_min_order(n, cfg)) {
       return std::nullopt;
     }
-    plan_ = Plan{.notional = n, .stop = stop};
+    plan_ = Plan{.notional = n, .stop = stop, .equity = equity, .atr = atr};
     return ConsensusRule::consensus_buy;
   }
   if (units_.empty()) {
@@ -122,7 +122,9 @@ ConsensusSignal::decide_sized(const ConsensusGate &gate, double close,
     const double new_stop = sizing::stop_price(close, atr, cfg);
     plan_ = Plan{.notional = *n,
                  .stop = new_stop,
-                 .raise_by = std::max(0.0, cfg.add_mult() * atr)};
+                 .raise_by = std::max(0.0, cfg.add_mult() * atr),
+                 .equity = equity,
+                 .atr = atr};
     return ConsensusRule::pyramid;
   }
   return std::nullopt;
@@ -209,6 +211,9 @@ void ConsensusSignal::buy_unit(Position &account, const Bar &bar,
     return;
   }
   const Fill fill = account.buy_notional(bar, spend, plan_.stop, rule);
+  const sizing::RiskPct risk =
+      sizing::risk_pct(spend, plan_.equity, plan_.atr, bar.close, *sizing_);
+  account.annotate_last_risk(risk.requested, risk.capped);
   for (sizing::Unit &u : units_) {
     u.stop += plan_.raise_by;
   }

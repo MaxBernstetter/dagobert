@@ -22,7 +22,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Inputs for a single C++ strategy run (protojson --config).
+// Inputs for a single C++ strategy run (protojson --config). Current
+// schema_version is 2.
 type RunEnvelope struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SchemaVersion uint32                 `protobuf:"varint,1,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
