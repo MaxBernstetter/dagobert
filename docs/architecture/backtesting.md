@@ -77,3 +77,7 @@ Execution simulation uses `src/internal/venue/sim` (spread, slippage, and fee in
 - Job image: `dagobert-backtest` (`src/cmd/backtest`) — `BACKTEST_ID` or `EXPERIMENT_ID`
 - Local: `task backtest-run BACKTEST_ID=<uuid>` or `task experiment-run EXPERIMENT_ID=<uuid>` (after `task build:jobs`)
 - Experiment sim concurrency: `EXPERIMENT_SIM_WORKERS` (default 4; set in `.env` / compose for the orchestrator)
+
+### C++ sweep client (CALC.30 S4a)
+
+`src/backtest/cpp_sweep.go` builds a `SweepRequest` (bars from `tirunner.BuildBarRange`: aggregated bars with the sub-candle closes, warmup bars before the first evaluated bar), runs `strategy-sma-cross --sweep` and converts the reported actions into `signalrunner.ReplayAction`. Sized actions carry the C++ book equity; `ReplayKPI` rescales `quote_notional`/`base_qty` by the replayed wallet equity (marked at the bar close) over that equity and sizes with the market-action policy. Only `ma-cross` is supported; other playbooks fail. The Go path stays the default; the engine switch follows in S4b. The Go experiment path cannot trade on its first evaluated bar, so the sweep's `trade_from_ms` is the bar after it. Known gap: sized configs differ slightly because the Go ATR is a simple mean over a 16-bar window while the C++ ATR is Wilder-smoothed over all bars. Unsized configs match the Go fills exactly (`TestSmaCrossGoVsCppEquivalence`).

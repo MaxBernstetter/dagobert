@@ -6,6 +6,7 @@ import (
 	"math"
 	"testing"
 
+	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
@@ -194,5 +195,37 @@ func TestRunKPIWorkersBatches(t *testing.T) {
 	}
 	if seen != 30 {
 		t.Fatalf("results %d, want 30", seen)
+	}
+}
+
+func TestReplayKPIRescalesSizedActions(t *testing.T) {
+	job := testJob("sized", 0)
+	job.Costs = sim.Model{}
+	job.Coins = map[string]float64{"USDC": 10000}
+	job.Policy = marketrunner.Policy{TargetWeightPct: 100, ReserveQuote: 0, MinOrderQuote: 1}
+	notional := 1000.0
+	job.Actions = []ReplayAction{{
+		CandleCloseMs: job.Bars[3].CloseMs, Decision: "buy",
+		// Sized by a C++ book of 5000 equity; the Go wallet holds 10000, so the order doubles.
+		Sizing: &ReplaySizing{QuoteNotional: &notional, Equity: 5000},
+	}}
+	res := ReplayKPI(job)
+	if res.Err != nil || len(res.Fills) != 1 {
+		t.Fatalf("%v %+v", res.Err, res.Fills)
+	}
+	if got := res.Fills[0].QuoteQty; math.Abs(got-2000) > 1e-6 {
+		t.Fatalf("quote spend %v, want 2000", got)
+	}
+
+	job.Actions[0].Sizing.Equity = 0
+	if res := ReplayKPI(job); res.Err == nil {
+		t.Fatal("sized action without equity must fail the instance")
+	}
+
+	// No sized quantities: legacy sizing, buy up to the target weight of the policy.
+	job.Actions[0].Sizing = &ReplaySizing{}
+	res = ReplayKPI(job)
+	if res.Err != nil || len(res.Fills) != 1 || math.Abs(res.Fills[0].QuoteQty-10000) > 1e-6 {
+		t.Fatalf("legacy sizing: %v %+v", res.Err, res.Fills)
 	}
 }
