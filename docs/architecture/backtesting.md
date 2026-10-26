@@ -2,26 +2,17 @@
 
 The UI focuses on the **Experiment Suite** (`/experiments`). Single-backtest list APIs and the Portfolio / Strategy / Data / Processing pages were removed from the frontend.
 
-Catalog DB remains `data/backtests.sqlite` (experiments + optional legacy `backtest` rows). Instance workspaces live under `data/experiments/<id>/…`. Production `technical_indicator.sqlite` is never written during a experiment run; indicator bars for experiments live in `experiment_kpi`.
+Without `DATABASE_URL` the catalog is `data/backtests.sqlite` (experiments + optional legacy `backtest` rows); with it, Postgres (also stores fills, see the data-flow doc). Instance workspaces live under `data/experiments/<id>/…`. Production `technical_indicator.sqlite` is never written during a experiment run; indicator bars for experiments live in `experiment_kpi`.
 
 ## Experiments (multi-instance)
 
-An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (ma-cross `strategyConfig`: `fastHr` / `slowHr`, plus per-instance `symbol`). KPI rows live in `experiment_kpi` keyed by `(experiment_id, symbol, …)` — one shared window per symbol. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
+An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). KPI rows live in `experiment_kpi` keyed by `(experiment_id, symbol, …)` — one shared window per symbol. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
 
 Create UI supports **Manual** instances or **GRID** search: options render as cards (≥2 per row). Enum axes are multi-select; number axes use a dual-thumb min/max range slider plus a tick field. The client posts **settings + grid axes** (or a small manual instance list); the server expands the cartesian product (invalid configs dropped, max 20 000 valid) asynchronously (`status: materializing` → `draft`). Experiment GET is a **summary only**; instances are a **paginated** child resource with SQL sort/filter on denormalized KPI columns written at sim complete. See `docs/grooming/experiment-api-scale.md`.
 
-**Retry failed:** `POST /api/v1/experiments/:id/run` with `{ "retryFailed": true }` (and orchestrator `retryFailed`) sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
+**Retry failed:** `POST /api/v1/experiments/{id}/run` with `{ "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
 
-```text
-POST /api/v1/experiments/:id/run  →  orchestrator POST /experiment/run
-  →  docker run dagobert-backtest (EXPERIMENT_ID, DATA_DIR=/data, EXPERIMENT_SIM_WORKERS)
-       →  CheckRawCoverage → chunked ingest for retryable gaps → re-check
-       →  BuildKPIRange once (warm TI parquet cache when present) → in-memory kpi.Window
-       →  worker pool (EXPERIMENT_SIM_WORKERS, default 4) slim FastSimulatedPipelineOpts per instance
-            (shared Window; no signal/action SQLite; fills+wallet only; report built in memory)
-       →  persistence stage drains the results in batches (see below)
-       →  UpsertExperimentKPIRows once + mark completed
-```
+Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `POST /api/v1/experiments/{id}/run` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
 
 Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/report.json` (runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder are stored in Postgres (`experiment_instance` counts, period win counts, per-sell outcomes, and the experiment reduction) and read by `GET .../kpis` and `GET .../performance`.
 
@@ -42,7 +33,7 @@ Compute and KPI errors reach the database only as `failed` rows in these batches
 
 **Measurements** (3000 `ma-cross` instances, 2 years of 1h candles, 22 workers, `tests/system/experiment` `TestBenchPersistGrid`, compose Postgres 16):
 
-| Catalog | Instances | Before (main) | After (this change) |
+| Catalog | Instances | Before (main) | After the persistence pipeline |
 |---|---|---|---|
 | SQLite | 3000 | 9 min 4 s | 1 min 44 s (Go engine; 253 s measured later, see `docs/development/05-cpp-benchmark.md`) |
 | Postgres | 100 | 5 min 8 s | 7.7 s |
@@ -54,6 +45,7 @@ With `EXPERIMENT_ENGINE=cpp` the same 3000 instances take 4 to 6 s on SQLite and
 
 For the C++ path (#130) the strategy outcome is a list of sized actions. `src/calculation-signal/runner/kpi_worker.go` turns them into fills and the instance report without disk or database access: `ReplayKPI` replays the actions against the bar closes with the same fill model as simulated execution (`execrunner.SimulateBarWithModel`, quantities read back through the journal strings like the SQLite path) and builds the report with `BuildInstanceReportFromSim`. `RunKPIWorkers` runs a goroutine pool over batches of `KPIJob` and emits one `[]KPIResult` batch per input batch, ready for the persistence stage. `RunExperimentSimulate` uses it when `EXPERIMENT_ENGINE=cpp` (see below).
 
+
 ### Sparse lake (exchange holes)
 
 Ingest does **not** synthesize candles. When Binance returns no closed kline for a requested hour, that open time is recorded in `ingest.sqlite` table `unavailable` (detail **32** if nothing was written; detail **30** is transport/retry failure only). Coverage `Ready` allows unavailable hours; only **retryable** missing hours block a experiment/backtest.
@@ -64,9 +56,9 @@ Signal/fill playbook keys use `ma-cross.yaml#<config_hash>` so variants never co
 
 ## CLI single backtest (optional)
 
-`task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (orchestrator `POST /backtest/run`). There is no dedicated Backtesting page in the UI.
+Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (orchestrator `POST /backtest/run`). There is no Backtesting page in the UI and the experiment flow does not use it.
 
-Reports use experiment instance APIs under `/api/v1/experiments/[id]/instances/[instanceId]/…`.
+Reports use experiment instance APIs under `/api/v1/experiments/{id}/instances/{instanceId}/…`.
 
 While `status = running`, the catalog carries staged progress: `progress_stage` / `progress_stages` (prepare, market data, indicators, instance simulation), `progress_stage_label`, and instance counters.
 
@@ -81,13 +73,14 @@ Execution simulation uses `src/internal/venue/sim` (spread, slippage, and fee in
 ### C++ sweep client (CALC.30 S4a)
 
 `src/backtest/cpp_sweep.go` builds a `SweepRequest` (bars from `tirunner.BuildBarRange`: aggregated bars with the sub-candle closes, warmup bars before the first evaluated bar), runs the playbook executable with `--sweep` and converts the reported actions into `signalrunner.ReplayAction`. Sized actions carry the C++ book equity; `ReplayKPI` rescales `quote_notional`/`base_qty` by the replayed wallet equity (marked at the bar close) over that equity and sizes with the market-action policy. Only `ma-cross` and `signal-consensus` are supported; other playbooks fail. `signal-consensus` sends the full resolved config; the cooldowns `minBarsFlatAfterSell`/`minBarsLongBeforeSell` are proto `optional` fields, always set from the resolved config, so an explicit 0 means no cooldown on both engines while an unset field keeps the default 8/4 (#128); the equivalence test covers zero cooldowns. The Go path stays the default (engine switch below). The Go experiment path cannot trade on its first evaluated bar, so the sweep's `trade_from_ms` is the bar after it. Both playbooks are verified against the Go path, sized configs included (vol_cut and pyramid fire): `TestSmaCrossGoVsCppEquivalence` and `TestConsensusGoVsCppEquivalence` (fill timestamp and side exact, qty and price within 1e-9, KPIs within 1e-6). The consensus test runs a 1h-candle lake and the same lake with missing hours; the `BuildBarRange` warm-up is enough for its longest series (SMA48, MACD, ATR). A 3h-candle lake is not a useful consensus input: `rsi-3h` is never ready on it, so no trade happens on either path. Notes on consensus windows (RSI from the 1h closes inside the bar, volume ratio always 1, MACD 4/8/3 seeded on the last N values) are in the playbook `DESCRIPTION.md` and `docs/v2/features/position-sizing.md`.
+
 ### Engine switch (CALC.30 S4b)
 
 `EXPERIMENT_ENGINE=go|cpp` (default `go`, anything else fails the simulate stage) selects the compute stage of `RunExperimentSimulate` for the whole run. `go` is unchanged. `cpp` (`src/backtest/cpp_engine.go`) runs C++ sweep, then `ReplayActions`, `RunKPIWorkers` and the same `runPersister` stage:
 
 - Instances are grouped by symbol and playbook, each group is cut into shards of `ceil(n/processes)` instances capped at `EXPERIMENT_CPP_SHARD_MAX` (default 500); `EXPERIMENT_CPP_PROCESSES` (default: CPU count) sets the number of concurrent `--sweep` processes. Bars come from `BuildBarRange` once per symbol.
 - The executable of a playbook comes from an env var; `ma-cross` uses `CPP_SMA_CROSS_BIN`, `signal-consensus` uses `CPP_SIGNAL_CONSENSUS_BIN` (built by `task cpp:build PRESET=optimized`; baked into the `dagobert-backtest` image, see below). Missing or non-executable binaries fail the instances.
-- There is no per-instance fallback to Go. A crashed or malformed shard marks all its instances failed with the process error. A playbook the C++ path does not support (everything except `ma-cross`) marks its instances failed with `C++ engine does not support playbook ...`; if no instance succeeds the experiment fails in finalize, otherwise it is `partial`.
+- There is no per-instance fallback to Go. A crashed or malformed shard marks all its instances failed with the process error. A playbook the C++ path does not support (everything except `ma-cross` and `signal-consensus`) marks its instances failed with `C++ engine does not support playbook ...`; if no instance succeeds the experiment fails in finalize, otherwise it is `partial`.
 - System tests: `tests/system/experiment/engine_test.go`.
 
 Worker image: `docker/backtest/Dockerfile` builds `strategy-sma-cross` and `strategy-signal-consensus` in a `debian:trixie` stage with `DAGOBERT_PORTABLE=ON` (baseline CPU code, no `-march=native`), copies them to `/usr/local/bin` of the final `distroless/cc` image and defaults `CPP_SMA_CROSS_BIN=/usr/local/bin/strategy-sma-cross` and `CPP_SIGNAL_CONSENSUS_BIN=/usr/local/bin/strategy-signal-consensus`. The dependency prefix (Arrow, protobuf, ...) is a separate `cpp-deps` stage that only sees the recipe files, so BuildKit reuses it until `deps/` changes.
