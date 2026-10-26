@@ -48,6 +48,10 @@ task cpp:test PRESET=debug      # build + ctest
   `protobuf::libprotobuf`.
 - googletest, magic_enum and StratForge are small and still use FetchContent.
 
+## Portable build (container images)
+
+The optimized preset tunes for the build host (`-march=native`). For an image built elsewhere set `DAGOBERT_PORTABLE=1` for `deps/build.sh` and `-DDAGOBERT_PORTABLE=ON` for the main configure; both use `-mtune=generic` instead. The key gets a `-portable` marker, so the prefix never collides with the host-tuned one. `DAGOBERT_CC` / `DAGOBERT_CXX` override the compiler of `deps/build.sh`. `docker/backtest/Dockerfile` does this in two stages: `cpp-deps` (recipe files only, cached) and `cpp-build`.
+
 ## ccache
 
 If `ccache` is installed (devbox provides it) the compiler launcher is

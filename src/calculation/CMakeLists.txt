@@ -47,11 +47,18 @@ if(DAGOBERT_MODE STREQUAL "debug")
   set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-fuse-ld=lld")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-fuse-ld=lld")
 elseif(DAGOBERT_MODE STREQUAL "optimized")
+  # DAGOBERT_PORTABLE=ON (container images): baseline x86-64/arm64 code, runs on
+  # any CPU of the architecture. Default: tuned for the build host.
+  if(DAGOBERT_PORTABLE)
+    set(_dagobert_cpu "-mtune=generic")
+  else()
+    set(_dagobert_cpu "-march=native -mtune=native")
+  endif()
   set(CMAKE_C_FLAGS_RELEASE
-      "-O3 -DNDEBUG -march=native -mtune=native -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
+      "-O3 -DNDEBUG ${_dagobert_cpu} -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
   )
   set(CMAKE_CXX_FLAGS_RELEASE
-      "-O3 -DNDEBUG -march=native -mtune=native -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
+      "-O3 -DNDEBUG ${_dagobert_cpu} -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
   )
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE
       "-flto=thin -fuse-ld=lld -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
