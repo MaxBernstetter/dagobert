@@ -32,8 +32,15 @@ if(DAGOBERT_MODE STREQUAL "debug")
   # Arrow debug builds use -Werror (CHECKIN); Nix _FORTIFY_SOURCE needs -O.
   set(_arrow_flags "-O1 -g3 -Wno-\\#warnings")
 else()
-  set(_main_flags
-      "-O3 -DNDEBUG -march=native -mtune=native -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer")
+  if(DAGOBERT_PORTABLE)
+    # Container image: baseline CPU, no LTO (gcc-built objects must link into
+    # the clang-built executables, and LTO bitcode is not interchangeable).
+    set(_main_flags
+        "-O3 -DNDEBUG -mtune=generic -ffunction-sections -fdata-sections -fno-omit-frame-pointer")
+  else()
+    set(_main_flags
+        "-O3 -DNDEBUG -march=native -mtune=native -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer")
+  endif()
   set(_arrow_flags "${_main_flags}")
 endif()
 

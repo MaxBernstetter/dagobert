@@ -20,6 +20,11 @@ flock 9 # concurrent callers wait here, then find the prefix already built
 args=(-G Ninja -S "$here" -DDAGOBERT_MODE="$preset" -DCMAKE_BUILD_TYPE="$type"
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
   -DDAGOBERT_DEPS_ROOT="$root")
+# DAGOBERT_PORTABLE=1: baseline-CPU code for container images (optimized only).
+[ "${DAGOBERT_PORTABLE:-}" = 1 ] && args+=(-DDAGOBERT_PORTABLE=ON)
+# DAGOBERT_CC / DAGOBERT_CXX override the compiler (default clang / clang++).
+args=("${args[@]/-DCMAKE_C_COMPILER=clang/-DCMAKE_C_COMPILER=${DAGOBERT_CC:-clang}}")
+args=("${args[@]/-DCMAKE_CXX_COMPILER=clang++/-DCMAKE_CXX_COMPILER=${DAGOBERT_CXX:-clang++}}")
 
 probe="$root/.work/probe-$preset"
 cmake -B "$probe" "${args[@]}" >/dev/null
