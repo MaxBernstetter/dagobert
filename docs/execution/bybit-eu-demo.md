@@ -4,6 +4,20 @@ Paper orders only. No deposit. The key is a demo key for a Bybit EU account.
 
 Checked on 2026-10-20 (order flow) and **2026-10-21** (balance endpoints; see `scripts/probe-bybit`). A market buy of 5 USDC of `BTCUSDC` filled.
 
+## Get a demo key
+
+1. Register at [bybit.eu](https://www.bybit.eu). API key creation can take up to 48 hours after the account is opened. Turn on Google Authenticator.
+2. Open Demo Trading in that account and create the API key there. The demo user is separate from the live user, so a live key is rejected by the demo host.
+3. Enable trade permission. Leave withdrawals off.
+4. Put the key and secret in a gitignored `.secrets` file in the repo root:
+
+```bash
+BYBIT_API_KEY=...
+BYBIT_API_SECRET=...
+```
+
+Compose gives that file to the execution container only. The web app never reads it.
+
 ## Host
 
 `https://api-demo.bybit.eu`

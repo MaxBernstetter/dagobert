@@ -1,59 +1,110 @@
 # Dagobert
 
-Personal experiment suite for systematic crypto spot swing trades on 3-hour UTC candles. It loads public Binance klines, computes one indicator record per closed candle, runs Go playbook strategies, and can send actions to the Bybit EU spot demo. The web UI covers experiments, providers, and experiment results.
+Dagobert is a personal suite for systematic crypto spot swing trading on 3-hour UTC candles. It loads public Binance klines, computes indicators, runs rule-based playbooks, and places paper orders on the Bybit EU demo. The same playbook code runs in live paper trading and in backtests. See [docs/IDEA.md](docs/IDEA.md) for the idea behind it.
 
-The orchestrator is the long-running process. The pipeline is five stateless Go containers, started by the orchestrator when a candle closes:
+There are two ways to use it:
 
-1. **Ingest** writes closed 1-hour klines to Parquet.
-2. **Calculation (technical indicator)** writes one KPI record per symbol and 3-hour bar (`technical_indicator.sqlite`).
-3. **Calculation (signal)** writes one **signal** per candle (buy / sell / no-trade; no size).
-4. **Calculation (market action)** reads the signal and **live Bybit balances**, then writes the sized **action**.
-5. **Execution** places the paper order and stores the fill and balance snapshot.
+- **Live pipeline.** Every time a 3-hour candle closes, the orchestrator runs five stateless containers in order. Each prints `DETAIL=<n>` and exits `0` (succeeded), `1` (failed, retried) or `2` (already stored, nothing to do).
+- **Experiments.** In the web UI you define an experiment: a date range, costs, and many strategy instances (set by hand or as a parameter grid). A worker container simulates them all and stores the results.
 
-Each container prints `DETAIL=<n>` and exits `0` (succeeded), `1` (failed), or `2` (aborted). A repeat of work that is already stored exits `2`.
+## Architecture
 
-## Run it
+```mermaid
+flowchart LR
+  subgraph exp [Experiments]
+    UI[Browser frontend] --> API[Experiment API]
+    API --> W[Experiment worker container<br/>Go engine or C++ engine]
+    API --> PG[(Postgres)]
+    W --> PG
+  end
+  subgraph live [Live pipeline]
+    CLK[3-hour candle clock] --> J1[ingest]
+    J1 --> J2[technical indicator]
+    J2 --> J3[signal]
+    J3 --> J4[market action]
+    J4 --> J5[execution]
+  end
+  ORCH[Orchestrator process]
+  ORCH --- API
+  ORCH --- CLK
+  W --> LAKE[(data/ lake: Parquet + SQLite)]
+  J1 --> LAKE
+  J2 --> LAKE
+  J3 --> LAKE
+  J4 --> LAKE
+  J5 --> LAKE
+  J5 --> BYBIT[Bybit EU demo]
+```
 
-You need Docker and [Devbox](https://www.jetify.com/devbox).
+- The Experiment API runs inside the orchestrator process. It is only mounted when `DATABASE_URL` is set, so it needs Postgres. Compose sets this for you.
+- The worker is the `dagobert-backtest` image. `EXPERIMENT_ENGINE=go` is the default. `cpp` is opt-in and supports `ma-cross` and `signal-consensus` only.
+- The live pipeline always uses the Go jobs.
+- The frontend talks only to the Experiment API. It does not read `data/`.
 
-Bybit credentials are a demo key on a Bybit EU account. Public Binance klines need no key.
+The five jobs are: ingest, calculation-technical-indicator, calculation-signal, calculation-market-action, execution. Only execution holds Bybit credentials.
 
-1. Register at [bybit.eu](https://www.bybit.eu). API key creation can take up to 48 hours after the account is opened. Turn on Google Authenticator.
-2. Open Demo Trading in that account and create the API key there. The demo user is separate from the live user, so a live key is rejected by the demo host.
-3. Enable trade permission. Leave withdrawals off.
-4. Put the key and secret in a gitignored `.secrets` file in the repo root:
+## Quickstart
+
+You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI is also needed for `task db:migrate` (it is not in the devbox shell).
+
+```bash
+devbox shell
+task build        # job images and compose images, once
+task up           # Floci, Postgres, orchestrator, frontend
+task db:migrate   # create the Postgres schema (first start, and after new migrations)
+```
+
+Nothing applies the migrations automatically, so run `task db:migrate` once the stack is up. Then open [http://localhost:3001](http://localhost:3001). Change the port with `WEB_PORT` in `.env` (see `env.example` for the other ports).
+
+`task up` merges `compose.override.yaml`, so it serves the Vite dev server with `src/frontend` mounted. `task dev` is the same plus `compose watch`. `task up:prod` skips the override and serves the production frontend image.
+
+**Run an experiment.** Create one in the UI and start it there. The orchestrator launches the worker container. To run one by hand: `EXPERIMENT_ID=<uuid> task experiment-run`. To fill `data/` with a year of BTC demo data and a simulated pipeline run (wipes `data/`, no Bybit): `task seed-demo-year`.
+
+**Run the live pipeline.** The orchestrator starts it by itself at each 3-hour boundary. To start one execution now: `task run` (`CANDLE_CLOSE_MS` defaults to `1700006400000`). A repeat of the same close does not place a second order. Execution needs a Bybit demo key in a gitignored `.secrets` file. See [docs/execution/bybit-eu-demo.md](docs/execution/bybit-eu-demo.md) for how to get a key.
 
 ```bash
 BYBIT_API_KEY=...
 BYBIT_API_SECRET=...
 ```
 
-Compose gives that file to the execution container only. The web app never reads it. The key is accepted only on `https://api-demo.bybit.eu`.
+## Tasks
+
+Run `task --list` for all of them.
+
+| Task | What it does |
+| --- | --- |
+| `task build` | Build the job images and the compose images. |
+| `task up` | Start the stack with the dev frontend. Runs `docker compose up`. |
+| `task dev` | Same as `up`, with compose watch. |
+| `task up:prod` | Start the stack without the override (production frontend). |
+| `task up:build` | Build everything, then start the stack. |
+| `task down` | Stop the stack. `./data` is kept. |
+| `task run` | One live-pipeline execution for `CANDLE_CLOSE_MS`. |
+| `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |
+| `task seed-demo-year` | Wipe `data/`, backfill 1 year of BTC, run `ma-cross` with a simulated venue. |
+| `task test` | System tests for the job images. |
+| `task cpp:deps`, `cpp:build`, `cpp:test`, `cpp:bench` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test, benchmark against Go. |
+| `task db:up`, `db:migrate`, `db:diff name=...`, `db:sqlc` | Postgres: start it, apply Atlas migrations, generate a migration, regenerate sqlc code. |
+| `task proto:lint`, `proto:gen`, `proto:breaking` | Protobuf checks and code generation. |
+| `task data:migrate-candles` | Rewrite old string candle files to the decimal schema. |
+
+## Tests
 
 ```bash
-devbox shell
-task up
+task test                                                          # system tests, about 20 minutes
+go test ./tests/system/ingest -run TestName -count=1 -timeout 20m  # one system test (image built first)
+go test ./src/internal/... ./src/shared/...                        # unit tests
+task cpp:test                                                      # C++ tests
+cd src/frontend && npm run build                                   # frontend typecheck
 ```
 
-Run `task build` once (job images + stack), then `task up` for Floci, the orchestrator, and the production frontend at [http://localhost:3001](http://localhost:3001). For UI work use `task dev` instead: Compose **watch** syncs `./src/frontend` into the container and runs the Vite dev server (no full image rebuild on each save). `task up:build` rebuilds everything then starts the stack. Set `WEB_PORT` (default 3001), `FLOCI_PORT` (default 4566), `POSTGRES_PORT` (default 5432), or `ORCHESTRATOR_PORT` (default 8090) in `.env` to publish those services on other host ports. The four jobs are not part of that stack. The orchestrator starts them when a 3-hour UTC candle closes. `task run` starts one execution now. `CANDLE_CLOSE_MS` defaults to `1700006400000` (2023-11-14 23:00 UTC). A second `task run` for the same close does not place a second order. The overview can also backfill hourly candles, or recalculate indicators, for a UTC from/to range. Those two steps do not place orders. `task down` stops the stack and leaves `data/` in place.
+System tests build each job image and run it against a faked upstream. There is no browser test suite.
 
-Ingest reads public klines from `https://data-api.binance.vision` unless `BINANCE_BASE_URL` is set. It also accepts `ETHUSDT` and `USDCUSDT`. Process, strategy, and execution accept `BTCUSDT` and `ETHUSDT`. Execution trades `BTCUSDC` and `ETHUSDC` on `https://api-demo.bybit.eu`.
+## Where to start
 
-## Development
-
-Workflow, GitHub issues, and the agent harness live in [docs/development](docs/development/README.md). How the local stack runs is in [docs/architecture/local-stack.md](docs/architecture/local-stack.md). Indicator and playbook documentation for the Wiki is described in [docs/architecture/wiki-catalog.md](docs/architecture/wiki-catalog.md). Closed milestone notes are in [docs/grooming/archive](docs/grooming/archive). Venue and kline contracts are in [docs/ingest/binance-public-klines.md](docs/ingest/binance-public-klines.md) and [docs/execution/bybit-eu-demo.md](docs/execution/bybit-eu-demo.md).
-
-`devbox shell` installs Go 1.24 and Task (`go-task`). From that shell:
-
-```bash
-task build      # images only
-task test       # system tests for the four job containers
-task up         # stack (after task build)
-task dev        # compose up --watch (optional; task up already bind-mounts the frontend)
-task up:prod    # production frontend image (no override)
-task up:build   # rebuild all images, then stack
-task run        # one candle close, CANDLE_CLOSE_MS optional
-task down
-```
-
-The system tests build each job image and run it. They do not import the service packages. Go 1.24 must be on `PATH` for `task test`. Application code lives under `src/` (jobs, `shared/`, `internal/instruments`, and `frontend/`, the Vite SPA). `npm run build` in `src/frontend/` typechecks the app. There is no browser test suite.
+- [docs/README.md](docs/README.md): index of all docs.
+- [docs/STATUS.md](docs/STATUS.md): what is done and what is next.
+- [docs/glossary.md](docs/glossary.md): terms such as experiment, instance, playbook.
+- [docs/architecture/experiment-data-flow.md](docs/architecture/experiment-data-flow.md): how an experiment runs.
+- [docs/architecture/pipeline-data-flow.md](docs/architecture/pipeline-data-flow.md): how a candle moves through the five jobs.
+- [docs/development/](docs/development/README.md): workflow, issues, agent harness.
