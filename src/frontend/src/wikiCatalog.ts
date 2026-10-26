@@ -8,6 +8,7 @@ type WikiMeta = {
   kind: string;
   unit?: string;
   status?: string;
+  summary?: string;
   symbols?: string[];
   venue?: string;
   series?: IndicatorSeries[];

@@ -178,7 +178,7 @@ function WikiNav({
               href={`/wiki/playbooks/${entry.meta.slug}`}
               title={entry.meta.title}
               slugLine={entry.meta.slug}
-              metaLine="Equity risked to the stop"
+              metaLine={entry.meta.summary}
               badges={
                 entry.meta.status ? (
                   <Badge variant="secondary" className="text-[10px]">

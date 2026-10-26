@@ -3,6 +3,7 @@ title: Position sizing
 slug: position-sizing
 kind: method
 status: specified
+summary: Equity risked to the stop
 ---
 
 # Position sizing
