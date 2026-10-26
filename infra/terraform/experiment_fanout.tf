@@ -1,5 +1,4 @@
 # Step 6 — experiment instance fan-out (SFN Inline Map + experiment-worker Lambda).
-# Optional ECS cluster for Fargate Spot long-tail (EXPERIMENT_RUN_HEAVY=1); not wired to RunTask yet.
 
 variable "experiment_batch_size" {
   type    = number
@@ -22,15 +21,6 @@ variable "experiment_worker_zip_path" {
   type        = string
   default     = ""
 }
-
-# Optional future: ECS cluster for Fargate Spot experiment heavy runs.
-# resource "aws_ecs_cluster" "experiment" {
-#   name = "${local.prefix}-experiment"
-#   setting {
-#     name  = "containerInsights"
-#     value = "disabled"
-#   }
-# }
 
 data "aws_iam_policy_document" "experiment_sfn_assume" {
   statement {

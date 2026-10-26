@@ -9,7 +9,7 @@ Run **experiments** without a live candle clock: Floci locally for AWS services 
 | Lake / artifacts | Floci S3 | AWS S3 |
 | Secrets | Floci SSM (+ `.secrets` fallback) | SSM |
 | Control plane (catalog, stats, actions) | Compose **Postgres** | **Supabase Free** (`public`) |
-| Experiment compute | Docker / batched workers; SFN+Lambda scaffolding | Batched Lambda Map + Fargate Spot long tail |
+| Experiment compute | Docker / batched workers; SFN+Lambda scaffolding | Batched Lambda Map |
 | UI | Next BFF (interim) → Vite SPA | Static SPA + Experiment API |
 
 Detail for Atlas smells/spike: [`atlas-schema.md`](atlas-schema.md). Why not host *jobs* on Supabase: [`deploy-supabase.md`](deploy-supabase.md). API list shape: [`experiment-api-scale.md`](experiment-api-scale.md).
@@ -111,7 +111,6 @@ EXPERIMENT_RUN_BACKEND=docker|batched|sfn
 EXPERIMENT_BATCH_SIZE=64
 EXPERIMENT_MAP_MAX_CONCURRENCY=8
 EXPERIMENT_SFN_ARN=…          # when sfn
-EXPERIMENT_RUN_HEAVY=1        # long-tail / future Fargate Spot
 ```
 
 Golden middle: **50–200 instances / worker**, **MaxConcurrency ~100–400** — not 1:1 Lambda at 20k. After step 10/14, workers update **Postgres** (not DDB) for status/metrics; lake still holds parquet.
@@ -216,7 +215,7 @@ task db:migrate
 
 - Local: Floci + Compose (Postgres + API + optional Next/Vite); experiments without live candle clock.
 - Catalog/stats/actions in Postgres; OHLC/TI charts via API→lake; no anon Data API.
-- Experiment fan-out: batched workers; Fargate Spot only for long/heavy work.
+- Experiment fan-out: batched workers.
 - UI: static SPA + Experiment API.
 
 ## Out of scope

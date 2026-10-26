@@ -68,7 +68,6 @@ services:
       EXPERIMENT_BATCH_SIZE: ${EXPERIMENT_BATCH_SIZE:-64}
       EXPERIMENT_MAP_MAX_CONCURRENCY: ${EXPERIMENT_MAP_MAX_CONCURRENCY:-8}
       EXPERIMENT_SFN_ARN: ${EXPERIMENT_SFN_ARN:-}
-      EXPERIMENT_RUN_HEAVY: ${EXPERIMENT_RUN_HEAVY:-0}
       # Always use Compose DNS name — do not inherit host DATABASE_URL (127.0.0.1).
       DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@postgres:5432/${POSTGRES_DB:-trading}?sslmode=disable&search_path=public
       LIVE_DIR: /data
