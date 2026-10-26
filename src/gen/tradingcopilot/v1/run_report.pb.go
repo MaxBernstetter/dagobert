@@ -21,7 +21,109 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Binary stdout payload from a strategy backtest run.
+// Sizing output of one action (docs/v2/features/position-sizing.md). Present
+// only when the run's config set `sizing`.
+type ActionSizing struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifies the action: same bar and side as the entry in `actions`.
+	BarOpenMs int64  `protobuf:"varint,1,opt,name=bar_open_ms,json=barOpenMs,proto3" json:"bar_open_ms,omitempty"`
+	Side      string `protobuf:"bytes,2,opt,name=side,proto3" json:"side,omitempty"`
+	// Quote value of the order (qty * price).
+	Notional float64 `protobuf:"fixed64,3,opt,name=notional,proto3" json:"notional,omitempty"`
+	// Stop price of a buy; 0 for sells.
+	StopPrice float64 `protobuf:"fixed64,4,opt,name=stop_price,json=stopPrice,proto3" json:"stop_price,omitempty"`
+	// Configured risk per unit, percent of equity; 0 for sells.
+	RequestedRiskPct float64 `protobuf:"fixed64,5,opt,name=requested_risk_pct,json=requestedRiskPct,proto3" json:"requested_risk_pct,omitempty"`
+	// Risk the notional carries at its stop after the weight cap, percent of
+	// equity; 0 for sells.
+	CappedRiskPct float64 `protobuf:"fixed64,6,opt,name=capped_risk_pct,json=cappedRiskPct,proto3" json:"capped_risk_pct,omitempty"`
+	// Rule that produced the action (golden_cross, atr_stop, pyramid, ...).
+	RuleId        string `protobuf:"bytes,7,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActionSizing) Reset() {
+	*x = ActionSizing{}
+	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActionSizing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActionSizing) ProtoMessage() {}
+
+func (x *ActionSizing) ProtoReflect() protoreflect.Message {
+	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActionSizing.ProtoReflect.Descriptor instead.
+func (*ActionSizing) Descriptor() ([]byte, []int) {
+	return file_tradingcopilot_v1_run_report_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ActionSizing) GetBarOpenMs() int64 {
+	if x != nil {
+		return x.BarOpenMs
+	}
+	return 0
+}
+
+func (x *ActionSizing) GetSide() string {
+	if x != nil {
+		return x.Side
+	}
+	return ""
+}
+
+func (x *ActionSizing) GetNotional() float64 {
+	if x != nil {
+		return x.Notional
+	}
+	return 0
+}
+
+func (x *ActionSizing) GetStopPrice() float64 {
+	if x != nil {
+		return x.StopPrice
+	}
+	return 0
+}
+
+func (x *ActionSizing) GetRequestedRiskPct() float64 {
+	if x != nil {
+		return x.RequestedRiskPct
+	}
+	return 0
+}
+
+func (x *ActionSizing) GetCappedRiskPct() float64 {
+	if x != nil {
+		return x.CappedRiskPct
+	}
+	return 0
+}
+
+func (x *ActionSizing) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+// Binary stdout payload from a strategy backtest run. schema_version 2 adds
+// `sizing`; the executables accept only the current version.
 type RunReport struct {
 	state         protoimpl.MessageState          `protogen:"open.v1"`
 	SchemaVersion uint32                          `protobuf:"varint,1,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
@@ -30,13 +132,16 @@ type RunReport struct {
 	PeriodStats   []*ExperimentInstancePeriodStat `protobuf:"bytes,4,rep,name=period_stats,json=periodStats,proto3" json:"period_stats,omitempty"`
 	Actions       []*ExperimentInstanceAction     `protobuf:"bytes,5,rep,name=actions,proto3" json:"actions,omitempty"`
 	Fills         []*ExperimentInstanceFill       `protobuf:"bytes,6,rep,name=fills,proto3" json:"fills,omitempty"`
+	// One entry per action, in order, when `sizing` is configured; empty
+	// otherwise.
+	Sizing        []*ActionSizing `protobuf:"bytes,7,rep,name=sizing,proto3" json:"sizing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RunReport) Reset() {
 	*x = RunReport{}
-	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[0]
+	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +153,7 @@ func (x *RunReport) String() string {
 func (*RunReport) ProtoMessage() {}
 
 func (x *RunReport) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[0]
+	mi := &file_tradingcopilot_v1_run_report_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +166,7 @@ func (x *RunReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunReport.ProtoReflect.Descriptor instead.
 func (*RunReport) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_run_report_proto_rawDescGZIP(), []int{0}
+	return file_tradingcopilot_v1_run_report_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RunReport) GetSchemaVersion() uint32 {
@@ -106,18 +211,35 @@ func (x *RunReport) GetFills() []*ExperimentInstanceFill {
 	return nil
 }
 
+func (x *RunReport) GetSizing() []*ActionSizing {
+	if x != nil {
+		return x.Sizing
+	}
+	return nil
+}
+
 var File_tradingcopilot_v1_run_report_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_run_report_proto_rawDesc = "" +
 	"\n" +
-	"\"tradingcopilot/v1/run_report.proto\x12\x11tradingcopilot.v1\x1a+tradingcopilot/v1/experiment_activity.proto\x1a+tradingcopilot/v1/experiment_instance.proto\"\xe2\x02\n" +
+	"\"tradingcopilot/v1/run_report.proto\x12\x11tradingcopilot.v1\x1a+tradingcopilot/v1/experiment_activity.proto\x1a+tradingcopilot/v1/experiment_instance.proto\"\xec\x01\n" +
+	"\fActionSizing\x12\x1e\n" +
+	"\vbar_open_ms\x18\x01 \x01(\x03R\tbarOpenMs\x12\x12\n" +
+	"\x04side\x18\x02 \x01(\tR\x04side\x12\x1a\n" +
+	"\bnotional\x18\x03 \x01(\x01R\bnotional\x12\x1d\n" +
+	"\n" +
+	"stop_price\x18\x04 \x01(\x01R\tstopPrice\x12,\n" +
+	"\x12requested_risk_pct\x18\x05 \x01(\x01R\x10requestedRiskPct\x12&\n" +
+	"\x0fcapped_risk_pct\x18\x06 \x01(\x01R\rcappedRiskPct\x12\x17\n" +
+	"\arule_id\x18\a \x01(\tR\x06ruleId\"\x9b\x03\n" +
 	"\tRunReport\x12%\n" +
 	"\x0eschema_version\x18\x01 \x01(\rR\rschemaVersion\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12<\n" +
 	"\ametrics\x18\x03 \x01(\v2\".tradingcopilot.v1.InstanceMetricsR\ametrics\x12R\n" +
 	"\fperiod_stats\x18\x04 \x03(\v2/.tradingcopilot.v1.ExperimentInstancePeriodStatR\vperiodStats\x12E\n" +
 	"\aactions\x18\x05 \x03(\v2+.tradingcopilot.v1.ExperimentInstanceActionR\aactions\x12?\n" +
-	"\x05fills\x18\x06 \x03(\v2).tradingcopilot.v1.ExperimentInstanceFillR\x05fillsB\xdb\x01\n" +
+	"\x05fills\x18\x06 \x03(\v2).tradingcopilot.v1.ExperimentInstanceFillR\x05fills\x127\n" +
+	"\x06sizing\x18\a \x03(\v2\x1f.tradingcopilot.v1.ActionSizingR\x06sizingB\xdb\x01\n" +
 	"\x15com.tradingcopilot.v1B\x0eRunReportProtoP\x01ZMgithub.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1;tradingcopilotv1\xa2\x02\x03TXX\xaa\x02\x11Tradingcopilot.V1\xca\x02\x11Tradingcopilot\\V1\xe2\x02\x1dTradingcopilot\\V1\\GPBMetadata\xea\x02\x12Tradingcopilot::V1b\x06proto3"
 
 var (
@@ -132,24 +254,26 @@ func file_tradingcopilot_v1_run_report_proto_rawDescGZIP() []byte {
 	return file_tradingcopilot_v1_run_report_proto_rawDescData
 }
 
-var file_tradingcopilot_v1_run_report_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_tradingcopilot_v1_run_report_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_tradingcopilot_v1_run_report_proto_goTypes = []any{
-	(*RunReport)(nil),                    // 0: tradingcopilot.v1.RunReport
-	(*InstanceMetrics)(nil),              // 1: tradingcopilot.v1.InstanceMetrics
-	(*ExperimentInstancePeriodStat)(nil), // 2: tradingcopilot.v1.ExperimentInstancePeriodStat
-	(*ExperimentInstanceAction)(nil),     // 3: tradingcopilot.v1.ExperimentInstanceAction
-	(*ExperimentInstanceFill)(nil),       // 4: tradingcopilot.v1.ExperimentInstanceFill
+	(*ActionSizing)(nil),                 // 0: tradingcopilot.v1.ActionSizing
+	(*RunReport)(nil),                    // 1: tradingcopilot.v1.RunReport
+	(*InstanceMetrics)(nil),              // 2: tradingcopilot.v1.InstanceMetrics
+	(*ExperimentInstancePeriodStat)(nil), // 3: tradingcopilot.v1.ExperimentInstancePeriodStat
+	(*ExperimentInstanceAction)(nil),     // 4: tradingcopilot.v1.ExperimentInstanceAction
+	(*ExperimentInstanceFill)(nil),       // 5: tradingcopilot.v1.ExperimentInstanceFill
 }
 var file_tradingcopilot_v1_run_report_proto_depIdxs = []int32{
-	1, // 0: tradingcopilot.v1.RunReport.metrics:type_name -> tradingcopilot.v1.InstanceMetrics
-	2, // 1: tradingcopilot.v1.RunReport.period_stats:type_name -> tradingcopilot.v1.ExperimentInstancePeriodStat
-	3, // 2: tradingcopilot.v1.RunReport.actions:type_name -> tradingcopilot.v1.ExperimentInstanceAction
-	4, // 3: tradingcopilot.v1.RunReport.fills:type_name -> tradingcopilot.v1.ExperimentInstanceFill
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	2, // 0: tradingcopilot.v1.RunReport.metrics:type_name -> tradingcopilot.v1.InstanceMetrics
+	3, // 1: tradingcopilot.v1.RunReport.period_stats:type_name -> tradingcopilot.v1.ExperimentInstancePeriodStat
+	4, // 2: tradingcopilot.v1.RunReport.actions:type_name -> tradingcopilot.v1.ExperimentInstanceAction
+	5, // 3: tradingcopilot.v1.RunReport.fills:type_name -> tradingcopilot.v1.ExperimentInstanceFill
+	0, // 4: tradingcopilot.v1.RunReport.sizing:type_name -> tradingcopilot.v1.ActionSizing
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_tradingcopilot_v1_run_report_proto_init() }
@@ -165,7 +289,7 @@ func file_tradingcopilot_v1_run_report_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tradingcopilot_v1_run_report_proto_rawDesc), len(file_tradingcopilot_v1_run_report_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

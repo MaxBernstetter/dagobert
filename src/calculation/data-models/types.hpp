@@ -33,6 +33,9 @@ struct Action {
   std::string reason;
   double weight_pct{};
   double stop{};
+  double notional{};
+  double requested_risk_pct{};
+  double capped_risk_pct{};
 };
 
 struct Fill {

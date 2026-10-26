@@ -76,7 +76,7 @@ sizing::SizingConfig sizing_of(const Struct &root) {
 
 tradingcopilot::v1::RunEnvelope envelope_of(const Struct &root) {
   tradingcopilot::v1::RunEnvelope envelope;
-  envelope.set_schema_version(1);
+  envelope.set_schema_version(2);
   envelope.set_label("sma-cross");
   envelope.set_initial_quote(num(root, "initialQuote"));
   tradingcopilot::v1::MaCrossConfig config;
@@ -153,8 +153,7 @@ TEST(SmaCrossSizing, OrdersBelowMinOrderAreSkipped) {
   sizing::SizingConfig cfg = sizing_of(root);
   cfg.min_order_quote = 1e12;
   SmaCrossStrategy strategy{envelope_of(root),
-                            static_cast<std::int64_t>(num(root, "barMs")),
-                            cfg};
+                            static_cast<std::int64_t>(num(root, "barMs")), cfg};
   const StrategyResult got = strategy.calc_backtest(bars_of(root));
   EXPECT_TRUE(got.actions.empty());
   EXPECT_TRUE(got.fills.empty());

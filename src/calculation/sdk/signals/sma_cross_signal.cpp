@@ -43,6 +43,16 @@ SmaCrossSeries SmaCrossSignal::evaluate(const CloseSeries &fast,
   return mask;
 }
 
+namespace {
+
+void annotate_risk(Position &account, double spend, double equity, double atr,
+                   double price, const sizing::SizingConfig &sz) {
+  const sizing::RiskPct risk = sizing::risk_pct(spend, equity, atr, price, sz);
+  account.annotate_last_risk(risk.requested, risk.capped);
+}
+
+} // namespace
+
 std::vector<Action> SmaCrossSignal::actions_from(Position &account,
                                                  std::span<const Bar> bars,
                                                  const SmaCrossSeries &mask) {
@@ -123,6 +133,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
     }
     const double before = account.qty();
     account.buy_notional(bar, spend, stop, SmaCrossRule::golden_cross);
+    annotate_risk(account, spend, equity, atr, price, sz);
     units_.push_back({price, stop, account.qty() - before});
     return;
   }
@@ -183,6 +194,7 @@ void SmaCrossSignal::step_sized(Position &account, const Bar &bar,
                       units_.front().stop;
   const double before = account.qty();
   account.buy_notional(bar, spend, stop, SmaCrossRule::pyramid);
+  annotate_risk(account, spend, equity, atr, price, sz);
   for (sizing::Unit &u : units_) {
     u.stop += std::max(0.0, step);
   }

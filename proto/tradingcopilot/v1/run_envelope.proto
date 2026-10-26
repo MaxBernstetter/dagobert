@@ -4,7 +4,8 @@ package tradingcopilot.v1;
 
 import "google/protobuf/any.proto";
 
-// Inputs for a single C++ strategy run (protojson --config).
+// Inputs for a single C++ strategy run (protojson --config). Current
+// schema_version is 2.
 message RunEnvelope {
   uint32 schema_version = 1;
   string label = 2;

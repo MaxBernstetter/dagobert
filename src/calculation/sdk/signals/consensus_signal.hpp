@@ -99,6 +99,8 @@ private:
     double stop{};
     double raise_by{};
     double qty{};
+    double equity{};
+    double atr{};
   };
 
   [[nodiscard]] std::optional<ConsensusRule>

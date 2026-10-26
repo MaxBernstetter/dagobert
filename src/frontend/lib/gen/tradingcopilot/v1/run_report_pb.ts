@@ -14,10 +14,74 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tradingcopilot/v1/run_report.proto.
  */
 export const file_tradingcopilot_v1_run_report: GenFile = /*@__PURE__*/
-  fileDesc("CiJ0cmFkaW5nY29waWxvdC92MS9ydW5fcmVwb3J0LnByb3RvEhF0cmFkaW5nY29waWxvdC52MSKmAgoJUnVuUmVwb3J0EhYKDnNjaGVtYV92ZXJzaW9uGAEgASgNEg0KBWxhYmVsGAIgASgJEjMKB21ldHJpY3MYAyABKAsyIi50cmFkaW5nY29waWxvdC52MS5JbnN0YW5jZU1ldHJpY3MSRQoMcGVyaW9kX3N0YXRzGAQgAygLMi8udHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudEluc3RhbmNlUGVyaW9kU3RhdBI8CgdhY3Rpb25zGAUgAygLMisudHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudEluc3RhbmNlQWN0aW9uEjgKBWZpbGxzGAYgAygLMikudHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudEluc3RhbmNlRmlsbELbAQoVY29tLnRyYWRpbmdjb3BpbG90LnYxQg5SdW5SZXBvcnRQcm90b1ABWk1naXRodWIuY29tL01heEJlcm5zdGV0dGVyL2RhZ29iZXJ0L3NyYy9nZW4vdHJhZGluZ2NvcGlsb3QvdjE7dHJhZGluZ2NvcGlsb3R2MaICA1RYWKoCEVRyYWRpbmdjb3BpbG90LlYxygIRVHJhZGluZ2NvcGlsb3RcVjHiAh1UcmFkaW5nY29waWxvdFxWMVxHUEJNZXRhZGF0YeoCElRyYWRpbmdjb3BpbG90OjpWMWIGcHJvdG8z", [file_tradingcopilot_v1_experiment_activity, file_tradingcopilot_v1_experiment_instance]);
+  fileDesc("CiJ0cmFkaW5nY29waWxvdC92MS9ydW5fcmVwb3J0LnByb3RvEhF0cmFkaW5nY29waWxvdC52MSKdAQoMQWN0aW9uU2l6aW5nEhMKC2Jhcl9vcGVuX21zGAEgASgDEgwKBHNpZGUYAiABKAkSEAoIbm90aW9uYWwYAyABKAESEgoKc3RvcF9wcmljZRgEIAEoARIaChJyZXF1ZXN0ZWRfcmlza19wY3QYBSABKAESFwoPY2FwcGVkX3Jpc2tfcGN0GAYgASgBEg8KB3J1bGVfaWQYByABKAki1wIKCVJ1blJlcG9ydBIWCg5zY2hlbWFfdmVyc2lvbhgBIAEoDRINCgVsYWJlbBgCIAEoCRIzCgdtZXRyaWNzGAMgASgLMiIudHJhZGluZ2NvcGlsb3QudjEuSW5zdGFuY2VNZXRyaWNzEkUKDHBlcmlvZF9zdGF0cxgEIAMoCzIvLnRyYWRpbmdjb3BpbG90LnYxLkV4cGVyaW1lbnRJbnN0YW5jZVBlcmlvZFN0YXQSPAoHYWN0aW9ucxgFIAMoCzIrLnRyYWRpbmdjb3BpbG90LnYxLkV4cGVyaW1lbnRJbnN0YW5jZUFjdGlvbhI4CgVmaWxscxgGIAMoCzIpLnRyYWRpbmdjb3BpbG90LnYxLkV4cGVyaW1lbnRJbnN0YW5jZUZpbGwSLwoGc2l6aW5nGAcgAygLMh8udHJhZGluZ2NvcGlsb3QudjEuQWN0aW9uU2l6aW5nQtsBChVjb20udHJhZGluZ2NvcGlsb3QudjFCDlJ1blJlcG9ydFByb3RvUAFaTWdpdGh1Yi5jb20vTWF4QmVybnN0ZXR0ZXIvZGFnb2JlcnQvc3JjL2dlbi90cmFkaW5nY29waWxvdC92MTt0cmFkaW5nY29waWxvdHYxogIDVFhYqgIRVHJhZGluZ2NvcGlsb3QuVjHKAhFUcmFkaW5nY29waWxvdFxWMeICHVRyYWRpbmdjb3BpbG90XFYxXEdQQk1ldGFkYXRh6gISVHJhZGluZ2NvcGlsb3Q6OlYxYgZwcm90bzM", [file_tradingcopilot_v1_experiment_activity, file_tradingcopilot_v1_experiment_instance]);
 
 /**
- * Binary stdout payload from a strategy backtest run.
+ * Sizing output of one action (docs/v2/features/position-sizing.md). Present
+ * only when the run's config set `sizing`.
+ *
+ * @generated from message tradingcopilot.v1.ActionSizing
+ */
+export type ActionSizing = Message<"tradingcopilot.v1.ActionSizing"> & {
+  /**
+   * Identifies the action: same bar and side as the entry in `actions`.
+   *
+   * @generated from field: int64 bar_open_ms = 1;
+   */
+  barOpenMs: bigint;
+
+  /**
+   * @generated from field: string side = 2;
+   */
+  side: string;
+
+  /**
+   * Quote value of the order (qty * price).
+   *
+   * @generated from field: double notional = 3;
+   */
+  notional: number;
+
+  /**
+   * Stop price of a buy; 0 for sells.
+   *
+   * @generated from field: double stop_price = 4;
+   */
+  stopPrice: number;
+
+  /**
+   * Configured risk per unit, percent of equity; 0 for sells.
+   *
+   * @generated from field: double requested_risk_pct = 5;
+   */
+  requestedRiskPct: number;
+
+  /**
+   * Risk the notional carries at its stop after the weight cap, percent of
+   * equity; 0 for sells.
+   *
+   * @generated from field: double capped_risk_pct = 6;
+   */
+  cappedRiskPct: number;
+
+  /**
+   * Rule that produced the action (golden_cross, atr_stop, pyramid, ...).
+   *
+   * @generated from field: string rule_id = 7;
+   */
+  ruleId: string;
+};
+
+/**
+ * Describes the message tradingcopilot.v1.ActionSizing.
+ * Use `create(ActionSizingSchema)` to create a new message.
+ */
+export const ActionSizingSchema: GenMessage<ActionSizing> = /*@__PURE__*/
+  messageDesc(file_tradingcopilot_v1_run_report, 0);
+
+/**
+ * Binary stdout payload from a strategy backtest run. schema_version 2 adds
+ * `sizing`; the executables accept only the current version.
  *
  * @generated from message tradingcopilot.v1.RunReport
  */
@@ -51,6 +115,14 @@ export type RunReport = Message<"tradingcopilot.v1.RunReport"> & {
    * @generated from field: repeated tradingcopilot.v1.ExperimentInstanceFill fills = 6;
    */
   fills: ExperimentInstanceFill[];
+
+  /**
+   * One entry per action, in order, when `sizing` is configured; empty
+   * otherwise.
+   *
+   * @generated from field: repeated tradingcopilot.v1.ActionSizing sizing = 7;
+   */
+  sizing: ActionSizing[];
 };
 
 /**
@@ -58,5 +130,5 @@ export type RunReport = Message<"tradingcopilot.v1.RunReport"> & {
  * Use `create(RunReportSchema)` to create a new message.
  */
 export const RunReportSchema: GenMessage<RunReport> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_run_report, 0);
+  messageDesc(file_tradingcopilot_v1_run_report, 1);
 

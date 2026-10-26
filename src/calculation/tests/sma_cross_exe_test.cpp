@@ -25,7 +25,7 @@ struct BinaryRun {
 };
 
 std::string config_json(const std::string &label, double quote,
-                        int schema_version = 1,
+                        int schema_version = 2,
                         const std::string &sizing = "") {
   return R"({"schemaVersion":)" + std::to_string(schema_version) +
          R"(,"label":")" + label +
@@ -71,6 +71,8 @@ TEST(SmaCrossExe, RoundTripWritesReport) {
   tradingcopilot::v1::RunReport report;
   ASSERT_TRUE(report.ParseFromString(run.out));
   EXPECT_EQ(report.label(), "sma-cross");
+  EXPECT_EQ(report.schema_version(), 2U);
+  EXPECT_EQ(report.sizing_size(), 0);
   ASSERT_GE(report.fills_size(), 2);
   EXPECT_EQ(report.fills(0).side(), "buy");
   EXPECT_EQ(report.fills(report.fills_size() - 1).side(), "sell");
@@ -89,6 +91,10 @@ TEST(SmaCrossExe, NonPositiveQuoteExits2) {
 
 TEST(SmaCrossExe, UnknownSchemaVersionExits2) {
   EXPECT_EQ(run_binary(config_json("sma-cross", 1000.0, 9)).exit_code, 2);
+}
+
+TEST(SmaCrossExe, PreviousSchemaVersionExits2) {
+  EXPECT_EQ(run_binary(config_json("sma-cross", 1000.0, 1)).exit_code, 2);
 }
 
 TEST(SmaCrossExe, MalformedConfigExits2) {
@@ -110,7 +116,7 @@ std::string long_range(std::string cfg) {
 
 TEST(SmaCrossExe, SizedRunOpensStopsOutAndCloses) {
   const BinaryRun run =
-      run_binary(long_range(config_json("sma-cross", 1000.0, 1,
+      run_binary(long_range(config_json("sma-cross", 1000.0, 2,
                                         R"({"unitRiskPct":0.25})")),
                  true, kLongLake);
   ASSERT_EQ(run.exit_code, 0);
@@ -121,6 +127,20 @@ TEST(SmaCrossExe, SizedRunOpensStopsOutAndCloses) {
   EXPECT_EQ(report.fills(0).side(), "buy");
   // Risk-sized: the first buy spends less than the whole book.
   EXPECT_LT(report.fills(0).qty() * report.fills(0).price(), 1000.0);
+  ASSERT_EQ(report.sizing_size(), report.actions_size());
+  for (int i = 0; i < report.sizing_size(); ++i) {
+    const auto &sz = report.sizing(i);
+    EXPECT_EQ(sz.bar_open_ms(), report.actions(i).bar_open_ms());
+    EXPECT_EQ(sz.rule_id(), report.actions(i).reason());
+    EXPECT_GT(sz.notional(), 0.0);
+  }
+  const auto &buy = report.sizing(0);
+  EXPECT_NEAR(buy.notional(), report.fills(0).qty() * report.fills(0).price(),
+              1e-6);
+  EXPECT_LT(buy.stop_price(), report.fills(0).price());
+  EXPECT_DOUBLE_EQ(buy.requested_risk_pct(), 0.25);
+  EXPECT_GT(buy.capped_risk_pct(), 0.0);
+  EXPECT_LE(buy.capped_risk_pct(), buy.requested_risk_pct() + 1e-9);
   std::set<std::string> reasons;
   for (const auto &action : report.actions()) {
     reasons.insert(action.reason());
@@ -132,7 +152,7 @@ TEST(SmaCrossExe, SizedAndUnsizedRunsDiffer) {
   const BinaryRun plain =
       run_binary(long_range(config_json("sma-cross", 1000.0)), true, kLongLake);
   const BinaryRun sized =
-      run_binary(long_range(config_json("sma-cross", 1000.0, 1,
+      run_binary(long_range(config_json("sma-cross", 1000.0, 2,
                                         R"({"unitRiskPct":0.25})")),
                  true, kLongLake);
   ASSERT_EQ(plain.exit_code, 0);
@@ -142,7 +162,7 @@ TEST(SmaCrossExe, SizedAndUnsizedRunsDiffer) {
 
 TEST(SmaCrossExe, InvalidSizingExits2) {
   const BinaryRun run =
-      run_binary(config_json("sma-cross", 1000.0, 1, R"({"unitRiskPct":3})"));
+      run_binary(config_json("sma-cross", 1000.0, 2, R"({"unitRiskPct":3})"));
   EXPECT_EQ(run.exit_code, 2);
   EXPECT_TRUE(run.out.empty());
 }

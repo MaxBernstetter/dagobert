@@ -31,7 +31,7 @@ std::vector<Bar> fixture_bars() {
 }
 
 void fill_ma_cross_envelope(tradingcopilot::v1::RunEnvelope &envelope) {
-  envelope.set_schema_version(1);
+  envelope.set_schema_version(2);
   envelope.set_label("sma-cross");
   envelope.set_initial_quote(1000.0);
 

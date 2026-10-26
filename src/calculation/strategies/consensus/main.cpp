@@ -1,6 +1,8 @@
 #include "bars_parquet.hpp"
 #include "consensus_strategy.hpp"
 
+#include "sizing_proto.hpp"
+
 #include "tradingcopilot/v1/run_report.pb.h"
 
 #include <google/protobuf/util/json_util.h>
@@ -95,13 +97,16 @@ int main(int argc, char **argv) {
     fail(kExitRunFailed, "no bars in range");
   }
 
-  dagobert::ConsensusStrategy strategy(
-      envelope, bars.front().duration_ms,
-      dagobert::ConsensusStrategy::sizing_of(envelope));
+  const auto sizing = dagobert::ConsensusStrategy::sizing_of(envelope);
+  dagobert::ConsensusStrategy strategy(envelope, bars.front().duration_ms,
+                                       sizing);
   const dagobert::StrategyResult result = strategy.calc_backtest(bars);
 
   tradingcopilot::v1::RunReport report;
   fill_report(result, envelope, envelope.to_ms() - envelope.from_ms(), report);
+  if (sizing.has_value()) {
+    dagobert::write_sizing_output(result.actions, report);
+  }
   if (!report.SerializeToOstream(&std::cout)) {
     fail(kExitRunFailed, "cannot write report");
   }

@@ -15,7 +15,8 @@ export const file_tradingcopilot_v1_run_envelope: GenFile = /*@__PURE__*/
   fileDesc("CiR0cmFkaW5nY29waWxvdC92MS9ydW5fZW52ZWxvcGUucHJvdG8SEXRyYWRpbmdjb3BpbG90LnYxIsEBCgtSdW5FbnZlbG9wZRIWCg5zY2hlbWFfdmVyc2lvbhgBIAEoDRINCgVsYWJlbBgCIAEoCRIQCghwcm92aWRlchgDIAEoCRIMCgRiYXNlGAQgASgJEg0KBXF1b3RlGAUgASgJEg8KB2Zyb21fbXMYBiABKAMSDQoFdG9fbXMYByABKAMSFQoNaW5pdGlhbF9xdW90ZRgIIAEoARIlCgdwYXlsb2FkGAkgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueULdAQoVY29tLnRyYWRpbmdjb3BpbG90LnYxQhBSdW5FbnZlbG9wZVByb3RvUAFaTWdpdGh1Yi5jb20vTWF4QmVybnN0ZXR0ZXIvZGFnb2JlcnQvc3JjL2dlbi90cmFkaW5nY29waWxvdC92MTt0cmFkaW5nY29waWxvdHYxogIDVFhYqgIRVHJhZGluZ2NvcGlsb3QuVjHKAhFUcmFkaW5nY29waWxvdFxWMeICHVRyYWRpbmdjb3BpbG90XFYxXEdQQk1ldGFkYXRh6gISVHJhZGluZ2NvcGlsb3Q6OlYxYgZwcm90bzM", [file_google_protobuf_any]);
 
 /**
- * Inputs for a single C++ strategy run (protojson --config).
+ * Inputs for a single C++ strategy run (protojson --config). Current
+ * schema_version is 2.
  *
  * @generated from message tradingcopilot.v1.RunEnvelope
  */

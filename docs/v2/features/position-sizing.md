@@ -7,7 +7,7 @@ status: specified
 
 # Position sizing
 
-Status: specified. ma-cross and signal-consensus apply this when `sizing` is configured. A buy still deploys one target weight of the book, and a sell still exits the whole position. The C++ `SmaCrossSignal`/`SmaCrossStrategy` run the same flow when given a `SizingConfig` (checked against recorded Go output in `sma_cross_sizing_test.cpp`). Both strategy executables (`strategy-sma-cross`, `strategy-signal-consensus`) read the optional `sizing` block of their payload (proto `Sizing`, every field optional); an invalid value exits 2, and without it the run is unchanged.
+Status: specified. ma-cross and signal-consensus apply this when `sizing` is configured. A buy still deploys one target weight of the book, and a sell still exits the whole position. The C++ `SmaCrossSignal`/`SmaCrossStrategy` run the same flow when given a `SizingConfig` (checked against recorded Go output in `sma_cross_sizing_test.cpp`). Both strategy executables (`strategy-sma-cross`, `strategy-signal-consensus`) read the optional `sizing` block of their payload (proto `Sizing`, every field optional); an invalid value exits 2, and without it the run is unchanged. With `sizing` set, `RunReport.sizing` (proto `ActionSizing`, `schema_version` 2) carries one entry per action: notional, stop price, requested and capped risk percent (of equity) and the rule id; sells carry notional and rule only. Without `sizing` the list is empty and the run differs only by the bumped `schema_version`.
 
 ## Aim
 
