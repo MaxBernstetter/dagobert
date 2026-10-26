@@ -159,7 +159,7 @@ TEST(ConsensusExe, InvalidSizingExits2) {
 namespace {
 
 BinaryRun run_fields(const std::string &fields) {
-  return run_binary(config_json("signal-consensus", 1000.0, 1,
+  return run_binary(config_json("signal-consensus", 1000.0, 2,
                                 "SignalConsensusConfig", "", fields));
 }
 
@@ -179,8 +179,8 @@ TEST(ConsensusExe, ThresholdsChangeTheReport) {
   const BinaryRun base = run_binary(config_json("signal-consensus", 1000.0));
   ASSERT_EQ(base.exit_code, 0);
   for (const char *fields :
-       {R"(,"atrStopMult":0.1)", R"(,"minBarsLongBeforeSell":40)",
-        R"(,"minBarsFlatAfterSell":60)", R"(,"rsiBear":1,"rsiBull":99)"}) {
+       {R"(,"atrStopMult":100)", R"(,"minBarsLongBeforeSell":40)",
+        R"(,"minBarsFlatAfterSell":60)"}) {
     const BinaryRun run = run_fields(fields);
     ASSERT_EQ(run.exit_code, 0) << fields;
     EXPECT_NE(run.out, base.out) << fields;

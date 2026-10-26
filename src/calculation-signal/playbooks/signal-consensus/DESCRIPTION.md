@@ -35,6 +35,18 @@ Uses the default Experiment Suite aggregation (`AGGREGATION_DURATION_MS` unset â
 
 Thresholds (`rsiBull` / `rsiBear`, volume ratios, ATR stop mult, cooldowns) are runtime `StrategyConfig` for Experiment Suite.
 
+| Config field | Default | Valid range |
+|--------------|---------|-------------|
+| `rsiBull` | 52 | (0,100], above `rsiBear` |
+| `rsiBear` | 48 | [0,100) |
+| `volRatioBull` | 1.10 | positive, above `volRatioBear` |
+| `volRatioBear` | 0.85 | positive |
+| `atrStopMult` | 2.5 | positive |
+| `minBarsFlatAfterSell` | 8 | 0 or more |
+| `minBarsLongBeforeSell` | 4 | 0 or more |
+
+The C++ executable (`SignalConsensusConfig`) reads the same fields; an unset (zero) proto field takes the default and an invalid value exits 2. The SMA hours (12/24/48) and the ATR window (24h) are fixed.
+
 ## Position sizing
 
 Optional `sizing` config applies [Position sizing](/wiki/playbooks/position-sizing). Without it the rules above are unchanged: one target weight in, the whole position out. Rules stay at v10; the config JSON is part of the playbook hash, so sized runs have their own identity.
