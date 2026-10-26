@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: Sortino
 unit: ratio
 format: decimal
+order: 5
 ---
 
 ## Definition

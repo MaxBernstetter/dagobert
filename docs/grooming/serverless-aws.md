@@ -12,7 +12,7 @@ Run **experiments** without a live candle clock: Floci locally for AWS services 
 | Experiment compute | Docker / batched workers; SFN+Lambda scaffolding | Batched Lambda Map + Fargate Spot long tail |
 | UI | Next BFF (interim) → Vite SPA | Static SPA + Experiment API |
 
-Detail for Atlas smells/spike: [`atlas-schema.md`](atlas-schema.md). Why not host *jobs* on Supabase: [`deploy-supabase.md`](deploy-supabase.md). API list shape: [`experiment-api-scale.md`](experiment-api-scale.md).
+Detail for Atlas smells/spike: [`atlas-schema.md`](atlas-schema.md). Why not host *jobs* on Supabase: see Out of scope below. API list shape: [`experiment-api-scale.md`](experiment-api-scale.md).
 
 ### Live candle pipeline — out of scope
 
@@ -222,7 +222,7 @@ task db:migrate
 ## Out of scope
 
 - AWS RDS (use Compose + Supabase Free)
-- Hosting jobs or primary lake on Supabase
+- Hosting jobs or primary lake on Supabase. Edge Functions are Deno workers (256 MB, 2 s CPU per request, 150 s wall clock on Free, 400 s paid) and cannot run a Docker image. `pg_cron` fires SQL or HTTP only: no state machine, no per-stage retry. Storage speaks a subset of S3 and is not the Floci endpoint the jobs use. Supabase is used for Postgres only; its Pro floor ($25/month) also outweighs the write volume of the live pipeline.
 - OpenNext / Next as long-term server
 - Live candle pipeline migration
 - Lowering 20k cap

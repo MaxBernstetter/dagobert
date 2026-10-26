@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: vs B&H
 unit: ratio
 format: percent-pts
+order: 4
 ---
 
 ## Definition

@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: Max DD
 unit: ratio
 format: percent
+order: 2
 ---
 
 ## Definition

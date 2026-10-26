@@ -5,6 +5,7 @@ kind: strategy-kpi
 label: Sharpe
 unit: ratio
 format: decimal
+order: 3
 ---
 
 ## Definition
