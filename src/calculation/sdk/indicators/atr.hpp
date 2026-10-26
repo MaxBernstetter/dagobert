@@ -3,11 +3,14 @@
 #include "types.hpp"
 
 #include <cstddef>
+#include <deque>
 #include <optional>
 #include <vector>
 
 namespace dagobert {
 
+// Average true range as the Go technical-indicator job computes it: the simple
+// mean of the last `period` true ranges (no Wilder smoothing).
 class ATR {
 public:
   explicit ATR(std::size_t period_bars);
@@ -26,10 +29,7 @@ private:
   std::size_t period_;
   bool has_prev_close_{false};
   double prev_close_{0.0};
-  bool initialized_{false};
-  double prev_atr_{0.0};
-  double tr_sum_{0.0};
-  std::size_t tr_count_{0U};
+  std::deque<double> trs_;
 };
 
 } // namespace dagobert

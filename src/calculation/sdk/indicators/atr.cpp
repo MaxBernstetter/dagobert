@@ -28,32 +28,21 @@ Column apply_atr(const std::vector<double> &high,
     return output;
   }
 
-  bool initialized = false;
-  double prev_atr = 0.0;
+  // Simple mean of the last `period` true ranges (the Go technical-indicator
+  // job's definition; there is no Wilder smoothing).
   double tr_sum = 0.0;
-  std::size_t tr_count = 0U;
-  const double period_d = static_cast<double>(period);
-
   for (std::size_t i = 1; i < count; ++i) {
-    const double tr = true_range(high[i], low[i], close.samples[i - 1U]);
-    if (!initialized) {
-      tr_sum += tr;
-      ++tr_count;
-      if (tr_count < period) {
-        continue;
-      }
-      prev_atr = tr_sum / period_d;
-      initialized = true;
-      output.ready[i] = close.ready[i];
-      if (output.ready[i]) {
-        output.samples[i] = prev_atr;
-      }
+    tr_sum += true_range(high[i], low[i], close.samples[i - 1U]);
+    if (i > period) {
+      const std::size_t old = i - period;
+      tr_sum -= true_range(high[old], low[old], close.samples[old - 1U]);
+    }
+    if (i < period) {
       continue;
     }
-    prev_atr = ((prev_atr * (period_d - 1.0)) + tr) / period_d;
     output.ready[i] = close.ready[i];
     if (output.ready[i]) {
-      output.samples[i] = prev_atr;
+      output.samples[i] = tr_sum / static_cast<double>(period);
     }
   }
   return output;
@@ -83,29 +72,24 @@ std::optional<double> ATR::push(double high, double low, double close) {
   const double tr = true_range(high, low, prev_close_);
   prev_close_ = close;
 
-  if (!initialized_) {
-    tr_sum_ += tr;
-    ++tr_count_;
-    if (tr_count_ < period_) {
-      return std::nullopt;
-    }
-    prev_atr_ = tr_sum_ / static_cast<double>(period_);
-    initialized_ = true;
-    return prev_atr_;
+  trs_.push_back(tr);
+  if (trs_.size() > period_) {
+    trs_.pop_front();
   }
-
-  const double period_d = static_cast<double>(period_);
-  prev_atr_ = ((prev_atr_ * (period_d - 1.0)) + tr) / period_d;
-  return prev_atr_;
+  if (trs_.size() < period_) {
+    return std::nullopt;
+  }
+  double sum = 0.0;
+  for (const double v : trs_) {
+    sum += v;
+  }
+  return sum / static_cast<double>(period_);
 }
 
 void ATR::reset() {
   has_prev_close_ = false;
   prev_close_ = 0.0;
-  initialized_ = false;
-  prev_atr_ = 0.0;
-  tr_sum_ = 0.0;
-  tr_count_ = 0U;
+  trs_.clear();
 }
 
 } // namespace dagobert

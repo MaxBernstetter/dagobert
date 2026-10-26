@@ -98,11 +98,14 @@ func compareJSON(t *testing.T, path string, a, b any, tol float64) {
 // TestSmaCrossGoVsCppEquivalence runs the same ma-cross configs on the Go experiment path and on
 // the C++ sweep -> actions -> ReplayKPI path over one seeded lake. Fills must match in
 // timestamp/side (exact) and qty/price (1e-9), instance KPIs within 1e-6.
+// Sized configs are covered too: the C++ ATR is the simple mean of the last n true ranges, like Go.
 //
-// Known gap, not covered here: sized configs ("sizing") do not match. The Go ATR indicator is the
-// simple mean of the last n true ranges of a 16-bar window, the C++ ATR is Wilder-smoothed over
-// all loaded bars, so sized notionals differ by a few tenths of a percent (first sized buy:
-// 33227 vs 33131 after rescaling). Unsized configs are bit-compatible.
+// Known gap, not covered: sized configs that fire "vol_cut" or "pyramid" (maxUnits > 1 or a heat
+// breach). The replay rescales C++ amounts linearly by goWalletEquity/cppEquity (planReplay), but
+// those two rules size from held base and equity affinely (cut = held - equity*heat/dist), so
+// the small held/equity drift between the fee-paying Go wallet and the C++ account is amplified
+// (first mismatches: 0.0197049 vs 0.01893767 cut; 0.97384805 vs 0.97489129 pyramid buy).
+// Entries, ATR stops and death-cross exits match to 1e-9.
 func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 	bin := cppBinary(t)
 	_ = os.Setenv("VENUE_SIMULATE", "1")
@@ -152,6 +155,8 @@ func TestSmaCrossGoVsCppEquivalence(t *testing.T) {
 	configs := []string{
 		`{"fastHr":12,"slowHr":48}`,
 		`{"fastHr":3,"slowHr":6}`,
+		`{"fastHr":12,"slowHr":48,"sizing":{"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
+		`{"fastHr":6,"slowHr":12,"sizing":{"unitRiskPct":1,"heatPct":2,"stopAtrMult":0.5,"maxUnits":1}}`,
 	}
 	items := make([]SweepItemSpec, len(configs))
 	for i, c := range configs {

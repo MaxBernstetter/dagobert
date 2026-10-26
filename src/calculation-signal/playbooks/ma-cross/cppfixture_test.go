@@ -89,21 +89,18 @@ func TestWriteCppSizingFixture(t *testing.T) {
 		}
 		atrAt := make([]float64, count)
 		atrOK := make([]bool, count)
-		var atr, trSum float64
-		trN := 0
+		// The indicator job's ATR: simple mean of the last atrBar true ranges.
+		trs := make([]float64, count)
 		for i := 1; i < count; i++ {
-			tr := math.Max(bars[i].High-bars[i].Low, math.Max(math.Abs(bars[i].High-bars[i-1].Close), math.Abs(bars[i].Low-bars[i-1].Close)))
-			if trN < atrBar {
-				trSum += tr
-				trN++
-				if trN < atrBar {
-					continue
-				}
-				atr = trSum / atrBar
-			} else {
-				atr = (atr*(atrBar-1) + tr) / atrBar
+			trs[i] = math.Max(bars[i].High-bars[i].Low, math.Max(math.Abs(bars[i].High-bars[i-1].Close), math.Abs(bars[i].Low-bars[i-1].Close)))
+			if i < atrBar {
+				continue
 			}
-			atrAt[i], atrOK[i] = atr, true
+			var sum float64
+			for j := i - atrBar + 1; j <= i; j++ {
+				sum += trs[j]
+			}
+			atrAt[i], atrOK[i] = sum/atrBar, true
 		}
 		results := func(i int) []kpi.Result {
 			var res []kpi.Result
