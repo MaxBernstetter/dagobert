@@ -15,3 +15,10 @@ System tests, audit, and HTTP checks: [04-coding-principles](04-coding-principle
 
 ### Agent harness
 Which model does what in agentic development: [03-agent-harness](03-agent-harness.md)
+
+
+### Coding principles, benchmark and contracts
+[04-coding-principles](04-coding-principles.md): job containers, system tests, audit. [05-cpp-benchmark](05-cpp-benchmark.md): C++ versus Go benchmark. [protobuf](protobuf.md): protobuf and Buf contracts.
+
+### Running things locally
+[run-backtest](run-backtest.md): run a backtest or experiment. [seed-demo-year](seed-demo-year.md): seed one year of demo history.
