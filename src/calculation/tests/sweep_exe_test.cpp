@@ -182,6 +182,14 @@ void check_three_configs(const Strategy &s,
     }
   }
   EXPECT_TRUE(any_sized_fields);
+  // A vol_cut, when one fires, always carries the heat budget for the replay.
+  for (const auto &report : reports) {
+    for (const auto &action : report.actions()) {
+      if (action.reason() == "vol_cut") {
+        EXPECT_GT(action.heat_base_per_equity(), 0.0);
+      }
+    }
+  }
 }
 
 void check_invalid_item(const Strategy &s) {
