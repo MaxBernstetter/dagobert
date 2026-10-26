@@ -1,3 +1,4 @@
+#include "bars_aggregate.hpp"
 #include "bars_parquet.hpp"
 #include "consensus_strategy.hpp"
 
@@ -18,6 +19,8 @@ namespace {
 
 constexpr int kExitRunFailed = 1;
 constexpr int kExitUsage = 2;
+// Decision bar of the Go playbook (AGGREGATION_DURATION_MS default).
+constexpr std::int64_t kBarDurationMs = 10'800'000;
 
 [[noreturn]] void fail(int code, const std::string &message) {
   std::cerr << message << '\n';
@@ -96,10 +99,22 @@ int main(int argc, char **argv) {
   if (bars.empty()) {
     fail(kExitRunFailed, "no bars in range");
   }
+  // The lake holds source candles (1h); the playbook decides on 3h bars built
+  // from them. The candle interval is the smallest spacing in the range.
+  std::int64_t source_interval_ms = bars.front().duration_ms;
+  for (const dagobert::Bar &bar : bars) {
+    if (bar.duration_ms > 0 && bar.duration_ms < source_interval_ms) {
+      source_interval_ms = bar.duration_ms;
+    }
+  }
+  bars = dagobert::aggregate_bars(bars, source_interval_ms, kBarDurationMs);
+  if (bars.empty()) {
+    fail(kExitRunFailed, "no complete 3h bars in range");
+  }
 
   const auto sizing = dagobert::ConsensusStrategy::sizing_of(envelope);
   dagobert::ConsensusStrategy strategy(
-      envelope, bars.front().duration_ms, sizing,
+      envelope, kBarDurationMs, sizing,
       dagobert::ConsensusStrategy::params_of(envelope));
   const dagobert::StrategyResult result = strategy.calc_backtest(bars);
 

@@ -6,7 +6,7 @@ add_executable(dagobert-tests magic_enum_test.cpp quote_test.cpp position_test.c
                                    bars_parquet_test.cpp sizing_test.cpp
                                    sma_cross_exe_test.cpp sma_cross_sizing_test.cpp
                                    consensus_strategy_test.cpp
-                                   consensus_exe_test.cpp)
+                                   consensus_exe_test.cpp consensus_equivalence_test.cpp)
 target_include_directories(
   dagobert-tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../data-models
@@ -44,4 +44,5 @@ target_compile_definitions(
 target_compile_definitions(
   dagobert-tests
   PRIVATE CONSENSUS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_sizing.json"
-          CONSENSUS_PARAMS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_params.json")
+          CONSENSUS_PARAMS_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_params.json"
+          CONSENSUS_EQUIVALENCE_FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/consensus_equivalence.json")

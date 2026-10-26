@@ -1,11 +1,8 @@
 #pragma once
 
-#include "atr.hpp"
+#include "consensus_features.hpp"
 #include "consensus_signal.hpp"
-#include "macd.hpp"
 #include "position.hpp"
-#include "rsi.hpp"
-#include "sma.hpp"
 #include "strategy.hpp"
 
 #include "tradingcopilot/v1/run_envelope.pb.h"
@@ -14,6 +11,9 @@ namespace dagobert {
 
 class ConsensusStrategy : public Strategy {
 public:
+  // Bars are the Go playbook's decision bars: 3h aggregates of the lake
+  // candles with their sub-bar closes (aggregate_bars). The indicator
+  // definitions are the technical-indicator job's (ConsensusFeatures).
   // With `sizing` the entry, stop, vol_cut and pyramid flow runs in backtest
   // and live alike; without it, buy_all/sell_all.
   explicit ConsensusStrategy(
@@ -37,13 +37,7 @@ public:
   void reset() override;
 
 private:
-  SMA signal_;
-  SMA regime_;
-  SMA macro_;
-  RSI rsi_;
-  SMA vol_mean_;
-  ATR atr_;
-  MACD macd_;
+  ConsensusFeatures features_;
   ConsensusParams params_;
   std::optional<sizing::SizingConfig> sizing_;
   ConsensusSignal consensus_;

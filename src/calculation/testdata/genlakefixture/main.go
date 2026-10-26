@@ -53,46 +53,60 @@ func main() {
 		rows = append(rows, candle{open, c, c, c, c, "1", open + intervalMs - 1})
 	}
 	writeLake("lake_roundtrip", rows)
-	writeLake("lake_consensus", consensusRows(openMs, intervalMs))
+	writeLakeInterval("lake_consensus", consensusRows(openMs), 3600000)
 }
 
-// consensusRows is a 56-bar convex uptrend with dips. It trips consensus_buy at
-// bar 19 (MACD histogram not ready yet), consensus_sell at 24, a second buy at
-// 47 (first recovery after the eight-bar cooldown with a positive histogram)
-// and atr_stop at 51, where the price is already below its 12h mean.
-func consensusRows(openMs, intervalMs int64) []candle {
+// consensusRows is the 56-bar convex uptrend with dips as 168 hourly candles, the
+// source interval of the real lake. The strategy aggregates them to 3h bars whose
+// closes are the path below; inside a bar the hourly closes move evenly from the
+// previous bar close, so rsi-3h reads 100 on rising bars and 0 on falling ones.
+// It trips consensus_buy, consensus_sell and atr_stop (see consensus_exe_test.cpp).
+func consensusRows(openMs int64) []candle {
+	const hourMs int64 = 3600000
 	dips := map[int]float64{
 		12: 4, 18: 4, 24: 4, 30: 4, 36: 4, 42: 4,
 		46: 6, 48: 14, 49: 20, 50: 20, 51: 60, 52: 60, 53: 60, 54: 60, 55: 60,
 	}
+	barClose := func(i int) float64 {
+		return 100 + float64(i) + 0.015*float64(i*i) - dips[i]
+	}
 	var rows []candle
+	prev := barClose(0)
 	for i := 0; i < 56; i++ {
-		c := 100 + float64(i) + 0.015*float64(i*i) - dips[i]
-		open := openMs + int64(i)*intervalMs
-		rows = append(rows, candle{
-			open, fmtF(c), fmtF(c + 0.5), fmtF(c - 0.5), fmtF(c), "1",
-			open + intervalMs - 1,
-		})
+		end := barClose(i)
+		for k := 0; k < 3; k++ {
+			c := prev + (end-prev)*float64(k+1)/3
+			open := openMs + (int64(i)*3+int64(k))*hourMs
+			rows = append(rows, candle{
+				open, fmtF(prev), fmtF(math.Max(prev, c) + 0.5), fmtF(math.Min(prev, c) - 0.5), fmtF(c), "1",
+				open + hourMs - 1,
+			})
+			prev = c
+		}
 	}
 	return rows
 }
 
 func fmtF(v float64) string { return strconv.FormatFloat(v, 'f', 2, 64) }
 
-func writeLake(name string, rows []candle) {
+func writeLake(name string, rows []candle) { writeLakeInterval(name, rows, 10800000) }
+
+func writeLakeInterval(name string, rows []candle, intervalMs int64) {
 	out := filepath.Join("src", "calculation", "tests", "fixtures", name,
 		"parquet", "provider=demo", "base=BTC", "quote=USDT", "year=2024",
 		"candles.parquet")
-	writeFile(out, rows)
+	writeFileInterval(out, rows, intervalMs)
 }
 
-func writeFile(out string, rows []candle) {
+func writeFile(out string, rows []candle) { writeFileInterval(out, rows, 10800000) }
+
+func writeFileInterval(out string, rows []candle, intervalMs int64) {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		panic(err)
 	}
 	if err := parquet.WriteFile(out, rows,
 		parquet.KeyValueMetadata("trading_copilot.schema_version", "1"),
-		parquet.KeyValueMetadata("trading_copilot.interval_ms", "10800000"),
+		parquet.KeyValueMetadata("trading_copilot.interval_ms", strconv.FormatInt(intervalMs, 10)),
 		parquet.KeyValueMetadata("trading_copilot.data_source", "binance"),
 	); err != nil {
 		panic(err)

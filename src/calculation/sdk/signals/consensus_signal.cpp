@@ -53,7 +53,8 @@ ConsensusSeries ConsensusSignal::evaluate(const ConsensusColumns &in,
         i >= volume.size() || i >= macd.size() || i >= stop.size()) {
       break;
     }
-    const bool valid = in.close.ready[i] && at(in.signal, i) && at(in.rsi, i);
+    const bool valid = in.close.ready[i] && at(in.signal, i) && at(in.rsi, i) &&
+                       (in.prior == nullptr || (*in.prior)[i]);
     out.gate[i] = combine(cross[i], trend[i], macd[i], momentum[i], volume[i],
                           stop[i], valid, at(in.atr, i));
   }
@@ -187,7 +188,7 @@ std::optional<ConsensusRule> ConsensusSignal::apply(const ConsensusSample &in,
   const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean, params_);
   const bool macd = MacdSign::apply(in.hist, momentum);
   const bool stop = AtrStop::apply(in.close, in.signal, in.atr, params_);
-  const bool valid = in.signal.has_value() && in.rsi.has_value();
+  const bool valid = in.signal.has_value() && in.rsi.has_value() && in.prior;
   return decide(
       combine(cross, trend, macd, momentum, volume, stop, valid, in.atr),
       in.close, 0.0, flat);
@@ -201,7 +202,7 @@ std::optional<ConsensusRule> ConsensusSignal::apply(const ConsensusSample &in,
   const Vote volume = VolumeRatio::apply(in.volume, in.vol_mean, params_);
   const bool macd = MacdSign::apply(in.hist, momentum);
   const bool stop = AtrStop::apply(in.close, in.signal, in.atr, params_);
-  const bool valid = in.signal.has_value() && in.rsi.has_value();
+  const bool valid = in.signal.has_value() && in.rsi.has_value() && in.prior;
   return decide(
       combine(cross, trend, macd, momentum, volume, stop, valid, in.atr),
       in.close, account.equity(in.close), account.flat());

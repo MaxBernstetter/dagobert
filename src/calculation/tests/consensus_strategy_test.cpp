@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "bars_aggregate.hpp"
 #include "bars_parquet.hpp"
 #include "consensus_strategy.hpp"
 
@@ -17,8 +18,11 @@ constexpr std::int64_t kFromMs = 1'704'067'200'000;
 std::vector<Bar> fixture_bars() {
   const auto lake = std::filesystem::path(__FILE__).parent_path() / "fixtures" /
                     "lake_consensus";
-  return load_bars_from_lake(lake.string(), "demo", "BTC", "USDT", kFromMs,
-                             kFromMs + 64 * kBarDurationMs);
+  // The lake holds 1h candles; the strategy decides on their 3h aggregates.
+  const std::vector<Bar> candles =
+      load_bars_from_lake(lake.string(), "demo", "BTC", "USDT", kFromMs,
+                          kFromMs + 64 * kBarDurationMs);
+  return aggregate_bars(candles, 3'600'000, kBarDurationMs);
 }
 
 tradingcopilot::v1::RunEnvelope envelope() {

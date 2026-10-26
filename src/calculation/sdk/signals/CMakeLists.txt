@@ -1,5 +1,5 @@
 add_library(dagobert_signals STATIC sma_cross_signal.cpp consensus_gates.cpp
-                                  consensus_signal.cpp ../sizing.cpp)
+                                  consensus_signal.cpp consensus_features.cpp ../sizing.cpp)
 target_include_directories(
   dagobert_signals
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
