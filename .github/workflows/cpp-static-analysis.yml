@@ -43,6 +43,11 @@ jobs:
           key: ccache-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
           restore-keys: |
             ccache-${{ runner.os }}-
+      # The runner ships Boost in /usr/include. Arrow's bundled thrift finds it
+      # and adds -isystem /usr/include, which shadows the Nix libc headers and
+      # breaks the build. The runner is ephemeral, so just remove it.
+      - name: Remove host Boost headers
+        run: sudo rm -rf /usr/include/boost
       - name: Build dependency prefix
         run: devbox run -- task cpp:deps PRESET=debug
       - name: include-what-you-use (ratchet against baseline)
