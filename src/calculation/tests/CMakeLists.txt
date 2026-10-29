@@ -37,6 +37,9 @@ include(GoogleTest)
 gtest_discover_tests(dagobert-tests DISCOVERY_MODE PRE_TEST)
 target_compile_definitions(
   dagobert-tests
+  PRIVATE DAGOBERT_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_definitions(
+  dagobert-tests
   PRIVATE SIZING_VECTORS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../src/calculation-signal/playbooks/position-sizing/position-sizing-vectors.json")
 target_compile_definitions(
   dagobert-tests

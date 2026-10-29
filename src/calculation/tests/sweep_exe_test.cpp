@@ -27,8 +27,7 @@ using tradingcopilot::v1::RunEnvelope;
 using tradingcopilot::v1::RunReport;
 using tradingcopilot::v1::SweepRequest;
 
-const fs::path kLake =
-    fs::path(__FILE__).parent_path() / "fixtures" / "lake_consensus";
+const fs::path kLake = fs::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_consensus";
 constexpr std::int64_t kFrom = 1704067200000;
 constexpr std::int64_t kTo = 1704844800000;
 constexpr std::int64_t kHourMs = 3'600'000;

@@ -15,7 +15,7 @@ constexpr std::int64_t kIntervalMs = 10'800'000;
 
 TEST(ParquetBars, FixtureRoundTrip) {
   const std::filesystem::path root =
-      std::filesystem::path(__FILE__).parent_path() / "fixtures" / "lake";
+      std::filesystem::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake";
   const std::vector<Bar> bars = load_bars_from_lake(
       root.string(), "demo", "BTC", "USDT", kOpenMs, kOpenMs + kIntervalMs);
   ASSERT_EQ(bars.size(), 1U);
@@ -28,18 +28,18 @@ TEST(ParquetBars, FixtureRoundTrip) {
   EXPECT_EQ(bars[0].duration_ms, kIntervalMs);
 }
 
-// The decimal schema (lake) and the old string schema (lake_legacy) hold the same
-// logical bars; both must load to bit-identical doubles, including a volume
-// that does not fit int64 at scale 8.
+// The decimal schema (lake) and the old string schema (lake_legacy) hold the
+// same logical bars; both must load to bit-identical doubles, including a
+// volume that does not fit int64 at scale 8.
 TEST(ParquetBars, DecimalAndLegacySchemasAgree) {
   const std::filesystem::path fixtures =
-      std::filesystem::path(__FILE__).parent_path() / "fixtures";
-  const std::vector<Bar> dec = load_bars_from_lake(
-      (fixtures / "lake").string(), "demo", "BTC", "USDT", kOpenMs,
-      kOpenMs + 2 * kIntervalMs);
-  const std::vector<Bar> old = load_bars_from_lake(
-      (fixtures / "lake_legacy").string(), "demo", "BTC", "USDT", kOpenMs,
-      kOpenMs + 2 * kIntervalMs);
+      std::filesystem::path(DAGOBERT_TEST_FIXTURES_DIR);
+  const std::vector<Bar> dec =
+      load_bars_from_lake((fixtures / "lake").string(), "demo", "BTC", "USDT",
+                          kOpenMs, kOpenMs + 2 * kIntervalMs);
+  const std::vector<Bar> old =
+      load_bars_from_lake((fixtures / "lake_legacy").string(), "demo", "BTC",
+                          "USDT", kOpenMs, kOpenMs + 2 * kIntervalMs);
   ASSERT_EQ(dec.size(), 2U);
   ASSERT_EQ(old.size(), 2U);
   for (std::size_t i = 0; i < 2; ++i) {

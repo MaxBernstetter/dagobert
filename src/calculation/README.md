@@ -67,18 +67,25 @@ truncated `libarrow.a` before). `task cpp:build` takes `flock` on
 
 ## Measured times
 
-Machine: 22 cores, Ninja/Make defaults, clang 22.1.8. Before (issue #109):
+Machine: 22 cores, clang 22.1.8 + lld, Ninja, medians of 3, default target
+(`all`), configure excluded (about 4 s per build dir). Before (issue #109):
 about 25 minutes per fresh worktree build, Arrow compiled in every build dir.
+Cold debug build with Make (no generator set, `-j1`) took 144 s.
+
+The presets use Ninja. A build dir created earlier with Make must be deleted
+(`rm -rf build/<preset>`), because CMake refuses to switch the generator of an
+existing build dir.
 
 | Step | Time |
 | --- | --- |
 | `task cpp:deps` debug, ccache warm from earlier attempts, once | 4m21s |
 | `task cpp:deps` optimized, `CCACHE_DISABLE=1` (cold), once | 4m01s |
-| fresh worktree: configure + build `dagobert-tests` and `strategy-sma-cross` + ctest (51 tests), debug, ccache off | 1m44s |
-| same, ccache cold-ish (28 of 46 compiles hit) | 1m07s |
-| same, ccache fully warm (46 of 46 hit) | 7s (build only) |
-| fresh worktree, optimized, ccache cold | 1m41s |
-| rebuild after a CMake-only change (`touch CMakeLists.txt`) | 1s |
 
-Timings were taken on a machine that was running other builds, so treat them
-as upper bounds.
+| Preset | Cold (ccache off) | Cached (ccache warm, hits/total) | Relink (touch `sdk/report.cpp`, ccache hit) |
+| --- | --- | --- | --- |
+| debug | 26.6s | 1.0s (59/59) | 0.7s |
+| optimized | 1m50s | 1m28s (59/59) | 1m25s |
+
+Relink rebuilds every executable, since `sdk/report.cpp` is in
+`dagobert_strategy`. With ccache off it also recompiles the file: 3.8s for
+debug. Optimized cached and relink times are dominated by ThinLTO at link time.

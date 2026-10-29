@@ -9,10 +9,12 @@
     {
       "name": "toolchain",
       "hidden": true,
-      "description": "Clang 22.1.8 (newest stable in nixpkgs; Clang 23 not packaged)."
+      "description": "Clang 22.1.8 (newest stable in nixpkgs; Clang 23 not packaged).",
+      "generator": "Ninja"
     },
     {
       "name": "debug",
+      "inherits": "toolchain",
       "displayName": "Debug",
       "binaryDir": "${sourceDir}/../../build/debug",
       "cacheVariables": {
@@ -25,6 +27,7 @@
     },
     {
       "name": "optimized",
+      "inherits": "toolchain",
       "displayName": "Optimized",
       "binaryDir": "${sourceDir}/../../build/optimized",
       "cacheVariables": {
