@@ -4,7 +4,7 @@
 
 #include "tradingcopilot/v1/run_report.pb.h"
 
-#include <sys/wait.h>
+#include <sys/wait.h> // IWYU pragma: keep
 
 #include <cstdio>
 #include <filesystem>

@@ -2,7 +2,6 @@
 
 #include "bars_parquet.hpp"
 
-#include <cmath>
 #include <filesystem>
 
 namespace dagobert {

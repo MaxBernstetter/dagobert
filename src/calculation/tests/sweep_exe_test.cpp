@@ -12,7 +12,7 @@
 #include <google/protobuf/util/delimited_message_util.h>
 #include <google/protobuf/util/json_util.h>
 
-#include <sys/wait.h>
+#include <sys/wait.h> // IWYU pragma: keep
 
 #include <cstdio>
 #include <filesystem>

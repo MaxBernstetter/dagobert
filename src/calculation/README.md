@@ -73,6 +73,26 @@ If `ccache` is installed (devbox provides it) the compiler launcher is
 (20G), `CCACHE_BASEDIR` = checkout root so worktrees share hits. Bypass with
 `CCACHE_DISABLE=1`. The dependency build uses it too.
 
+## Include hygiene (IWYU)
+
+- `task cpp:iwyu` reports include-what-you-use findings for our `.cpp` files
+  (report only, nothing fails).
+- `task cpp:iwyu:check` fails on unnecessary includes that are not in
+  `iwyu-baseline.txt`. It runs as the CI job `cpp-static-analysis`
+  (`.github/workflows/cpp-static-analysis.yml`) and as the pre-commit hook
+  `calculation-iwyu` on staged `.cpp` files (headers are covered by CI).
+- `task cpp:iwyu:baseline` regenerates `iwyu-baseline.txt`.
+- Policy: only "should remove" findings are enforced. "Should add"
+  suggestions are ignored. `iwyu-baseline.txt` is kept empty (header comment
+  only). Never add entries to it: remove the include or keep it with a pragma.
+- Fixing a finding: remove the include. If IWYU is wrong, keep it with
+  `// IWYU pragma: keep`, or add a mapping in `iwyu.imp` (private header to
+  public header; format described in the file).
+- IWYU 0.26 is built on clang 22; the compiler is Clang 23. It works against
+  our compile database; builtin headers differ only slightly.
+- Usage: `PRESET=optimized scripts/cpp-iwyu.sh check src/calculation/sdk/x.cpp`
+  checks one file (one-shot, same rules as the full check).
+
 ## One build per build directory
 
 Do not run two builds in the same build directory (a concurrent build

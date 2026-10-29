@@ -1,10 +1,9 @@
 #include "atr.hpp"
 
+#include "exit_policy.hpp"
 #include <algorithm>
 #include <cmath>
-#include "exit_policy.hpp"
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {
