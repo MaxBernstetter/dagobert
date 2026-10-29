@@ -95,6 +95,9 @@ ExternalProject_Add(
     -DCMAKE_C_FLAGS_${_bt}=${_arrow_flags}
     -DCMAKE_CXX_FLAGS_${_bt}=${_arrow_flags}
     -DBUILD_WARNING_LEVEL=PRODUCTION
+    # Never pick up a system Boost: its -isystem /usr/include shadows the
+    # toolchain's libc headers (breaks thrift on hosts with libboost-dev).
+    -DBoost_SOURCE=BUNDLED
     -DARROW_BUILD_SHARED=OFF
     -DARROW_BUILD_STATIC=ON
     -DARROW_PARQUET=ON

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "quote.hpp"
+#include "quote.hpp" // IWYU pragma: keep
 #include "types.hpp"
 
 #include <magic_enum/magic_enum.hpp>

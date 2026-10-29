@@ -82,10 +82,9 @@ If `ccache` is installed (devbox provides it) the compiler launcher is
   (`.github/workflows/cpp-static-analysis.yml`) and as the pre-commit hook
   `calculation-iwyu` on staged `.cpp` files (headers are covered by CI).
 - `task cpp:iwyu:baseline` regenerates `iwyu-baseline.txt`.
-- Policy (ratchet): only "should remove" findings are enforced. "Should add"
-  suggestions are ignored. `iwyu-baseline.txt` lists the unnecessary includes
-  that predate the check. It only ever shrinks; PR4a (BUILD.04) empties it.
-  Never add entries to it.
+- Policy: only "should remove" findings are enforced. "Should add"
+  suggestions are ignored. `iwyu-baseline.txt` is kept empty (header comment
+  only). Never add entries to it: remove the include or keep it with a pragma.
 - Fixing a finding: remove the include. If IWYU is wrong, keep it with
   `// IWYU pragma: keep`, or add a mapping in `iwyu.imp` (private header to
   public header; format described in the file).

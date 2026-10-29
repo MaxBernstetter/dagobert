@@ -1,7 +1,6 @@
 #pragma once
 
 #include "consensus_signal.hpp"
-#include "types.hpp"
 
 #include <cstddef>
 #include <deque>

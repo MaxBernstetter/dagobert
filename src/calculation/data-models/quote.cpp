@@ -1,9 +1,8 @@
 #include "quote.hpp"
 
-#include <cmath>
 #include "exit_policy.hpp"
+#include <cmath>
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {

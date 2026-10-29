@@ -3,9 +3,8 @@
 #include "quote.hpp"
 #include "types.hpp"
 
-#include "tradingcopilot/v1/run_envelope.pb.h"
+#include "tradingcopilot/v1/run_envelope.pb.h" // IWYU pragma: keep
 
-#include <climits>
 #include <cstdint>
 #include <span>
 

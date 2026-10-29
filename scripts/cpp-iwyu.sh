@@ -96,7 +96,7 @@ if mode == "entries":
         fh.write("".join(e + "\n" for e in sorted(found)))
 elif mode == "baseline":
     with open(target, "w", encoding="utf-8") as fh:
-        fh.write("# Unnecessary includes that predate the IWYU check; only ever remove lines. "
+        fh.write("# Unnecessary includes; kept empty. Do not add entries: remove the include or keep it with // IWYU pragma: keep. "
                  "Regenerate: task cpp:iwyu:baseline\n")
         fh.write("".join(e + "\n" for e in sorted(found)))
     print(f"wrote {len(found)} entries to {target}")
