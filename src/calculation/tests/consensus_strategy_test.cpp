@@ -16,8 +16,8 @@ constexpr std::int64_t kBarDurationMs = 10'800'000;
 constexpr std::int64_t kFromMs = 1'704'067'200'000;
 
 std::vector<Bar> fixture_bars() {
-  const auto lake = std::filesystem::path(__FILE__).parent_path() / "fixtures" /
-                    "lake_consensus";
+  const auto lake =
+      std::filesystem::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_consensus";
   // The lake holds 1h candles; the strategy decides on their 3h aggregates.
   const std::vector<Bar> candles =
       load_bars_from_lake(lake.string(), "demo", "BTC", "USDT", kFromMs,

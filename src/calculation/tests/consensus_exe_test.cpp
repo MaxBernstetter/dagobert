@@ -16,8 +16,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-const fs::path kLake =
-    fs::path(__FILE__).parent_path() / "fixtures" / "lake_consensus";
+const fs::path kLake = fs::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_consensus";
 
 struct BinaryRun {
   int exit_code{-1};

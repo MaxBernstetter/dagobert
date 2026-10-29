@@ -16,8 +16,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-const fs::path kLake =
-    fs::path(__FILE__).parent_path() / "fixtures" / "lake_roundtrip";
+const fs::path kLake = fs::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_roundtrip";
 
 struct BinaryRun {
   int exit_code{-1};
@@ -39,7 +38,7 @@ std::string config_json(const std::string &label, double quote,
 
 // The 8-day consensus lake has enough bars for the 24-hour ATR window.
 const fs::path kLongLake =
-    fs::path(__FILE__).parent_path() / "fixtures" / "lake_consensus";
+    fs::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_consensus";
 constexpr const char *kLongRange = R"("toMs":"1704844800000")";
 
 BinaryRun run_binary(const std::string &config, bool write_config = true,
