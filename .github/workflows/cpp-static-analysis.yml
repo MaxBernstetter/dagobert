@@ -1,0 +1,49 @@
+name: cpp-static-analysis
+
+on:
+  pull_request:
+    paths:
+      - "src/calculation/**"
+      - "scripts/cpp-iwyu.sh"
+      - "devbox.json"
+      - "devbox.lock"
+      - "Taskfile.yml"
+      - ".github/workflows/cpp-static-analysis.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/calculation/**"
+      - "scripts/cpp-iwyu.sh"
+      - "devbox.json"
+      - "devbox.lock"
+      - "Taskfile.yml"
+      - ".github/workflows/cpp-static-analysis.yml"
+
+jobs:
+  iwyu:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: true
+      - name: Cache shared C++ dependency prefix
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dagobert/deps
+          key: deps-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+      - name: Build dependency prefix
+        run: devbox run -- task cpp:deps PRESET=debug
+      - name: include-what-you-use (ratchet against baseline)
+        run: devbox run -- task cpp:iwyu:check
