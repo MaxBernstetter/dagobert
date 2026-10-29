@@ -52,6 +52,20 @@ task cpp:test PRESET=debug      # build + ctest
 
 The optimized preset tunes for the build host (`-march=native`). For an image built elsewhere set `DAGOBERT_PORTABLE=1` for `deps/build.sh` and `-DDAGOBERT_PORTABLE=ON` for the main configure; both use `-mtune=generic` instead. The key gets a `-portable` marker, so the prefix never collides with the host-tuned one. `DAGOBERT_CC` / `DAGOBERT_CXX` override the compiler of `deps/build.sh`. `docker/backtest/Dockerfile` does this in two stages: `cpp-deps` (recipe files only, cached) and `cpp-build`.
 
+## Toolchain
+
+Clang 23 + lld 23 + clang-tools 23 come from devbox, pinned to nixpkgs rev
+`31ecbaca…` (prebuilt in cache.nixos.org), because devbox has no versioned
+Clang 23 package. Clang 22 and 23 collide in a devbox profile, so only one is
+installed. The linker is mold by default; `-DDAGOBERT_LINKER=lld` selects lld.
+After switching toolchains, run `task cpp:deps` again once (about 10 min for
+both presets, see the deps rows above) and delete existing build dirs.
+Decision: adopted as default based on a one-off measurement (one run each,
+Ninja, all cores): optimized cold 89 s vs 120 s, relink 73 s vs 89 s; debug on
+par (cold 32.5 s vs 24.0 s, relink 3.8 s vs 3.9 s); no repeated benchmark and
+no engine-runtime comparison yet. The backtest Docker image (Debian clang 19)
+is unchanged.
+
 ## ccache
 
 If `ccache` is installed (devbox provides it) the compiler launcher is
@@ -67,8 +81,9 @@ truncated `libarrow.a` before). `task cpp:build` takes `flock` on
 
 ## Measured times
 
-Machine: 22 cores, clang 22.1.8 + lld, Ninja, medians of 3, default target
-(`all`), configure excluded (about 4 s per build dir). Before (issue #109):
+The table below was measured with Clang 22.1.8 + lld (before the switch to
+Clang 23 + mold, see Toolchain). Machine: 22 cores, Ninja, medians of 3, default
+target (`all`), configure excluded (about 4 s per build dir). Before (issue #109):
 about 25 minutes per fresh worktree build, Arrow compiled in every build dir.
 Cold debug build with Make (no generator set, `-j1`) took 144 s.
 
@@ -80,6 +95,8 @@ existing build dir.
 | --- | --- |
 | `task cpp:deps` debug, ccache warm from earlier attempts, once | 4m21s |
 | `task cpp:deps` optimized, `CCACHE_DISABLE=1` (cold), once | 4m01s |
+| `task cpp:deps` debug, Clang 23 + mold, once | 4m18s |
+| `task cpp:deps` optimized, Clang 23 + mold, once | 5m39s |
 
 | Preset | Cold (ccache off) | Cached (ccache warm, hits/total) | Relink (touch `sdk/report.cpp`, ccache hit) |
 | --- | --- | --- | --- |

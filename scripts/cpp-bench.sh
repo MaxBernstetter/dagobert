@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Benchmark the optimized C++ strategy executables against the Go experiment
-# path on one seeded lake. Usage: scripts/cpp-bench.sh [runs]  (default 15)
-# Needs: task cpp:build PRESET=optimized, /usr/bin/time, python3.
+# path on one seeded lake. Usage: [CPP_BUILD_DIR=build/<preset>] scripts/cpp-bench.sh [runs]
+# (runs default 15; CPP_BUILD_DIR defaults to build/optimized).
+# Needs: task cpp:build PRESET=<preset>, /usr/bin/time, python3.
 # Output: build/bench/results.json (raw samples) and build/bench/results.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -32,11 +33,11 @@ for s in sma-cross signal-consensus; do
   done
 done
 
-python3 -I - "$OUT" "$RUNS" "$LAKE" <<'PY'
+python3 -I - "$OUT" "$RUNS" "$LAKE" "${CPP_BUILD_DIR:-build/optimized}" <<'PY'
 import json, os, subprocess, sys, time, statistics as st
-out, runs, lake = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+out, runs, lake, build_dir = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
 def run_cpp(s):
-    exe = subprocess.check_output(["find", "build/optimized", "-name", "strategy-" + s, "-type", "f"], text=True).split()[0]
+    exe = subprocess.check_output(["find", build_dir, "-name", "strategy-" + s, "-type", "f"], text=True).split()[0]
     for _ in range(runs):
         t0 = time.perf_counter()
         p = subprocess.Popen([exe, "--config", f"{out}/{s}.json", "--data-dir", lake], stdout=subprocess.DEVNULL)

@@ -9,7 +9,7 @@
     {
       "name": "toolchain",
       "hidden": true,
-      "description": "Clang 22.1.8 (newest stable in nixpkgs; Clang 23 not packaged).",
+      "description": "Clang 23 + mold from devbox (llvmPackages_23 from a pinned nixpkgs rev).",
       "generator": "Ninja"
     },
     {
