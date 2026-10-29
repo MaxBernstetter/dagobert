@@ -43,11 +43,15 @@ jobs:
           key: ccache-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
           restore-keys: |
             ccache-${{ runner.os }}-
-      # The runner ships Boost in /usr/include. Arrow's bundled thrift finds it
-      # and adds -isystem /usr/include, which shadows the Nix libc headers and
-      # breaks the build. The runner is ephemeral, so just remove it.
-      - name: Remove host Boost headers
-        run: sudo rm -rf /usr/include/boost
+      # The runner ships dev headers in /usr/include (Boost, zlib, OpenSSL, ...).
+      # Arrow's bundled thrift finds one of them and adds -isystem /usr/include,
+      # which shadows the Nix libc headers with the host's glibc and breaks the
+      # build. The runner is ephemeral, so remove them. Print what was there.
+      - name: Remove host dev headers
+        run: |
+          cd /usr/include
+          ls -d boost zlib.h zconf.h openssl event2 event.h snappy*.h lz4*.h zstd*.h thrift 2>/dev/null || true
+          sudo rm -rf boost zlib.h zconf.h openssl event2 event.h snappy*.h lz4*.h zstd*.h thrift
       - name: Build dependency prefix
         run: devbox run -- task cpp:deps PRESET=debug
       - name: include-what-you-use (ratchet against baseline)
