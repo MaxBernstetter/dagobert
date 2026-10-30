@@ -2,6 +2,7 @@
 // fills the Go sized ma-cross playbook produced for them (regenerate with
 // src/calculation-signal/playbooks/ma-cross/cppfixture_test.go). The C++
 // strategy must reproduce them, in backtest and bar by bar in live.
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include <gtest/gtest.h>
 
 #include "sma_cross_strategy.hpp"

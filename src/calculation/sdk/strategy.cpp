@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include "strategy.hpp"
 
 #include "exit_policy.hpp"

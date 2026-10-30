@@ -5,7 +5,7 @@
 #include "position.hpp"
 #include "strategy.hpp"
 
-#include "tradingcopilot/v1/run_envelope.pb.h" // IWYU pragma: keep
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 namespace dagobert {
 

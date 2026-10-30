@@ -3,7 +3,7 @@
 #include "quote.hpp"
 #include "types.hpp"
 
-#include "tradingcopilot/v1/run_envelope.pb.h" // IWYU pragma: keep
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 #include <cstdint>
 #include <span>

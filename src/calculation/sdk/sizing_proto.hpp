@@ -2,8 +2,7 @@
 
 #include "sizing.hpp"
 
-#include "tradingcopilot/v1/run_report.pb.h" // IWYU pragma: keep
-#include "tradingcopilot/v1/strategy.pb.h"   // IWYU pragma: keep
+#include "proto_fwd.hpp" // IWYU pragma: keep
 #include "types.hpp"                         // IWYU pragma: keep
 
 #include <vector>
