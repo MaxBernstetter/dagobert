@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include <gtest/gtest.h>
 
 #include "bars_aggregate.hpp"

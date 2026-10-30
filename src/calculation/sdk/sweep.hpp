@@ -2,7 +2,7 @@
 
 #include "strategy.hpp"
 
-#include "tradingcopilot/v1/run_envelope.pb.h"
+#include "proto_fwd.hpp"
 
 #include <functional>
 #include <iosfwd>

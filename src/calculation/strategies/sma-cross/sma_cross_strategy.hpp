@@ -6,7 +6,7 @@
 #include "sma_cross_signal.hpp"
 #include "strategy.hpp"
 
-#include "tradingcopilot/v1/run_envelope.pb.h" // IWYU pragma: keep
+#include "proto_fwd.hpp"
 
 namespace dagobert {
 

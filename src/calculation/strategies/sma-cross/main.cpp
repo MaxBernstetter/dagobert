@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include "bars_parquet.hpp"
 #include "sma_cross_strategy.hpp"
 
