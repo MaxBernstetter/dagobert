@@ -158,7 +158,7 @@ Relink rebuilds every executable, since `sdk/report.cpp` is in
 `dagobert_strategy`. With ccache off it also recompiles the file: 3.8s for
 debug. Optimized cached and relink times are dominated by ThinLTO at link time.
 
-Include and cache work (BUILD.04), debug preset, 22-core machine, clang 22.1.8:
+Include and cache work (BUILD.04), debug preset, 22-core machine, Clang 23.1.3 + mold:
 
 | Step | Before | After |
 | --- | --- | --- |
