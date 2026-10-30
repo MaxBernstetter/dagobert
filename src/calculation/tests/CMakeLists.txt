@@ -26,6 +26,15 @@ target_compile_definitions(dagobert-tests
                            PRIVATE SMA_CROSS_BIN="$<TARGET_FILE:strategy-sma-cross>"
                            CONSENSUS_BIN="$<TARGET_FILE:strategy-signal-consensus>")
 dagobert_strict_warnings(dagobert-tests)
+# Precompiled header: gtest and the standard headers shared by the test TUs
+# are parsed once. Keep it to headers every test already includes.
+target_precompile_headers(
+  dagobert-tests
+  PRIVATE <gtest/gtest.h> <cstdint> <functional> <memory> <optional>
+          <ostream> <span> <string> <vector>)
+# Clang stamps the PCH with its build time, so the file differs on every build
+# and ccache misses every TU that includes it. This flag drops the stamp.
+target_compile_options(dagobert-tests PRIVATE -Xclang -fno-pch-timestamp)
 target_link_options(dagobert-tests PRIVATE -static-libstdc++ -static-libgcc)
 if(DAGOBERT_MODE STREQUAL "debug")
   target_compile_options(

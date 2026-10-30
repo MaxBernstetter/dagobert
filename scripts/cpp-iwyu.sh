@@ -55,17 +55,46 @@ if [ "${#TUS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-# 2. Run IWYU (never fails on findings; the parser decides).
+# 2. IWYU does not support precompiled headers. Give it a copy of the compile
+# database without the PCH flags (-include-pch / -include, -Winvalid-pch); the
+# build's own compile_commands.json is left as it is.
+mkdir -p "$TMP/db"
+python3 -I - "$DB" "$TMP/db/compile_commands.json" <<'PY'
+import json, shlex, sys
+db, out = sys.argv[1], sys.argv[2]
+def strip_pch(args):
+    keep, i = [], 0
+    while i < len(args):
+        a = args[i]
+        if a == "-Winvalid-pch":
+            i += 1
+        elif a == "-Xclang" and i + 3 < len(args) and args[i + 1] in ("-include-pch", "-include") \
+                and args[i + 2] == "-Xclang":
+            i += 4
+        else:
+            keep.append(a)
+            i += 1
+    return keep
+entries = json.load(open(db, encoding="utf-8"))
+for e in entries:
+    if "arguments" in e:
+        e["arguments"] = strip_pch(e["arguments"])
+    else:
+        e["command"] = shlex.join(strip_pch(shlex.split(e["command"])))
+json.dump(entries, open(out, "w", encoding="utf-8"))
+PY
+
+# 3. Run IWYU (never fails on findings; the parser decides).
 RAW="$TMP/iwyu.txt"
 rc=0
-iwyu_tool.py -p "build/$PRESET" -j "$(nproc)" "${TUS[@]}" -- \
+iwyu_tool.py -p "$TMP/db" -j "$(nproc)" "${TUS[@]}" -- \
   -Xiwyu --error=0 -Xiwyu "--mapping_file=$MAPPING" >"$RAW" || rc=$?
 if [ "$rc" -ne 0 ]; then
   echo "iwyu_tool.py failed with exit $rc" >&2
   exit "$rc"
 fi
 
-# 3. Normalize "should remove" findings; check them against the baseline.
+# 4. Normalize "should remove" findings; check them against the baseline.
 cat >"$TMP/parse.py" <<'PY'
 import os, re, sys
 mode, root, raw, target, scope_path = sys.argv[1:6]

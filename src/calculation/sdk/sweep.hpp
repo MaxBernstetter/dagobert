@@ -2,7 +2,7 @@
 
 #include "strategy.hpp"
 
-#include "proto_fwd.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 #include <functional>
 #include <iosfwd>

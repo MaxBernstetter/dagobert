@@ -3,7 +3,7 @@
 #include "quote.hpp"
 #include "types.hpp"
 
-#include "proto_fwd.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 #include <cstdint>
 #include <span>

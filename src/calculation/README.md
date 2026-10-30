@@ -99,6 +99,37 @@ Do not run two builds in the same build directory (a concurrent build
 truncated `libarrow.a` before). `task cpp:build` takes `flock` on
 `build/<preset>.lock`.
 
+## Precompiled headers and ccache
+
+`dagobert-tests` uses a precompiled header (`tests/CMakeLists.txt`) with gtest
+and the standard headers the tests share. Two settings keep it cacheable:
+
+- `-Xclang -fno-pch-timestamp`: without it the `.pch` differs on every build,
+  so ccache misses every test TU.
+- `CCACHE_SLOPPINESS=pch_defines,time_macros` in `cmake/ccache-launcher.sh`.
+
+IWYU does not support PCH, so `scripts/cpp-iwyu.sh` checks against a copy of
+the compile database with the PCH flags removed.
+
+## Include structure
+
+Public SDK and strategy headers forward-declare the generated `RunEnvelope`,
+`RunReport` and `Sizing` (`sdk/proto_fwd.hpp`). `.cpp` files that read those
+messages include the `.pb.h` themselves. Arrow is only included by
+`data/bars_parquet.cpp`.
+
+Not done, and why:
+- Split `report.hpp`/`types.hpp`: nothing to split; `report.hpp` is already small
+  and no `types.hpp` exists under `sdk/`.
+- Replace `<iostream>` in `data-models/position.hpp`: its `std::cerr` calls sit in
+  templates. Moving them out changes the stderr text, which the death tests
+  depend on. Gain was small (about 11 s total across TUs under trace).
+- Pimpl for strategy/report classes: no class in the public headers pulls in
+  protobuf or absl by value, so there is nothing to hide.
+- Protobuf and absl headers still parsed about 28 times each: the generated
+  `*.pb.cc` files include them. Only a lite runtime (C2) would reduce that, and
+  it needs a reflection/JSON check first.
+
 ## Measured times
 
 The table below was measured with Clang 22.1.8 + lld (before the switch to
@@ -126,3 +157,16 @@ existing build dir.
 Relink rebuilds every executable, since `sdk/report.cpp` is in
 `dagobert_strategy`. With ccache off it also recompiles the file: 3.8s for
 debug. Optimized cached and relink times are dominated by ThinLTO at link time.
+
+Include and cache work (BUILD.04), debug preset, 22-core machine, clang 22.1.8:
+
+| Step | Before | After |
+| --- | --- | --- |
+| Cold build, `-ftime-trace`, ccache off: total compile CPU | 663 s | 319 s |
+| Cold build, no trace, ccache off: wall | not measured | 18 s |
+| Cold build, ccache empty: wall | not measured | 22 s (0 of 59 hits) |
+| Cold build, ccache warm (the same tree rebuilt): wall | not measured (9 s with a PCH that missed the cache) | 2 s (59 of 59 hits) |
+
+Timings were taken on a shared machine. The "before" trace run and the "after"
+runs were not back-to-back, so read the ratios, not the absolute values.
+

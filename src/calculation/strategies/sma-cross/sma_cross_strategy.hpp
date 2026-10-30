@@ -6,7 +6,7 @@
 #include "sma_cross_signal.hpp"
 #include "strategy.hpp"
 
-#include "proto_fwd.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 namespace dagobert {
 

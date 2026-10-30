@@ -2,7 +2,7 @@
 
 #include "strategy.hpp" // IWYU pragma: keep
 
-#include "proto_fwd.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
 
 namespace dagobert {
 

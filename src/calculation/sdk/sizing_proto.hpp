@@ -2,7 +2,7 @@
 
 #include "sizing.hpp"
 
-#include "proto_fwd.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
 #include "types.hpp"                         // IWYU pragma: keep
 
 #include <vector>
