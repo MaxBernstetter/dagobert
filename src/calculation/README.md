@@ -58,6 +58,9 @@ Clang 23 + lld 23 + clang-tools 23 come from devbox, pinned to nixpkgs rev
 `31ecbaca…` (prebuilt in cache.nixos.org), because devbox has no versioned
 Clang 23 package. Clang 22 and 23 collide in a devbox profile, so only one is
 installed. The linker is mold by default; `-DDAGOBERT_LINKER=lld` selects lld.
+The optimized preset links with a ThinLTO codegen cache in
+`build/optimized/thinlto-cache` (`-Wl,--thinlto-cache-dir`, both linkers); it
+is inside the build dir, so a clean `rm -rf build/<preset>` also clears it.
 After switching toolchains, run `task cpp:deps` again once (about 10 min for
 both presets, see the deps rows above) and delete existing build dirs.
 Decision: adopted as default based on a one-off measurement (one run each,
@@ -157,6 +160,23 @@ existing build dir.
 Relink rebuilds every executable, since `sdk/report.cpp` is in
 `dagobert_strategy`. With ccache off it also recompiles the file: 3.8s for
 debug. Optimized cached and relink times are dominated by ThinLTO at link time.
+
+ThinLTO cache (BUILD.05), optimized preset, Clang 23.1.3 + mold 3.0.0, 22
+cores, Ninja, default target, one run each, configure excluded. Cache dir
+`build/optimized/thinlto-cache` (`-Wl,--thinlto-cache-dir`). Before = the
+same tree without the flag:
+
+| Step | Before | After |
+| --- | --- | --- |
+| Cold clean, ccache off | 1m32s | 1m25s (cache empty, 550 entries written) |
+| Clean rebuild, ccache warm, ThinLTO cache kept | 1m19s (ccache warm) | 1m01s (first run; 303 more entries written) |
+| Clean rebuild, ccache warm, ThinLTO cache kept (repeat) | not measured | 1.5s (no new entries, 853 total) |
+| Relink after `touch sdk/report.cpp`, ccache warm | 1m16s, 1m15s | 1.5s, 1.1s, 1.2s |
+
+The relink rebuilds `dagobert_strategy` and the three executables; the
+ThinLTO cache serves all of them. The 1m01s "after" clean rebuild is not
+explained: its ThinLTO entries were rewritten, so some module inputs differed
+from the cold run. The repeat run did not reproduce it.
 
 Include and cache work (BUILD.04), debug preset, 22-core machine, Clang 23.1.3 + mold:
 

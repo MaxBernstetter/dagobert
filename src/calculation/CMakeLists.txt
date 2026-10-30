@@ -70,10 +70,13 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
   set(CMAKE_CXX_FLAGS_RELEASE
       "-O3 -DNDEBUG ${_dagobert_cpu} -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
   )
+  # ThinLTO codegen cache: unchanged modules reuse their codegen result on
+  # relink. Same flag for lld and mold (mold 3 forwards it to the LLVM plugin).
+  set(_dagobert_thinlto_cache "-Wl,--thinlto-cache-dir=${CMAKE_BINARY_DIR}/thinlto-cache")
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE
-      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
+      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2 ${_dagobert_thinlto_cache}")
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE
-      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
+      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2 ${_dagobert_thinlto_cache}")
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Valgrind.cmake)
