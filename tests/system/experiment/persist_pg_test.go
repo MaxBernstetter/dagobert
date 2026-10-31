@@ -16,7 +16,6 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
-	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 )
 
 // pgScratchDB creates an empty database loaded with db/sqlc/schema.sql on the dev Postgres and
@@ -149,36 +148,41 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 		t.Fatalf("poisoned instance status %q err %v", poisonStatus, err)
 	}
 
-	// Oracles: fills from the workspace journals, outcomes from the stored metrics (every sell).
-	wantFills := 0
+	// Fills and trade outcomes are files now: Postgres keeps none of them, and each instance that
+	// completed has its journal, fill and outcome files, the poisoned one has none.
+	wantFills, wantOutcomes := 0, 0
 	for _, inst := range rec.Instances {
+		ws := filepath.Join(dataDir, inst.WorkspaceRelPath)
 		if inst.ID == poison {
+			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet"} {
+				if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
+					t.Fatalf("poisoned instance keeps %s: %v", name, err)
+				}
+			}
 			continue
 		}
-		fills, err := signalrunner.LoadInstanceFills(filepath.Join(dataDir, inst.WorkspaceRelPath), inst.PlaybookKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantFills += len(fills)
+		wantFills += len(readJournalFile(t, ws))
+		wantOutcomes += len(readOutcomeFile(t, ws))
 	}
-	var gotFills, gotOutcomes, wantOutcomes, statInstances int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM experiment_instance_fill`).Scan(&gotFills); err != nil {
+	var gotOutcomes, statInstances int
+	var fillTable, outcomeTable *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text`).Scan(&fillTable, &outcomeTable); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM experiment_trade_outcome`).Scan(&gotOutcomes); err != nil {
-		t.Fatal(err)
+	if fillTable != nil || outcomeTable != nil {
+		t.Fatalf("dropped tables still exist: fill=%v outcome=%v", fillTable, outcomeTable)
 	}
-	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&wantOutcomes); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&gotOutcomes); err != nil {
 		t.Fatal(err)
 	}
 	if err := pool.QueryRow(ctx, `SELECT count(DISTINCT instance_id) FROM experiment_instance_period_stat`).Scan(&statInstances); err != nil {
 		t.Fatal(err)
 	}
-	if gotFills != wantFills || wantFills == 0 {
-		t.Fatalf("fills %d want %d", gotFills, wantFills)
+	if wantFills == 0 {
+		t.Fatal("no fills were written to the journal files")
 	}
 	if gotOutcomes != wantOutcomes || wantOutcomes == 0 {
-		t.Fatalf("outcomes %d want %d", gotOutcomes, wantOutcomes)
+		t.Fatalf("outcomes in metrics %d, outcome files %d", gotOutcomes, wantOutcomes)
 	}
 	if statInstances != n-1 {
 		t.Fatalf("period stats for %d instances want %d", statInstances, n-1)

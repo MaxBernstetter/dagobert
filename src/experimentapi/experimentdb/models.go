@@ -84,31 +84,6 @@ type ExperimentInstance struct {
 	MetricYearlyWinRateMed   pgtype.Float4 `json:"metric_yearly_win_rate_med"`
 }
 
-type ExperimentInstanceAction struct {
-	ID           uuid.UUID     `json:"id"`
-	ExperimentID uuid.UUID     `json:"experiment_id"`
-	InstanceID   uuid.UUID     `json:"instance_id"`
-	Symbol       string        `json:"symbol"`
-	BarOpenMs    int64         `json:"bar_open_ms"`
-	Side         string        `json:"side"`
-	WeightPct    pgtype.Float8 `json:"weight_pct"`
-	Reason       string        `json:"reason"`
-}
-
-type ExperimentInstanceFill struct {
-	ID           uuid.UUID   `json:"id"`
-	ExperimentID uuid.UUID   `json:"experiment_id"`
-	InstanceID   uuid.UUID   `json:"instance_id"`
-	ActionID     pgtype.UUID `json:"action_id"`
-	Symbol       string      `json:"symbol"`
-	TsMs         int64       `json:"ts_ms"`
-	Side         string      `json:"side"`
-	Qty          float64     `json:"qty"`
-	Price        float64     `json:"price"`
-	Fee          float64     `json:"fee"`
-	FeeAsset     string      `json:"fee_asset"`
-}
-
 type ExperimentInstancePeriodStat struct {
 	InstanceID uuid.UUID     `json:"instance_id"`
 	PeriodKind string        `json:"period_kind"`
@@ -145,12 +120,4 @@ type ExperimentPeriodStat struct {
 	PeriodKey    string    `json:"period_key"`
 	Wins         int32     `json:"wins"`
 	Trades       int32     `json:"trades"`
-}
-
-type ExperimentTradeOutcome struct {
-	InstanceID uuid.UUID     `json:"instance_id"`
-	Ordinal    int32         `json:"ordinal"`
-	Side       int16         `json:"side"`
-	Quote      float32       `json:"quote"`
-	Percent    pgtype.Float4 `json:"percent"`
 }

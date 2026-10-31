@@ -6,8 +6,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -179,10 +177,10 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		t.Fatalf("instance B playbook keys %v want [%s]", keysB, got.Instances[1].PlaybookKey)
 	}
 
-	endA := portfolioEndValue(t, wsA)
-	endB := portfolioEndValue(t, wsB)
+	endA := netCashFlow(t, wsA)
+	endB := netCashFlow(t, wsB)
 	if math.IsNaN(endA) || math.IsInf(endA, 0) || math.IsNaN(endB) || math.IsInf(endB, 0) {
-		t.Fatal("portfolio end value not finite")
+		t.Fatal("net cash flow not finite")
 	}
 }
 
@@ -395,55 +393,6 @@ func countKPIByStudyPartitions(t *testing.T, dataDir string) int {
 	return n
 }
 
-func countSignalsWithDecision(t *testing.T, workspace, decision string) int {
-	return len(decisionCloses(t, workspace, decision))
-}
-
-func decisionCloses(t *testing.T, workspace, decision string) []int64 {
-	t.Helper()
-	// Slim experiment path does not write signal rows; infer buys/sells from fill_journal.
-	side := ""
-	switch decision {
-	case "buy":
-		side = "Buy"
-	case "sell":
-		side = "Sell"
-	default:
-		return nil
-	}
-	dbPath := filepath.Join(workspace, "execution.sqlite")
-	if _, err := os.Stat(dbPath); err != nil {
-		return nil
-	}
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query(`SELECT order_link_id FROM fill_journal WHERE side = ? ORDER BY order_link_id`, side)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []int64
-	for rows.Next() {
-		var link string
-		if err := rows.Scan(&link); err != nil {
-			t.Fatal(err)
-		}
-		last := strings.LastIndex(link, ":")
-		if last <= 0 {
-			continue
-		}
-		ms, err := strconv.ParseInt(link[last+1:], 10, 64)
-		if err != nil || ms <= 0 {
-			continue
-		}
-		out = append(out, ms)
-	}
-	return out
-}
-
 func sameInt64Slice(a, b []int64) bool {
 	if len(a) != len(b) {
 		return false
@@ -454,103 +403,6 @@ func sameInt64Slice(a, b []int64) bool {
 		}
 	}
 	return true
-}
-
-func distinctPlaybooks(t *testing.T, workspace string) []string {
-	t.Helper()
-	dbPath := filepath.Join(workspace, "execution.sqlite")
-	if _, err := os.Stat(dbPath); err != nil {
-		return nil
-	}
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query(`SELECT DISTINCT order_link_id FROM fill_journal`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	seen := map[string]struct{}{}
-	var out []string
-	for rows.Next() {
-		var link string
-		if err := rows.Scan(&link); err != nil {
-			t.Fatal(err)
-		}
-		// order_link_id = playbookKey:symbol:candleClose
-		last := strings.LastIndex(link, ":")
-		if last <= 0 {
-			continue
-		}
-		rest := link[:last]
-		prev := strings.LastIndex(rest, ":")
-		if prev <= 0 {
-			continue
-		}
-		key := rest[:prev]
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, key)
-	}
-	sort.Strings(out)
-	return out
-}
-
-func countFills(t *testing.T, workspace string) int {
-	t.Helper()
-	dbPath := filepath.Join(workspace, "execution.sqlite")
-	if _, err := os.Stat(dbPath); err != nil {
-		return 0
-	}
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	var n int
-	err = db.QueryRow(`SELECT COUNT(*) FROM fill_journal`).Scan(&n)
-	if err != nil {
-		err = db.QueryRow(`SELECT COUNT(*) FROM order_result WHERE kind = 'fill'`).Scan(&n)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
-func portfolioEndValue(t *testing.T, workspace string) float64 {
-	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(workspace, "execution.sqlite"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	var cash float64
-	_ = db.QueryRow(`SELECT SUM(CAST(cash_balance AS REAL)) FROM balance`).Scan(&cash)
-	return cash
-}
-
-func firstBuyQuote(t *testing.T, workspace string) (float64, bool) {
-	t.Helper()
-	dbPath := filepath.Join(workspace, "execution.sqlite")
-	if _, err := os.Stat(dbPath); err != nil {
-		return 0, false
-	}
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	var q float64
-	err = db.QueryRow(`SELECT quote_qty FROM fill_journal WHERE side = 'Buy' ORDER BY order_link_id LIMIT 1`).Scan(&q)
-	if err != nil {
-		return 0, false
-	}
-	return q, true
 }
 
 func TestStudySignalConsensusSizing(t *testing.T) {

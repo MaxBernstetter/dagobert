@@ -5,7 +5,6 @@ package persist
 import (
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -232,41 +231,6 @@ func InstanceFromDB(i experimentdb.ExperimentInstance) *v1.ExperimentInstance {
 		if ok {
 			out.SignalConsensus = cfg
 		}
-	}
-	return out
-}
-
-// ActionFromDB maps experiment_instance_action.
-func ActionFromDB(a experimentdb.ExperimentInstanceAction) *v1.ExperimentInstanceAction {
-	return &v1.ExperimentInstanceAction{
-		Id:           a.ID.String(),
-		ExperimentId: a.ExperimentID.String(),
-		InstanceId:   a.InstanceID.String(),
-		Symbol:       a.Symbol,
-		BarOpenMs:    a.BarOpenMs,
-		Side:         a.Side,
-		WeightPct:    optFloat64(a.WeightPct),
-		Reason:       a.Reason,
-	}
-}
-
-// FillFromDB maps experiment_instance_fill.
-func FillFromDB(f experimentdb.ExperimentInstanceFill) *v1.ExperimentInstanceFill {
-	out := &v1.ExperimentInstanceFill{
-		Id:           f.ID.String(),
-		ExperimentId: f.ExperimentID.String(),
-		InstanceId:   f.InstanceID.String(),
-		Symbol:       f.Symbol,
-		TsMs:         f.TsMs,
-		Side:         f.Side,
-		Qty:          f.Qty,
-		Price:        f.Price,
-		Fee:          f.Fee,
-		FeeAsset:     f.FeeAsset,
-	}
-	if f.ActionID.Valid {
-		id := uuid.UUID(f.ActionID.Bytes).String()
-		out.ActionId = &id
 	}
 	return out
 }

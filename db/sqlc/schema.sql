@@ -104,44 +104,6 @@ CREATE INDEX "experiment_instance_experiment_id_sortino_idx" ON "experiment_inst
 CREATE INDEX "experiment_instance_experiment_id_status_idx" ON "experiment_instance" ("experiment_id", "status");
 -- Create index "experiment_instance_experiment_id_symbol_idx" to table: "experiment_instance"
 CREATE INDEX "experiment_instance_experiment_id_symbol_idx" ON "experiment_instance" ("experiment_id", "symbol");
--- Create "experiment_instance_action" table
-CREATE TABLE "experiment_instance_action" (
-  "id" uuid NOT NULL,
-  "experiment_id" uuid NOT NULL,
-  "instance_id" uuid NOT NULL,
-  "symbol" text NOT NULL,
-  "bar_open_ms" bigint NOT NULL,
-  "side" text NOT NULL,
-  "weight_pct" double precision NULL,
-  "reason" text NOT NULL DEFAULT '',
-  PRIMARY KEY ("id"),
-  CONSTRAINT "experiment_instance_action_instance_id_fk" FOREIGN KEY ("instance_id") REFERENCES "experiment_instance" ("id") ON UPDATE NO ACTION ON DELETE CASCADE,
-  CONSTRAINT "experiment_instance_action_experiment_id_fk" FOREIGN KEY ("experiment_id") REFERENCES "experiment" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
-);
--- Create index "experiment_instance_action_instance_bar_idx" to table: "experiment_instance_action"
-CREATE INDEX "experiment_instance_action_instance_bar_idx" ON "experiment_instance_action" ("instance_id", "bar_open_ms");
--- Create index "experiment_instance_action_experiment_id_idx" to table: "experiment_instance_action"
-CREATE INDEX "experiment_instance_action_experiment_id_idx" ON "experiment_instance_action" ("experiment_id");
--- Create "experiment_instance_fill" table
-CREATE TABLE "experiment_instance_fill" (
-  "id" uuid NOT NULL,
-  "experiment_id" uuid NOT NULL,
-  "instance_id" uuid NOT NULL,
-  "action_id" uuid NULL,
-  "symbol" text NOT NULL,
-  "ts_ms" bigint NOT NULL,
-  "side" text NOT NULL,
-  "qty" double precision NOT NULL,
-  "price" double precision NOT NULL,
-  "fee" double precision NOT NULL DEFAULT 0,
-  "fee_asset" text NOT NULL DEFAULT '',
-  PRIMARY KEY ("id"),
-  CONSTRAINT "experiment_instance_fill_action_id_fk" FOREIGN KEY ("action_id") REFERENCES "experiment_instance_action" ("id") ON UPDATE NO ACTION ON DELETE SET NULL,
-  CONSTRAINT "experiment_instance_fill_instance_id_fk" FOREIGN KEY ("instance_id") REFERENCES "experiment_instance" ("id") ON UPDATE NO ACTION ON DELETE CASCADE,
-  CONSTRAINT "experiment_instance_fill_experiment_id_fk" FOREIGN KEY ("experiment_id") REFERENCES "experiment" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
-);
--- Create index "experiment_instance_fill_instance_ts_idx" to table: "experiment_instance_fill"
-CREATE INDEX "experiment_instance_fill_instance_ts_idx" ON "experiment_instance_fill" ("instance_id", "ts_ms");
 -- Create "experiment_instance_period_stat" table
 CREATE TABLE "experiment_instance_period_stat" (
   "instance_id" uuid NOT NULL,
@@ -196,12 +158,3 @@ CREATE TABLE "experiment_outcome_stat" (
   CONSTRAINT "experiment_outcome_stat_experiment_id_fk" FOREIGN KEY ("experiment_id") REFERENCES "experiment" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE TABLE "experiment_trade_outcome" (
-  "instance_id" uuid NOT NULL,
-  "ordinal" integer NOT NULL,
-  "side" smallint NOT NULL,
-  "quote" real NOT NULL,
-  "percent" real NULL,
-  PRIMARY KEY ("instance_id", "ordinal"),
-  CONSTRAINT "experiment_trade_outcome_instance_id_fk" FOREIGN KEY ("instance_id") REFERENCES "experiment_instance" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
-);

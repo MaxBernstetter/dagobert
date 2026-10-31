@@ -13,45 +13,6 @@ ON CONFLICT (instance_id, period_kind, period_key) DO UPDATE SET
   trade_count = EXCLUDED.trade_count,
   win_count = EXCLUDED.win_count;
 
--- name: DeleteFillsForInstance :exec
-DELETE FROM experiment_instance_fill
-WHERE experiment_id = $1 AND instance_id = $2;
-
--- name: InsertFill :exec
-INSERT INTO experiment_instance_fill (
-  id, experiment_id, instance_id, action_id, symbol, ts_ms, side, qty, price, fee, fee_asset
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-);
-
--- name: DeleteActionsForInstance :exec
-DELETE FROM experiment_instance_action
-WHERE experiment_id = $1 AND instance_id = $2;
-
--- name: DeleteTradeOutcomesForInstance :exec
-DELETE FROM experiment_trade_outcome
-WHERE instance_id = $1;
-
--- name: InsertTradeOutcome :exec
-INSERT INTO experiment_trade_outcome (
-  instance_id, ordinal, side, quote, percent
-) VALUES (
-  $1, $2, $3, $4, $5
-);
-
--- name: ListTradeOutcomesForInstance :many
-SELECT instance_id, ordinal, side, quote, percent
-FROM experiment_trade_outcome
-WHERE instance_id = $1
-ORDER BY ordinal ASC;
-
--- name: ListTradeOutcomesForExperiment :many
-SELECT o.instance_id, o.ordinal, o.side, o.quote, o.percent
-FROM experiment_trade_outcome o
-JOIN experiment_instance i ON i.id = o.instance_id
-WHERE i.experiment_id = $1 AND i.status = 'completed'
-ORDER BY o.instance_id, o.ordinal;
-
 -- name: ListCompletedPeriodStats :many
 SELECT p.instance_id, p.period_kind, p.period_key, p.win_count, p.trade_count
 FROM experiment_instance_period_stat p
@@ -109,21 +70,6 @@ SELECT experiment_id, side, unit, average, p10, p25, p50, p75, p90, p95
 FROM experiment_outcome_stat
 WHERE experiment_id = $1
 ORDER BY side, unit;
-
--- name: InsertAction :exec
-INSERT INTO experiment_instance_action (
-  id, experiment_id, instance_id, symbol, bar_open_ms, side, weight_pct, reason
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8
-);
-
--- name: DeleteFillsForInstances :exec
-DELETE FROM experiment_instance_fill
-WHERE instance_id = ANY($1::uuid[]);
-
--- name: DeleteTradeOutcomesForInstances :exec
-DELETE FROM experiment_trade_outcome
-WHERE instance_id = ANY($1::uuid[]);
 
 -- name: DeletePeriodStatsForInstances :exec
 DELETE FROM experiment_instance_period_stat

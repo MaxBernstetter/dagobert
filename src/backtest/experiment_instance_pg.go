@@ -9,32 +9,9 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 )
 
-// activityRows projects a report and its fills onto the Postgres activity tables.
-func activityRows(report signalrunner.InstanceReport, fills []signalrunner.StrategyKPIFill) ([]pgcatalog.PeriodStatRow, []pgcatalog.FillRow, []pgcatalog.TradeOutcomeRow) {
-	stats := periodStatsFromReport(report.Statistics, fills, report.Performance)
-	fillRows := make([]pgcatalog.FillRow, 0, len(fills))
-	for _, f := range fills {
-		fillRows = append(fillRows, pgcatalog.FillRow{
-			TsMs:  f.CandleCloseMs,
-			Side:  f.Side,
-			Qty:   f.BaseQty,
-			Price: f.Price,
-		})
-	}
-	return stats, fillRows, outcomeRows(report.Performance)
-}
-
-func outcomeRows(perf performance.Result) []pgcatalog.TradeOutcomeRow {
-	out := make([]pgcatalog.TradeOutcomeRow, 0, len(perf.Trades))
-	for _, tr := range perf.Trades {
-		row := pgcatalog.TradeOutcomeRow{Side: int16(tr.Side), Quote: float32(tr.Quote)}
-		if tr.Percent != nil {
-			p := float32(*tr.Percent)
-			row.Percent = &p
-		}
-		out = append(out, row)
-	}
-	return out
+// periodStatRows projects a report onto the experiment_instance_period_stat rows.
+func periodStatRows(report signalrunner.InstanceReport, fills []signalrunner.StrategyKPIFill) []pgcatalog.PeriodStatRow {
+	return periodStatsFromReport(report.Statistics, fills, report.Performance)
 }
 
 func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunner.StrategyKPIFill, perf performance.Result) []pgcatalog.PeriodStatRow {

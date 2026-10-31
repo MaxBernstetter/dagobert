@@ -11,6 +11,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
+	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
@@ -384,16 +385,19 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 				bundle := bySymbol[sym]
 				ws := store.ExperimentWorkspaceDir(dataDir, inst)
 				res := instanceResult{inst: inst, sym: sym, ws: ws}
+				capture := &execrunner.Activity{}
 				opts := &signalrunner.PipelineOpts{
 					StrategyConfig: inst.StrategyConfig,
 					PlaybookKey:    inst.PlaybookKey,
 					Slim:           true,
 					SkipSampler:    true,
+					Capture:        capture,
 				}
 				runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, bundle.win, inst.Playbook, sym, bundle.closes, opts, nil)
 				res.timing = store.InstanceRunTiming{StartedAtMs: runRep.StartedAtMs, FinishedAtMs: runRep.FinishedAtMs}
 				if err == nil {
-					res.fills, err = signalrunner.LoadInstanceFills(ws, inst.PlaybookKey)
+					res.fills = signalrunner.FillsFromActivity(capture)
+					res.orders, res.journals = capture.Orders, capture.Journals
 				}
 				if err == nil {
 					res.report = signalrunner.BuildInstanceReport(
@@ -480,7 +484,7 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	if okN == 0 {
 		return fail(fmt.Errorf("%s", summary))
 	}
-	if err := writeExperimentPerformance(cat, experimentID); err != nil {
+	if err := writeExperimentPerformance(cat, dataDir, experimentID); err != nil {
 		return fail(err)
 	}
 	if failN > 0 {
@@ -492,11 +496,11 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	return cat.MarkExperimentCompleted(experimentID)
 }
 
-func writeExperimentPerformance(cat *experimentRunCatalog, experimentID string) error {
+func writeExperimentPerformance(cat *experimentRunCatalog, dataDir, experimentID string) error {
 	if !cat.usesPostgres() {
 		return nil
 	}
-	results, err := cat.pg.LoadCompletedResults(cat.ctx(), experimentID)
+	results, err := cat.pg.LoadCompletedResults(cat.ctx(), experimentID, dataDir)
 	if err != nil {
 		return err
 	}

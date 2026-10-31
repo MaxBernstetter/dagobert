@@ -15,6 +15,7 @@ import (
 	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
+	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
 	pb "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
@@ -253,15 +254,13 @@ func goVsCppEquivalence(t *testing.T, bin, playbook string, lakeArgs, configs []
 			if err != nil {
 				t.Fatal(err)
 			}
-			opts := &signalrunner.PipelineOpts{StrategyConfig: []byte(cfg), PlaybookKey: playbook, Slim: true, SkipSampler: true}
+			capture := &execrunner.Activity{}
+			opts := &signalrunner.PipelineOpts{StrategyConfig: []byte(cfg), PlaybookKey: playbook, Slim: true, SkipSampler: true, Capture: capture}
 			runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, win, playbook, "BTCUSDT", closes, opts, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			goFills, err := signalrunner.LoadInstanceFills(ws, playbook)
-			if err != nil {
-				t.Fatal(err)
-			}
+			goFills := signalrunner.FillsFromActivity(capture)
 			goRep := signalrunner.BuildInstanceReport(runRep, playbook, "BTCUSDT", from, to, startCash, goFills, win, closes, aggMS)
 
 			actions, err := ReplayActions(reports[i], aggMS)
@@ -287,6 +286,12 @@ func goVsCppEquivalence(t *testing.T, bin, playbook string, lakeArgs, configs []
 					}
 				}
 				t.Fatalf("fills: C++ path %d, Go path %d", len(res.Fills), len(goFills))
+			}
+			if !reflect.DeepEqual(res.Journals, capture.Journals) {
+				t.Fatalf("journals differ: C++ %d rows, Go %d rows\nC++ %+v\nGo  %+v", len(res.Journals), len(capture.Journals), res.Journals, capture.Journals)
+			}
+			if !reflect.DeepEqual(res.Orders, capture.Orders) {
+				t.Fatalf("orders differ: C++ %d rows, Go %d rows\nC++ %+v\nGo  %+v", len(res.Orders), len(capture.Orders), res.Orders, capture.Orders)
 			}
 			for k, g := range goFills {
 				c := res.Fills[k]

@@ -35,6 +35,9 @@ type PipelineOpts struct {
 	Slim bool
 	// SkipSampler disables the resource sampler (faster experiment sims).
 	SkipSampler bool
+	// Capture, when set, receives the order results and fill journals in memory. The run then writes
+	// no execution SQLite and no paper wallet; the caller persists the rows (experiment instances).
+	Capture *execrunner.Activity
 }
 
 // RunReport is the wall-clock + optional resource report for one pipeline run.
@@ -171,6 +174,10 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 	var signals []signalstore.SignalRow
 	var actions []signalstore.ActionRow
 	simBatch := execrunner.NewSimBatch()
+	var capture *execrunner.Activity
+	if opts != nil {
+		capture = opts.Capture
+	}
 
 	position := "flat"
 	lastBuyBar := -1
@@ -301,7 +308,11 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		if err != nil {
 			return finish(err)
 		}
-		simBatch.Add(step)
+		if capture != nil {
+			capture.Add(step)
+		} else {
+			simBatch.Add(step)
+		}
 		position = step.Position
 		if dec.StopPrice != nil || len(openUnits) > 0 {
 			_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
@@ -335,8 +346,10 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 		}
 		sigDB.Close()
 	}
-	if err := simBatch.Flush(workspaceDir, &wallet); err != nil {
-		return finish(err)
+	if capture == nil {
+		if err := simBatch.Flush(workspaceDir, &wallet); err != nil {
+			return finish(err)
+		}
 	}
 	stages.FlushMs = time.Since(flushStart).Milliseconds()
 	return finish(nil)

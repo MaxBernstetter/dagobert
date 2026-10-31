@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	_ "modernc.org/sqlite"
@@ -234,7 +235,7 @@ func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
 		},
 		Run: report.Run,
 	}
-	if err := s.attachInstancePerformance(r.Context(), inst.ID, &resp); err != nil {
+	if err := s.attachInstancePerformance(r.Context(), inst, &resp); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -316,15 +317,12 @@ type activityResponse struct {
 	Symbol         string            `json:"symbol"`
 }
 
-// handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from execution.sqlite.
+// handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from the
+// instance Parquet files. An instance without orders.parquet is a legacy instance and is read from its
+// execution.sqlite; an instance with neither has no activity.
 func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) {
 	inst, ok := s.instanceForRequest(w, r)
 	if !ok {
-		return
-	}
-	db, err := openReadOnlySQLite(filepath.Join(instanceWorkspace(inst), "execution.sqlite"))
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	resp := activityResponse{
@@ -335,6 +333,30 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 		InstanceID:     inst.ID.String(),
 		Playbook:       inst.PlaybookKey,
 		Symbol:         inst.Symbol,
+	}
+	ws := instanceWorkspace(inst)
+	orders, err := instanceparquet.ReadOrders(ws)
+	if err == nil {
+		resp.Rows = activityRowsFromOrders(orders)
+		journals, err := instanceparquet.ReadJournals(ws)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if resp.Journals = journalRowsFromParquet(journals); len(resp.Journals) == 0 {
+			resp.Journals = journalsFromFillOrders(orders)
+		}
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	db, err := openReadOnlySQLite(filepath.Join(ws, "execution.sqlite"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	if db != nil {
 		defer db.Close()

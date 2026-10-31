@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 	"github.com/google/uuid"
@@ -421,6 +423,15 @@ func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toS
 }
 
 func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
+	fills, err := instanceparquet.ReadFills(instanceWorkspace(inst))
+	if err == nil {
+		cf := chartFillsFromParquet(fills)
+		return equityFromFills(cf, startCash), markersFromFills(cf)
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	// Legacy instance: the fills live in its execution.sqlite.
 	db, err := openReadOnlySQLite(filepath.Join(instanceWorkspace(inst), "execution.sqlite"))
 	if err != nil || db == nil {
 		return nil, nil
@@ -431,47 +442,9 @@ func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64
 	return equityFromJournals(journals, startCash), markersFromActivity(rows)
 }
 
+// equityFromJournals is equityFromFills over legacy journal rows.
 func equityFromJournals(journals []journalRow, startCash float64) []*v1.ChartPoint {
-	type fill struct {
-		closeMs int64
-		side    string
-		base    float64
-		quote   float64
-		price   float64
-	}
-	var fills []fill
-	for _, j := range journals {
-		ms := candleCloseFromLink(j.OrderLinkID)
-		if ms == 0 {
-			continue
-		}
-		base, err1 := strconv.ParseFloat(j.BaseQty, 64)
-		quote, err2 := strconv.ParseFloat(j.QuoteQty, 64)
-		price, err3 := strconv.ParseFloat(j.Price, 64)
-		if err1 != nil || err2 != nil || err3 != nil {
-			continue
-		}
-		fills = append(fills, fill{ms, strings.ToLower(j.Side), base, quote, price})
-	}
-	sort.Slice(fills, func(i, j int) bool { return fills[i].closeMs < fills[j].closeMs })
-	if len(fills) == 0 {
-		return nil
-	}
-	cash := startCash
-	base := 0.0
-	points := []*v1.ChartPoint{{TimeSec: fills[0].closeMs/1000 - 1, Value: startCash}}
-	for _, f := range fills {
-		switch f.side {
-		case "buy":
-			cash -= f.quote
-			base += f.base
-		case "sell":
-			cash += f.quote
-			base -= f.base
-		}
-		points = append(points, &v1.ChartPoint{TimeSec: f.closeMs / 1000, Value: cash + base*f.price})
-	}
-	return points
+	return equityFromFills(journalFills(journals), startCash)
 }
 
 func candleCloseFromLink(link string) int64 {

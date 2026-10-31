@@ -156,7 +156,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		for batch := range results {
 			for _, r := range batch {
 				inst := byKey[r.Key]
-				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, err: r.Err}
+				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
 				if r.Err == nil {
 					res.timing = store.InstanceRunTiming{StartedAtMs: r.Report.Run.StartedAtMs, FinishedAtMs: r.Report.Run.FinishedAtMs}
 				}

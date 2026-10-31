@@ -1,9 +1,7 @@
 package experiment_test
 
 import (
-	"database/sql"
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
@@ -47,29 +45,6 @@ func runMACross(t *testing.T, cfg string) (string, error) {
 }
 
 // buyQuotes lists the quote spent by each buy fill, oldest first.
-func buyQuotes(t *testing.T, ws string) []float64 {
-	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(ws, "execution.sqlite"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query(`SELECT CAST(quote_qty AS REAL) FROM fill_journal WHERE side = 'Buy' ORDER BY order_link_id`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []float64
-	for rows.Next() {
-		var q float64
-		if err := rows.Scan(&q); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, q)
-	}
-	return out
-}
-
 func TestMACrossSizingBuysLessThanAllIn(t *testing.T) {
 	legacyWS, _ := runMACross(t, `{"fastHr":3,"slowHr":6}`)
 	sizedWS, _ := runMACross(t, `{"fastHr":3,"slowHr":6,"sizing":{}}`)
