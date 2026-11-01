@@ -122,3 +122,22 @@ type ExperimentPeriodStat struct {
 	Wins         int32     `json:"wins"`
 	Trades       int32     `json:"trades"`
 }
+
+type Provider struct {
+	ID            string      `json:"id"`
+	Activated     bool        `json:"activated"`
+	Status        string      `json:"status"`
+	Error         string      `json:"error"`
+	ProgressLabel pgtype.Text `json:"progress_label"`
+	ProgressDone  pgtype.Int4 `json:"progress_done"`
+	ProgressTotal pgtype.Int4 `json:"progress_total"`
+	Config        []byte      `json:"config"`
+	UpdatedAtMs   int64       `json:"updated_at_ms"`
+}
+
+type ProviderPair struct {
+	ProviderID string `json:"provider_id"`
+	Ordinal    int32  `json:"ordinal"`
+	Base       string `json:"base"`
+	Quote      string `json:"quote"`
+}
