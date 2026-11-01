@@ -1,7 +1,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { apiUrl } from "@/lib/api";
-import { chartSeriesUrl, loadChartSeries } from "@/lib/chart-series-cache";
+import { chartMaxPoints, chartSeriesUrl, loadChartSeries } from "@/lib/chart-series-cache";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { ActivityView } from "@/components/activity-view";
 import { BacktestDatePicker } from "@/components/backtest-date-picker";
@@ -594,10 +594,12 @@ export function ExperimentsPanel({ className }: { className?: string }) {
 
   useEffect(() => {
     if (!instanceDetailOpen || !selected || !activeInstance || activeInstance.status !== "completed") return;
+    // Same URL as the instance charts (window and budget), so the prefetch fills their cache entry.
     const url = chartSeriesUrl(
       apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/chart-series`),
       selected.settings.fromMs,
       selected.settings.toMs,
+      chartMaxPoints(),
     );
     void loadChartSeries(url).catch(() => {});
   }, [instanceDetailOpen, selected, activeInstance]);
