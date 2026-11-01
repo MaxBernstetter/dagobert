@@ -156,7 +156,7 @@ tasks:
         export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN:-}"
         export TF_VAR_supabase_database_password="${SUPABASE_DB_PWD:-}"
         TF_IMG=hashicorp/terraform:1.9
-        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "4566"}}"
+        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "11566"}}"
         if command -v terraform >/dev/null 2>&1; then
           (cd infra/terraform && terraform init -input=false && \
             terraform apply -input=false -auto-approve \
@@ -228,7 +228,7 @@ tasks:
     desc: Atlas — edit HCL then generate a migration (name=… optional)
     dir: db
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"
@@ -320,7 +320,7 @@ tasks:
     dir: db
     deps: [db:up]
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"

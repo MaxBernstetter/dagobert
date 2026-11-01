@@ -54,7 +54,7 @@ task up           # Floci, Postgres, orchestrator, frontend
 task db:migrate   # create the Postgres schema (first start, and after new migrations)
 ```
 
-Nothing applies the migrations automatically, so run `task db:migrate` once the stack is up. Then open [http://localhost:3001](http://localhost:3001). Change the port with `WEB_PORT` in `.env` (see `env.example` for the other ports).
+Nothing applies the migrations automatically, so run `task db:migrate` once the stack is up. Then open [http://localhost:11001](http://localhost:11001). Change the port with `WEB_PORT` in `.env` (see `env.example` for the other ports).
 
 `task up` merges `compose.override.yaml`, so it serves the Vite dev server with `src/frontend` mounted. `task dev` is the same plus `compose watch`. `task up:prod` skips the override and serves the production frontend image.
 

@@ -7,7 +7,7 @@ services:
   floci:
     image: floci/floci:latest
     ports:
-      - "127.0.0.1:${FLOCI_PORT:-4566}:4566"
+      - "127.0.0.1:${FLOCI_PORT:-11566}:4566"
     environment:
       FLOCI_HOSTNAME: floci
     restart: unless-stopped
@@ -16,7 +16,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-11432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-trading}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trading}
@@ -72,7 +72,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@postgres:5432/${POSTGRES_DB:-trading}?sslmode=disable&search_path=public
       LIVE_DIR: /data
     ports:
-      - "127.0.0.1:${ORCHESTRATOR_PORT:-8090}:8090"
+      - "127.0.0.1:${ORCHESTRATOR_PORT:-11090}:8090"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_SECRETS_FILE:-./.secrets}:/secrets/.secrets:ro
@@ -95,7 +95,7 @@ services:
       VITE_EXPERIMENT_API_URL: ${VITE_EXPERIMENT_API_URL:-}
       VITE_DEV_API_PROXY: ${VITE_DEV_API_PROXY:-http://orchestrator:8090}
     ports:
-      - "${WEB_PORT:-3001}:3000"
+      - "${WEB_PORT:-11001}:3000"
     depends_on:
       orchestrator:
         condition: service_started

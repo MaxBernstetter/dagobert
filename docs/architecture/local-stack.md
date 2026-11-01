@@ -6,10 +6,10 @@
 
 | Process | Role |
 |---|---|
-| Frontend | The Vite SPA (`src/frontend`), published on `WEB_PORT` (default 3001). Reads through the Experiment API only; no `./data` mount. Does not start jobs. |
-| Postgres | `postgres:16-alpine` on `POSTGRES_PORT` (default 5432), volume `postgres_data`. Catalog of experiments, instances and fills. The orchestrator mounts the Experiment API when `DATABASE_URL` is set. |
+| Frontend | The Vite SPA (`src/frontend`), published on `WEB_PORT` (default 11001). Reads through the Experiment API only; no `./data` mount. Does not start jobs. |
+| Postgres | `postgres:16-alpine` on `POSTGRES_PORT` (default 11432), volume `postgres_data`. Catalog of experiments, instances and fills. The orchestrator mounts the Experiment API when `DATABASE_URL` is set. |
 | Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `calculation_signal.sqlite`, `execution.sqlite`, `backtests.sqlite` (experiment catalog fallback when there is no `DATABASE_URL`) and `data/experiments/<experiment_id>/` (per-instance workspaces). The jobs and the orchestrator mount this directory; the frontend does not. The experiment catalog lives in Postgres. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
-| Orchestrator | Floci on host port `FLOCI_PORT` (default 4566), and a starter process that owns the Docker socket. Also serves the Experiment API on `ORCHESTRATOR_PORT` (default 8090). |
+| Orchestrator | Floci on host port `FLOCI_PORT` (default 11566), and a starter process that owns the Docker socket. Also serves the Experiment API on `ORCHESTRATOR_PORT` (default 11090). |
 
 The five job images are runners. They appear when a candle close is due and exit when that stage is done.
 
