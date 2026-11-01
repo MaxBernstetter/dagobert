@@ -11,6 +11,7 @@ COPY src/calculation-signal ./src/calculation-signal
 COPY src/calculation-performance ./src/calculation-performance
 COPY src/calculation-market-action ./src/calculation-market-action
 COPY src/internal ./src/internal
+COPY src/gen ./src/gen
 ENV CGO_ENABLED=0
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
