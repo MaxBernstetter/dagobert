@@ -52,6 +52,6 @@ Follow [AGENTS.md](../AGENTS.md) and [development/01-task-management.md](develop
 
 1. `git pull` on `main`; `devbox shell` for Go and Task.
 2. `task build` (job and compose images; needed after pulls that touch `src/`).
-3. `task up`, then open the frontend on http://localhost:3001. `task up` does not run migrations: run `task db:migrate` once after a pull that adds files to `db/migrations/`.
+3. `task up`, then open the frontend on http://localhost:11001. `task up` does not run migrations: run `task db:migrate` once after a pull that adds files to `db/migrations/`.
 4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all job system tests (about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
 5. Logs: `docker compose logs -f orchestrator` (job output and `DETAIL=<n>`). Data: `./data` (Parquet lake, SQLite files, `experiments/<id>/instances/<id>/` workspaces); Postgres lives in the compose volume.

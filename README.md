@@ -75,7 +75,7 @@ Run `task --list` for all of them.
 | --- | --- |
 | `task build` | Build the job images and the compose images. |
 | `task up` | Start the stack with the dev frontend. Runs `docker compose up`. |
-| `task dev` | Same as `up`, with compose watch. |
+| `task dev` | Build the job images, apply the Postgres migrations, then `up` with compose watch. |
 | `task up:prod` | Start the stack without the override (production frontend). |
 | `task up:build` | Build everything, then start the stack. |
 | `task down` | Stop the stack. `./data` is kept. |

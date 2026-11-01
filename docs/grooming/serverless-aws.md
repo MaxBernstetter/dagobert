@@ -123,7 +123,7 @@ Golden middle: **50–200 instances / worker**, **MaxConcurrency ~100–400** �
 
 ```bash
 # Host (Atlas / psql)
-DATABASE_URL=postgres://trading:trading@127.0.0.1:5432/trading?sslmode=disable&search_path=public
+DATABASE_URL=postgres://trading:trading@127.0.0.1:11432/trading?sslmode=disable&search_path=public
 
 task db:up          # start postgres
 task db:migrate     # atlas migrate apply --env local
@@ -157,7 +157,7 @@ task db:diff name=my_change   # after editing db/schema/**/*.pg.hcl
 
 ```bash
 task db:migrate
-# curl http://127.0.0.1:8090/api/v1/experiments
+# curl http://127.0.0.1:11090/api/v1/experiments
 # Frontend (Compose): EXPERIMENT_API_URL=http://orchestrator:8090
 ```
 
