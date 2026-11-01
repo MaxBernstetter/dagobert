@@ -3,7 +3,10 @@
 The HTTP API behind the experiments UI, backed by Postgres. It creates experiments and instances, starts and cancels runs, and serves progress, instances, reports, charts and performance. Data flow: `docs/architecture/experiment-data-flow.md`.
 
 ## Routes
-All under `/api/v1/experiments`, registered in `api.go` (`Mount`): list, `strategies`, create (manual list or grid), get, delete, `{id}/status`, `{id}/progress`, `{id}/performance`, `{id}/instances`, `{id}/instances/{instanceId}` plus `/chart-series`, `/report`, `/kpis`, `/activity`, and `POST {id}/run` and `{id}/cancel`.
+All under `/api/v1/experiments`, registered in `api.go` (`Mount`): list, `strategies`, create (manual list or grid), get, delete, `{id}/status`, `{id}/progress`, `{id}/performance`, `{id}/instances`, `{id}/instances/{instanceId}` plus `/chart-series`, `/report`, `/kpis`, `/activity`, `POST {id}/run` and `{id}/cancel`, and `GET /api/v1/experiments/limits` (`{"maxParallelism": N}`, the largest "Parallel processes" value the create form accepts).
+
+## Parallel processes
+`settings.parallelism` (proto `ExperimentSettings.parallelism`, and `parallelism` on the experiment) is the number of C++ sweep processes of an experiment. Unset or 0 means auto: one per CPU of the worker. It is optional in the proto, so a response without a value has no `parallelism` key, as before. Create rejects a negative value or a value above the maximum with a 400 that says so. The maximum is the CPU count of the API process, or `EXPERIMENT_MAX_PARALLELISM` when set. The worker reads the stored value at each run, so a retry or re-run uses the same count.
 
 ## Response encoding and budgets
 - Gzip: every route is wrapped in `gzipHandler` (`gzip.go`, applied in `Mount`). A request with `Accept-Encoding: gzip` (q > 0) gets a gzip body with the same status and `Content-Type`; without it the body is unchanged. Every response carries `Vary: Accept-Encoding`.

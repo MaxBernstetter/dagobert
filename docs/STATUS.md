@@ -5,7 +5,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## What works today
 
 - **Live pipeline.** Five Go job containers per 3-hour UTC candle: ingest, technical indicators, signal, market action, execution. The orchestrator runs them in order and places a paper order on the Bybit EU demo host.
-- **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. Experiments run on the C++ engine only (`ma-cross` and `signal-consensus`); the Go engine and `EXPERIMENT_ENGINE` were removed (#164). The replayed output is checked by `TestSmaCrossCppReplayConsistent` and `TestConsensusCppReplayConsistent`.
+- **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. Experiments run on the C++ engine only (`ma-cross` and `signal-consensus`); each experiment sets its C++ process count (auto = one per CPU) in the create form; the Go engine and `EXPERIMENT_ENGINE` were removed (#164). The replayed output is checked by `TestSmaCrossCppReplayConsistent` and `TestConsensusCppReplayConsistent`.
 - **Decimal candles.** Parquet candles use fixed-scale decimals; the reader also accepts the old string schema (`task data:migrate-candles`).
 - **Position sizing.** Unit risk, heat and max units, in both engines ([position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md)).
 

@@ -116,6 +116,8 @@ The experiment engine is C++ only. The strategy decides in C++; Go replays the d
 3. `ReplayActions` turns the reported sized actions into `ReplayAction`s. `RunKPIWorkers` -> `ReplayKPI` (`src/calculation-signal/runner/kpi_worker.go`) replays them against the bar closes with `execrunner.SimulateBarWithModel` (`src/internal/venue/sim`: spread, slippage and fee in bps against the bar close), rescales sizes by the replayed wallet equity over the C++ book equity, and builds the report with `BuildInstanceReportFromSim`. The orders, journals and fills it returns are the instance files. No disk or database access.
 4. The same queue and persister as before. A run uses `VENUE_SIMULATE=1`; sizing comes from `allocate.PolicyFromEnv()` (`ALLOC_*`, copied from the experiment settings by `applyExperimentEnv`).
 
+Parallel processes: the experiment's own setting (`parallelism`, optional, 0 or unset = auto) gives the number of concurrent C++ sweep processes; create validates it against the maximum, and the worker reads it from the experiment record at each run.
+
 No fallback: an unsupported playbook or a missing binary fails the instance with the variable name; a crashed shard fails all its instances.
 
 ### Checks
@@ -146,7 +148,8 @@ Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip
 |---|---|---|
 | `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API (routes are mounted only when set) |
 | `EXPERIMENT_SIM_WORKERS` | CPU count | Go KPI replay workers (CPU bound) |
-| `EXPERIMENT_CPP_PROCESSES` | CPU count | concurrent C++ `--sweep` processes |
+| `EXPERIMENT_CPP_PROCESSES` | CPU count | fallback for the concurrent C++ `--sweep` processes when the experiment has no "Parallel processes" value (see below) |
+| `EXPERIMENT_MAX_PARALLELISM` | CPU count of the API process | the largest "Parallel processes" value create accepts; `GET /api/v1/experiments/limits` returns it |
 | `EXPERIMENT_CPP_SHARD_MAX` | 500 | upper bound of instances per shard (shard = `ceil(n/processes)` capped here) |
 | `CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN` | set in the worker image (`/usr/local/bin/...`) | C++ strategy executables |
 | `EXPERIMENT_RUN_BACKEND` | `docker` | `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |

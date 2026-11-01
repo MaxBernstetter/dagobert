@@ -61,6 +61,7 @@ services:
       EXPERIMENT_SIM_WORKERS: ${EXPERIMENT_SIM_WORKERS:-}           # KPI replay workers; empty = one per CPU
       EXPERIMENT_CPP_PROCESSES: ${EXPERIMENT_CPP_PROCESSES:-}        # C++ sweep processes; empty = one per CPU
       EXPERIMENT_CPP_SHARD_MAX: ${EXPERIMENT_CPP_SHARD_MAX:-500}     # max instances per C++ process
+      EXPERIMENT_MAX_PARALLELISM: ${EXPERIMENT_MAX_PARALLELISM:-}    # largest per-experiment process count; empty = this container's CPUs
       CPP_SMA_CROSS_BIN: ${CPP_SMA_CROSS_BIN:-}
       CPP_SIGNAL_CONSENSUS_BIN: ${CPP_SIGNAL_CONSENSUS_BIN:-}
       EXPERIMENT_RUN_BACKEND: ${EXPERIMENT_RUN_BACKEND:-docker}

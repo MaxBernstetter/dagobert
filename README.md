@@ -37,7 +37,7 @@ flowchart LR
 ```
 
 - The Experiment API runs inside the orchestrator process. It is only mounted when `DATABASE_URL` is set, so it needs Postgres. Compose sets this for you.
-- The worker is the `dagobert-backtest` image. Experiments always run on the C++ engine (`ma-cross` and `signal-consensus` only; other playbooks fail the experiment). The Go code only replays the C++ actions into fills and reports, with the same fill model as the live pipeline.
+- Each experiment has a "Parallel processes" setting (auto = one per CPU of the server, up to the server maximum). The worker is the `dagobert-backtest` image. Experiments always run on the C++ engine (`ma-cross` and `signal-consensus` only; other playbooks fail the experiment). The Go code only replays the C++ actions into fills and reports, with the same fill model as the live pipeline.
 - The live pipeline always uses the Go jobs.
 - The frontend talks only to the Experiment API. It does not read `data/`.
 
