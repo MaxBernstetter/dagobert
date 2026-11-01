@@ -225,6 +225,23 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createSettings, setCreateSettings] = useState<ExperimentSettings>(defaultExperimentSettings());
+  // Stable handlers: the date pickers are memoized and must not re-render on the polling tick.
+  const onCreateFromDateChange = useCallback((dateInput: string) => {
+    const fromMs = backtestDateInputToFromMs(dateInput);
+    if (fromMs == null) return;
+    setCreateSettings((s) => {
+      const next = { ...s, fromMs };
+      if (fromMs >= s.toMs) {
+        const bumped = backtestDateInputToToMs(dateInput);
+        if (bumped != null && bumped > fromMs) next.toMs = bumped;
+      }
+      return next;
+    });
+  }, []);
+  const onCreateToDateChange = useCallback((dateInput: string) => {
+    const toMs = backtestDateInputToToMs(dateInput);
+    setCreateSettings((s) => (toMs == null || toMs <= s.fromMs ? s : { ...s, toMs }));
+  }, []);
   const [createPlaybook, setCreatePlaybook] = useState("ma-cross");
   const [strategies, setStrategies] = useState<ExperimentStrategy[]>([]);
   const [instanceDrafts, setInstanceDrafts] = useState<InstanceDraft[]>([]);
@@ -1073,29 +1090,14 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                   label="From (UTC)"
                   value={backtestFromMsToDateInput(createSettings.fromMs)}
                   max={backtestToMsToDateInput(createSettings.toMs) || undefined}
-                  onChange={(dateInput) => {
-                    const fromMs = backtestDateInputToFromMs(dateInput);
-                    if (fromMs == null) return;
-                    setCreateSettings((s) => {
-                      const next = { ...s, fromMs };
-                      if (fromMs >= s.toMs) {
-                        const bumped = backtestDateInputToToMs(dateInput);
-                        if (bumped != null && bumped > fromMs) next.toMs = bumped;
-                      }
-                      return next;
-                    });
-                  }}
+                  onChange={onCreateFromDateChange}
                 />
                 <BacktestDatePicker
                   id="experiment-to"
                   label="To (UTC, inclusive)"
                   value={backtestToMsToDateInput(createSettings.toMs)}
                   min={backtestFromMsToDateInput(createSettings.fromMs) || undefined}
-                  onChange={(dateInput) => {
-                    const toMs = backtestDateInputToToMs(dateInput);
-                    if (toMs == null || toMs <= createSettings.fromMs) return;
-                    setCreateSettings((s) => ({ ...s, toMs }));
-                  }}
+                  onChange={onCreateToDateChange}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm">
