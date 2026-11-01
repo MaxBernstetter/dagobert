@@ -89,11 +89,17 @@ func (s *Server) handleChartSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	maxPoints, err := chartMaxPoints(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	series, err := marketSeries(r.Context(), exp, fromSec, toSec)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	series = downsampleSeries(series, maxPoints)
 	points, markers := instanceChartSeries(inst, exp.InitialUsdc+exp.InitialUsdt)
 	series.Portfolio = points
 	series.Markers = markers
@@ -467,4 +473,86 @@ func indicatorPane(unit, typ string) string {
 		return "oscillator"
 	}
 	return "price"
+}
+
+// chartMaxPoints reads the optional maxPoints query parameter. Absent or <= 0 keeps every candle.
+func chartMaxPoints(r *http.Request) (int, error) {
+	raw := r.URL.Query().Get("maxPoints")
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("maxPoints must be an integer")
+	}
+	if n < 0 {
+		return 0, nil
+	}
+	return n, nil
+}
+
+// candleBuckets splits n consecutive candles into buckets of equal size (the last one may be smaller)
+// and returns them as half-open index ranges [lo, hi). It makes at most maxPoints buckets. With
+// maxPoints <= 0 or n <= maxPoints every candle is its own bucket.
+func candleBuckets(n, maxPoints int) [][2]int {
+	if n <= 0 {
+		return nil
+	}
+	if maxPoints <= 0 || n <= maxPoints {
+		out := make([][2]int, n)
+		for i := range out {
+			out[i] = [2]int{i, i + 1}
+		}
+		return out
+	}
+	size := (n + maxPoints - 1) / maxPoints
+	out := make([][2]int, 0, maxPoints)
+	for lo := 0; lo < n; lo += size {
+		out = append(out, [2]int{lo, min(lo+size, n)})
+	}
+	return out
+}
+
+// downsampleSeries aggregates the candles of a series into at most maxPoints buckets: open of the first
+// candle, high and low over the bucket, close of the last candle, time of the first candle (the bucket
+// start). Each indicator takes its value at the bucket's last candle. Portfolio and markers are not part
+// of the candles and are left out; the caller sets them afterwards. The input is not modified.
+func downsampleSeries(s *v1.ChartSeries, maxPoints int) *v1.ChartSeries {
+	n := len(s.GetTimeSec())
+	if maxPoints <= 0 || n <= maxPoints {
+		return s
+	}
+	buckets := candleBuckets(n, maxPoints)
+	out := &v1.ChartSeries{
+		TimeSec:    make([]int64, len(buckets)),
+		Open:       make([]float64, len(buckets)),
+		High:       make([]float64, len(buckets)),
+		Low:        make([]float64, len(buckets)),
+		Close:      make([]float64, len(buckets)),
+		Indicators: make([]*v1.ChartIndicator, len(s.GetIndicators())),
+	}
+	for k, b := range buckets {
+		lo, hi := b[0], b[1]
+		high, low := s.High[lo], s.Low[lo]
+		for i := lo + 1; i < hi; i++ {
+			high = max(high, s.High[i])
+			low = min(low, s.Low[i])
+		}
+		out.TimeSec[k] = s.TimeSec[lo]
+		out.Open[k] = s.Open[lo]
+		out.High[k] = high
+		out.Low[k] = low
+		out.Close[k] = s.Close[hi-1]
+	}
+	for i, ind := range s.GetIndicators() {
+		values := make([]float64, len(buckets))
+		for k, b := range buckets {
+			values[k] = ind.Value[b[1]-1]
+		}
+		out.Indicators[i] = &v1.ChartIndicator{
+			Id: ind.Id, Label: ind.Label, Unit: ind.Unit, Pane: ind.Pane, Style: ind.Style,
+			Reference: ind.Reference, Value: values,
+		}
+	}
+	return out
 }

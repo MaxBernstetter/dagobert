@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -310,5 +311,61 @@ func TestExperimentRunNeedsDatabase(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
 		t.Fatal("run without DATABASE_URL must fail")
+	}
+}
+
+// TestChartSeriesMaxPoints: without maxPoints (or with 0) the series is unchanged. With maxPoints the
+// candles are aggregated to at most that many, and the portfolio and the markers stay exact.
+func TestChartSeriesMaxPoints(t *testing.T) {
+	f := newAPIFixture(t, "")
+	base := fmt.Sprintf("/instances/%s/chart-series?from=0&to=%d", f.traded.ID, f.endSec)
+
+	code, plain := f.get(t, base)
+	if code != http.StatusOK {
+		t.Fatalf("chart-series %d", code)
+	}
+	code, zero := f.get(t, base+"&maxPoints=0")
+	if code != http.StatusOK || string(zero) != string(plain) {
+		t.Fatalf("maxPoints=0 must be byte-identical to no parameter (status %d)", code)
+	}
+	full := &v1.ChartSeries{}
+	if err := proto.Unmarshal(plain, full); err != nil {
+		t.Fatal(err)
+	}
+	if len(full.TimeSec) < 20 {
+		t.Fatalf("fixture has only %d candles, need more than the budget", len(full.TimeSec))
+	}
+
+	const budget = 10
+	code, body := f.get(t, base+fmt.Sprintf("&maxPoints=%d", budget))
+	if code != http.StatusOK {
+		t.Fatalf("maxPoints chart-series %d", code)
+	}
+	small := &v1.ChartSeries{}
+	if err := proto.Unmarshal(body, small); err != nil {
+		t.Fatal(err)
+	}
+	if len(small.TimeSec) == 0 || len(small.TimeSec) > budget {
+		t.Fatalf("candles %d, budget %d", len(small.TimeSec), budget)
+	}
+	for _, ind := range small.Indicators {
+		if len(ind.Value) != len(small.TimeSec) {
+			t.Fatalf("indicator %s has %d values for %d candles", ind.Id, len(ind.Value), len(small.TimeSec))
+		}
+	}
+	if small.TimeSec[0] != full.TimeSec[0] || small.Open[0] != full.Open[0] {
+		t.Fatal("first bucket must start at the first candle")
+	}
+	if small.Close[len(small.Close)-1] != full.Close[len(full.Close)-1] {
+		t.Fatal("last bucket must close at the last candle's close")
+	}
+	if !reflect.DeepEqual(small.Portfolio, full.Portfolio) {
+		t.Fatal("portfolio must not be downsampled")
+	}
+	if !reflect.DeepEqual(small.Markers, full.Markers) {
+		t.Fatal("markers must not be downsampled")
+	}
+	if len(full.Markers) == 0 {
+		t.Fatal("fixture must have markers")
 	}
 }
