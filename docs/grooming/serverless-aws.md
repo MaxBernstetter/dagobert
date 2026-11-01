@@ -169,7 +169,7 @@ task db:migrate
 
 ### Step 10 — Job writers → Postgres ✅ implemented
 
-**What:** `RunExperiment` prepare/simulate/finalize use **Postgres** when `DATABASE_URL` is set (`src/experimentapi/pgcatalog`); otherwise SQLite catalog unchanged. Jobs upsert instance `metric_*`, `experiment_instance_period_stat`, and fills; actions deferred. Experiment docker runs join Compose network (`COMPOSE_NETWORK`, default `dagobert_default`) so job containers reach `postgres`.
+**What:** `RunExperiment` prepare/simulate/finalize use **Postgres** when `DATABASE_URL` is set (`src/experimentapi/pgcatalog`); otherwise SQLite catalog unchanged. Jobs upsert instance `metric_*`, `experiment_instance_period_stat`, and fills; actions deferred. Experiment docker runs join the Compose network so job containers reach `postgres`: `COMPOSE_NETWORK` if set, else the orchestrator's own network (the project name follows the checkout directory), else `dagobert_default`.
 
 **Exit:** Create experiment via Experiment API → run → instance table KPIs/progress from Postgres (no `report.json` for list metrics). `experiment_kpi` bar bodies still SQLite until step 11.
 

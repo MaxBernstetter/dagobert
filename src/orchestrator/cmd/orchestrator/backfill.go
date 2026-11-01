@@ -416,6 +416,28 @@ func runBacktestDocker(ctx context.Context, id string) (int, error) {
 	return runCatalogDocker(ctx, "BACKTEST_ID", id, "backtest", "", false, nil)
 }
 
+// composeNetwork names the Docker network job containers join so they reach postgres.
+// COMPOSE_NETWORK wins. Otherwise it is read from this container's own networks, since
+// Compose names the network after the project (the checkout directory), not always
+// "dagobert". The last resort is the default project's "dagobert_default".
+func composeNetwork(ctx context.Context) string {
+	if v := strings.TrimSpace(os.Getenv("COMPOSE_NETWORK")); v != "" {
+		return v
+	}
+	if host, err := os.Hostname(); err == nil && host != "" {
+		out, err := exec.CommandContext(ctx, "docker", "inspect", "--format",
+			"{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}\n{{end}}", host).Output()
+		if err == nil {
+			for _, name := range strings.Fields(string(out)) {
+				if name != "bridge" && name != "host" && name != "none" {
+					return name
+				}
+			}
+		}
+	}
+	return "dagobert_default"
+}
+
 func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName string, retryFailed bool, extraEnv []string) (int, error) {
 	data, err := hostDataDirForJobs()
 	if err != nil {
@@ -436,7 +458,7 @@ func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName strin
 		"-e", "VENUE_SIMULATE=1",
 		"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
 	)
-	if net := strings.TrimSpace(env("COMPOSE_NETWORK", "dagobert_default")); net != "" {
+	if net := composeNetwork(ctx); net != "" {
 		args = append(args, "--network", net)
 	}
 	args = append(args, dockerDataPlaneEnvArgs()...)
