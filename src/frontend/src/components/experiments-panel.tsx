@@ -92,6 +92,12 @@ import {
 import { cn } from "@/lib/utils";
 import { usePageBreadcrumbs, type PageCrumb } from "@/components/page-breadcrumbs";
 
+/** The parallelism input as a setting: a whole number of at least 1, or undefined (auto). */
+function parseParallelismInput(raw: string): number | undefined {
+  const n = Number(raw.trim());
+  return raw.trim() !== "" && Number.isInteger(n) && n >= 1 ? n : undefined;
+}
+
 const fieldInputClass =
   "w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
 
@@ -222,6 +228,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   const [selected, setSelected] = useState<ExperimentRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [maxParallelism, setMaxParallelism] = useState<number | null>(null);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createSettings, setCreateSettings] = useState<ExperimentSettings>(defaultExperimentSettings());
@@ -364,6 +371,20 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    let cancelled = false;
+    fetch(apiUrl("/experiments/limits"), { cache: "no-store" })
+      .then((res) => (res.ok ? (res.json() as Promise<{ maxParallelism: number }>) : null))
+      .then((limits) => {
+        if (!cancelled && limits) setMaxParallelism(limits.maxParallelism);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [createOpen]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -1114,6 +1135,28 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                 <span className="text-muted-foreground">
                   Force re-download candles in range (otherwise only missing hours are
                   fetched)
+                </span>
+              </label>
+              <label className="grid gap-1">
+                <span className="text-muted-foreground">Parallel processes</span>
+                <input
+                  type="number"
+                  className={fieldInputClass}
+                  min={1}
+                  max={maxParallelism ?? undefined}
+                  step={1}
+                  placeholder="auto"
+                  value={createSettings.parallelism ?? ""}
+                  onChange={(e) =>
+                    setCreateSettings((s) => ({
+                      ...s,
+                      parallelism: parseParallelismInput(e.target.value),
+                    }))
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  Empty = auto: one C++ process per CPU of the server
+                  {maxParallelism != null ? ` (at most ${maxParallelism} here)` : ""}.
                 </span>
               </label>
             </div>
