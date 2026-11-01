@@ -1,7 +1,6 @@
 package backtest
 
 import (
-	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -88,41 +87,4 @@ func cppBinaryFor(t *testing.T, env, dir, name string) string {
 	}
 	t.Skipf("strategy-%s not built (task cpp:build) and %s unset", name, env)
 	return ""
-}
-
-// relEq is the equivalence tolerance of #130: relative with a tiny absolute floor.
-func relEq(a, b, tol float64) bool {
-	return math.Abs(a-b) <= tol*math.Max(1, math.Max(math.Abs(a), math.Abs(b)))
-}
-
-func compareJSON(t *testing.T, path string, a, b any, tol float64) {
-	t.Helper()
-	switch av := a.(type) {
-	case map[string]any:
-		bv, _ := b.(map[string]any)
-		if len(av) != len(bv) {
-			t.Errorf("%s: keys %d vs %d", path, len(av), len(bv))
-		}
-		for k, v := range av {
-			compareJSON(t, path+"."+k, v, bv[k], tol)
-		}
-	case []any:
-		bv, _ := b.([]any)
-		if len(av) != len(bv) {
-			t.Errorf("%s: len %d vs %d", path, len(av), len(bv))
-			return
-		}
-		for i := range av {
-			compareJSON(t, path+"[]", av[i], bv[i], tol)
-		}
-	case float64:
-		bv, _ := b.(float64)
-		if !relEq(av, bv, tol) {
-			t.Errorf("%s: %v vs %v", path, av, bv)
-		}
-	default:
-		if a != b {
-			t.Errorf("%s: %v vs %v", path, a, b)
-		}
-	}
 }
