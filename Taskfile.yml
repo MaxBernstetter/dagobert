@@ -93,11 +93,12 @@ tasks:
       - docker compose up
 
   dev:
-    desc: Same as task up but builds the job images, migrates the database, and runs compose file watch (sync/rebuild rules)
+    desc: Same as task up but builds the job and compose images, migrates the database, and runs compose file watch (sync/rebuild rules)
     cmds:
       - mkdir -p data/parquet
       - task: ensure-secrets
       - task: build:jobs
+      - task: build:stack
       - task: db:migrate
       - docker compose up --watch
 

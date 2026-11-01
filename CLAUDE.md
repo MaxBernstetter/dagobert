@@ -10,7 +10,7 @@ Run from `devbox shell` (provides Go 1.24 and Task). Module: `github.com/MaxBern
 task build              # job images + compose images
 task build:jobs         # only the pipeline job images (dagobert-<job>)
 task up                 # compose stack: Floci, orchestrator, dev frontend on :11001
-task dev                # builds job images, migrates the DB, then up with compose watch
+task dev                # builds job and compose images, migrates the DB, then up with compose watch
 task down               # stop stack; ./data is kept
 task run                # one candle-close execution (CANDLE_CLOSE_MS, default 1700006400000)
 task test               # system tests for the job images (builds each image, runs it)

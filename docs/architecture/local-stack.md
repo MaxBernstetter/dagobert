@@ -32,7 +32,7 @@ Floci's Lambda cannot see the host Docker socket. The starter is the process tha
 | `task build` | Job images plus compose images (orchestrator, production frontend). |
 | `task build:jobs` / `task build:stack` | Build only pipeline jobs or only compose services. |
 | `task up` | `docker compose up` with `compose.override.yaml` (dev frontend: bind-mount of `src/frontend` + Vite dev server). |
-| `task dev` | `task build:jobs`, `task db:migrate`, then `docker compose up --watch` (same stack; Compose sync/rebuild on file changes). `db:up` also creates the Supabase roles `anon` and `authenticated` the migrations revoke from. |
+| `task dev` | `task build:jobs`, `task build:stack`, `task db:migrate`, then `docker compose up --watch` (same stack; Compose sync/rebuild on file changes). `db:up` also creates the Supabase roles `anon` and `authenticated` the migrations revoke from. |
 | `task up:prod` | `COMPOSE_FILE=compose.yaml` only — production frontend image (`target: prod`). |
 | `task up:build` | `task build` then `task up` (job images + compose build). |
 | `task run` | One execution for `CANDLE_CLOSE_MS`. Default `1700006400000`. |
