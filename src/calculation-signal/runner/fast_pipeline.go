@@ -25,21 +25,6 @@ import (
 // BarProgress is called during simulation with done/total bar counts (may be throttled).
 type BarProgress func(done, total int)
 
-// PipelineOpts customizes FastSimulatedPipeline (nil = defaults).
-type PipelineOpts struct {
-	// StrategyConfig is playbook-specific JSON (ma-cross windows; signal-consensus thresholds).
-	StrategyConfig json.RawMessage
-	// PlaybookKey overrides entry.ID for signal/action/fill identity when set.
-	PlaybookKey string
-	// Slim skips signal/action SQLite, no-trade order rows, and per-bar JSON encode (experiment path).
-	Slim bool
-	// SkipSampler disables the resource sampler (faster experiment sims).
-	SkipSampler bool
-	// Capture, when set, receives the order results and fill journals in memory. The run then writes
-	// no execution SQLite and no paper wallet; the caller persists the rows (experiment instances).
-	Capture *execrunner.Activity
-}
-
 // RunReport is the wall-clock + optional resource report for one pipeline run.
 type RunReport = framework.RunReport
 
@@ -55,22 +40,14 @@ type StageTimings struct {
 
 // FastSimulatedPipeline replays signal → market-action → execution with KPI window preload
 // and batched SQLite writes. workspaceDir holds signal/execution/paper; kpiWin supplies marks.
-// Requires VENUE_SIMULATE=1.
+// It is the single-backtest path (backtest.Run) and the seed command; experiments replay C++ actions
+// through ReplayKPI instead. Requires VENUE_SIMULATE=1.
 func FastSimulatedPipeline(workspaceDir string, kpiWin *kpi.Window, playbookEnv, symbol string, candleCloses []int64, onBar BarProgress) (RunReport, error) {
-	return FastSimulatedPipelineOpts(workspaceDir, kpiWin, playbookEnv, symbol, candleCloses, nil, onBar)
-}
-
-// FastSimulatedPipelineOpts is FastSimulatedPipeline with optional strategy config / playbook key.
-func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbookEnv, symbol string, candleCloses []int64, opts *PipelineOpts, onBar BarProgress) (RunReport, error) {
 	start := time.Now()
-	slim := opts != nil && opts.Slim
-	skipSampler := (opts != nil && opts.SkipSampler) || slim
 	profile := profileEnabled()
 
 	var sampler *resourceSampler
-	if !skipSampler {
-		sampler = startResourceSampler(resourceSampleInterval)
-	}
+	sampler = startResourceSampler(resourceSampleInterval)
 
 	var stages StageTimings
 	finish := func(err error) (RunReport, error) {
@@ -100,12 +77,6 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 
 	var strategyConfig json.RawMessage
 	playbookID := entry.ID
-	if opts != nil {
-		strategyConfig = opts.StrategyConfig
-		if opts.PlaybookKey != "" {
-			playbookID = opts.PlaybookKey
-		}
-	}
 
 	var configJSON []byte
 	aggMS := framework.AggregationDurationMS()
@@ -123,13 +94,6 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			return finish(err)
 		}
 		strategyConfig = configJSON
-		if opts != nil && opts.PlaybookKey == "" && len(opts.StrategyConfig) > 0 {
-			hash, err := cfg.Hash()
-			if err != nil {
-				return finish(err)
-			}
-			playbookID = playbooks.InstancePlaybookKey(entry.ID, hash)
-		}
 	case "signal-consensus":
 		cfg, err := signalconsensus.ParseConfig(strategyConfig)
 		if err != nil {
@@ -143,13 +107,6 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			return finish(err)
 		}
 		strategyConfig = configJSON
-		if opts != nil && opts.PlaybookKey == "" && len(opts.StrategyConfig) > 0 {
-			hash, err := cfg.Hash()
-			if err != nil {
-				return finish(err)
-			}
-			playbookID = playbooks.InstancePlaybookKey(entry.ID, hash)
-		}
 	}
 
 	inst, ok := instruments.Resolve(symbol)
@@ -169,15 +126,10 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 
 	pol := marketrunner.PolicyFromEnv()
 	costs := sim.FromEnv()
-	encodeBodies := !slim
 
 	var signals []signalstore.SignalRow
 	var actions []signalstore.ActionRow
 	simBatch := execrunner.NewSimBatch()
-	var capture *execrunner.Activity
-	if opts != nil {
-		capture = opts.Capture
-	}
 
 	position := "flat"
 	lastBuyBar := -1
@@ -263,17 +215,15 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			return finish(err)
 		}
 
-		if encodeBodies {
-			encStart := time.Now()
-			signalJSON, err := playbooks.EncodeSignalJSONWithConfig(entry, symbol, dec, configJSON)
-			if err != nil {
-				return finish(err)
-			}
-			signals = append(signals, signalstore.SignalRow{
-				Playbook: playbookID, Symbol: symbol, CandleClose: candleClose, Body: signalJSON,
-			})
-			encodeDur += time.Since(encStart)
+		encStart := time.Now()
+		signalJSON, err := playbooks.EncodeSignalJSONWithConfig(entry, symbol, dec, configJSON)
+		if err != nil {
+			return finish(err)
 		}
+		signals = append(signals, signalstore.SignalRow{
+			Playbook: playbookID, Symbol: symbol, CandleClose: candleClose, Body: signalJSON,
+		})
+		encodeDur += time.Since(encStart)
 
 		mark := barClose
 		for _, hr := range []int{3, 6, 12, 24, 48} {
@@ -286,15 +236,13 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			mark = 1
 		}
 		quoteCash, baseHeld := wallet.QuoteAndBase(inst.Quote, inst.Base)
-		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, dec.QuoteNotional, dec.BaseQty, pol, encodeBodies)
+		planned, err := marketrunner.PlanActionWithPolicy(playbookID, symbol, dec.Decision, dec.RuleID, quoteCash, baseHeld, mark, dec.QuoteNotional, dec.BaseQty, pol, true)
 		if err != nil {
 			return finish(err)
 		}
-		if encodeBodies {
-			actions = append(actions, signalstore.ActionRow{
-				Playbook: playbookID, Symbol: symbol, CandleClose: candleClose, Body: planned.Body,
-			})
-		}
+		actions = append(actions, signalstore.ActionRow{
+			Playbook: playbookID, Symbol: symbol, CandleClose: candleClose, Body: planned.Body,
+		})
 
 		price := barClose
 		if price <= 0 {
@@ -304,15 +252,11 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 			return finish(fmt.Errorf("no bar price bar_open=%d", barOpen))
 		}
 		baseBefore := baseHeld
-		step, err := execrunner.SimulateBarWithModel(&wallet, playbookID, symbol, candleClose, planned.Decision, planned.Size, price, position, costs, slim)
+		step, err := execrunner.SimulateBarWithModel(&wallet, playbookID, symbol, candleClose, planned.Decision, planned.Size, price, position, costs, false)
 		if err != nil {
 			return finish(err)
 		}
-		if capture != nil {
-			capture.Add(step)
-		} else {
-			simBatch.Add(step)
-		}
+		simBatch.Add(step)
 		position = step.Position
 		if dec.StopPrice != nil || len(openUnits) > 0 {
 			_, baseAfter := wallet.QuoteAndBase(inst.Quote, inst.Base)
@@ -335,21 +279,17 @@ func FastSimulatedPipelineOpts(workspaceDir string, kpiWin *kpi.Window, playbook
 	stages.EncodeMs = encodeDur.Milliseconds()
 
 	flushStart := time.Now()
-	if encodeBodies {
-		sigDB, err := signalstore.Open(workspaceDir)
-		if err != nil {
-			return finish(err)
-		}
-		if err := signalstore.ReplaceSignalsAndActions(sigDB, signals, actions); err != nil {
-			sigDB.Close()
-			return finish(err)
-		}
-		sigDB.Close()
+	sigDB, err := signalstore.Open(workspaceDir)
+	if err != nil {
+		return finish(err)
 	}
-	if capture == nil {
-		if err := simBatch.Flush(workspaceDir, &wallet); err != nil {
-			return finish(err)
-		}
+	if err := signalstore.ReplaceSignalsAndActions(sigDB, signals, actions); err != nil {
+		sigDB.Close()
+		return finish(err)
+	}
+	sigDB.Close()
+	if err := simBatch.Flush(workspaceDir, &wallet); err != nil {
+		return finish(err)
 	}
 	stages.FlushMs = time.Since(flushStart).Milliseconds()
 	return finish(nil)

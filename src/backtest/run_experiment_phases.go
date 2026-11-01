@@ -5,14 +5,11 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
-	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
-	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
@@ -276,10 +273,6 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		return fmt.Errorf("no instance ids to simulate")
 	}
 	_ = os.Setenv("VENUE_SIMULATE", "1")
-	engine, err := experimentEngine()
-	if err != nil {
-		return err
-	}
 
 	meta, err := ReadExperimentPrepareMeta(dataDir, experimentID)
 	if err != nil {
@@ -291,7 +284,6 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	}
 	settings := meta.Settings
 	applyExperimentEnv(dataDir, settings)
-	from, to := meta.From, meta.To
 	failedSymbols := meta.FailedSymbols
 	if failedSymbols == nil {
 		failedSymbols = map[string]string{}
@@ -363,58 +355,7 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		queue <- r
 	}
 
-	if engine == engineCpp {
-		cppSimulate(dataDir, meta, bySymbol, compute, queue)
-		if SimulateComputeDoneHook != nil {
-			SimulateComputeDoneHook()
-		}
-		close(queue)
-		<-persistDone
-		return nil
-	}
-
-	aggMS := signalstore.AggregationDurationMS()
-	startCash := settings.InitialUSDC + settings.InitialUSDT
-	next := make(chan store.ExperimentInstance)
-	var wg sync.WaitGroup
-	for w := 0; w < ExperimentSimWorkers(); w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for inst := range next {
-				sym := store.InstanceSymbol(inst, settings)
-				bundle := bySymbol[sym]
-				ws := store.ExperimentWorkspaceDir(dataDir, inst)
-				res := instanceResult{inst: inst, sym: sym, ws: ws}
-				capture := &execrunner.Activity{}
-				opts := &signalrunner.PipelineOpts{
-					StrategyConfig: inst.StrategyConfig,
-					PlaybookKey:    inst.PlaybookKey,
-					Slim:           true,
-					SkipSampler:    true,
-					Capture:        capture,
-				}
-				runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, bundle.win, inst.Playbook, sym, bundle.closes, opts, nil)
-				res.timing = store.InstanceRunTiming{StartedAtMs: runRep.StartedAtMs, FinishedAtMs: runRep.FinishedAtMs}
-				if err == nil {
-					res.fills = signalrunner.FillsFromActivity(capture)
-					res.orders, res.journals = capture.Orders, capture.Journals
-				}
-				if err == nil {
-					res.report = signalrunner.BuildInstanceReport(
-						runRep, inst.PlaybookKey, sym, from, to, startCash, res.fills, bundle.win, bundle.closes, aggMS,
-					)
-				}
-				res.err = err
-				queue <- res
-			}
-		}()
-	}
-	for _, inst := range compute {
-		next <- inst
-	}
-	close(next)
-	wg.Wait()
+	cppSimulate(dataDir, meta, bySymbol, compute, queue)
 	if SimulateComputeDoneHook != nil {
 		SimulateComputeDoneHook()
 	}

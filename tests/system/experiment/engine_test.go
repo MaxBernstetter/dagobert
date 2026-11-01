@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
@@ -45,10 +44,9 @@ func cppSignalConsensusBin(t *testing.T) string {
 	return ""
 }
 
-func TestExperimentEngineCppPersistsResults(t *testing.T) {
+func TestExperimentPersistsResults(t *testing.T) {
 	const n = 12
 	dataDir, url, rec := gridExperiment(t, n)
-	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SMA_CROSS_BIN", cppSmaCrossBin(t))
 	t.Setenv("EXPERIMENT_CPP_SHARD_MAX", "5") // three shards
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
@@ -86,10 +84,9 @@ func TestExperimentEngineCppPersistsResults(t *testing.T) {
 	}
 }
 
-func TestExperimentEngineCppCrashedShardFailsItsInstances(t *testing.T) {
+func TestExperimentCrashedShardFailsItsInstances(t *testing.T) {
 	const n = 4
 	dataDir, url, rec := gridExperiment(t, n)
-	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SMA_CROSS_BIN", falseBin(t))
 	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
 		t.Fatal("expected the run to fail when every shard crashes")
@@ -101,7 +98,7 @@ func TestExperimentEngineCppCrashedShardFailsItsInstances(t *testing.T) {
 }
 
 // An explicit cooldown of 0 reaches the C++ engine as 0 (proto optional presence, #128) and runs.
-func TestExperimentEngineCppRunsConsensusZeroCooldown(t *testing.T) {
+func TestExperimentRunsConsensusZeroCooldown(t *testing.T) {
 	bin := cppSignalConsensusBin(t)
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
@@ -122,7 +119,6 @@ func TestExperimentEngineCppRunsConsensusZeroCooldown(t *testing.T) {
 	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
-	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
@@ -133,7 +129,7 @@ func TestExperimentEngineCppRunsConsensusZeroCooldown(t *testing.T) {
 	}
 }
 
-func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
+func TestExperimentSignalConsensusPersistsResults(t *testing.T) {
 	bin := cppSignalConsensusBin(t)
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
@@ -156,7 +152,6 @@ func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
 	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
-	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
@@ -169,28 +164,6 @@ func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(instanceDir(dataDir, inst), "report.json")); err != nil {
 			t.Fatalf("instance %s: %v", inst.Label, err)
 		}
-	}
-}
-
-// The default engine stays Go: the C++ binary is never touched, so a broken path is harmless.
-func TestExperimentDefaultEngineIsGo(t *testing.T) {
-	const n = 4
-	dataDir, url, rec := gridExperiment(t, n)
-	t.Setenv("CPP_SMA_CROSS_BIN", "/nonexistent")
-	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
-		t.Fatal(err)
-	}
-	got := loadExperimentPG(t, url, rec.ID)
-	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != n {
-		t.Fatalf("status %q counts %v", got.Status, countStatus(got))
-	}
-}
-
-func TestExperimentEngineInvalidValueFails(t *testing.T) {
-	dataDir, _, rec := gridExperiment(t, 2)
-	t.Setenv("EXPERIMENT_ENGINE", "rust")
-	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil || !strings.Contains(err.Error(), "EXPERIMENT_ENGINE") {
-		t.Fatalf("err %v", err)
 	}
 }
 

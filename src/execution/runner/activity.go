@@ -6,20 +6,6 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
-// Activity is the order results and fill journals of a simulated run in the neutral row types
-// written to orders.parquet and journals.parquet. Ordinals keep the simulation order.
-type Activity struct {
-	Orders   []instanceparquet.Order
-	Journals []instanceparquet.Journal
-}
-
-// Add appends one simulated step.
-func (a *Activity) Add(step SimBarResult) {
-	orders, journals := ActivityFromStep(step, int32(len(a.Orders)), int32(len(a.Journals)))
-	a.Orders = append(a.Orders, orders...)
-	a.Journals = append(a.Journals, journals...)
-}
-
 // ActivityFromStep converts one simulated step to Parquet rows. The ordinals start at the given
 // counts, which are the rows already produced by earlier steps.
 func ActivityFromStep(step SimBarResult, orderBase, journalBase int32) ([]instanceparquet.Order, []instanceparquet.Journal) {

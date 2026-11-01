@@ -37,7 +37,7 @@ type apiFixture struct {
 // newAPIFixture runs two ma-cross instances on the crossing fixture in a scratch Postgres and serves
 // the Experiment API over httptest. The second instance's Parquet files are removed afterwards, so
 // it stands for an instance without them.
-func newAPIFixture(t *testing.T, engine string) apiFixture {
+func newAPIFixture(t *testing.T) apiFixture {
 	t.Helper()
 	url := pgScratchDB(t)
 	dataDir := tempDataDir(t)
@@ -60,10 +60,6 @@ func newAPIFixture(t *testing.T, engine string) apiFixture {
 	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("DATABASE_URL", url)
-	if engine != "" {
-		t.Setenv("EXPERIMENT_ENGINE", engine)
-		t.Setenv("CPP_SMA_CROSS_BIN", cppSmaCrossBin(t))
-	}
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +155,7 @@ func checkActivity(t *testing.T, body []byte, wantRows bool) (rows, journals []m
 }
 
 func TestExperimentAPIInstanceFiles(t *testing.T) {
-	f := newAPIFixture(t, "")
+	f := newAPIFixture(t)
 
 	code, body := f.get(t, f.instancePath(f.traded, "activity"))
 	if code != http.StatusOK {
@@ -218,29 +214,6 @@ func TestExperimentAPIInstanceFiles(t *testing.T) {
 	}
 }
 
-// TestExperimentAPIInstanceFilesCpp: C++ instances have real activity rows, journals and markers,
-// which they had no source for before the Parquet files (they used to return empty arrays).
-func TestExperimentAPIInstanceFilesCpp(t *testing.T) {
-	f := newAPIFixture(t, "cpp")
-	code, body := f.get(t, f.instancePath(f.traded, "activity"))
-	if code != http.StatusOK {
-		t.Fatalf("activity %d: %s", code, body)
-	}
-	checkActivity(t, body, true)
-
-	code, body = f.get(t, f.instancePath(f.traded, fmt.Sprintf("chart-series?from=0&to=%d", f.endSec)))
-	if code != http.StatusOK {
-		t.Fatalf("chart-series %d", code)
-	}
-	series := &v1.ChartSeries{}
-	if err := proto.Unmarshal(body, series); err != nil {
-		t.Fatal(err)
-	}
-	if len(series.Markers) == 0 {
-		t.Fatal("cpp instance returned no trade markers")
-	}
-}
-
 // removeInstanceParquet deletes the four instance files, as the orchestrator's delete does.
 func removeInstanceParquet(t *testing.T, ws string) {
 	t.Helper()
@@ -254,7 +227,7 @@ func removeInstanceParquet(t *testing.T, ws string) {
 // TestExperimentPerformanceFromParquet: /performance is built from the instances' trade_outcomes.parquet
 // at finalize, and the prepare cache is gone once the experiment is final.
 func TestExperimentPerformanceFromParquet(t *testing.T) {
-	f := newAPIFixture(t, "")
+	f := newAPIFixture(t)
 	code, body := f.get(t, "/performance")
 	if code != http.StatusOK {
 		t.Fatalf("performance %d: %s", code, body)
@@ -269,7 +242,7 @@ func TestExperimentPerformanceFromParquet(t *testing.T) {
 
 // TestExperimentAPIDeleteRemovesFiles: DELETE drops the experiment's directory under DATA_DIR.
 func TestExperimentAPIDeleteRemovesFiles(t *testing.T) {
-	f := newAPIFixture(t, "")
+	f := newAPIFixture(t)
 	dir := filepath.Join(f.dataDir, "experiments", f.experiment)
 	if _, err := os.Stat(dir); err != nil {
 		t.Fatalf("experiment directory before delete: %v", err)
@@ -317,7 +290,7 @@ func TestExperimentRunNeedsDatabase(t *testing.T) {
 // TestChartSeriesMaxPoints: without maxPoints (or with 0) the series is unchanged. With maxPoints the
 // candles are aggregated to at most that many, and the portfolio and the markers stay exact.
 func TestChartSeriesMaxPoints(t *testing.T) {
-	f := newAPIFixture(t, "")
+	f := newAPIFixture(t)
 	base := fmt.Sprintf("/instances/%s/chart-series?from=0&to=%d", f.traded.ID, f.endSec)
 
 	code, plain := f.get(t, base)
