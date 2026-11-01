@@ -47,17 +47,14 @@ func cppSignalConsensusBin(t *testing.T) string {
 
 func TestExperimentEngineCppPersistsResults(t *testing.T) {
 	const n = 12
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SMA_CROSS_BIN", cppSmaCrossBin(t))
 	t.Setenv("EXPERIMENT_CPP_SHARD_MAX", "5") // three shards
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != n {
 		t.Fatalf("status %q error %q counts %v", got.Status, got.Error, countStatus(got))
 	}
@@ -66,7 +63,7 @@ func TestExperimentEngineCppPersistsResults(t *testing.T) {
 		if inst.StartedAt == nil || inst.FinishedAt == nil {
 			t.Fatalf("instance %s missing timing", inst.Label)
 		}
-		b, err := os.ReadFile(filepath.Join(store.ExperimentWorkspaceDir(dataDir, inst), "report.json"))
+		b, err := os.ReadFile(filepath.Join(instanceDir(dataDir, inst), "report.json"))
 		if err != nil {
 			t.Fatalf("instance %s report.json: %v", inst.Label, err)
 		}
@@ -91,13 +88,13 @@ func TestExperimentEngineCppPersistsResults(t *testing.T) {
 
 func TestExperimentEngineCppCrashedShardFailsItsInstances(t *testing.T) {
 	const n = 4
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SMA_CROSS_BIN", falseBin(t))
 	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
 		t.Fatal("expected the run to fail when every shard crashes")
 	}
-	got, _ := cat.GetExperiment(rec.ID)
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusFailed || countStatus(got)[store.StatusFailed] != n {
 		t.Fatalf("status %q counts %v", got.Status, countStatus(got))
 	}
@@ -110,30 +107,27 @@ func TestExperimentEngineCppRunsConsensusZeroCooldown(t *testing.T) {
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cat.Close()
+	url := pgScratchDB(t)
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
 	cfg, _ := json.Marshal(map[string]any{"minBarsFlatAfterSell": 0, "minBarsLongBeforeSell": 0})
-	rec, err := cat.CreateStudy("zero-cooldown", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "zero-cooldown", Playbook: "signal-consensus", StrategyConfig: cfg},
+	rec, err := createExperimentPG(url, "zero-cooldown", settings, []fixtureSpec{
+		{Label: "zero-cooldown", Playbook: "signal-consensus", Config: cfg},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := cat.GetExperiment(rec.ID)
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Instances[0].Status != store.StatusCompleted {
 		t.Fatalf("instance status %q error %q", got.Instances[0].Status, got.Instances[0].Error)
 	}
@@ -145,37 +139,34 @@ func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cat.Close()
+	url := pgScratchDB(t)
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	var specs []store.ExperimentInstanceSpec
+	var specs []fixtureSpec
 	for i, rsi := range []float64{50, 52, 55} {
 		cfg, _ := json.Marshal(map[string]any{"rsiBull": rsi})
-		specs = append(specs, store.ExperimentInstanceSpec{Label: fmt.Sprintf("c%d", i), Playbook: "signal-consensus", StrategyConfig: cfg})
+		specs = append(specs, fixtureSpec{Label: fmt.Sprintf("c%d", i), Playbook: "signal-consensus", Config: cfg})
 	}
-	rec, err := cat.CreateStudy("consensus", "", settings, specs)
+	rec, err := createExperimentPG(url, "consensus", settings, specs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("EXPERIMENT_ENGINE", "cpp")
 	t.Setenv("CPP_SIGNAL_CONSENSUS_BIN", bin)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := cat.GetExperiment(rec.ID)
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != len(specs) {
 		t.Fatalf("status %q error %q counts %v", got.Status, got.Error, countStatus(got))
 	}
 	for _, inst := range got.Instances {
-		if _, err := os.Stat(filepath.Join(store.ExperimentWorkspaceDir(dataDir, inst), "report.json")); err != nil {
+		if _, err := os.Stat(filepath.Join(instanceDir(dataDir, inst), "report.json")); err != nil {
 			t.Fatalf("instance %s: %v", inst.Label, err)
 		}
 	}
@@ -184,12 +175,12 @@ func TestExperimentEngineCppSignalConsensusPersistsResults(t *testing.T) {
 // The default engine stays Go: the C++ binary is never touched, so a broken path is harmless.
 func TestExperimentDefaultEngineIsGo(t *testing.T) {
 	const n = 4
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	t.Setenv("CPP_SMA_CROSS_BIN", "/nonexistent")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := cat.GetExperiment(rec.ID)
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != n {
 		t.Fatalf("status %q counts %v", got.Status, countStatus(got))
 	}

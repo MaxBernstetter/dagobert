@@ -26,13 +26,16 @@ import (
 type apiFixture struct {
 	srv        *httptest.Server
 	dataDir    string
-	rec        store.ExperimentRecord
-	traded     store.ExperimentInstance
-	missing    store.ExperimentInstance
+	rec        pgRun
+	traded     pgInst
+	missing    pgInst
 	endSec     int64
 	experiment string
 }
 
+// newAPIFixture runs two ma-cross instances on the crossing fixture in a scratch Postgres and serves
+// the Experiment API over httptest. The second instance's Parquet files are removed afterwards, so
+// it stands for an instance without them.
 func newAPIFixture(t *testing.T, engine string) apiFixture {
 	t.Helper()
 	url := pgScratchDB(t)
@@ -41,25 +44,21 @@ func newAPIFixture(t *testing.T, engine string) apiFixture {
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
 
-	t.Setenv("DATABASE_URL", "")
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { cat.Close() })
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	rec, err := cat.CreateStudy("api-files", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "traded", Playbook: "ma-cross", StrategyConfig: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
-		{Label: "missing", Playbook: "ma-cross", StrategyConfig: json.RawMessage(`{"fastHr":6,"slowHr":12}`)},
+	rec, err := createExperimentPG(url, "api-files", settings, []fixtureSpec{
+		{Label: "traded", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
+		{Label: "missing", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":6,"slowHr":12}`)},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
+	t.Setenv("DATABASE_URL", url)
 	if engine != "" {
 		t.Setenv("EXPERIMENT_ENGINE", engine)
 		t.Setenv("CPP_SMA_CROSS_BIN", cppSmaCrossBin(t))
@@ -67,14 +66,10 @@ func newAPIFixture(t *testing.T, engine string) apiFixture {
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mirrorToPostgres(t, url, rec)
+	got := loadExperimentPG(t, url, rec.ID)
 	for _, inst := range got.Instances {
 		if inst.Label == "missing" {
-			removeInstanceParquet(t, store.ExperimentWorkspaceDir(dataDir, inst))
+			removeInstanceParquet(t, instanceDir(dataDir, inst))
 		}
 	}
 
@@ -88,7 +83,7 @@ func newAPIFixture(t *testing.T, engine string) apiFixture {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	f := apiFixture{srv: srv, dataDir: dataDir, rec: rec, endSec: endMs / 1000, experiment: rec.ID}
+	f := apiFixture{srv: srv, dataDir: dataDir, rec: got, endSec: endMs / 1000, experiment: rec.ID}
 	for _, inst := range got.Instances {
 		switch inst.Label {
 		case "traded":
@@ -114,7 +109,7 @@ func (f apiFixture) get(t *testing.T, path string) (int, []byte) {
 	return resp.StatusCode, body
 }
 
-func (f apiFixture) instancePath(inst store.ExperimentInstance, suffix string) string {
+func (f apiFixture) instancePath(inst pgInst, suffix string) string {
 	return fmt.Sprintf("/instances/%s/%s", inst.ID, suffix)
 }
 
@@ -263,26 +258,19 @@ func TestExperimentPerformanceStableOnRefinalize(t *testing.T) {
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
-
-	t.Setenv("DATABASE_URL", "")
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { cat.Close() })
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	rec, err := cat.CreateStudy("api-performance", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "a", Playbook: "ma-cross", StrategyConfig: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
-		{Label: "b", Playbook: "ma-cross", StrategyConfig: json.RawMessage(`{"fastHr":6,"slowHr":12}`)},
+	rec, err := createExperimentPG(url, "api-performance", settings, []fixtureSpec{
+		{Label: "a", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
+		{Label: "b", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":6,"slowHr":12}`)},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	mirrorToPostgres(t, url, rec)
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	t.Setenv("DATABASE_URL", url)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {

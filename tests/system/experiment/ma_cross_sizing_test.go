@@ -16,35 +16,31 @@ func runMACross(t *testing.T, cfg string) (string, error) {
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
 
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { cat.Close() })
+	url := pgScratchDB(t)
 
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	rec, err := cat.CreateStudy("sizing", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "sized", Playbook: "ma-cross", StrategyConfig: json.RawMessage(cfg)},
+	rec, err := createExperimentPG(url, "sizing", settings, []fixtureSpec{
+		{Label: "sized", Playbook: "ma-cross", Config: json.RawMessage(cfg)},
 	})
 	if err != nil {
 		return "", err
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil || got.Status != store.StatusCompleted {
-		t.Fatalf("status %q err %v", got.Status, err)
+	got := loadExperimentPG(t, url, rec.ID)
+	if got.Status != store.StatusCompleted {
+		t.Fatalf("status %q error %q", got.Status, got.Error)
 	}
-	return store.ExperimentWorkspaceDir(dataDir, got.Instances[0]), nil
+	return instanceDir(dataDir, got.Instances[0]), nil
 }
 
-// buyQuotes lists the quote spent by each buy fill, oldest first.
 func TestMACrossSizingBuysLessThanAllIn(t *testing.T) {
 	legacyWS, _ := runMACross(t, `{"fastHr":3,"slowHr":6}`)
 	sizedWS, _ := runMACross(t, `{"fastHr":3,"slowHr":6,"sizing":{}}`)

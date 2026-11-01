@@ -30,11 +30,7 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 	endMs := 240 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
 
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cat.Close()
+	url := pgScratchDB(t)
 
 	settings := store.DefaultExperimentSettings()
 	settings.Base = "BTC"
@@ -45,9 +41,9 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 
 	cfgA, _ := json.Marshal(map[string]int{"fastHr": 3, "slowHr": 6})
 	cfgB, _ := json.Marshal(map[string]int{"fastHr": 6, "slowHr": 12})
-	rec, err := cat.CreateStudy("multi-instance", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "SMA 3/6", Playbook: "ma-cross", StrategyConfig: cfgA},
-		{Label: "SMA 6/12", Playbook: "ma-cross", StrategyConfig: cfgB},
+	rec, err := createExperimentPG(url, "multi-instance", settings, []fixtureSpec{
+		{Label: "SMA 3/6", Playbook: "ma-cross", Config: cfgA},
+		{Label: "SMA 6/12", Playbook: "ma-cross", Config: cfgB},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -62,21 +58,14 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		t.Fatal("expected distinct playbook keys")
 	}
 
-	// KPI must be empty before run (write-at-end).
-	if n, err := cat.CountExperimentKPIRows(rec.ID); err != nil || n != 0 {
-		t.Fatalf("pre-run experiment_kpi count=%d err=%v", n, err)
-	}
-
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted {
 		t.Fatalf("status %q error %q", got.Status, got.Error)
 	}
@@ -90,7 +79,7 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		if *inst.FinishedAt < *inst.StartedAt {
 			t.Fatalf("instance %s finished_at %d < started_at %d", inst.Label, *inst.FinishedAt, *inst.StartedAt)
 		}
-		ws := store.ExperimentWorkspaceDir(dataDir, inst)
+		ws := instanceDir(dataDir, inst)
 		reportPath := filepath.Join(ws, "report.json")
 		body, err := os.ReadFile(reportPath)
 		if err != nil {
@@ -134,21 +123,8 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		t.Fatal("live calculation_signal.sqlite marker row was overwritten")
 	}
 
-	kpiRows, err := cat.CountExperimentKPIRows(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if kpiRows < 8 {
-		t.Fatalf("experiment_kpi rows: got %d want at least 8", kpiRows)
-	}
-	// Shared once: only one experiment_id partition (no per-instance duplication).
-	dup := countKPIByStudyPartitions(t, dataDir)
-	if dup != 1 {
-		t.Fatalf("expected 1 experiment_id with KPI rows, got %d partitions", dup)
-	}
-
-	wsA := store.ExperimentWorkspaceDir(dataDir, got.Instances[0])
-	wsB := store.ExperimentWorkspaceDir(dataDir, got.Instances[1])
+	wsA := instanceDir(dataDir, got.Instances[0])
+	wsB := instanceDir(dataDir, got.Instances[1])
 	buysA := countSignalsWithDecision(t, wsA, "buy")
 	buysB := countSignalsWithDecision(t, wsB, "buy")
 	fillsA := countFills(t, wsA)
@@ -191,11 +167,7 @@ func TestStudySignalConsensusThresholds(t *testing.T) {
 	endMs := 4000 * hour
 	writeCrossingParquet(t, dataDir, symbol, endMs)
 
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cat.Close()
+	url := pgScratchDB(t)
 
 	settings := store.DefaultExperimentSettings()
 	settings.Base = "BTC"
@@ -216,9 +188,9 @@ func TestStudySignalConsensusThresholds(t *testing.T) {
 		"atrStopMult":          3.0,
 		"minBarsFlatAfterSell": 4, "minBarsLongBeforeSell": 2,
 	})
-	rec, err := cat.CreateStudy("consensus-thresholds", "", settings, []store.ExperimentInstanceSpec{
-		{Label: "default thresholds", Playbook: "signal-consensus", StrategyConfig: cfgA},
-		{Label: "loose thresholds", Playbook: "signal-consensus", StrategyConfig: cfgB},
+	rec, err := createExperimentPG(url, "consensus-thresholds", settings, []fixtureSpec{
+		{Label: "default thresholds", Playbook: "signal-consensus", Config: cfgA},
+		{Label: "loose thresholds", Playbook: "signal-consensus", Config: cfgB},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -234,15 +206,13 @@ func TestStudySignalConsensusThresholds(t *testing.T) {
 	}
 
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted {
 		t.Fatalf("status %q error %q", got.Status, got.Error)
 	}
@@ -379,20 +349,6 @@ func liveRows(t *testing.T, dataDir string) int {
 	return n
 }
 
-func countKPIByStudyPartitions(t *testing.T, dataDir string) int {
-	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(dataDir, "backtests.sqlite"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(DISTINCT experiment_id) FROM experiment_kpi`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 func sameInt64Slice(a, b []int64) bool {
 	if len(a) != len(b) {
 		return false
@@ -411,11 +367,7 @@ func TestStudySignalConsensusSizing(t *testing.T) {
 	endMs := 4000 * hour
 	writeTrendingParquet(t, dataDir, int(endMs/hour))
 
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cat.Close()
+	url := pgScratchDB(t)
 	settings := store.DefaultExperimentSettings()
 	settings.Base = "BTC"
 	settings.Quote = "USDT"
@@ -423,28 +375,26 @@ func TestStudySignalConsensusSizing(t *testing.T) {
 	settings.ToMs = endMs
 	settings.RedownloadMissing = false
 
-	bad := []store.ExperimentInstanceSpec{{Label: "bad", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"unitRiskPct":5}}`)}}
-	if _, err := cat.CreateStudy("bad-sizing", "", settings, bad); err == nil {
+	bad := []fixtureSpec{{Label: "bad", Playbook: "signal-consensus", Config: json.RawMessage(`{"sizing":{"unitRiskPct":5}}`)}}
+	if _, err := createExperimentPG(url, "bad-sizing", settings, bad); err == nil {
 		t.Fatal("invalid sizing must be rejected")
 	}
 
-	rec, err := cat.CreateStudy("consensus-sizing", "", settings, []store.ExperimentInstanceSpec{
+	rec, err := createExperimentPG(url, "consensus-sizing", settings, []fixtureSpec{
 		{Label: "legacy", Playbook: "signal-consensus"},
-		{Label: "sized", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"unitRiskPct":0.25}}`)},
-		{Label: "below min", Playbook: "signal-consensus", StrategyConfig: json.RawMessage(`{"sizing":{"maxWeightPct":0.0001}}`)},
+		{Label: "sized", Playbook: "signal-consensus", Config: json.RawMessage(`{"sizing":{"unitRiskPct":0.25}}`)},
+		{Label: "below min", Playbook: "signal-consensus", Config: json.RawMessage(`{"sizing":{"maxWeightPct":0.0001}}`)},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	for _, inst := range got.Instances {
 		if inst.Status != store.StatusCompleted {
 			t.Fatalf("instance %s status %q error %q", inst.Label, inst.Status, inst.Error)
@@ -452,7 +402,7 @@ func TestStudySignalConsensusSizing(t *testing.T) {
 	}
 	ws := map[string]string{}
 	for _, inst := range got.Instances {
-		ws[inst.Label] = store.ExperimentWorkspaceDir(dataDir, inst)
+		ws[inst.Label] = instanceDir(dataDir, inst)
 	}
 	legacy, okL := firstBuyQuote(t, ws["legacy"])
 	sized, okS := firstBuyQuote(t, ws["sized"])

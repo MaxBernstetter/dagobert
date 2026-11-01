@@ -3,7 +3,6 @@ package experiment_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -11,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
@@ -21,54 +19,11 @@ import (
 // pgScratchDB creates an empty database loaded with db/sqlc/schema.sql on the dev Postgres and
 // drops it on cleanup. It skips when no Postgres is reachable. POSTGRES_TEST_URL (default: the
 // compose Postgres on 127.0.0.1:9432) names a user that may CREATE DATABASE.
-func pgScratchDB(t *testing.T) string {
-	t.Helper()
-	admin := os.Getenv("POSTGRES_TEST_URL")
-	if admin == "" {
-		admin = "postgres://trading:trading@127.0.0.1:9432/postgres"
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	ap, err := pgxpool.New(ctx, admin)
-	if err == nil {
-		err = ap.Ping(ctx)
-	}
-	if err != nil {
-		t.Skipf("no reachable Postgres (%v)", err)
-	}
-	t.Cleanup(ap.Close)
-	name := "persist_test_" + uuid.NewString()[:8]
-	if _, err := ap.Exec(context.Background(), "CREATE DATABASE "+name); err != nil {
-		t.Skipf("cannot create database: %v", err)
-	}
-	t.Cleanup(func() { _, _ = ap.Exec(context.Background(), "DROP DATABASE "+name+" WITH (FORCE)") })
-	cfg := ap.Config().ConnConfig.Copy()
-	cfg.Database = name
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, name)
-	schema, err := os.ReadFile(filepath.Join("..", "..", "..", "db", "sqlc", "schema.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p.Close()
-	if _, err := p.Exec(context.Background(), string(schema)); err != nil {
-		t.Fatal(err)
-	}
-	return url
-}
-
 // Many batches commit concurrently on Postgres; one poisoned instance goes through the bisection
 // path. Counts must match the journals and metrics, and progress must never go backwards.
 func TestExperimentPostgresConcurrentBatches(t *testing.T) {
-	url := pgScratchDB(t)
 	const n = 300 // batches flush at 200 instances or after 250 ms while compute is still running
-	t.Setenv("DATABASE_URL", "")
-	dataDir, _, rec := gridExperiment(t, n)
-	t.Setenv("DATABASE_URL", url)
-	mirrorToPostgres(t, url, rec)
+	dataDir, url, rec := gridExperiment(t, n)
 
 	poison := rec.Instances[n/2].ID
 	var attempts atomic.Int32 // successful batch commits

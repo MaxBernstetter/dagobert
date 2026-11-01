@@ -82,6 +82,9 @@ func instanceFromRow(i experimentdb.ExperimentInstance) store.ExperimentInstance
 }
 
 func strategyConfigJSON(i experimentdb.ExperimentInstance) json.RawMessage {
+	if i.StrategyConfigJson.Valid {
+		return json.RawMessage(i.StrategyConfigJson.String)
+	}
 	switch i.Playbook {
 	case "ma-cross":
 		if i.CfgFastHr.Valid && i.CfgSlowHr.Valid {

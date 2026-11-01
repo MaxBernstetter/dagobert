@@ -58,6 +58,7 @@ CREATE TABLE "experiment_instance" (
   "cfg_atr_stop_mult" double precision NULL,
   "cfg_min_bars_flat_after_sell" integer NULL,
   "cfg_min_bars_long_before_sell" integer NULL,
+  "strategy_config_json" text NULL,
   "metric_duration_ms" bigint NULL,
   "metric_cagr" double precision NULL,
   "metric_max_drawdown" double precision NULL,

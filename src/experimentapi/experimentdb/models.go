@@ -63,6 +63,7 @@ type ExperimentInstance struct {
 	CfgAtrStopMult           pgtype.Float8 `json:"cfg_atr_stop_mult"`
 	CfgMinBarsFlatAfterSell  pgtype.Int4   `json:"cfg_min_bars_flat_after_sell"`
 	CfgMinBarsLongBeforeSell pgtype.Int4   `json:"cfg_min_bars_long_before_sell"`
+	StrategyConfigJson       pgtype.Text   `json:"strategy_config_json"`
 	MetricDurationMs         pgtype.Int8   `json:"metric_duration_ms"`
 	MetricCagr               pgtype.Float8 `json:"metric_cagr"`
 	MetricMaxDrawdown        pgtype.Float8 `json:"metric_max_drawdown"`
