@@ -149,7 +149,7 @@ tasks:
   experiment-run:
     desc: Run one multi-instance experiment (EXPERIMENT_ID=uuid, uses dagobert-backtest image)
     cmds:
-      - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 -e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS | default "4"}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
+      - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 {{if .EXPERIMENT_SIM_WORKERS}}-e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS}}{{end}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
 
   infra:local:
     desc: Step 1 — apply Terraform against Floci (S3/SSM/IAM)
