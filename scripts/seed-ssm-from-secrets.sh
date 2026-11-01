@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SECRETS_FILE="${HOST_SECRETS_FILE:-$ROOT/.secrets}"
-FLOCI_PORT="${FLOCI_PORT:-4566}"
+FLOCI_PORT="${FLOCI_PORT:-11566}"
 ENDPOINT="${AWS_ENDPOINT_URL:-http://127.0.0.1:${FLOCI_PORT}}"
 PREFIX="${SSM_PREFIX:-/dagobert/local}"
 REGION="${AWS_REGION:-us-east-1}"

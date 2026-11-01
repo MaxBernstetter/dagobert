@@ -11,7 +11,7 @@ FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG ${_dagobert_gtest_sha}
-  GIT_SHALLOW TRUE)
+  GIT_SHALLOW FALSE)
 
 FetchContent_MakeAvailable(googletest)
 

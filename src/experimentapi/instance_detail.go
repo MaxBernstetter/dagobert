@@ -1,26 +1,22 @@
 package experimentapi
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	_ "modernc.org/sqlite"
 )
 
 // The instance detail endpoints read the instance workspace written by the backtest job:
-// report.json (KPIs and statistics) and execution.sqlite (orders and fills).
+// report.json (KPIs and statistics) and the Parquet files of the instance (orders, fills, journals).
 
 // instanceForRequest loads the instance named in the path and checks that it belongs to the experiment.
 func (s *Server) instanceForRequest(w http.ResponseWriter, r *http.Request) (experimentdb.ExperimentInstance, bool) {
@@ -234,7 +230,7 @@ func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
 		},
 		Run: report.Run,
 	}
-	if err := s.attachInstancePerformance(r.Context(), inst.ID, &resp); err != nil {
+	if err := s.attachInstancePerformance(r.Context(), inst, &resp); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -316,15 +312,11 @@ type activityResponse struct {
 	Symbol         string            `json:"symbol"`
 }
 
-// handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from execution.sqlite.
+// handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from the
+// instance Parquet files. An instance without orders.parquet has no activity (empty arrays).
 func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) {
 	inst, ok := s.instanceForRequest(w, r)
 	if !ok {
-		return
-	}
-	db, err := openReadOnlySQLite(filepath.Join(instanceWorkspace(inst), "execution.sqlite"))
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	resp := activityResponse{
@@ -336,171 +328,24 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 		Playbook:       inst.PlaybookKey,
 		Symbol:         inst.Symbol,
 	}
-	if db != nil {
-		defer db.Close()
-		if resp.Rows, err = readActivityRows(db); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if resp.Journals, err = readJournalRows(db); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+	ws := instanceWorkspace(inst)
+	orders, err := instanceparquet.ReadOrders(ws)
+	if errors.Is(err, fs.ErrNotExist) {
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp.Rows = activityRowsFromOrders(orders)
+	journals, err := instanceparquet.ReadJournals(ws)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if resp.Journals = journalRowsFromParquet(journals); len(resp.Journals) == 0 {
+		resp.Journals = journalsFromFillOrders(orders)
 	}
 	writeJSON(w, http.StatusOK, resp)
-}
-
-// openReadOnlySQLite opens a file that must already exist. A missing file returns nil, not an error.
-func openReadOnlySQLite(path string) (*sql.DB, error) {
-	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	return sql.Open("sqlite", "file:"+path+"?mode=ro")
-}
-
-func readActivityRows(db *sql.DB) ([]activityRow, error) {
-	rows := []activityRow{}
-	res, err := db.Query(`SELECT order_link_id, kind, body FROM order_result`)
-	if err != nil {
-		return rows, nil // no order_result table yet: the instance has no orders
-	}
-	defer res.Close()
-	for res.Next() {
-		var linkID, kind, rawBody string
-		if err := res.Scan(&linkID, &kind, &rawBody); err != nil {
-			return nil, err
-		}
-		body := map[string]any{}
-		_ = json.Unmarshal([]byte(rawBody), &body)
-		playbook, symbol, candleClose := keysFromOrder(body, linkID)
-		rows = append(rows, activityRow{
-			OrderLinkID:  linkID,
-			Playbook:     playbook,
-			Symbol:       symbol,
-			CandleClose:  candleClose,
-			Kind:         kind,
-			Decision:     strFrom(body, "decision"),
-			Size:         numFrom(body, "size"),
-			OrderID:      strFrom(body, "orderId"),
-			OrderStatus:  strFrom(body, "orderStatus"),
-			VenueSymbol:  strFrom(body, "venueSymbol"),
-			Side:         strFrom(body, "side"),
-			Qty:          strFrom(body, "qty"),
-			CumExecQty:   strFrom(body, "cumExecQty"),
-			CumExecValue: strFrom(body, "cumExecValue"),
-			AvgPrice:     strFrom(body, "avgPrice"),
-			MarketUnit:   strFrom(body, "marketUnit"),
-			RetCode:      numFrom(body, "retCode"),
-			RetMsg:       strFrom(body, "retMsg"),
-		})
-	}
-	if err := res.Err(); err != nil {
-		return nil, err
-	}
-	sort.SliceStable(rows, func(i, j int) bool { return rows[i].CandleClose > rows[j].CandleClose })
-	return rows, nil
-}
-
-func readJournalRows(db *sql.DB) ([]journalRow, error) {
-	journals := []journalRow{}
-	var hasJournal int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'fill_journal'`).Scan(&hasJournal); err != nil {
-		return nil, err
-	}
-	if hasJournal > 0 {
-		res, err := db.Query(`SELECT COALESCE(order_link_id,''), COALESCE(venue,''), COALESCE(venue_symbol,''), COALESCE(side,''),
-			COALESCE(base_qty,''), COALESCE(quote_qty,''), COALESCE(price,''), COALESCE(fee,''), COALESCE(fee_currency,''), COALESCE(price_source,'')
-			FROM fill_journal`)
-		if err != nil {
-			return nil, err
-		}
-		defer res.Close()
-		for res.Next() {
-			var j journalRow
-			if err := res.Scan(&j.OrderLinkID, &j.Venue, &j.VenueSymbol, &j.Side, &j.BaseQty, &j.QuoteQty, &j.Price, &j.Fee, &j.FeeCurrency, &j.PriceSource); err != nil {
-				return nil, err
-			}
-			journals = append(journals, j)
-		}
-		if err := res.Err(); err != nil {
-			return nil, err
-		}
-		if len(journals) > 0 {
-			return journals, nil
-		}
-	}
-	// Without a journal, derive the fills from the filled order results.
-	res, err := db.Query(`SELECT body FROM order_result WHERE kind = 'fill'`)
-	if err != nil {
-		return journals, nil
-	}
-	defer res.Close()
-	for res.Next() {
-		var rawBody string
-		if err := res.Scan(&rawBody); err != nil {
-			return nil, err
-		}
-		body := map[string]any{}
-		_ = json.Unmarshal([]byte(rawBody), &body)
-		journals = append(journals, journalRow{
-			OrderLinkID: strOr(body, "orderLinkId"),
-			Venue:       "bybit",
-			VenueSymbol: strOr(body, "venueSymbol"),
-			Side:        strOr(body, "side"),
-			BaseQty:     strOr(body, "cumExecQty"),
-			QuoteQty:    strOr(body, "cumExecValue"),
-			Price:       strOr(body, "avgPrice"),
-			Fee:         strOr(body, "cumExecFee"),
-			FeeCurrency: defaultString(strOr(body, "feeCurrency"), "USDC"),
-			PriceSource: "binance",
-		})
-	}
-	return journals, res.Err()
-}
-
-// keysFromOrder reads playbook, symbol, and candle close from the order body, falling back to the
-// order link id, which is "<playbook>:<symbol>:<candleClose>".
-func keysFromOrder(body map[string]any, linkID string) (string, string, int64) {
-	playbook, symbol := strOr(body, "playbook"), strOr(body, "symbol")
-	candle, candleOK := body["candleClose"].(float64)
-	if playbook != "" && symbol != "" && candleOK {
-		return playbook, symbol, int64(candle)
-	}
-	last := strings.LastIndex(linkID, ":")
-	if last > 0 {
-		if n, err := strconv.ParseInt(linkID[last+1:], 10, 64); err == nil {
-			rest := linkID[:last]
-			if sep := strings.LastIndex(rest, ":"); sep > 0 {
-				return rest[:sep], rest[sep+1:], n
-			}
-		}
-	}
-	return playbook, symbol, int64(candle)
-}
-
-func strOr(body map[string]any, key string) string {
-	v, ok := body[key]
-	if !ok || v == nil {
-		return ""
-	}
-	return fmt.Sprint(v)
-}
-
-func strFrom(body map[string]any, key string) *string {
-	v, ok := body[key]
-	if !ok || v == nil {
-		return nil
-	}
-	s := fmt.Sprint(v)
-	return &s
-}
-
-func numFrom(body map[string]any, key string) *float64 {
-	v, ok := body[key].(float64)
-	if !ok {
-		return nil
-	}
-	return &v
 }

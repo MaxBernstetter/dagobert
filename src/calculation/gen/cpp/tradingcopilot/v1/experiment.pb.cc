@@ -375,11 +375,11 @@ constexpr ExperimentSettings::ParseTableT_ ExperimentSettings::InternalGenerateP
     {
       PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_._has_bits_),
       0, // no _extensions_
-      16, 120,  // max_field_number, fast_idx_mask
+      17, 248,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294901760,  // skipmap
+      4294836224,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      16,  // num_field_entries
+      17,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -389,10 +389,7 @@ constexpr ExperimentSettings::ParseTableT_ ExperimentSettings::InternalGenerateP
       ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentSettings>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // double fee_bps = 16 [json_name = "feeBps"];
-      {::_pbi::TcParser::FastF64S2,
-       {385, 14, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.fee_bps_)}},
+      {::_pbi::TcParser::MiniParse, {}},
       // string provider = 1 [json_name = "provider"];
       {::_pbi::TcParser::FastUS1,
        {10, 0, 0,
@@ -438,8 +435,8 @@ constexpr ExperimentSettings::ParseTableT_ ExperimentSettings::InternalGenerateP
        {89, 11, 0,
         PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.min_order_quote_)}},
       // bool redownload_missing = 12 [json_name = "redownloadMissing"];
-      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ExperimentSettings, _impl_.redownload_missing_), 15>(),
-       {96, 15, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(ExperimentSettings, _impl_.redownload_missing_), 13>(),
+       {96, 13, 0,
         PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.redownload_missing_)}},
       // string algo = 13 [json_name = "algo"];
       {::_pbi::TcParser::FastUS1,
@@ -451,8 +448,30 @@ constexpr ExperimentSettings::ParseTableT_ ExperimentSettings::InternalGenerateP
         PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.spread_bps_)}},
       // double slippage_bps = 15 [json_name = "slippageBps"];
       {::_pbi::TcParser::FastF64S1,
-       {121, 13, 0,
+       {121, 15, 0,
         PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.slippage_bps_)}},
+      // double fee_bps = 16 [json_name = "feeBps"];
+      {::_pbi::TcParser::FastF64S2,
+       {385, 16, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.fee_bps_)}},
+      // optional int32 parallelism = 17 [json_name = "parallelism"];
+      {::_pbi::TcParser::FastV32S2,
+       {392, 14, 0,
+        PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.parallelism_)}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
     }}, {{
@@ -479,15 +498,17 @@ constexpr ExperimentSettings::ParseTableT_ ExperimentSettings::InternalGenerateP
       // double min_order_quote = 11 [json_name = "minOrderQuote"];
       {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.min_order_quote_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // bool redownload_missing = 12 [json_name = "redownloadMissing"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.redownload_missing_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.redownload_missing_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
       // string algo = 13 [json_name = "algo"];
       {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.algo_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // double spread_bps = 14 [json_name = "spreadBps"];
       {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.spread_bps_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double slippage_bps = 15 [json_name = "slippageBps"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.slippage_bps_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.slippage_bps_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double fee_bps = 16 [json_name = "feeBps"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.fee_bps_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.fee_bps_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional int32 parallelism = 17 [json_name = "parallelism"];
+      {PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.parallelism_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
     }},
     // no aux_entries
     {{
@@ -526,9 +547,10 @@ inline constexpr ExperimentSettings::Impl_::Impl_(
         cash_reserve_quote_{0},
         min_order_quote_{0},
         spread_bps_{0},
+        redownload_missing_{false},
+        parallelism_{0},
         slippage_bps_{0},
-        fee_bps_{0},
-        redownload_missing_{false} {}
+        fee_bps_{0} {}
 
 template <typename>
 constexpr ExperimentSettings::ExperimentSettings(::_pbi::ConstantInitialized,
@@ -1174,7 +1196,7 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
       offsetof(ParseTableT_, field_lookup_table),
       1048544,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      32,  // num_field_entries
+      33,  // num_field_entries
       1,  // num_aux_entries
       offsetof(ParseTableT_, aux_entries),
       class_data,
@@ -1217,7 +1239,7 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
       {::_pbi::TcParser::MiniParse, {}},
       // bool redownload_missing = 32 [json_name = "redownloadMissing"];
       {::_pbi::TcParser::FastV8S2,
-       {640, 29, 0,
+       {640, 22, 0,
         PROTOBUF_FIELD_OFFSET(Experiment, _impl_.redownload_missing_)}},
       // string algo = 33 [json_name = "algo"];
       {::_pbi::TcParser::FastUS2,
@@ -1281,9 +1303,9 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
         PROTOBUF_FIELD_OFFSET(Experiment, _impl_.min_order_quote_)}},
     }}, {{
       33, 0, 3,
-      65520, 17,
-      64515, 21,
-      32671, 29,
+      65504, 17,
+      64515, 22,
+      32671, 30,
       65535, 65535
     }}, {{
       // string id = 1 [json_name = "id"];
@@ -1319,7 +1341,7 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
       // double min_order_quote = 31 [json_name = "minOrderQuote"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.min_order_quote_), _Internal::kHasBitsOffset + 18, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // bool redownload_missing = 32 [json_name = "redownloadMissing"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.redownload_missing_), _Internal::kHasBitsOffset + 29, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.redownload_missing_), _Internal::kHasBitsOffset + 22, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
       // string algo = 33 [json_name = "algo"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.algo_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // double spread_bps = 34 [json_name = "spreadBps"];
@@ -1328,26 +1350,28 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.slippage_bps_), _Internal::kHasBitsOffset + 20, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
       // double fee_bps = 36 [json_name = "feeBps"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.fee_bps_), _Internal::kHasBitsOffset + 21, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+      // optional int32 parallelism = 37 [json_name = "parallelism"];
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.parallelism_), _Internal::kHasBitsOffset + 24, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // int64 created_at_ms = 51 [json_name = "createdAtMs"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.created_at_ms_), _Internal::kHasBitsOffset + 22, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.created_at_ms_), _Internal::kHasBitsOffset + 26, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
       // optional int64 started_at_ms = 52 [json_name = "startedAtMs"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.started_at_ms_), _Internal::kHasBitsOffset + 23, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.started_at_ms_), _Internal::kHasBitsOffset + 27, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
       // optional int64 finished_at_ms = 53 [json_name = "finishedAtMs"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.finished_at_ms_), _Internal::kHasBitsOffset + 24, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.finished_at_ms_), _Internal::kHasBitsOffset + 28, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
       // int32 progress_stage = 54 [json_name = "progressStage"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_stage_), _Internal::kHasBitsOffset + 25, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // int32 progress_stages = 55 [json_name = "progressStages"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_stages_), _Internal::kHasBitsOffset + 26, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_stages_), _Internal::kHasBitsOffset + 29, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // string progress_stage_label = 56 [json_name = "progressStageLabel"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_stage_label_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // int32 progress_instance_done = 57 [json_name = "progressInstanceDone"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_instance_done_), _Internal::kHasBitsOffset + 27, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_instance_done_), _Internal::kHasBitsOffset + 30, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_instance_total_), _Internal::kHasBitsOffset + 28, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_instance_total_), _Internal::kHasBitsOffset + 23, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
       // repeated string list_playbooks = 70 [json_name = "listPlaybooks"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.list_playbooks_), _Internal::kHasBitsOffset + 30, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.list_playbooks_), _Internal::kHasBitsOffset + 31, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
       // repeated string list_symbols = 71 [json_name = "listSymbols"];
-      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.list_symbols_), _Internal::kHasBitsOffset + 31, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
+      {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.list_symbols_), _Internal::kHasBitsOffset + 32, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
       // .tradingcopilot.v1.ExperimentSettings settings = 80 [json_name = "settings"];
       {PROTOBUF_FIELD_OFFSET(Experiment, _impl_.settings_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     }},
@@ -1359,7 +1383,7 @@ constexpr Experiment::ParseTableT_ Experiment::InternalGenerateParseTable_(const
         #endif
     }},
     {{
-      "\34\2\4\13\6\5\10\4\5\0\0\0\0\0\0\0\0\0\4\0\0\0\0\0\0\0\0\24\0\0\16\14\0\0\0\0\0\0\0\0"
+      "\34\2\4\13\6\5\10\4\5\0\0\0\0\0\0\0\0\0\4\0\0\0\0\0\0\0\0\0\24\0\0\16\14\0\0\0\0\0\0\0"
       "tradingcopilot.v1.Experiment"
       "id"
       "name"
@@ -1423,14 +1447,15 @@ inline constexpr Experiment::Impl_::Impl_(
         spread_bps_{0},
         slippage_bps_{0},
         fee_bps_{0},
+        redownload_missing_{false},
+        progress_instance_total_{0},
+        parallelism_{0},
+        progress_stage_{0},
         created_at_ms_{::int64_t{0}},
         started_at_ms_{::int64_t{0}},
         finished_at_ms_{::int64_t{0}},
-        progress_stage_{0},
         progress_stages_{0},
         progress_instance_done_{0},
-        progress_instance_total_{0},
-        redownload_missing_{false},
         list_playbooks_ { visibility, ::_pbi::InternalMetadataOffset::Build<
             ::tradingcopilot::v1::Experiment,
             PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.list_playbooks_)>()
@@ -2092,7 +2117,7 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_._has_bits_),
-        35, // hasbit index offset
+        36, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.id_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.name_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.description_),
@@ -2114,6 +2139,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.spread_bps_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.slippage_bps_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.fee_bps_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.parallelism_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.created_at_ms_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.started_at_ms_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::Experiment, _impl_.finished_at_ms_),
@@ -2141,25 +2167,26 @@ const ::uint32_t
         16,
         17,
         18,
-        29,
+        22,
         8,
         19,
         20,
         21,
-        22,
-        23,
         24,
-        25,
         26,
-        9,
         27,
         28,
+        25,
+        29,
+        9,
         30,
+        23,
         31,
+        32,
         10,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_._has_bits_),
-        19, // hasbit index offset
+        20, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.provider_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.base_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.quote_),
@@ -2176,6 +2203,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.spread_bps_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.slippage_bps_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.fee_bps_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSettings, _impl_.parallelism_),
         0,
         1,
         2,
@@ -2187,10 +2215,11 @@ const ::uint32_t
         9,
         10,
         11,
-        15,
+        13,
         3,
         12,
-        13,
+        15,
+        16,
         14,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentProgress, _impl_._has_bits_),
@@ -2283,15 +2312,15 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::tradingcopilot::v1::Experiment)},
-        {67, sizeof(::tradingcopilot::v1::ExperimentSettings)},
-        {102, sizeof(::tradingcopilot::v1::ExperimentProgress)},
-        {127, sizeof(::tradingcopilot::v1::ListExperimentsResponse)},
-        {132, sizeof(::tradingcopilot::v1::GridAxis)},
-        {141, sizeof(::tradingcopilot::v1::ExperimentGridSpec)},
-        {148, sizeof(::tradingcopilot::v1::ExperimentInstanceSpec)},
-        {161, sizeof(::tradingcopilot::v1::CreateExperimentRequest)},
-        {178, sizeof(::tradingcopilot::v1::ErrorResponse)},
-        {183, sizeof(::tradingcopilot::v1::OkResponse)},
+        {69, sizeof(::tradingcopilot::v1::ExperimentSettings)},
+        {106, sizeof(::tradingcopilot::v1::ExperimentProgress)},
+        {131, sizeof(::tradingcopilot::v1::ListExperimentsResponse)},
+        {136, sizeof(::tradingcopilot::v1::GridAxis)},
+        {145, sizeof(::tradingcopilot::v1::ExperimentGridSpec)},
+        {152, sizeof(::tradingcopilot::v1::ExperimentInstanceSpec)},
+        {165, sizeof(::tradingcopilot::v1::CreateExperimentRequest)},
+        {182, sizeof(::tradingcopilot::v1::ErrorResponse)},
+        {187, sizeof(::tradingcopilot::v1::OkResponse)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
@@ -2310,7 +2339,7 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_2eproto[] 
     protodesc_cold) = {
     "\n\"tradingcopilot/v1/experiment.proto\022\021tr"
     "adingcopilot.v1\032 tradingcopilot/v1/strat"
-    "egy.proto\"\227\t\n\nExperiment\022\016\n\002id\030\001 \001(\tR\002id"
+    "egy.proto\"\316\t\n\nExperiment\022\016\n\002id\030\001 \001(\tR\002id"
     "\022\022\n\004name\030\002 \001(\tR\004name\022 \n\013description\030\003 \001("
     "\tR\013description\022\026\n\006status\030\004 \001(\tR\006status\022\024"
     "\n\005error\030\005 \001(\tR\005error\022\032\n\010provider\030\025 \001(\tR\010"
@@ -2326,79 +2355,82 @@ const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_2eproto[] 
     "\021redownloadMissing\022\022\n\004algo\030! \001(\tR\004algo\022\035"
     "\n\nspread_bps\030\" \001(\001R\tspreadBps\022!\n\014slippag"
     "e_bps\030# \001(\001R\013slippageBps\022\027\n\007fee_bps\030$ \001("
-    "\001R\006feeBps\022\"\n\rcreated_at_ms\0303 \001(\003R\013create"
-    "dAtMs\022\'\n\rstarted_at_ms\0304 \001(\003H\000R\013startedA"
-    "tMs\210\001\001\022)\n\016finished_at_ms\0305 \001(\003H\001R\014finish"
-    "edAtMs\210\001\001\022%\n\016progress_stage\0306 \001(\005R\rprogr"
-    "essStage\022\'\n\017progress_stages\0307 \001(\005R\016progr"
-    "essStages\0220\n\024progress_stage_label\0308 \001(\tR"
-    "\022progressStageLabel\0224\n\026progress_instance"
-    "_done\0309 \001(\005R\024progressInstanceDone\0226\n\027pro"
-    "gress_instance_total\030: \001(\005R\025progressInst"
-    "anceTotal\022%\n\016list_playbooks\030F \003(\tR\rlistP"
-    "laybooks\022!\n\014list_symbols\030G \003(\tR\013listSymb"
-    "ols\022A\n\010settings\030P \001(\0132%.tradingcopilot.v"
-    "1.ExperimentSettingsR\010settingsB\020\n\016_start"
-    "ed_at_msB\021\n\017_finished_at_ms\"\221\004\n\022Experime"
-    "ntSettings\022\032\n\010provider\030\001 \001(\tR\010provider\022\022"
-    "\n\004base\030\002 \001(\tR\004base\022\024\n\005quote\030\003 \001(\tR\005quote"
-    "\022\027\n\007from_ms\030\004 \001(\003R\006fromMs\022\023\n\005to_ms\030\005 \001(\003"
-    "R\004toMs\022!\n\014initial_usdc\030\006 \001(\001R\013initialUsd"
-    "c\022!\n\014initial_usdt\030\007 \001(\001R\013initialUsdt\022!\n\014"
-    "initial_base\030\010 \001(\001R\013initialBase\022*\n\021targe"
-    "t_weight_pct\030\t \001(\001R\017targetWeightPct\022,\n\022c"
-    "ash_reserve_quote\030\n \001(\001R\020cashReserveQuot"
-    "e\022&\n\017min_order_quote\030\013 \001(\001R\rminOrderQuot"
-    "e\022-\n\022redownload_missing\030\014 \001(\010R\021redownloa"
-    "dMissing\022\022\n\004algo\030\r \001(\tR\004algo\022\035\n\nspread_b"
-    "ps\030\016 \001(\001R\tspreadBps\022!\n\014slippage_bps\030\017 \001("
-    "\001R\013slippageBps\022\027\n\007fee_bps\030\020 \001(\001R\006feeBps\""
-    "\357\003\n\022ExperimentProgress\022\016\n\002id\030\001 \001(\tR\002id\022\026"
-    "\n\006status\030\002 \001(\tR\006status\022\024\n\005error\030\003 \001(\tR\005e"
-    "rror\022%\n\016progress_stage\030\004 \001(\005R\rprogressSt"
-    "age\022\'\n\017progress_stages\030\005 \001(\005R\016progressSt"
-    "ages\0220\n\024progress_stage_label\030\006 \001(\tR\022prog"
-    "ressStageLabel\0224\n\026progress_instance_done"
-    "\030\007 \001(\005R\024progressInstanceDone\0226\n\027progress"
-    "_instance_total\030\010 \001(\005R\025progressInstanceT"
-    "otal\0222\n\025failed_instance_count\030\t \001(\003R\023fai"
-    "ledInstanceCount\022\'\n\rstarted_at_ms\030\n \001(\003H"
-    "\000R\013startedAtMs\210\001\001\022)\n\016finished_at_ms\030\013 \001("
-    "\003H\001R\014finishedAtMs\210\001\001B\020\n\016_started_at_msB\021"
-    "\n\017_finished_at_ms\"Z\n\027ListExperimentsResp"
-    "onse\022\?\n\013experiments\030\001 \003(\0132\035.tradingcopil"
-    "ot.v1.ExperimentR\013experiments\"[\n\010GridAxi"
-    "s\022\020\n\003key\030\001 \001(\tR\003key\022\026\n\006values\030\002 \003(\tR\006val"
-    "ues\022%\n\016numeric_values\030\003 \003(\001R\rnumericValu"
-    "es\"a\n\022ExperimentGridSpec\022\032\n\010playbook\030\001 \001"
-    "(\tR\010playbook\022/\n\004axes\030\002 \003(\0132\033.tradingcopi"
-    "lot.v1.GridAxisR\004axes\"\364\001\n\026ExperimentInst"
-    "anceSpec\022\024\n\005label\030\001 \001(\tR\005label\022\032\n\010playbo"
-    "ok\030\002 \001(\tR\010playbook\022\026\n\006symbol\030\003 \001(\tR\006symb"
-    "ol\022;\n\010ma_cross\030\n \001(\0132 .tradingcopilot.v1"
-    ".MaCrossConfigR\007maCross\022S\n\020signal_consen"
-    "sus\030\013 \001(\0132(.tradingcopilot.v1.SignalCons"
-    "ensusConfigR\017signalConsensus\"\357\002\n\027CreateE"
-    "xperimentRequest\022\022\n\004name\030\001 \001(\tR\004name\022 \n\013"
-    "description\030\002 \001(\tR\013description\022A\n\010settin"
-    "gs\030\003 \001(\0132%.tradingcopilot.v1.ExperimentS"
-    "ettingsR\010settings\022;\n\004mode\030\004 \001(\0162\'.tradin"
-    "gcopilot.v1.ExperimentCreateModeR\004mode\022\032"
-    "\n\010playbook\030\005 \001(\tR\010playbook\0229\n\004grid\030\006 \001(\013"
-    "2%.tradingcopilot.v1.ExperimentGridSpecR"
-    "\004grid\022G\n\tinstances\030\007 \003(\0132).tradingcopilo"
-    "t.v1.ExperimentInstanceSpecR\tinstances\"%"
-    "\n\rErrorResponse\022\024\n\005error\030\001 \001(\tR\005error\"\034\n"
-    "\nOkResponse\022\016\n\002ok\030\001 \001(\010R\002ok*\202\001\n\024Experime"
-    "ntCreateMode\022&\n\"EXPERIMENT_CREATE_MODE_U"
-    "NSPECIFIED\020\000\022\037\n\033EXPERIMENT_CREATE_MODE_G"
-    "RID\020\001\022!\n\035EXPERIMENT_CREATE_MODE_MANUAL\020\002"
-    "B\334\001\n\025com.tradingcopilot.v1B\017ExperimentPr"
-    "otoP\001ZMgithub.com/MaxBernstetter/dagober"
-    "t/src/gen/tradingcopilot/v1;tradingcopil"
-    "otv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Trading"
-    "copilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMetada"
-    "ta\352\002\022Tradingcopilot::V1b\006proto3"
+    "\001R\006feeBps\022%\n\013parallelism\030% \001(\005H\000R\013parall"
+    "elism\210\001\001\022\"\n\rcreated_at_ms\0303 \001(\003R\013created"
+    "AtMs\022\'\n\rstarted_at_ms\0304 \001(\003H\001R\013startedAt"
+    "Ms\210\001\001\022)\n\016finished_at_ms\0305 \001(\003H\002R\014finishe"
+    "dAtMs\210\001\001\022%\n\016progress_stage\0306 \001(\005R\rprogre"
+    "ssStage\022\'\n\017progress_stages\0307 \001(\005R\016progre"
+    "ssStages\0220\n\024progress_stage_label\0308 \001(\tR\022"
+    "progressStageLabel\0224\n\026progress_instance_"
+    "done\0309 \001(\005R\024progressInstanceDone\0226\n\027prog"
+    "ress_instance_total\030: \001(\005R\025progressInsta"
+    "nceTotal\022%\n\016list_playbooks\030F \003(\tR\rlistPl"
+    "aybooks\022!\n\014list_symbols\030G \003(\tR\013listSymbo"
+    "ls\022A\n\010settings\030P \001(\0132%.tradingcopilot.v1"
+    ".ExperimentSettingsR\010settingsB\016\n\014_parall"
+    "elismB\020\n\016_started_at_msB\021\n\017_finished_at_"
+    "ms\"\310\004\n\022ExperimentSettings\022\032\n\010provider\030\001 "
+    "\001(\tR\010provider\022\022\n\004base\030\002 \001(\tR\004base\022\024\n\005quo"
+    "te\030\003 \001(\tR\005quote\022\027\n\007from_ms\030\004 \001(\003R\006fromMs"
+    "\022\023\n\005to_ms\030\005 \001(\003R\004toMs\022!\n\014initial_usdc\030\006 "
+    "\001(\001R\013initialUsdc\022!\n\014initial_usdt\030\007 \001(\001R\013"
+    "initialUsdt\022!\n\014initial_base\030\010 \001(\001R\013initi"
+    "alBase\022*\n\021target_weight_pct\030\t \001(\001R\017targe"
+    "tWeightPct\022,\n\022cash_reserve_quote\030\n \001(\001R\020"
+    "cashReserveQuote\022&\n\017min_order_quote\030\013 \001("
+    "\001R\rminOrderQuote\022-\n\022redownload_missing\030\014"
+    " \001(\010R\021redownloadMissing\022\022\n\004algo\030\r \001(\tR\004a"
+    "lgo\022\035\n\nspread_bps\030\016 \001(\001R\tspreadBps\022!\n\014sl"
+    "ippage_bps\030\017 \001(\001R\013slippageBps\022\027\n\007fee_bps"
+    "\030\020 \001(\001R\006feeBps\022%\n\013parallelism\030\021 \001(\005H\000R\013p"
+    "arallelism\210\001\001B\016\n\014_parallelism\"\357\003\n\022Experi"
+    "mentProgress\022\016\n\002id\030\001 \001(\tR\002id\022\026\n\006status\030\002"
+    " \001(\tR\006status\022\024\n\005error\030\003 \001(\tR\005error\022%\n\016pr"
+    "ogress_stage\030\004 \001(\005R\rprogressStage\022\'\n\017pro"
+    "gress_stages\030\005 \001(\005R\016progressStages\0220\n\024pr"
+    "ogress_stage_label\030\006 \001(\tR\022progressStageL"
+    "abel\0224\n\026progress_instance_done\030\007 \001(\005R\024pr"
+    "ogressInstanceDone\0226\n\027progress_instance_"
+    "total\030\010 \001(\005R\025progressInstanceTotal\0222\n\025fa"
+    "iled_instance_count\030\t \001(\003R\023failedInstanc"
+    "eCount\022\'\n\rstarted_at_ms\030\n \001(\003H\000R\013started"
+    "AtMs\210\001\001\022)\n\016finished_at_ms\030\013 \001(\003H\001R\014finis"
+    "hedAtMs\210\001\001B\020\n\016_started_at_msB\021\n\017_finishe"
+    "d_at_ms\"Z\n\027ListExperimentsResponse\022\?\n\013ex"
+    "periments\030\001 \003(\0132\035.tradingcopilot.v1.Expe"
+    "rimentR\013experiments\"[\n\010GridAxis\022\020\n\003key\030\001"
+    " \001(\tR\003key\022\026\n\006values\030\002 \003(\tR\006values\022%\n\016num"
+    "eric_values\030\003 \003(\001R\rnumericValues\"a\n\022Expe"
+    "rimentGridSpec\022\032\n\010playbook\030\001 \001(\tR\010playbo"
+    "ok\022/\n\004axes\030\002 \003(\0132\033.tradingcopilot.v1.Gri"
+    "dAxisR\004axes\"\364\001\n\026ExperimentInstanceSpec\022\024"
+    "\n\005label\030\001 \001(\tR\005label\022\032\n\010playbook\030\002 \001(\tR\010"
+    "playbook\022\026\n\006symbol\030\003 \001(\tR\006symbol\022;\n\010ma_c"
+    "ross\030\n \001(\0132 .tradingcopilot.v1.MaCrossCo"
+    "nfigR\007maCross\022S\n\020signal_consensus\030\013 \001(\0132"
+    "(.tradingcopilot.v1.SignalConsensusConfi"
+    "gR\017signalConsensus\"\357\002\n\027CreateExperimentR"
+    "equest\022\022\n\004name\030\001 \001(\tR\004name\022 \n\013descriptio"
+    "n\030\002 \001(\tR\013description\022A\n\010settings\030\003 \001(\0132%"
+    ".tradingcopilot.v1.ExperimentSettingsR\010s"
+    "ettings\022;\n\004mode\030\004 \001(\0162\'.tradingcopilot.v"
+    "1.ExperimentCreateModeR\004mode\022\032\n\010playbook"
+    "\030\005 \001(\tR\010playbook\0229\n\004grid\030\006 \001(\0132%.trading"
+    "copilot.v1.ExperimentGridSpecR\004grid\022G\n\ti"
+    "nstances\030\007 \003(\0132).tradingcopilot.v1.Exper"
+    "imentInstanceSpecR\tinstances\"%\n\rErrorRes"
+    "ponse\022\024\n\005error\030\001 \001(\tR\005error\"\034\n\nOkRespons"
+    "e\022\016\n\002ok\030\001 \001(\010R\002ok*\202\001\n\024ExperimentCreateMo"
+    "de\022&\n\"EXPERIMENT_CREATE_MODE_UNSPECIFIED"
+    "\020\000\022\037\n\033EXPERIMENT_CREATE_MODE_GRID\020\001\022!\n\035E"
+    "XPERIMENT_CREATE_MODE_MANUAL\020\002B\334\001\n\025com.t"
+    "radingcopilot.v1B\017ExperimentProtoP\001ZMgit"
+    "hub.com/MaxBernstetter/dagobert/src/gen/"
+    "tradingcopilot/v1;tradingcopilotv1\242\002\003TXX"
+    "\252\002\021Tradingcopilot.V1\312\002\021Tradingcopilot\\V1"
+    "\342\002\035Tradingcopilot\\V1\\GPBMetadata\352\002\022Tradi"
+    "ngcopilot::V1b\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto_deps[1] = {
@@ -2408,7 +2440,7 @@ static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fexperiment_2epro
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto = {
     false,
     false,
-    3631,
+    3741,
     descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_2eproto,
     "tradingcopilot/v1/experiment.proto",
     &descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto_once,
@@ -2493,9 +2525,9 @@ Experiment::Experiment(
                offsetof(Impl_, from_ms_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, from_ms_),
-           offsetof(Impl_, redownload_missing_) -
+           offsetof(Impl_, progress_instance_done_) -
                offsetof(Impl_, from_ms_) +
-               sizeof(Impl_::redownload_missing_));
+               sizeof(Impl_::progress_instance_done_));
 
   // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.Experiment)
 }
@@ -2528,9 +2560,9 @@ inline void Experiment::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, settings_),
            0,
-           offsetof(Impl_, redownload_missing_) -
+           offsetof(Impl_, progress_instance_done_) -
                offsetof(Impl_, settings_) +
-               sizeof(Impl_::redownload_missing_));
+               sizeof(Impl_::progress_instance_done_));
 }
 Experiment::~Experiment() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.Experiment)
@@ -2638,22 +2670,23 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   if (BatchCheckHasBit(cached_has_bits, 0x00ff0000U)) {
     ::memset(&this_._impl_.target_weight_pct_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.started_at_ms_) -
+                 reinterpret_cast<char*>(&this_._impl_.progress_instance_total_) -
                  reinterpret_cast<char*>(&this_._impl_.target_weight_pct_)) +
-                 sizeof(_impl_.started_at_ms_));
+                 sizeof(_impl_.progress_instance_total_));
   }
   if (BatchCheckHasBit(cached_has_bits, 0xff000000U)) {
-    ::memset(&this_._impl_.finished_at_ms_, 0,
+    ::memset(&this_._impl_.parallelism_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.redownload_missing_) -
-                 reinterpret_cast<char*>(&this_._impl_.finished_at_ms_)) +
-                 sizeof(_impl_.redownload_missing_));
-    if (CheckHasBit(cached_has_bits, 0x40000000U)) {
+                 reinterpret_cast<char*>(&this_._impl_.progress_instance_done_) -
+                 reinterpret_cast<char*>(&this_._impl_.parallelism_)) +
+                 sizeof(_impl_.progress_instance_done_));
+    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
       _impl_.list_playbooks_.Clear();
     }
-    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
-      _impl_.list_symbols_.Clear();
-    }
+  }
+  cached_has_bits = this_._impl_._has_bits_[1];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    _impl_.list_symbols_.Clear();
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -2831,7 +2864,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // bool redownload_missing = 32 [json_name = "redownloadMissing"];
-  if (CheckHasBit(cached_has_bits, 0x20000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00400000U)) {
     if (this_._internal_redownload_missing() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -2876,8 +2909,15 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
     }
   }
 
+  // optional int32 parallelism = 37 [json_name = "parallelism"];
+  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        37, this_._internal_parallelism(), target);
+  }
+
   // int64 created_at_ms = 51 [json_name = "createdAtMs"];
-  if (CheckHasBit(cached_has_bits, 0x00400000U)) {
+  if (CheckHasBit(cached_has_bits, 0x04000000U)) {
     if (this_._internal_created_at_ms() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt64ToArray(
@@ -2886,14 +2926,14 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // optional int64 started_at_ms = 52 [json_name = "startedAtMs"];
-  if (CheckHasBit(cached_has_bits, 0x00800000U)) {
+  if (CheckHasBit(cached_has_bits, 0x08000000U)) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteInt64ToArray(
         52, this_._internal_started_at_ms(), target);
   }
 
   // optional int64 finished_at_ms = 53 [json_name = "finishedAtMs"];
-  if (CheckHasBit(cached_has_bits, 0x01000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x10000000U)) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteInt64ToArray(
         53, this_._internal_finished_at_ms(), target);
@@ -2909,7 +2949,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // int32 progress_stages = 55 [json_name = "progressStages"];
-  if (CheckHasBit(cached_has_bits, 0x04000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x20000000U)) {
     if (this_._internal_progress_stages() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt32ToArray(
@@ -2928,7 +2968,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // int32 progress_instance_done = 57 [json_name = "progressInstanceDone"];
-  if (CheckHasBit(cached_has_bits, 0x08000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x40000000U)) {
     if (this_._internal_progress_instance_done() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt32ToArray(
@@ -2937,7 +2977,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
-  if (CheckHasBit(cached_has_bits, 0x10000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00800000U)) {
     if (this_._internal_progress_instance_total() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteInt32ToArray(
@@ -2946,7 +2986,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
   }
 
   // repeated string list_playbooks = 70 [json_name = "listPlaybooks"];
-  if (CheckHasBit(cached_has_bits, 0x40000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x80000000U)) {
     for (int i = 0, n = this_._internal_list_playbooks_size(); i < n; ++i) {
       const auto& s = this_._internal_list_playbooks().Get(i);
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -2955,8 +2995,9 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
     }
   }
 
+  cached_has_bits = this_._impl_._has_bits_[1];
   // repeated string list_symbols = 71 [json_name = "listSymbols"];
-  if (CheckHasBit(cached_has_bits, 0x80000000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
     for (int i = 0, n = this_._internal_list_symbols_size(); i < n; ++i) {
       const auto& s = this_._internal_list_symbols().Get(i);
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
@@ -2965,6 +3006,7 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
     }
   }
 
+  cached_has_bits = this_._impl_._has_bits_[0];
   // .tradingcopilot.v1.ExperimentSettings settings = 80 [json_name = "settings"];
   if (CheckHasBit(cached_has_bits, 0x00000400U)) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
@@ -3143,24 +3185,25 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
         total_size += 10;
       }
     }
-    // int64 created_at_ms = 51 [json_name = "createdAtMs"];
+    // bool redownload_missing = 32 [json_name = "redownloadMissing"];
     if (CheckHasBit(cached_has_bits, 0x00400000U)) {
-      if (this_._internal_created_at_ms() != 0) {
-        total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
-                                        this_._internal_created_at_ms());
+      if (this_._internal_redownload_missing() != 0) {
+        total_size += 3;
       }
     }
-    // optional int64 started_at_ms = 52 [json_name = "startedAtMs"];
+    // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
     if (CheckHasBit(cached_has_bits, 0x00800000U)) {
-      total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
-                                      this_._internal_started_at_ms());
+      if (this_._internal_progress_instance_total() != 0) {
+        total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                        this_._internal_progress_instance_total());
+      }
     }
   }
   if (BatchCheckHasBit(cached_has_bits, 0xff000000U)) {
-    // optional int64 finished_at_ms = 53 [json_name = "finishedAtMs"];
+    // optional int32 parallelism = 37 [json_name = "parallelism"];
     if (CheckHasBit(cached_has_bits, 0x01000000U)) {
-      total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
-                                      this_._internal_finished_at_ms());
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_parallelism());
     }
     // int32 progress_stage = 54 [json_name = "progressStage"];
     if (CheckHasBit(cached_has_bits, 0x02000000U)) {
@@ -3169,35 +3212,39 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
                                         this_._internal_progress_stage());
       }
     }
-    // int32 progress_stages = 55 [json_name = "progressStages"];
+    // int64 created_at_ms = 51 [json_name = "createdAtMs"];
     if (CheckHasBit(cached_has_bits, 0x04000000U)) {
+      if (this_._internal_created_at_ms() != 0) {
+        total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
+                                        this_._internal_created_at_ms());
+      }
+    }
+    // optional int64 started_at_ms = 52 [json_name = "startedAtMs"];
+    if (CheckHasBit(cached_has_bits, 0x08000000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
+                                      this_._internal_started_at_ms());
+    }
+    // optional int64 finished_at_ms = 53 [json_name = "finishedAtMs"];
+    if (CheckHasBit(cached_has_bits, 0x10000000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int64Size(
+                                      this_._internal_finished_at_ms());
+    }
+    // int32 progress_stages = 55 [json_name = "progressStages"];
+    if (CheckHasBit(cached_has_bits, 0x20000000U)) {
       if (this_._internal_progress_stages() != 0) {
         total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
                                         this_._internal_progress_stages());
       }
     }
     // int32 progress_instance_done = 57 [json_name = "progressInstanceDone"];
-    if (CheckHasBit(cached_has_bits, 0x08000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x40000000U)) {
       if (this_._internal_progress_instance_done() != 0) {
         total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
                                         this_._internal_progress_instance_done());
       }
     }
-    // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
-    if (CheckHasBit(cached_has_bits, 0x10000000U)) {
-      if (this_._internal_progress_instance_total() != 0) {
-        total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
-                                        this_._internal_progress_instance_total());
-      }
-    }
-    // bool redownload_missing = 32 [json_name = "redownloadMissing"];
-    if (CheckHasBit(cached_has_bits, 0x20000000U)) {
-      if (this_._internal_redownload_missing() != 0) {
-        total_size += 3;
-      }
-    }
     // repeated string list_playbooks = 70 [json_name = "listPlaybooks"];
-    if (CheckHasBit(cached_has_bits, 0x40000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
       total_size +=
           2 * ::google::protobuf::internal::FromIntSize(this_._internal_list_playbooks().size());
       for (int i = 0, n = this_._internal_list_playbooks().size(); i < n; ++i) {
@@ -3205,8 +3252,11 @@ PROTOBUF_NOINLINE void Experiment::Clear() {
             this_._internal_list_playbooks().Get(i));
       }
     }
+  }
+   {
     // repeated string list_symbols = 71 [json_name = "listSymbols"];
-    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
+    cached_has_bits = this_._impl_._has_bits_[1];
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       total_size +=
           2 * ::google::protobuf::internal::FromIntSize(this_._internal_list_symbols().size());
       for (int i = 0, n = this_._internal_list_symbols().size(); i < n; ++i) {
@@ -3392,17 +3442,19 @@ void Experiment::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00400000U)) {
-      if (from._internal_created_at_ms() != 0) {
-        _this->_impl_.created_at_ms_ = from._impl_.created_at_ms_;
+      if (from._internal_redownload_missing() != 0) {
+        _this->_impl_.redownload_missing_ = from._impl_.redownload_missing_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00800000U)) {
-      _this->_impl_.started_at_ms_ = from._impl_.started_at_ms_;
+      if (from._internal_progress_instance_total() != 0) {
+        _this->_impl_.progress_instance_total_ = from._impl_.progress_instance_total_;
+      }
     }
   }
   if (BatchCheckHasBit(cached_has_bits, 0xff000000U)) {
     if (CheckHasBit(cached_has_bits, 0x01000000U)) {
-      _this->_impl_.finished_at_ms_ = from._impl_.finished_at_ms_;
+      _this->_impl_.parallelism_ = from._impl_.parallelism_;
     }
     if (CheckHasBit(cached_has_bits, 0x02000000U)) {
       if (from._internal_progress_stage() != 0) {
@@ -3410,37 +3462,39 @@ void Experiment::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x04000000U)) {
+      if (from._internal_created_at_ms() != 0) {
+        _this->_impl_.created_at_ms_ = from._impl_.created_at_ms_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x08000000U)) {
+      _this->_impl_.started_at_ms_ = from._impl_.started_at_ms_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x10000000U)) {
+      _this->_impl_.finished_at_ms_ = from._impl_.finished_at_ms_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x20000000U)) {
       if (from._internal_progress_stages() != 0) {
         _this->_impl_.progress_stages_ = from._impl_.progress_stages_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x08000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x40000000U)) {
       if (from._internal_progress_instance_done() != 0) {
         _this->_impl_.progress_instance_done_ = from._impl_.progress_instance_done_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x10000000U)) {
-      if (from._internal_progress_instance_total() != 0) {
-        _this->_impl_.progress_instance_total_ = from._impl_.progress_instance_total_;
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x20000000U)) {
-      if (from._internal_redownload_missing() != 0) {
-        _this->_impl_.redownload_missing_ = from._impl_.redownload_missing_;
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x40000000U)) {
+    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
       _this->_internal_mutable_list_playbooks()->InternalMergeFromWithArena(
           ::google::protobuf::MessageLite::internal_visibility(), arena,
           from._internal_list_playbooks());
     }
-    if (CheckHasBit(cached_has_bits, 0x80000000U)) {
-      _this->_internal_mutable_list_symbols()->InternalMergeFromWithArena(
-          ::google::protobuf::MessageLite::internal_visibility(), arena,
-          from._internal_list_symbols());
-    }
   }
-  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  cached_has_bits = from._impl_._has_bits_[1];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    _this->_internal_mutable_list_symbols()->InternalMergeFromWithArena(
+        ::google::protobuf::MessageLite::internal_visibility(), arena,
+        from._internal_list_symbols());
+  }
+  _this->_impl_._has_bits_.Or(from._impl_._has_bits_);
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
 }
@@ -3459,6 +3513,7 @@ void Experiment::InternalSwap(Experiment* PROTOBUF_RESTRICT PROTOBUF_NONNULL oth
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  swap(_impl_._has_bits_[1], other->_impl_._has_bits_[1]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.id_, &other->_impl_.id_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, &other->_impl_.name_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.description_, &other->_impl_.description_, arena);
@@ -3470,8 +3525,8 @@ void Experiment::InternalSwap(Experiment* PROTOBUF_RESTRICT PROTOBUF_NONNULL oth
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.algo_, &other->_impl_.algo_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.progress_stage_label_, &other->_impl_.progress_stage_label_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Experiment, _impl_.redownload_missing_)
-      + sizeof(Experiment::_impl_.redownload_missing_)
+      PROTOBUF_FIELD_OFFSET(Experiment, _impl_.progress_instance_done_)
+      + sizeof(Experiment::_impl_.progress_instance_done_)
       - PROTOBUF_FIELD_OFFSET(Experiment, _impl_.settings_)>(
           reinterpret_cast<char*>(&_impl_.settings_),
           reinterpret_cast<char*>(&other->_impl_.settings_));
@@ -3521,9 +3576,9 @@ ExperimentSettings::ExperimentSettings(
                offsetof(Impl_, from_ms_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, from_ms_),
-           offsetof(Impl_, redownload_missing_) -
+           offsetof(Impl_, fee_bps_) -
                offsetof(Impl_, from_ms_) +
-               sizeof(Impl_::redownload_missing_));
+               sizeof(Impl_::fee_bps_));
 
   // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ExperimentSettings)
 }
@@ -3540,9 +3595,9 @@ inline void ExperimentSettings::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, from_ms_),
            0,
-           offsetof(Impl_, redownload_missing_) -
+           offsetof(Impl_, fee_bps_) -
                offsetof(Impl_, from_ms_) +
-               sizeof(Impl_::redownload_missing_));
+               sizeof(Impl_::fee_bps_));
 }
 ExperimentSettings::~ExperimentSettings() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.ExperimentSettings)
@@ -3619,10 +3674,11 @@ PROTOBUF_NOINLINE void ExperimentSettings::Clear() {
   if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     ::memset(&this_._impl_.initial_base_, 0,
              static_cast<::size_t>(
-                 reinterpret_cast<char*>(&this_._impl_.redownload_missing_) -
+                 reinterpret_cast<char*>(&this_._impl_.slippage_bps_) -
                  reinterpret_cast<char*>(&this_._impl_.initial_base_)) +
-                 sizeof(_impl_.redownload_missing_));
+                 sizeof(_impl_.slippage_bps_));
   }
+  this_._impl_.fee_bps_ = 0;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -3749,7 +3805,7 @@ PROTOBUF_NOINLINE void ExperimentSettings::Clear() {
   }
 
   // bool redownload_missing = 12 [json_name = "redownloadMissing"];
-  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
     if (this_._internal_redownload_missing() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -3777,7 +3833,7 @@ PROTOBUF_NOINLINE void ExperimentSettings::Clear() {
   }
 
   // double slippage_bps = 15 [json_name = "slippageBps"];
-  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_slippage_bps()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -3786,12 +3842,19 @@ PROTOBUF_NOINLINE void ExperimentSettings::Clear() {
   }
 
   // double fee_bps = 16 [json_name = "feeBps"];
-  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_fee_bps()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
           16, this_._internal_fee_bps(), target);
     }
+  }
+
+  // optional int32 parallelism = 17 [json_name = "parallelism"];
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        17, this_._internal_parallelism(), target);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -3904,22 +3967,29 @@ PROTOBUF_NOINLINE void ExperimentSettings::Clear() {
         total_size += 9;
       }
     }
-    // double slippage_bps = 15 [json_name = "slippageBps"];
+    // bool redownload_missing = 12 [json_name = "redownloadMissing"];
     if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (this_._internal_redownload_missing() != 0) {
+        total_size += 2;
+      }
+    }
+    // optional int32 parallelism = 17 [json_name = "parallelism"];
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      total_size += 2 + ::_pbi::WireFormatLite::Int32Size(
+                                      this_._internal_parallelism());
+    }
+    // double slippage_bps = 15 [json_name = "slippageBps"];
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_slippage_bps()) != 0) {
         total_size += 9;
       }
     }
+  }
+   {
     // double fee_bps = 16 [json_name = "feeBps"];
-    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_fee_bps()) != 0) {
         total_size += 10;
-      }
-    }
-    // bool redownload_missing = 12 [json_name = "redownloadMissing"];
-    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
-      if (this_._internal_redownload_missing() != 0) {
-        total_size += 2;
       }
     }
   }
@@ -4025,19 +4095,22 @@ void ExperimentSettings::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (from._internal_redownload_missing() != 0) {
+        _this->_impl_.redownload_missing_ = from._impl_.redownload_missing_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      _this->_impl_.parallelism_ = from._impl_.parallelism_;
+    }
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_slippage_bps()) != 0) {
         _this->_impl_.slippage_bps_ = from._impl_.slippage_bps_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
-      if (::absl::bit_cast<::uint64_t>(from._internal_fee_bps()) != 0) {
-        _this->_impl_.fee_bps_ = from._impl_.fee_bps_;
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
-      if (from._internal_redownload_missing() != 0) {
-        _this->_impl_.redownload_missing_ = from._impl_.redownload_missing_;
-      }
+  }
+  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    if (::absl::bit_cast<::uint64_t>(from._internal_fee_bps()) != 0) {
+      _this->_impl_.fee_bps_ = from._impl_.fee_bps_;
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -4064,8 +4137,8 @@ void ExperimentSettings::InternalSwap(ExperimentSettings* PROTOBUF_RESTRICT PROT
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.quote_, &other->_impl_.quote_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.algo_, &other->_impl_.algo_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.redownload_missing_)
-      + sizeof(ExperimentSettings::_impl_.redownload_missing_)
+      PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.fee_bps_)
+      + sizeof(ExperimentSettings::_impl_.fee_bps_)
       - PROTOBUF_FIELD_OFFSET(ExperimentSettings, _impl_.from_ms_)>(
           reinterpret_cast<char*>(&_impl_.from_ms_),
           reinterpret_cast<char*>(&other->_impl_.from_ms_));

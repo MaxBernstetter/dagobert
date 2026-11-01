@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -193,6 +194,14 @@ func serveBackfill(ctx context.Context) {
 		go runStudyJob(jobCtx, req.ID, req.RetryFailed)
 		writeJSON(w, http.StatusAccepted, experimentJob)
 	})
+	// Connector state uses the same Postgres catalog convention as the experiments.
+	if cat, err := pgcatalog.Open(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
+	} else if cat != nil {
+		connectorStore = cat
+	} else {
+		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; connector routes answer 503")
+	}
 	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if dbURL != "" {
 		pool, err := pgxpool.New(ctx, dbURL)
@@ -416,6 +425,28 @@ func runBacktestDocker(ctx context.Context, id string) (int, error) {
 	return runCatalogDocker(ctx, "BACKTEST_ID", id, "backtest", "", false, nil)
 }
 
+// composeNetwork names the Docker network job containers join so they reach postgres.
+// COMPOSE_NETWORK wins. Otherwise it is read from this container's own networks, since
+// Compose names the network after the project (the checkout directory), not always
+// "dagobert". The last resort is the default project's "dagobert_default".
+func composeNetwork(ctx context.Context) string {
+	if v := strings.TrimSpace(os.Getenv("COMPOSE_NETWORK")); v != "" {
+		return v
+	}
+	if host, err := os.Hostname(); err == nil && host != "" {
+		out, err := exec.CommandContext(ctx, "docker", "inspect", "--format",
+			"{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}\n{{end}}", host).Output()
+		if err == nil {
+			for _, name := range strings.Fields(string(out)) {
+				if name != "bridge" && name != "host" && name != "none" {
+					return name
+				}
+			}
+		}
+	}
+	return "dagobert_default"
+}
+
 func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName string, retryFailed bool, extraEnv []string) (int, error) {
 	data, err := hostDataDirForJobs()
 	if err != nil {
@@ -434,15 +465,15 @@ func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName strin
 		"-e", "DATA_DIR=/data",
 		"-e", idEnv+"="+id,
 		"-e", "VENUE_SIMULATE=1",
-		"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
+		"-e", "BINANCE_BASE_URL="+jobBaseURL(),
 	)
-	if net := strings.TrimSpace(env("COMPOSE_NETWORK", "dagobert_default")); net != "" {
+	if net := composeNetwork(ctx); net != "" {
 		args = append(args, "--network", net)
 	}
 	args = append(args, dockerDataPlaneEnvArgs()...)
 	if label == "experiment" {
-		args = append(args, "-e", "EXPERIMENT_SIM_WORKERS="+env("EXPERIMENT_SIM_WORKERS", "4"))
-		for _, k := range []string{"EXPERIMENT_ENGINE", "EXPERIMENT_CPP_PROCESSES", "EXPERIMENT_CPP_SHARD_MAX", "CPP_SMA_CROSS_BIN", "CPP_SIGNAL_CONSENSUS_BIN"} {
+		// Unset knobs stay unset: the worker sizes them from the machine (see backtest.ExperimentSimWorkers, cppProcesses).
+		for _, k := range []string{"EXPERIMENT_SIM_WORKERS", "EXPERIMENT_CPP_PROCESSES", "EXPERIMENT_CPP_SHARD_MAX", "CPP_SMA_CROSS_BIN", "CPP_SIGNAL_CONSENSUS_BIN"} {
 			if v := strings.TrimSpace(os.Getenv(k)); v != "" {
 				args = append(args, "-e", k+"="+v)
 			}

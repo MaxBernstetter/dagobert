@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "@/components/link";
 import {
@@ -319,7 +319,9 @@ function StrategyRepeaterItem({
     () => portfolioSeriesForPlaybook(journals, group.playbook),
     [journals, group.playbook]
   );
-  const markers = useMemo(() => tradeMarkersFromActivity(group.rows), [group.rows]);
+  // The chart derivations read the rows deferred: the decisions table is the first thing to paint.
+  const deferredRows = useDeferredValue(group.rows);
+  const markers = useMemo(() => tradeMarkersFromActivity(deferredRows), [deferredRows]);
   const wikiSlug = playbookWikiSlug(group.playbook);
   const symbol = useMemo(() => primarySymbol(group.rows), [group.rows]);
   const timeRange = useMemo(() => {
@@ -330,8 +332,8 @@ function StrategyRepeaterItem({
         toSec: Math.ceil(reportApi.toMs / 1000) + padSec,
       };
     }
-    return chartTimeRange(group.rows, points, markers);
-  }, [reportApi, group.rows, points, markers]);
+    return chartTimeRange(deferredRows, points, markers);
+  }, [reportApi, deferredRows, points, markers]);
   const chartSeriesPath = useMemo(() => {
     if (!reportApi || !timeRange) return undefined;
     const q = new URLSearchParams({

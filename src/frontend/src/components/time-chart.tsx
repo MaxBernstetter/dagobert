@@ -35,6 +35,11 @@ type Hover = { time: number; rows: { label: string; value: string }[]; marker?: 
 
 const BAR_SEC = 3 * 3600;
 
+/** Series above this many points are drawn with ECharts' large mode (the window is budgeted server side). */
+const LARGE_THRESHOLD = 2000;
+/** Points drawn per frame for progressive rendering of big series. */
+const PROGRESSIVE_CHUNK = 4000;
+
 function isOscillator(ind: ChartIndicatorMeta): boolean {
   return ind.pane === "oscillator";
 }
@@ -287,6 +292,8 @@ function buildOption(input: BuildInput) {
         series.push({
           type: "bar",
           name: ind.label,
+          large: true,
+          largeThreshold: LARGE_THRESHOLD,
           xAxisIndex: i,
           yAxisIndex: i,
           data: samples(input.columns.timeSec, ind.value),
@@ -305,6 +312,7 @@ function buildOption(input: BuildInput) {
           xAxisIndex: i,
           yAxisIndex: i,
           showSymbol: false,
+          sampling: "lttb",
           data: samples(input.columns.timeSec, ind.value),
           lineStyle: { width: 1.5, color: indicatorColor(i, theme), opacity: visible ? 1 : 0 },
           itemStyle: { color: indicatorColor(i, theme) },
@@ -338,6 +346,7 @@ function buildOption(input: BuildInput) {
         type: "line",
         name: "Buy & hold",
         showSymbol: false,
+        sampling: "lttb",
         data: input.buyHold.map((p) => [ms(p.time), p.value]),
         lineStyle: {
           width: 1.25,
@@ -361,6 +370,10 @@ function buildOption(input: BuildInput) {
     series.push({
       type: "candlestick",
       name: "Close",
+      large: true,
+      largeThreshold: LARGE_THRESHOLD,
+      progressive: PROGRESSIVE_CHUNK,
+      progressiveThreshold: LARGE_THRESHOLD,
       data: input.columns.timeSec.map((time, i) => [time * 1000, input.columns.open[i], input.columns.close[i], input.columns.low[i], input.columns.high[i]]),
       itemStyle: {
         color: theme.candleUpFill,
@@ -381,6 +394,7 @@ function buildOption(input: BuildInput) {
         name: ind.label,
         yAxisIndex: ownScale ? 1 : 0,
         showSymbol: false,
+        sampling: "lttb",
         data: samples(input.columns.timeSec, columnOf(input.columns, ind.id)),
         lineStyle: { width: 1.5, color, opacity: visible ? 1 : 0 },
         itemStyle: { color },

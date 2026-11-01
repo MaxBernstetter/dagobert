@@ -3,7 +3,6 @@ package experiment_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -11,65 +10,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
-	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 )
 
 // pgScratchDB creates an empty database loaded with db/sqlc/schema.sql on the dev Postgres and
 // drops it on cleanup. It skips when no Postgres is reachable. POSTGRES_TEST_URL (default: the
 // compose Postgres on 127.0.0.1:9432) names a user that may CREATE DATABASE.
-func pgScratchDB(t *testing.T) string {
-	t.Helper()
-	admin := os.Getenv("POSTGRES_TEST_URL")
-	if admin == "" {
-		admin = "postgres://trading:trading@127.0.0.1:9432/postgres"
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	ap, err := pgxpool.New(ctx, admin)
-	if err == nil {
-		err = ap.Ping(ctx)
-	}
-	if err != nil {
-		t.Skipf("no reachable Postgres (%v)", err)
-	}
-	t.Cleanup(ap.Close)
-	name := "persist_test_" + uuid.NewString()[:8]
-	if _, err := ap.Exec(context.Background(), "CREATE DATABASE "+name); err != nil {
-		t.Skipf("cannot create database: %v", err)
-	}
-	t.Cleanup(func() { _, _ = ap.Exec(context.Background(), "DROP DATABASE "+name+" WITH (FORCE)") })
-	cfg := ap.Config().ConnConfig.Copy()
-	cfg.Database = name
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, name)
-	schema, err := os.ReadFile(filepath.Join("..", "..", "..", "db", "sqlc", "schema.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p.Close()
-	if _, err := p.Exec(context.Background(), string(schema)); err != nil {
-		t.Fatal(err)
-	}
-	return url
-}
-
 // Many batches commit concurrently on Postgres; one poisoned instance goes through the bisection
 // path. Counts must match the journals and metrics, and progress must never go backwards.
 func TestExperimentPostgresConcurrentBatches(t *testing.T) {
-	url := pgScratchDB(t)
 	const n = 300 // batches flush at 200 instances or after 250 ms while compute is still running
-	t.Setenv("DATABASE_URL", "")
-	dataDir, _, rec := gridExperiment(t, n)
-	t.Setenv("DATABASE_URL", url)
-	mirrorToPostgres(t, url, rec)
+	dataDir, url, rec := gridExperiment(t, n)
 
 	poison := rec.Instances[n/2].ID
 	var attempts atomic.Int32 // successful batch commits
@@ -149,36 +103,41 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 		t.Fatalf("poisoned instance status %q err %v", poisonStatus, err)
 	}
 
-	// Oracles: fills from the workspace journals, outcomes from the stored metrics (every sell).
-	wantFills := 0
+	// Fills and trade outcomes are files now: Postgres keeps none of them, and each instance that
+	// completed has its journal, fill and outcome files, the poisoned one has none.
+	wantFills, wantOutcomes := 0, 0
 	for _, inst := range rec.Instances {
+		ws := filepath.Join(dataDir, inst.WorkspaceRelPath)
 		if inst.ID == poison {
+			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet"} {
+				if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
+					t.Fatalf("poisoned instance keeps %s: %v", name, err)
+				}
+			}
 			continue
 		}
-		fills, err := signalrunner.LoadInstanceFills(filepath.Join(dataDir, inst.WorkspaceRelPath), inst.PlaybookKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantFills += len(fills)
+		wantFills += len(readJournalFile(t, ws))
+		wantOutcomes += len(readOutcomeFile(t, ws))
 	}
-	var gotFills, gotOutcomes, wantOutcomes, statInstances int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM experiment_instance_fill`).Scan(&gotFills); err != nil {
+	var gotOutcomes, statInstances int
+	var fillTable, outcomeTable *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text`).Scan(&fillTable, &outcomeTable); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM experiment_trade_outcome`).Scan(&gotOutcomes); err != nil {
-		t.Fatal(err)
+	if fillTable != nil || outcomeTable != nil {
+		t.Fatalf("dropped tables still exist: fill=%v outcome=%v", fillTable, outcomeTable)
 	}
-	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&wantOutcomes); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&gotOutcomes); err != nil {
 		t.Fatal(err)
 	}
 	if err := pool.QueryRow(ctx, `SELECT count(DISTINCT instance_id) FROM experiment_instance_period_stat`).Scan(&statInstances); err != nil {
 		t.Fatal(err)
 	}
-	if gotFills != wantFills || wantFills == 0 {
-		t.Fatalf("fills %d want %d", gotFills, wantFills)
+	if wantFills == 0 {
+		t.Fatal("no fills were written to the journal files")
 	}
 	if gotOutcomes != wantOutcomes || wantOutcomes == 0 {
-		t.Fatalf("outcomes %d want %d", gotOutcomes, wantOutcomes)
+		t.Fatalf("outcomes in metrics %d, outcome files %d", gotOutcomes, wantOutcomes)
 	}
 	if statInstances != n-1 {
 		t.Fatalf("period stats for %d instances want %d", statInstances, n-1)

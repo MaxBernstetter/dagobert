@@ -1,7 +1,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { apiUrl } from "@/lib/api";
-import { chartSeriesUrl, loadChartSeries } from "@/lib/chart-series-cache";
+import { chartMaxPoints, chartSeriesUrl, loadChartSeries } from "@/lib/chart-series-cache";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { ActivityView } from "@/components/activity-view";
 import { BacktestDatePicker } from "@/components/backtest-date-picker";
@@ -91,6 +91,12 @@ import {
 } from "@/lib/symbol-picker";
 import { cn } from "@/lib/utils";
 import { usePageBreadcrumbs, type PageCrumb } from "@/components/page-breadcrumbs";
+
+/** The parallelism input as a setting: a whole number of at least 1, or undefined (auto). */
+function parseParallelismInput(raw: string): number | undefined {
+  const n = Number(raw.trim());
+  return raw.trim() !== "" && Number.isInteger(n) && n >= 1 ? n : undefined;
+}
 
 const fieldInputClass =
   "w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
@@ -222,9 +228,27 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   const [selected, setSelected] = useState<ExperimentRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [maxParallelism, setMaxParallelism] = useState<number | null>(null);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createSettings, setCreateSettings] = useState<ExperimentSettings>(defaultExperimentSettings());
+  // Stable handlers: the date pickers are memoized and must not re-render on the polling tick.
+  const onCreateFromDateChange = useCallback((dateInput: string) => {
+    const fromMs = backtestDateInputToFromMs(dateInput);
+    if (fromMs == null) return;
+    setCreateSettings((s) => {
+      const next = { ...s, fromMs };
+      if (fromMs >= s.toMs) {
+        const bumped = backtestDateInputToToMs(dateInput);
+        if (bumped != null && bumped > fromMs) next.toMs = bumped;
+      }
+      return next;
+    });
+  }, []);
+  const onCreateToDateChange = useCallback((dateInput: string) => {
+    const toMs = backtestDateInputToToMs(dateInput);
+    setCreateSettings((s) => (toMs == null || toMs <= s.fromMs ? s : { ...s, toMs }));
+  }, []);
   const [createPlaybook, setCreatePlaybook] = useState("ma-cross");
   const [strategies, setStrategies] = useState<ExperimentStrategy[]>([]);
   const [instanceDrafts, setInstanceDrafts] = useState<InstanceDraft[]>([]);
@@ -310,7 +334,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     void refresh().catch((err) => setError(err instanceof Error ? err.message : "load failed"));
   }, [refresh]);
 
-  // Warm pairs for ready providers (disk snapshot after Ingestion activate).
+  // Warm pairs for ready providers (stored snapshot after Ingestion activate).
   useEffect(() => {
     void (async () => {
       try {
@@ -347,6 +371,20 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    let cancelled = false;
+    fetch(apiUrl("/experiments/limits"), { cache: "no-store" })
+      .then((res) => (res.ok ? (res.json() as Promise<{ maxParallelism: number }>) : null))
+      .then((limits) => {
+        if (!cancelled && limits) setMaxParallelism(limits.maxParallelism);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [createOpen]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -594,10 +632,12 @@ export function ExperimentsPanel({ className }: { className?: string }) {
 
   useEffect(() => {
     if (!instanceDetailOpen || !selected || !activeInstance || activeInstance.status !== "completed") return;
+    // Same URL as the instance charts (window and budget), so the prefetch fills their cache entry.
     const url = chartSeriesUrl(
       apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/chart-series`),
       selected.settings.fromMs,
       selected.settings.toMs,
+      chartMaxPoints(),
     );
     void loadChartSeries(url).catch(() => {});
   }, [instanceDetailOpen, selected, activeInstance]);
@@ -1071,29 +1111,14 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                   label="From (UTC)"
                   value={backtestFromMsToDateInput(createSettings.fromMs)}
                   max={backtestToMsToDateInput(createSettings.toMs) || undefined}
-                  onChange={(dateInput) => {
-                    const fromMs = backtestDateInputToFromMs(dateInput);
-                    if (fromMs == null) return;
-                    setCreateSettings((s) => {
-                      const next = { ...s, fromMs };
-                      if (fromMs >= s.toMs) {
-                        const bumped = backtestDateInputToToMs(dateInput);
-                        if (bumped != null && bumped > fromMs) next.toMs = bumped;
-                      }
-                      return next;
-                    });
-                  }}
+                  onChange={onCreateFromDateChange}
                 />
                 <BacktestDatePicker
                   id="experiment-to"
                   label="To (UTC, inclusive)"
                   value={backtestToMsToDateInput(createSettings.toMs)}
                   min={backtestFromMsToDateInput(createSettings.fromMs) || undefined}
-                  onChange={(dateInput) => {
-                    const toMs = backtestDateInputToToMs(dateInput);
-                    if (toMs == null || toMs <= createSettings.fromMs) return;
-                    setCreateSettings((s) => ({ ...s, toMs }));
-                  }}
+                  onChange={onCreateToDateChange}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm">
@@ -1110,6 +1135,28 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                 <span className="text-muted-foreground">
                   Force re-download candles in range (otherwise only missing hours are
                   fetched)
+                </span>
+              </label>
+              <label className="grid gap-1">
+                <span className="text-muted-foreground">Parallel processes</span>
+                <input
+                  type="number"
+                  className={fieldInputClass}
+                  min={1}
+                  max={maxParallelism ?? undefined}
+                  step={1}
+                  placeholder="auto"
+                  value={createSettings.parallelism ?? ""}
+                  onChange={(e) =>
+                    setCreateSettings((s) => ({
+                      ...s,
+                      parallelism: parseParallelismInput(e.target.value),
+                    }))
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  Empty = auto: one C++ process per CPU of the server
+                  {maxParallelism != null ? ` (at most ${maxParallelism} here)` : ""}.
                 </span>
               </label>
             </div>

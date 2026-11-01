@@ -14,6 +14,8 @@ services:
       VITE_DEV_API_PROXY: ${VITE_DEV_API_PROXY:-http://orchestrator:8090}
     volumes:
       - ./src/frontend:/repo/src/frontend
+      # Keep the image's node_modules; the bind mount above would hide them (vite: not found).
+      - /repo/src/frontend/node_modules
       - ./src/calculation-technical-indicator:/repo/src/calculation-technical-indicator:ro
       - ./src/calculation-signal:/repo/src/calculation-signal:ro
     develop:

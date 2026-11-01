@@ -20,30 +20,15 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// C++ engine of the experiment simulate stage (issue #130, S4b). EXPERIMENT_ENGINE=cpp replaces
-// the Go strategy loop by: C++ sweep (actions only) -> ReplayKPI (fills, equity, KPIs) -> the
-// shared persistence stage. There is no per-instance fallback to Go.
+// The experiment simulate stage runs on the C++ engine (issue #130): C++ sweep (actions only) ->
+// ReplayKPI (fills, equity, KPIs) -> the shared persistence stage. There is no Go engine and no
+// per-instance fallback: an unsupported playbook or a missing binary fails the instance.
 
 const (
-	engineGo  = "go"
-	engineCpp = "cpp"
-
 	// DefaultCppShardMax caps the instances per C++ process (EXPERIMENT_CPP_SHARD_MAX).
 	DefaultCppShardMax = 500
 	cppKPIBatch        = 64
 )
-
-// experimentEngine returns the engine of this run from EXPERIMENT_ENGINE (default go).
-func experimentEngine() (string, error) {
-	switch v := strings.ToLower(strings.TrimSpace(os.Getenv("EXPERIMENT_ENGINE"))); v {
-	case "", engineGo:
-		return engineGo, nil
-	case engineCpp:
-		return engineCpp, nil
-	default:
-		return "", fmt.Errorf("EXPERIMENT_ENGINE=%q: want go or cpp", v)
-	}
-}
 
 // cppBinaryEnv names the env var holding the executable of a playbook slug.
 func cppBinaryEnv(slug string) (string, error) {
@@ -63,15 +48,20 @@ func cppBinaryPath(slug string) (string, error) {
 	}
 	p := strings.TrimSpace(os.Getenv(name))
 	if p == "" {
-		return "", fmt.Errorf("EXPERIMENT_ENGINE=cpp: %s is not set", name)
+		return "", fmt.Errorf("%s is not set: the experiment engine needs the C++ strategy binary", name)
 	}
 	if _, err := os.Stat(p); err != nil {
-		return "", fmt.Errorf("EXPERIMENT_ENGINE=cpp: %s: %w", name, err)
+		return "", fmt.Errorf("%s: %w", name, err)
 	}
 	return p, nil
 }
 
-func cppProcesses() int {
+// cppProcesses is the number of concurrent C++ sweep processes: the experiment's own setting when set
+// (validated by the API), else EXPERIMENT_CPP_PROCESSES (the fallback default), else one per CPU.
+func cppProcesses(setting int) int {
+	if setting >= 1 {
+		return setting
+	}
 	if n, err := strconv.Atoi(strings.TrimSpace(os.Getenv("EXPERIMENT_CPP_PROCESSES"))); err == nil && n >= 1 {
 		return n
 	}
@@ -119,7 +109,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		}
 		groups[k] = append(groups[k], inst)
 	}
-	procs := cppProcesses()
+	procs := cppProcesses(meta.Settings.Parallelism)
 	var shards []cppShard
 	for _, k := range order {
 		insts := groups[k]
@@ -156,7 +146,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		for batch := range results {
 			for _, r := range batch {
 				inst := byKey[r.Key]
-				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, err: r.Err}
+				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
 				if r.Err == nil {
 					res.timing = store.InstanceRunTiming{StartedAtMs: r.Report.Run.StartedAtMs, FinishedAtMs: r.Report.Run.FinishedAtMs}
 				}

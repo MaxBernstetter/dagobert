@@ -8,7 +8,6 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -38,12 +37,12 @@ func winRateDef() kpisDef {
 	}
 }
 
-func (s *Server) attachInstancePerformance(ctx context.Context, instanceID uuid.UUID, resp *kpisResponse) error {
-	trades, err := s.q.ListTradeOutcomesForInstance(ctx, instanceID)
+func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentdb.ExperimentInstance, resp *kpisResponse) error {
+	closed, err := instanceTradeOutcomes(inst)
 	if err != nil {
 		return err
 	}
-	periods, err := s.q.ListInstancePeriodStats(ctx, instanceID)
+	periods, err := s.q.ListInstancePeriodStats(ctx, inst.ID)
 	if err != nil {
 		return err
 	}
@@ -62,15 +61,6 @@ func (s *Server) attachInstancePerformance(ctx context.Context, instanceID uuid.
 		case "month":
 			monthly = append(monthly, bucket)
 		}
-	}
-	closed := make([]performance.ClosedTrade, 0, len(trades))
-	for _, tr := range trades {
-		ct := performance.ClosedTrade{Quote: float64(tr.Quote), Side: int(tr.Side)}
-		if tr.Percent.Valid {
-			pct := float64(tr.Percent.Float32)
-			ct.Percent = &pct
-		}
-		closed = append(closed, ct)
 	}
 	result := performance.Assemble(closed, monthly, yearly)
 	if result.ClosedTrades() == 0 {

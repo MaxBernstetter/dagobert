@@ -12,21 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteActionsForInstance = `-- name: DeleteActionsForInstance :exec
-DELETE FROM experiment_instance_action
-WHERE experiment_id = $1 AND instance_id = $2
-`
-
-type DeleteActionsForInstanceParams struct {
-	ExperimentID uuid.UUID `json:"experiment_id"`
-	InstanceID   uuid.UUID `json:"instance_id"`
-}
-
-func (q *Queries) DeleteActionsForInstance(ctx context.Context, arg DeleteActionsForInstanceParams) error {
-	_, err := q.db.Exec(ctx, deleteActionsForInstance, arg.ExperimentID, arg.InstanceID)
-	return err
-}
-
 const deleteExperimentOutcomeStats = `-- name: DeleteExperimentOutcomeStats :exec
 DELETE FROM experiment_outcome_stat WHERE experiment_id = $1
 `
@@ -54,31 +39,6 @@ func (q *Queries) DeleteExperimentPeriodStats(ctx context.Context, experimentID 
 	return err
 }
 
-const deleteFillsForInstance = `-- name: DeleteFillsForInstance :exec
-DELETE FROM experiment_instance_fill
-WHERE experiment_id = $1 AND instance_id = $2
-`
-
-type DeleteFillsForInstanceParams struct {
-	ExperimentID uuid.UUID `json:"experiment_id"`
-	InstanceID   uuid.UUID `json:"instance_id"`
-}
-
-func (q *Queries) DeleteFillsForInstance(ctx context.Context, arg DeleteFillsForInstanceParams) error {
-	_, err := q.db.Exec(ctx, deleteFillsForInstance, arg.ExperimentID, arg.InstanceID)
-	return err
-}
-
-const deleteFillsForInstances = `-- name: DeleteFillsForInstances :exec
-DELETE FROM experiment_instance_fill
-WHERE instance_id = ANY($1::uuid[])
-`
-
-func (q *Queries) DeleteFillsForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteFillsForInstances, dollar_1)
-	return err
-}
-
 const deletePeriodStatsForInstance = `-- name: DeletePeriodStatsForInstance :exec
 DELETE FROM experiment_instance_period_stat
 WHERE instance_id = $1
@@ -99,26 +59,6 @@ func (q *Queries) DeletePeriodStatsForInstances(ctx context.Context, dollar_1 []
 	return err
 }
 
-const deleteTradeOutcomesForInstance = `-- name: DeleteTradeOutcomesForInstance :exec
-DELETE FROM experiment_trade_outcome
-WHERE instance_id = $1
-`
-
-func (q *Queries) DeleteTradeOutcomesForInstance(ctx context.Context, instanceID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteTradeOutcomesForInstance, instanceID)
-	return err
-}
-
-const deleteTradeOutcomesForInstances = `-- name: DeleteTradeOutcomesForInstances :exec
-DELETE FROM experiment_trade_outcome
-WHERE instance_id = ANY($1::uuid[])
-`
-
-func (q *Queries) DeleteTradeOutcomesForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteTradeOutcomesForInstances, dollar_1)
-	return err
-}
-
 const getExperimentPerformance = `-- name: GetExperimentPerformance :one
 SELECT experiment_id, wins, losses, breakeven, win_rate
 FROM experiment_performance
@@ -136,39 +76,6 @@ func (q *Queries) GetExperimentPerformance(ctx context.Context, experimentID uui
 		&i.WinRate,
 	)
 	return i, err
-}
-
-const insertAction = `-- name: InsertAction :exec
-INSERT INTO experiment_instance_action (
-  id, experiment_id, instance_id, symbol, bar_open_ms, side, weight_pct, reason
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8
-)
-`
-
-type InsertActionParams struct {
-	ID           uuid.UUID     `json:"id"`
-	ExperimentID uuid.UUID     `json:"experiment_id"`
-	InstanceID   uuid.UUID     `json:"instance_id"`
-	Symbol       string        `json:"symbol"`
-	BarOpenMs    int64         `json:"bar_open_ms"`
-	Side         string        `json:"side"`
-	WeightPct    pgtype.Float8 `json:"weight_pct"`
-	Reason       string        `json:"reason"`
-}
-
-func (q *Queries) InsertAction(ctx context.Context, arg InsertActionParams) error {
-	_, err := q.db.Exec(ctx, insertAction,
-		arg.ID,
-		arg.ExperimentID,
-		arg.InstanceID,
-		arg.Symbol,
-		arg.BarOpenMs,
-		arg.Side,
-		arg.WeightPct,
-		arg.Reason,
-	)
-	return err
 }
 
 const insertExperimentOutcomeStat = `-- name: InsertExperimentOutcomeStat :exec
@@ -228,72 +135,6 @@ func (q *Queries) InsertExperimentPeriodStat(ctx context.Context, arg InsertExpe
 		arg.PeriodKey,
 		arg.Wins,
 		arg.Trades,
-	)
-	return err
-}
-
-const insertFill = `-- name: InsertFill :exec
-INSERT INTO experiment_instance_fill (
-  id, experiment_id, instance_id, action_id, symbol, ts_ms, side, qty, price, fee, fee_asset
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-)
-`
-
-type InsertFillParams struct {
-	ID           uuid.UUID   `json:"id"`
-	ExperimentID uuid.UUID   `json:"experiment_id"`
-	InstanceID   uuid.UUID   `json:"instance_id"`
-	ActionID     pgtype.UUID `json:"action_id"`
-	Symbol       string      `json:"symbol"`
-	TsMs         int64       `json:"ts_ms"`
-	Side         string      `json:"side"`
-	Qty          float64     `json:"qty"`
-	Price        float64     `json:"price"`
-	Fee          float64     `json:"fee"`
-	FeeAsset     string      `json:"fee_asset"`
-}
-
-func (q *Queries) InsertFill(ctx context.Context, arg InsertFillParams) error {
-	_, err := q.db.Exec(ctx, insertFill,
-		arg.ID,
-		arg.ExperimentID,
-		arg.InstanceID,
-		arg.ActionID,
-		arg.Symbol,
-		arg.TsMs,
-		arg.Side,
-		arg.Qty,
-		arg.Price,
-		arg.Fee,
-		arg.FeeAsset,
-	)
-	return err
-}
-
-const insertTradeOutcome = `-- name: InsertTradeOutcome :exec
-INSERT INTO experiment_trade_outcome (
-  instance_id, ordinal, side, quote, percent
-) VALUES (
-  $1, $2, $3, $4, $5
-)
-`
-
-type InsertTradeOutcomeParams struct {
-	InstanceID uuid.UUID     `json:"instance_id"`
-	Ordinal    int32         `json:"ordinal"`
-	Side       int16         `json:"side"`
-	Quote      float32       `json:"quote"`
-	Percent    pgtype.Float4 `json:"percent"`
-}
-
-func (q *Queries) InsertTradeOutcome(ctx context.Context, arg InsertTradeOutcomeParams) error {
-	_, err := q.db.Exec(ctx, insertTradeOutcome,
-		arg.InstanceID,
-		arg.Ordinal,
-		arg.Side,
-		arg.Quote,
-		arg.Percent,
 	)
 	return err
 }
@@ -434,73 +275,6 @@ func (q *Queries) ListInstancePeriodStats(ctx context.Context, instanceID uuid.U
 			&i.ReturnPct,
 			&i.TradeCount,
 			&i.WinCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTradeOutcomesForExperiment = `-- name: ListTradeOutcomesForExperiment :many
-SELECT o.instance_id, o.ordinal, o.side, o.quote, o.percent
-FROM experiment_trade_outcome o
-JOIN experiment_instance i ON i.id = o.instance_id
-WHERE i.experiment_id = $1 AND i.status = 'completed'
-ORDER BY o.instance_id, o.ordinal
-`
-
-func (q *Queries) ListTradeOutcomesForExperiment(ctx context.Context, experimentID uuid.UUID) ([]ExperimentTradeOutcome, error) {
-	rows, err := q.db.Query(ctx, listTradeOutcomesForExperiment, experimentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ExperimentTradeOutcome{}
-	for rows.Next() {
-		var i ExperimentTradeOutcome
-		if err := rows.Scan(
-			&i.InstanceID,
-			&i.Ordinal,
-			&i.Side,
-			&i.Quote,
-			&i.Percent,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTradeOutcomesForInstance = `-- name: ListTradeOutcomesForInstance :many
-SELECT instance_id, ordinal, side, quote, percent
-FROM experiment_trade_outcome
-WHERE instance_id = $1
-ORDER BY ordinal ASC
-`
-
-func (q *Queries) ListTradeOutcomesForInstance(ctx context.Context, instanceID uuid.UUID) ([]ExperimentTradeOutcome, error) {
-	rows, err := q.db.Query(ctx, listTradeOutcomesForInstance, instanceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ExperimentTradeOutcome{}
-	for rows.Next() {
-		var i ExperimentTradeOutcome
-		if err := rows.Scan(
-			&i.InstanceID,
-			&i.Ordinal,
-			&i.Side,
-			&i.Quote,
-			&i.Percent,
 		); err != nil {
 			return nil, err
 		}

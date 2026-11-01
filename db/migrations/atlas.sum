@@ -1,4 +1,4 @@
-h1:Er6aVESvO/af8abNrPCz/IyM6sJdMgKhsaGdZl+zt9c=
+h1:S/be6Z6f/aOKkyrVB0VLTVN8YTJI4nUnJBiEPC6VJyM=
 20261023212749_init_study.sql h1:SPnjyLPV0eHc0Sg5OLHpueNru+/TXvv9EvK7t7Jb7cs=
 20261023212819_add_study_description.sql h1:oTe+j1KfU61MBshYclBPqluNqJ5SW2NljxEy5mphroc=
 20261023214646_control_plane.sql h1:oHXhPxDlL4epFR6qen10tq3tqQS9gk4UArYVbaQSn7Q=
@@ -6,3 +6,7 @@ h1:Er6aVESvO/af8abNrPCz/IyM6sJdMgKhsaGdZl+zt9c=
 20261024120000_rename_study_to_experiment.sql h1:8pRXNon6/Dg6iEzgSQMUr2OJyAyrgIsVSLHsMGLNqlg=
 20261024140000_revoke_app_table_api_grants.sql h1:PGIpzZIPyrU/WSVRhNVlWwqK2fZH8b57pS/jxMw/fZI=
 20261025164000_performance_metrics.sql h1:Khtw2DKrZ/5Dx1sXExxjV3/1XHbmAnudRryw5i2/9h8=
+20261031120000_drop_activity_tables.sql h1:wfYFSTzjXOheSbFhBbZ8IwTBf8RrkwaMWfnJGreoYQ4=
+20261101120000_instance_strategy_config.sql h1:XhhYgtNBxc8x3oVLlE0XpXOv93KXKiFW+U+c6W9FkOY=
+20261101130000_connector_state.sql h1:l6agFYlu21SwW4mQ9FISal75vsF8aqkx0dttRpUccGg=
+20261101140000_experiment_parallelism.sql h1:zgj6ExwbHx1c0S/xET2D+3jq798HDd7/Zyb2NpYx5UQ=

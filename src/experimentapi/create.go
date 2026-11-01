@@ -3,10 +3,11 @@ package experimentapi
 import (
 	"context"
 	"fmt"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/persist"
 	"strings"
 
-	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -23,6 +24,9 @@ func (s *Server) createStudy(ctx context.Context, req *v1.CreateExperimentReques
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		return nil, fmt.Errorf("name required")
+	}
+	if err := validateParallelism(int(req.GetSettings().GetParallelism()), parallelismMax()); err != nil {
+		return nil, err
 	}
 	merged := mergeSettings(req.Settings)
 	fallbackSymbol := strings.ToUpper(merged.Base + merged.Quote)
@@ -113,6 +117,7 @@ func (s *Server) createStudy(ctx context.Context, req *v1.CreateExperimentReques
 		SpreadBps:             merged.SpreadBps,
 		SlippageBps:           merged.SlippageBps,
 		FeeBps:                merged.FeeBps,
+		Parallelism:           persist.ParallelismToDB(merged.Parallelism),
 		CreatedAtMs:           created,
 		StartedAtMs:           pgtype.Int8{},
 		FinishedAtMs:          pgtype.Int8{},

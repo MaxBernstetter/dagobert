@@ -1,16 +1,67 @@
-# C++ vs Go benchmark (CALC.25)
+# C++ experiment engine: benchmarks
 
-Issue #110. Phase 1 recorded a baseline and profile; phase 2 (section
-"Phase 2: optimisation") applies the cheap fixes and re-measures. The
-baseline sections below are kept as recorded.
+The experiment engine is C++ only (#164). The measurement that describes the current code is in
+the next section. Everything after it is history, kept as recorded:
 
-## Run it
+- CALC.25 (#110) compared the C++ executables with the Go engine (`BenchmarkGoExperiment`). The Go
+  engine and that benchmark were removed in #164, and so was `task cpp:bench`.
+- #158 and #162 measured the Go-era and the Postgres fill-COPY persistence (both removed in #164).
+- Earlier sections quote Go numbers as the baseline; they do not describe the current code.
+
+## Current: the experiment engine on C++ (#164)
+
+Measured on the current branch. The harness is `TestBenchPersistGrid` (manual; needs
+`BENCH_INSTANCES`). Each run creates 3000 ma-cross instances (10 SMA pairs by stop multiples) on one
+lake of 17520 hourly BTC/USDT bars (730 days) in a throwaway Postgres 16, then calls
+`backtest.RunExperiment` and reads the experiment directory back.
 
 ```bash
-task cpp:deps PRESET=optimized        # once
-task cpp:build PRESET=optimized
-task cpp:bench RUNS=15                # or: scripts/cpp-bench.sh 15
+go test -c -o /tmp/exp.test ./tests/system/experiment
+export POSTGRES_TEST_URL=postgres://trading:trading@127.0.0.1:9433/postgres
+export CPP_SMA_CROSS_BIN=<strategy-sma-cross> CPP_SIGNAL_CONSENSUS_BIN=<strategy-signal-consensus>
+export BENCH_INSTANCES=3000 BENCH_HOURS=17520
+/tmp/exp.test -test.run BenchPersistGrid -test.v            # zigzag lake (default fixture)
+BENCH_WALK=1 /tmp/exp.test -test.run BenchPersistGrid -test.v   # random-walk lake (seed 110)
 ```
+
+`EXPERIMENT_SIM_WORKERS` and `EXPERIMENT_CPP_PROCESSES` were unset: 22 KPI workers and 22 C++
+processes (one per CPU on this machine). The C++ binaries were copied out of the `dagobert-backtest`
+image.
+
+| Lake | Runs of `RunExperiment` wall (s) | Median (s) | Instances completed |
+|---|---|---|---|
+| zigzag (default fixture, 17520 bars) | 14.88, 9.36, 15.45 | 14.9 | 3000 of 3000, every run |
+| random walk (`BENCH_WALK=1`, seed 110) | 20.01, 14.37, 16.93 | 16.9 | 3000 of 3000, every run |
+
+Files and rows written, from one run per lake (all 3000 instances; the experiment directory is read
+back after the run, before the test removes its temp dir):
+
+| File (per instance, 3000 files each) | zigzag bytes | zigzag rows | walk bytes | walk rows |
+|---|---|---|---|---|
+| `fills.parquet` | 37,197,404 | 1,479,318 | 82,387,108 | 3,379,535 |
+| `journals.parquet` | 80,908,631 | 1,479,318 | 172,922,722 | 3,379,535 |
+| `orders.parquet` | 103,945,001 | 1,497,576 | 221,043,037 | 3,379,535 |
+| `trade_outcomes.parquet` | 9,005,385 | 730,530 | 18,030,627 | 1,689,335 |
+| `report.json` | 12,085,157 | - | 13,362,618 | - |
+| other per-instance `.json` (wallet, paper state) | 159,000 | - | 159,000 | - |
+| **experiment directory total (`du`)** | **232.0 MiB** (243,300,578 B) | | **484.4 MiB** (507,905,112 B) | |
+
+Host and settings: 22 logical CPUs, `EXPERIMENT_SIM_WORKERS` and `EXPERIMENT_CPP_PROCESSES` unset
+(effective: 22 KPI replay workers and 22 C++ processes, `runtime.NumCPU()`), `EXPERIMENT_CPP_SHARD_MAX`
+500. The C++ binaries are the optimized ones shipped in the `dagobert-backtest` image. The machine is
+shared: the one-minute load average before each run was 15 to 24 and after it 15 to 26, so the timings
+include contention from other work on the host.
+
+Measured on the throwaway Postgres 16 (`postgres:16-alpine`), with the branch at the commit that
+drops the Go-comparison benchmark (0614159) plus this document. The first zigzag run, made before the
+per-file logging was added, took 23.0 s and is superseded by the three runs above.
+Not measured: the browser-side load of these files (`/activity`, `/chart-series`), the cold-cache
+case, and the write cost of the Go KPI replay separately from the C++ sweep.
+
+
+## Run it (historical)
+
+The `task cpp:bench` micro-benchmark is removed (see the top of this document). It ran:
 
 The script generates a seeded lake (`go run ./src/calculation/testdata/genlakefixture -bench <dir>`:
 5840 3h BTC/USDT bars = 730 days from 2024-01-01, geometric random walk, seed 110,
@@ -193,11 +244,9 @@ doubles, including a volume above int64 at scale 8.
 
 ## Gaps
 
-- Go benchmark lives in `src/backtest/bench_test.go` and skips without
-  `BENCH_LAKE_DIR`; it is not part of `go test` runs.
-- One synthetic symbol, one config per strategy. Go and C++ results are cross-checked by
-  `TestSmaCrossGoVsCppEquivalence` and `TestConsensusGoVsCppEquivalence` in
-  `src/backtest/cpp_sweep_test.go`.
+- The Go benchmark (`bench_test.go`) and the Go cross-check were removed in #164 (the C++ results
+  are checked by the replay consistency tests in `src/backtest/cpp_replay_test.go`).
+- One synthetic symbol, one config per strategy.
 - Single-process timings include a warm page cache; cold-cache runs not measured.
 
 ## 3000-instance experiment, end to end (issue #158, parent #130)
@@ -215,17 +264,20 @@ hourly SMA 3/6 to 24/48), so the persisted row volume is far above a realistic e
 task cpp:deps PRESET=optimized && task cpp:build PRESET=optimized
 go test -c -o /tmp/exp.test ./tests/system/experiment
 export BENCH_HOURS=17520 BENCH_WALK=1 CPP_SMA_CROSS_BIN=$PWD/build/optimized/strategies/sma-cross/strategy-sma-cross
-BENCH_INSTANCES=3000 EXPERIMENT_ENGINE=cpp /tmp/exp.test -test.run BenchPersistGrid -test.v
-# Postgres: add DATABASE_URL=... (a database loaded with db/sqlc/schema.sql; the harness mirrors the grid into it)
+BENCH_INSTANCES=3000 /tmp/exp.test -test.run BenchPersistGrid -test.v   # historical: the engine switch was removed in #164
+# The harness needs a Postgres for the experiment catalog: POSTGRES_TEST_URL=... (default: the compose Postgres on 9432)
 ```
 
 Timed: the `RunExperiment` call only, i.e. prepare (bar range, coverage), bar loading, the sweep
-(C++ processes or Go loop), KPI replay, report.json, persistence (SQLite catalog or Postgres COPY),
+(C++ processes or Go loop), KPI replay, report.json, persistence (Postgres period stats and the instance Parquet files),
 progress updates. Not timed: fixture and catalog creation, process start of the test binary. S3 upload
 is not exercised (no `EXPERIMENT_ARTIFACTS` bucket), and the Go `prepare` indicator pass is part of the Go number.
 Machine: Intel Core Ultra 9 185H, 22 logical CPUs, 62 GB, Linux 7.0, Go 1.24, optimized C++ build, default
 `EXPERIMENT_CPP_PROCESSES` (NumCPU) and `EXPERIMENT_CPP_SHARD_MAX` (500). The machine was shared: load
 average 7 to 14 during all runs, so treat the numbers as upper bounds.
+
+**History, not the current code.** These runs predate #164: the SQLite experiment catalog and the Postgres
+fill and outcome COPY were removed, so the "store" column no longer exists. Kept for comparison only.
 
 | run | store | instances | runs (s) | median (s) |
 |---|---|---|---|---|
@@ -249,17 +301,12 @@ on SQLite and 3 to 10 s on Postgres, report.json writing 3 ms. The CPU profile o
 about 31 percent in pgx `CopyFrom` value encoding (`encodePlanDriverValuer`, `newEncodeError`: a
 `uuid.UUID` per row goes through the `driver.Valuer` path) and about 21 percent in GC.
 
-Catalog comparability: the SQLite catalog (`store.PersistInstanceBatch`) stores only status, timing, list metrics and progress, no fills. The Postgres catalog also COPYs fills, trade outcomes and period stats, about 5 M fills for 3000 instances. SQLite and Postgres timings are therefore not comparable. What fill data to persist is open in #164.
-
-Equality, Go vs cpp (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
+Equality, Go vs cpp, before #164 (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
 completed): Sharpe, Sortino, CAGR, max drawdown, monthly/yearly return, trades per month, wins, losses,
 breakeven, win rate and fill count are identical (max relative difference 0). `metric_duration_ms` differs
 by design (wall time of the instance).
 
-Follow-ups (not done here): encode UUIDs as `pgtype.UUID`/`[16]byte` in the COPY rows and drop the
-per-fill `uuid.New()`; consider COPY of fills only for sampled instances or a coarser row model; run the
-Postgres case against a database without the dev stack on the same host. The fixture trades 10 to 20 times
-more than real data, so the Postgres number is a worst case.
+The fixture trades 10 to 20 times more than real data, so the Postgres number was a worst case.
 
 ## Postgres persistence cost (issue #162, parent #130)
 
@@ -282,17 +329,7 @@ Same harness and host as above, 3000 instances, 3 runs each, median:
 The shared dev stack makes the absolute numbers swing (the #161 zigzag figure of 66 s was measured on an
 emptier database; the same code took 195 s later). Target (about 10 s) is not met on Postgres.
 
-Where the server time goes (psql, 1 M fill rows into a scratch copy of the schema, one backend):
-22.2 s with both foreign keys and both indexes, 5.8 s without the two foreign keys, 4.8 s also without the
-`(instance_id, ts_ms)` index (row generation alone 0.6 s). The two RI triggers (`experiment_id`,
-`instance_id`) cost about 75 percent of the COPY, the secondary index about 5 percent, the random UUID
-primary key the rest. A COPY backend sits at 100 percent of one core; `synchronous_commit=off` on the
-bench database changed nothing (17.0 vs 17.4 s), so WAL flushes are not the limit. The dev Postgres runs
-defaults (shared_buffers 128 MB, max_wal_size 1 GB).
-
 Equality: a seeded 400-instance walk run persisted identical row counts and checksums before and after
 (fills 320000, outcomes 160000, period stats 4800, instance metrics 400, progress 400/400).
 
-Options not implemented (they change schema or behaviour, owner decision): drop the redundant
-`experiment_instance_fill.experiment_id` FK or both fill FKs (the `instance_id` cascade already covers
-deletion); persist fills only for sampled or top-N instances; coarser fill rows.
+## Parquet instance files (#164): see "Current" at the top

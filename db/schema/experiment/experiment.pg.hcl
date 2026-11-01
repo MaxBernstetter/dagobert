@@ -105,6 +105,11 @@ table "experiment" {
     type = double_precision
     default = 0
   }
+  # C++ sweep processes of the run. NULL (or 0) = auto: one per CPU of the worker.
+  column "parallelism" {
+    null = true
+    type = integer
+  }
 
   column "created_at_ms" {
     null = false

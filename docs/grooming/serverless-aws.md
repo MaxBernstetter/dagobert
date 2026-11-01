@@ -20,7 +20,7 @@ Do not migrate the scheduled candle path (orchestrator clock, candle SFN chain, 
 
 ### Frontend target — Vite SPA + Experiment API (not Next forever)
 
-Next is an interim BFF (`better-sqlite3`). End state: static Vite + React; Go Experiment API (sqlc) → Postgres + S3/SSM. No OpenNext.
+The interim Next BFF (`better-sqlite3`) was removed with step 13: the SPA talks to the Go Experiment API only. End state: static Vite + React; Go Experiment API (sqlc) → Postgres + S3/SSM. No OpenNext.
 
 ---
 
@@ -123,7 +123,7 @@ Golden middle: **50–200 instances / worker**, **MaxConcurrency ~100–400** �
 
 ```bash
 # Host (Atlas / psql)
-DATABASE_URL=postgres://trading:trading@127.0.0.1:5432/trading?sslmode=disable&search_path=public
+DATABASE_URL=postgres://trading:trading@127.0.0.1:11432/trading?sslmode=disable&search_path=public
 
 task db:up          # start postgres
 task db:migrate     # atlas migrate apply --env local
@@ -157,7 +157,7 @@ task db:diff name=my_change   # after editing db/schema/**/*.pg.hcl
 
 ```bash
 task db:migrate
-# curl http://127.0.0.1:8090/api/v1/experiments
+# curl http://127.0.0.1:11090/api/v1/experiments
 # Frontend (Compose): EXPERIMENT_API_URL=http://orchestrator:8090
 ```
 
@@ -169,7 +169,7 @@ task db:migrate
 
 ### Step 10 — Job writers → Postgres ✅ implemented
 
-**What:** `RunExperiment` prepare/simulate/finalize use **Postgres** when `DATABASE_URL` is set (`src/experimentapi/pgcatalog`); otherwise SQLite catalog unchanged. Jobs upsert instance `metric_*`, `experiment_instance_period_stat`, and fills; actions deferred. Experiment docker runs join Compose network (`COMPOSE_NETWORK`, default `dagobert_default`) so job containers reach `postgres`.
+**What:** `RunExperiment` prepare/simulate/finalize use **Postgres** when `DATABASE_URL` is set (`src/experimentapi/pgcatalog`); otherwise SQLite catalog unchanged. Jobs upsert instance `metric_*`, `experiment_instance_period_stat`, and fills; actions deferred. Experiment docker runs join the Compose network so job containers reach `postgres`: `COMPOSE_NETWORK` if set, else the orchestrator's own network (the project name follows the checkout directory), else `dagobert_default`.
 
 **Exit:** Create experiment via Experiment API → run → instance table KPIs/progress from Postgres (no `report.json` for list metrics). `experiment_kpi` bar bodies still SQLite until step 11.
 

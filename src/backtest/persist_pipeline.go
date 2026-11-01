@@ -9,6 +9,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
 // Persistence stage of the experiment simulation. Compute workers produce instanceResult values
@@ -39,13 +40,15 @@ var (
 
 // instanceResult is the output of the compute stage for one instance.
 type instanceResult struct {
-	inst   store.ExperimentInstance
-	sym    string
-	ws     string
-	report signalrunner.InstanceReport
-	fills  []signalrunner.StrategyKPIFill
-	timing store.InstanceRunTiming
-	err    error
+	inst     store.ExperimentInstance
+	sym      string
+	ws       string
+	report   signalrunner.InstanceReport
+	fills    []signalrunner.StrategyKPIFill
+	orders   []instanceparquet.Order
+	journals []instanceparquet.Journal
+	timing   store.InstanceRunTiming
+	err      error
 }
 
 func (r instanceResult) item() store.InstanceBatchItem {
@@ -61,7 +64,7 @@ func (r instanceResult) item() store.InstanceBatchItem {
 func (r instanceResult) pgItem() pgcatalog.InstanceBatchItem {
 	it := pgcatalog.InstanceBatchItem{InstanceBatchItem: r.item(), Symbol: r.sym}
 	if r.err == nil {
-		it.Stats, it.Fills, it.Outcomes = activityRows(r.report, r.fills)
+		it.Stats = periodStatRows(r.report, r.fills)
 	}
 	return it
 }
@@ -101,10 +104,7 @@ func (p *persister) release(n int) {
 // runPersister drains results until the channel is closed and returns once everything is flushed.
 func runPersister(cat *experimentRunCatalog, experimentID string, total, alreadyDone int, in <-chan instanceResult) {
 	p := &persister{cat: cat, experimentID: experimentID, total: total, done: alreadyDone}
-	parallel := 1
-	if cat.usesPostgres() {
-		parallel = persistParallelPG
-	}
+	parallel := persistParallelPG
 	sem := make(chan struct{}, parallel)
 	var inflight sync.WaitGroup
 	defer inflight.Wait()
@@ -142,7 +142,8 @@ func runPersister(cat *experimentRunCatalog, experimentID string, total, already
 	}
 }
 
-// flush writes report.json files (pool of 8), then commits the batch with retry and bisection.
+// flush writes report.json and the Parquet files of each instance (pool of 8), then commits the
+// batch with retry and bisection. A failed instance leaves no Parquet files behind.
 func (p *persister) flush(batch []instanceResult) {
 	var wg sync.WaitGroup
 	jobs := make(chan int)
@@ -154,8 +155,13 @@ func (p *persister) flush(batch []instanceResult) {
 				r := &batch[i]
 				if err := signalrunner.WriteInstanceReport(r.ws, r.report); err != nil {
 					r.err = err
+				} else if err := writeInstanceFiles(p.experimentID, *r); err != nil {
+					r.err = err
 				} else if err := uploadInstanceReport(r.inst.WorkspaceRelPath, r.ws); err != nil {
 					r.err = err
+				}
+				if r.err != nil {
+					removeInstanceFiles(r.ws)
 				}
 			}
 		}()
@@ -163,6 +169,8 @@ func (p *persister) flush(batch []instanceResult) {
 	for i := range batch {
 		if batch[i].err == nil {
 			jobs <- i
+		} else {
+			removeInstanceFiles(batch[i].ws)
 		}
 	}
 	close(jobs)
@@ -189,6 +197,7 @@ func (p *persister) commit(batch []instanceResult) {
 	}
 	r := batch[0]
 	r.err = fmt.Errorf("persist: %w", err)
+	removeInstanceFiles(r.ws)
 	if ferr := p.cat.PersistInstanceBatch(p.experimentID, []instanceResult{r}, p.claim(1), p.total); ferr != nil {
 		log.Printf("experiment %s: instance %s could not be marked failed: %v", p.experimentID, r.inst.ID, ferr)
 	}
@@ -209,4 +218,15 @@ func (p *persister) try(batch []instanceResult) error {
 		p.release(len(batch))
 	}
 	return err
+}
+
+// removeInstanceFiles drops the Parquet files of a failed instance. An empty workspace (an instance
+// that never reached simulation) has none.
+func removeInstanceFiles(ws string) {
+	if ws == "" {
+		return
+	}
+	if err := instanceparquet.Remove(ws); err != nil {
+		log.Printf("experiment instance files in %s: remove: %v", ws, err)
+	}
 }

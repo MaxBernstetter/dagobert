@@ -63,13 +63,33 @@ export function loadChartSeries(url: string): Promise<ChartColumns> {
   return promise;
 }
 
+/** Upper bound of candles per chart-series response (the server buckets above it). */
+export const CHART_MAX_POINTS_CAP = 4000;
+
+/**
+ * Candle budget for one chart response: about two candles per pixel of the window, which keeps the
+ * shape of the candles and the indicators. The viewport width stands in for the chart width.
+ */
+export function chartMaxPoints(viewportWidth: number = typeof window === "undefined" ? 1000 : window.innerWidth): number {
+  const budget = Math.round((2 * viewportWidth) / 100) * 100;
+  return Math.min(CHART_MAX_POINTS_CAP, Math.max(400, budget));
+}
+
 /** Same window the instance charts request: the run, padded by 12 hours. */
-export function chartSeriesUrl(base: string, fromMs: number, toMs: number): string {
+export function chartSeriesUrl(base: string, fromMs: number, toMs: number, maxPoints?: number): string {
   const padSec = 12 * 3600;
-  const q = new URLSearchParams({
-    from: String(Math.floor(fromMs / 1000) - padSec),
-    to: String(Math.ceil(toMs / 1000) + padSec),
-  });
+  return chartSeriesWindowUrl(
+    base,
+    Math.floor(fromMs / 1000) - padSec,
+    Math.ceil(toMs / 1000) + padSec,
+    maxPoints,
+  );
+}
+
+/** The chart-series URL for an exact window in unix seconds. */
+export function chartSeriesWindowUrl(base: string, fromSec: number, toSec: number, maxPoints?: number): string {
+  const q = new URLSearchParams({ from: String(fromSec), to: String(toSec) });
+  if (maxPoints != null && maxPoints > 0) q.set("maxPoints", String(maxPoints));
   const path = base.split("?")[0] ?? base;
   return `${path}?${q}`;
 }

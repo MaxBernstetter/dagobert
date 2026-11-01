@@ -93,6 +93,11 @@ table "experiment_instance" {
     null = true
     type = integer
   }
+  # Canonical strategy config as JSON (sizing included); NULL on instances made before it was stored.
+  column "strategy_config_json" {
+    null = true
+    type = text
+  }
 
   # Denormalized list / sort metrics (UI table).
   column "metric_duration_ms" {

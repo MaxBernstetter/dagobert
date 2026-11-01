@@ -22,6 +22,7 @@ Trivial changes (typos, docs wording) can skip the full workflow.
 ## Pull requests
 - When opening a pull request for an issue, prefix the title with the issue ID from the issue title, for example `[00.2] <task name>`.
 - Reference the issue with a closing keyword such as `Closes #42`.
+- Keep the pull request description up to date at all times. After every push that changes scope, behaviour, tests or caveats, rewrite the whole description (deduplicated, in the required sections) so it matches the branch. Never leave a stale description behind, and verify the Testing section against the actual runs before writing it.
 
 ## Pull request size
 Every pull request must be reviewable by a human in one sitting.
@@ -49,4 +50,4 @@ Agentic work is split by model to save tokens (`docs/development/03-agent-harnes
 
 ## Before finishing
 - Make the smallest correct change, run the relevant tests and checks, and review the diff.
-- Update documentation when behaviour, architecture or workflows change.
+- Update documentation in the same pull request whenever behaviour, architecture, workflows, ports, commands or configuration change. Documentation and the pull request description are never a follow-up task.

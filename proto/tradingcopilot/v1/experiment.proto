@@ -30,6 +30,8 @@ message Experiment {
   double spread_bps = 34;
   double slippage_bps = 35;
   double fee_bps = 36;
+  // C++ sweep processes of the run; 0 = auto (see ExperimentSettings.parallelism).
+  optional int32 parallelism = 37;
 
   int64 created_at_ms = 51;
   optional int64 started_at_ms = 52;
@@ -67,6 +69,8 @@ message ExperimentSettings {
   double spread_bps = 14;
   double slippage_bps = 15;
   double fee_bps = 16;
+  // C++ sweep processes for the run. 0 = auto: one per CPU of the worker (capped by the server maximum).
+  optional int32 parallelism = 17;
 }
 
 message ExperimentProgress {

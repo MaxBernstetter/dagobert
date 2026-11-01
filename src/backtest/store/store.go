@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS backtest_kpi (
 	}); err != nil {
 		return err
 	}
-	return migrateExperimentTables(c.db)
+	return nil
 }
 
 // CreateDraft inserts a new draft backtest.
