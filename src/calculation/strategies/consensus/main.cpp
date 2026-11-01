@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include "bars_aggregate.hpp"
 #include "bars_parquet.hpp"
 #include "consensus_strategy.hpp"

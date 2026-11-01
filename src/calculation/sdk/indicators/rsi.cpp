@@ -1,10 +1,8 @@
 #include "rsi.hpp"
 
-#include <algorithm>
-#include <cmath>
 #include "exit_policy.hpp"
+#include <algorithm>
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {

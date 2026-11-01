@@ -2,11 +2,9 @@
 
 #include "sizing.hpp"
 
-#include "tradingcopilot/v1/run_report.pb.h"
-#include "tradingcopilot/v1/strategy.pb.h"
-#include "types.hpp"
+#include "proto_fwd.hpp" // IWYU pragma: keep
+#include "types.hpp"                         // IWYU pragma: keep
 
-#include <optional>
 #include <vector>
 
 namespace dagobert {

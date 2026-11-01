@@ -1,3 +1,6 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
+#include "tradingcopilot/v1/run_report.pb.h"
+#include "tradingcopilot/v1/experiment_activity.pb.h"
 #include "report.hpp"
 
 #include "sizing_proto.hpp"

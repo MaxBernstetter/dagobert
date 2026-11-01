@@ -1,0 +1,58 @@
+name: cpp-static-analysis
+
+on:
+  pull_request:
+    paths:
+      - "src/calculation/**"
+      - "scripts/cpp-iwyu.sh"
+      - "devbox.json"
+      - "devbox.lock"
+      - "Taskfile.yml"
+      - ".github/workflows/cpp-static-analysis.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/calculation/**"
+      - "scripts/cpp-iwyu.sh"
+      - "devbox.json"
+      - "devbox.lock"
+      - "Taskfile.yml"
+      - ".github/workflows/cpp-static-analysis.yml"
+
+jobs:
+  iwyu:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: true
+      - name: Cache shared C++ dependency prefix
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dagobert/deps
+          key: deps-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('src/calculation/deps/**', 'src/calculation/cmake/DepsKey.cmake', 'devbox.lock') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+      # The runner ships dev headers in /usr/include (Boost, zlib, OpenSSL, ...).
+      # Arrow's bundled thrift finds one of them and adds -isystem /usr/include,
+      # which shadows the Nix libc headers with the host's glibc and breaks the
+      # build. The runner is ephemeral, so remove them. Print what was there.
+      - name: Remove host dev headers
+        run: |
+          cd /usr/include
+          ls -d boost zlib.h zconf.h openssl event2 event.h snappy*.h lz4*.h zstd*.h thrift 2>/dev/null || true
+          sudo rm -rf boost zlib.h zconf.h openssl event2 event.h snappy*.h lz4*.h zstd*.h thrift
+      - name: Build dependency prefix
+        run: devbox run -- task cpp:deps PRESET=debug
+      - name: include-what-you-use (ratchet against baseline)
+        run: devbox run -- task cpp:iwyu:check

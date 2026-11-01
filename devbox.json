@@ -3,15 +3,17 @@
   "packages": [
     "go@1.24",
     "go-task@latest",
-    "clang_22@22.1.8",
-    "llvmPackages_22.clang-tools@22.1.8",
     "cmake@4.4.4",
     "ninja@1.13.2",
-    "lld_22@22.1.8",
     "valgrind@3.27.1",
     "doxygen@1.17.0",
     "pre-commit@4.7.0",
-    "ccache@latest"
+    "ccache@latest",
+    "github:NixOS/nixpkgs/31ecbaca1bdefa45dffc409f0250bd8039ea0010#llvmPackages_23.clang",
+    "github:NixOS/nixpkgs/31ecbaca1bdefa45dffc409f0250bd8039ea0010#llvmPackages_23.lld",
+    "github:NixOS/nixpkgs/31ecbaca1bdefa45dffc409f0250bd8039ea0010#llvmPackages_23.clang-tools",
+    "mold@3.0.0",
+    "include-what-you-use@0.26"
   ],
   "shell": {
     "init_hook": [
