@@ -1,6 +1,6 @@
 # Status
 
-As of 2026-10-26 (main at f14c38c). Update this page whenever an epic closes or the plan changes.
+As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; main at e7b94a3). Update this page whenever an epic closes or the plan changes.
 
 ## What works today
 
@@ -18,11 +18,11 @@ As of 2026-10-26 (main at f14c38c). Update this page whenever an epic closes or 
 
 ## Measured performance
 
-3000 instances, C++ engine ([05-cpp-benchmark](development/05-cpp-benchmark.md)): about 4-6 s with the SQLite catalog, about 100 s with the Postgres catalog. The Postgres cost is write volume (about 5 M fills per run; the SQLite catalog does not store fills, so the two timings are not comparable). About 100 s is accepted for now; the open question is issue #164.
+The figures in [05-cpp-benchmark](development/05-cpp-benchmark.md) were measured before #164 (SQLite catalog, Postgres fill COPY) and are kept as history. Since #164 nothing is measured: the Parquet instance files have no numbers yet (TODO in that document).
 
 ## Next steps, in priority order
 
-1. Decide how much fill data to persist per instance: [#164](https://github.com/MaxBernstetter/dagobert/issues/164). Deferred on purpose (about 100 s per 3000-instance run is fine for now); it sets the Postgres cost of every large experiment, so revisit it before running very large grids.
+1. Measure the instance Parquet files: write cost per instance, file size, `/activity` and `/chart-series` latency, on a 3000-instance run ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). Record the numbers in [05-cpp-benchmark](development/05-cpp-benchmark.md).
 2. Make C++ the default experiment engine, then move the live path to C++ and delete the Go jobs. No issue yet; needs more validation first (see [architecture/backtesting.md](architecture/backtesting.md)).
 3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
 
@@ -36,6 +36,8 @@ Things that were not verified when this page was written (2026-10-26):
 - `task seed-demo-year` and running an experiment from the UI were not run end to end after the C++ engine and docs work. Do this first when you resume.
 - The wiki pages were not opened in a browser after the Next.js removal and the move of wiki prose into markdown (the build passes).
 - `terraform fmt` / `validate` were not run on `infra/terraform` after the heavy-path stub removal (no terraform in the dev shell).
+- Experiments completed before #164 have no trade outcome files, so their trades are gone from `/kpis` and `/performance` and their activity and charts are empty. A new run rebuilds them; there is no backfill. See [experiment-data-flow](architecture/experiment-data-flow.md#known-limits).
+- `src/internal/experimentddb` has no caller since the SQLite experiment catalog was removed (#164). It is kept, not deleted.
 - Local-only: `src/frontend/node_modules` may be owned by root if it was created in a container; `npm ci` then fails. Delete it or `chown` it.
 
 ## How to pick up work

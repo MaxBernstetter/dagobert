@@ -20,7 +20,7 @@ Do not migrate the scheduled candle path (orchestrator clock, candle SFN chain, 
 
 ### Frontend target — Vite SPA + Experiment API (not Next forever)
 
-Next is an interim BFF (`better-sqlite3`). End state: static Vite + React; Go Experiment API (sqlc) → Postgres + S3/SSM. No OpenNext.
+The interim Next BFF (`better-sqlite3`) was removed with step 13: the SPA talks to the Go Experiment API only. End state: static Vite + React; Go Experiment API (sqlc) → Postgres + S3/SSM. No OpenNext.
 
 ---
 

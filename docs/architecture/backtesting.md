@@ -2,11 +2,11 @@
 
 The UI focuses on the **Experiment Suite** (`/experiments`). Single-backtest list APIs and the Portfolio / Strategy / Data / Processing pages were removed from the frontend.
 
-Without `DATABASE_URL` the catalog is `data/backtests.sqlite` (experiments + optional legacy `backtest` rows); with it, Postgres (also stores fills, see the data-flow doc). Instance workspaces live under `data/experiments/<id>/…`. Production `technical_indicator.sqlite` is never written during a experiment run; indicator bars for experiments live in `experiment_kpi`.
+The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes) are Parquet files in the instance workspace, `data/experiments/<id>/instances/<instance>/`; Postgres keeps the experiment, instance metrics, period stats and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). Production `technical_indicator.sqlite` is never written during an experiment run; the indicator window for experiments is a per-symbol cache under `data/experiments/<id>/.cache`, deleted when the experiment is final.
 
 ## Experiments (multi-instance)
 
-An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). KPI rows live in `experiment_kpi` keyed by `(experiment_id, symbol, …)` — one shared window per symbol. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
+An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). The indicator window is shared per symbol and lives in the experiment cache until finalize. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
 
 Create UI supports **Manual** instances or **GRID** search: options render as cards (≥2 per row). Enum axes are multi-select; number axes use a dual-thumb min/max range slider plus a tick field. The client posts **settings + grid axes** (or a small manual instance list); the server expands the cartesian product (invalid configs dropped, max 20 000 valid) asynchronously (`status: materializing` → `draft`). Experiment GET is a **summary only**; instances are a **paginated** child resource with SQL sort/filter on denormalized KPI columns written at sim complete. See `docs/grooming/experiment-api-scale.md`.
 
@@ -14,36 +14,35 @@ Create UI supports **Manual** instances or **GRID** search: options render as ca
 
 Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `POST /api/v1/experiments/{id}/run` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
 
-Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/report.json` (runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder are stored in Postgres (`experiment_instance` counts, period win counts, per-sell outcomes, and the experiment reduction) and read by `GET .../kpis` and `GET .../performance`.
+Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/report.json` (runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder come from the instance `trade_outcomes.parquet` (one row per sell) and the period win counts in Postgres; `GET .../kpis` and `GET .../performance` read them. Finalize rebuilds the experiment performance from the outcome files.
 
 
 ### Simulation stages and persistence
 
 The simulate phase is a three-stage pipeline. Database writes never run on the calculation path.
 
-1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines): run the strategy, read the instance fills once from the workspace journal, and build the report (KPIs, statistics, period series) in memory. The result (`instanceResult`: instance, report, fills, timing, error) goes to a queue. Compute workers touch no database and no mutex.
+1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines): run the strategy, capture the orders and fill journal rows in memory (`PipelineOpts.Capture`; no execution SQLite, no wallet write), derive the fills from them, and build the report (KPIs, statistics, period series) in memory. The result (`instanceResult`: instance, report, fills, orders, journals, timing, error) goes to a queue. Compute workers touch no database and no mutex.
 2. **Queue**: a bounded channel with capacity `min(instances, 4096)` (about 10 KB per result). The send only blocks when more than 4096 results wait for persistence.
-3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` (and the S3 copy) with a pool of 8, then commits the batch in **one transaction**:
-   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on fills, trade outcomes and period stats, `COPY` for the three tables, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently on Postgres (separate connections; progress uses `GREATEST`).
-   - SQLite (`store.PersistInstanceBatch`): the same status, timing and metric updates plus progress in one transaction.
+3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` and the instance Parquet files (`fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet`, `src/internal/instanceparquet`; atomic, one row group each) and the S3 copy of `report.json`, with a pool of 8. A failed instance removes its Parquet files. Then it commits the batch in **one transaction**:
+   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on period stats, `COPY` of the period stats, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently (separate connections; progress uses `GREATEST`).
 
 Compute and KPI errors reach the database only as `failed` rows in these batches.
 
 **Semantics.** An instance is `completed` only after its batch committed. A failed batch is retried 3 times (backoff 100 ms, 400 ms, 1.6 s), then split in half recursively down to single instances. An instance that still fails is marked `failed` with an error starting `persist:` (and stays `running` if even that write fails); both are picked up by `EXPERIMENT_RETRY_FAILED`. `RunExperimentSimulate` closes the queue when compute finishes and returns only after the persister has drained it, so `RunExperimentFinalize` counts final statuses. Test seams: `PersistCommitHook`, `PersistRetryBackoff`, `SimulateComputeDoneHook` (see `tests/system/experiment/persist_test.go`).
 
-**Measurements** (3000 `ma-cross` instances, 2 years of 1h candles, 22 workers, `tests/system/experiment` `TestBenchPersistGrid`, compose Postgres 16):
+**Measurements, before #164** (history only: the SQLite catalog and the Postgres fill COPY no longer exist. TODO: re-measure with the Parquet instance files and record the numbers here) (3000 `ma-cross` instances, 2 years of 1h candles, 22 workers, `tests/system/experiment` `TestBenchPersistGrid`, compose Postgres 16):
 
-| Catalog | Instances | Before (main) | After the persistence pipeline |
+| Catalog (before #164) | Instances | Before (main) | After the persistence pipeline |
 |---|---|---|---|
 | SQLite | 3000 | 9 min 4 s | 1 min 44 s (Go engine; 253 s measured later, see `docs/development/05-cpp-benchmark.md`) |
 | Postgres | 100 | 5 min 8 s | 7.7 s |
 | Postgres | 3000 | not run to completion (about 3 s per instance, roughly 2.6 h extrapolated; a contended partial run completed 132 of 3000 in 25 min) | 2 min 39 s (Go engine) |
 
-With `EXPERIMENT_ENGINE=cpp` the same 3000 instances take 4 to 6 s on SQLite and about 100 s on Postgres (195 s before #162, 229 s on the random-walk lake), see `docs/development/05-cpp-benchmark.md`; the Postgres time is the COPY of about 5 M fills (foreign-key checks), not compute. Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
+With `EXPERIMENT_ENGINE=cpp` the same 3000 instances took 4 to 6 s on SQLite and about 100 s on Postgres (195 s before #162, 229 s on the random-walk lake), see `docs/development/05-cpp-benchmark.md`; the Postgres time was the COPY of about 5 M fills (foreign-key checks), not compute. Fills are no longer written to Postgres. Single runs on a shared 22-core host; load average was 2 to 11 at the start of the runs, so treat the numbers as indicative. The old Postgres path issued one autocommitted statement per fill (about 1000 fills per instance), each waiting for a WAL flush, while holding a global mutex.
 
 ### KPI worker (actions to KPIs)
 
-For the C++ path (#130) the strategy outcome is a list of sized actions. `src/calculation-signal/runner/kpi_worker.go` turns them into fills and the instance report without disk or database access: `ReplayKPI` replays the actions against the bar closes with the same fill model as simulated execution (`execrunner.SimulateBarWithModel`, quantities read back through the journal strings like the SQLite path) and builds the report with `BuildInstanceReportFromSim`. `RunKPIWorkers` runs a goroutine pool over batches of `KPIJob` and emits one `[]KPIResult` batch per input batch, ready for the persistence stage. `RunExperimentSimulate` uses it when `EXPERIMENT_ENGINE=cpp` (see below).
+For the C++ path (#130) the strategy outcome is a list of sized actions. `src/calculation-signal/runner/kpi_worker.go` turns them into fills and the instance report without disk or database access: `ReplayKPI` replays the actions against the bar closes with the same fill model as simulated execution (`execrunner.SimulateBarWithModel`, quantities read back through the journal strings, as the fill journal does) and builds the report with `BuildInstanceReportFromSim`. `RunKPIWorkers` runs a goroutine pool over batches of `KPIJob` and emits one `[]KPIResult` batch per input batch, ready for the persistence stage. `RunExperimentSimulate` uses it when `EXPERIMENT_ENGINE=cpp` (see below).
 
 
 ### Sparse lake (exchange holes)

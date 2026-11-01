@@ -1,6 +1,6 @@
 # db
 
-Postgres schema for the experiment control plane (experiments, instances, fills, period stats, performance). Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
+Postgres schema for the experiment control plane (experiments, instances, period stats, performance). Fills, orders, journals and trade outcomes are Parquet files in each instance workspace, not tables. Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
 
 ## Layout
 - `schema/`: the desired state as Atlas HCL (`*.pg.hcl`), grouped `experiment/` and `activity/`; `atlas.hcl` defines the `local` env.
@@ -9,7 +9,7 @@ Postgres schema for the experiment control plane (experiments, instances, fills,
 
 ## Workflow
 1. Edit the HCL in `schema/`.
-2. `task db:diff name=<change>` generates a migration (uses a dev Postgres via Docker).
+2. `task db:diff name=<change>` generates a migration (uses a dev Postgres via Docker). Known limit: the dev database replays `20261024140000_revoke_app_table_api_grants.sql`, which needs the Supabase `anon` role, so the diff fails on a plain Postgres. Then write the migration by hand, check it on a scratch database (`db/sqlc/schema.sql` plus the new file), and run `atlas migrate hash --dir file://migrations`.
 3. `task db:migrate` applies migrations to `DATABASE_URL` (starts compose Postgres via `task db:up`). `task db:migrate:supabase` targets `SUPABASE_DB_URL`.
 4. If queries or the schema changed for Go: update `sqlc/schema.sql` and `queries/`, then `task db:sqlc`. Commit the generated Go.
 

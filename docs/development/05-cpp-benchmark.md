@@ -216,16 +216,19 @@ task cpp:deps PRESET=optimized && task cpp:build PRESET=optimized
 go test -c -o /tmp/exp.test ./tests/system/experiment
 export BENCH_HOURS=17520 BENCH_WALK=1 CPP_SMA_CROSS_BIN=$PWD/build/optimized/strategies/sma-cross/strategy-sma-cross
 BENCH_INSTANCES=3000 EXPERIMENT_ENGINE=cpp /tmp/exp.test -test.run BenchPersistGrid -test.v
-# Postgres: add DATABASE_URL=... (a database loaded with db/sqlc/schema.sql; the harness mirrors the grid into it)
+# The harness needs a Postgres for the experiment catalog: POSTGRES_TEST_URL=... (default: the compose Postgres on 9432)
 ```
 
 Timed: the `RunExperiment` call only, i.e. prepare (bar range, coverage), bar loading, the sweep
-(C++ processes or Go loop), KPI replay, report.json, persistence (SQLite catalog or Postgres COPY),
+(C++ processes or Go loop), KPI replay, report.json, persistence (Postgres period stats and the instance Parquet files),
 progress updates. Not timed: fixture and catalog creation, process start of the test binary. S3 upload
 is not exercised (no `EXPERIMENT_ARTIFACTS` bucket), and the Go `prepare` indicator pass is part of the Go number.
 Machine: Intel Core Ultra 9 185H, 22 logical CPUs, 62 GB, Linux 7.0, Go 1.24, optimized C++ build, default
 `EXPERIMENT_CPP_PROCESSES` (NumCPU) and `EXPERIMENT_CPP_SHARD_MAX` (500). The machine was shared: load
 average 7 to 14 during all runs, so treat the numbers as upper bounds.
+
+**History, not the current code.** These runs predate #164: the SQLite experiment catalog and the Postgres
+fill and outcome COPY were removed, so the "store" column no longer exists. Kept for comparison only.
 
 | run | store | instances | runs (s) | median (s) |
 |---|---|---|---|---|
@@ -249,17 +252,12 @@ on SQLite and 3 to 10 s on Postgres, report.json writing 3 ms. The CPU profile o
 about 31 percent in pgx `CopyFrom` value encoding (`encodePlanDriverValuer`, `newEncodeError`: a
 `uuid.UUID` per row goes through the `driver.Valuer` path) and about 21 percent in GC.
 
-Catalog comparability: the SQLite catalog (`store.PersistInstanceBatch`) stores only status, timing, list metrics and progress, no fills. The Postgres catalog also COPYs fills, trade outcomes and period stats, about 5 M fills for 3000 instances. SQLite and Postgres timings are therefore not comparable. What fill data to persist is open in #164.
-
-Equality, Go vs cpp (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
+Equality, Go vs cpp, before #164 (100 instances of the walk grid, Postgres-persisted metrics and fill counts, all 100
 completed): Sharpe, Sortino, CAGR, max drawdown, monthly/yearly return, trades per month, wins, losses,
 breakeven, win rate and fill count are identical (max relative difference 0). `metric_duration_ms` differs
 by design (wall time of the instance).
 
-Follow-ups (not done here): encode UUIDs as `pgtype.UUID`/`[16]byte` in the COPY rows and drop the
-per-fill `uuid.New()`; consider COPY of fills only for sampled instances or a coarser row model; run the
-Postgres case against a database without the dev stack on the same host. The fixture trades 10 to 20 times
-more than real data, so the Postgres number is a worst case.
+The fixture trades 10 to 20 times more than real data, so the Postgres number was a worst case.
 
 ## Postgres persistence cost (issue #162, parent #130)
 
@@ -282,17 +280,16 @@ Same harness and host as above, 3000 instances, 3 runs each, median:
 The shared dev stack makes the absolute numbers swing (the #161 zigzag figure of 66 s was measured on an
 emptier database; the same code took 195 s later). Target (about 10 s) is not met on Postgres.
 
-Where the server time goes (psql, 1 M fill rows into a scratch copy of the schema, one backend):
-22.2 s with both foreign keys and both indexes, 5.8 s without the two foreign keys, 4.8 s also without the
-`(instance_id, ts_ms)` index (row generation alone 0.6 s). The two RI triggers (`experiment_id`,
-`instance_id`) cost about 75 percent of the COPY, the secondary index about 5 percent, the random UUID
-primary key the rest. A COPY backend sits at 100 percent of one core; `synchronous_commit=off` on the
-bench database changed nothing (17.0 vs 17.4 s), so WAL flushes are not the limit. The dev Postgres runs
-defaults (shared_buffers 128 MB, max_wal_size 1 GB).
-
 Equality: a seeded 400-instance walk run persisted identical row counts and checksums before and after
 (fills 320000, outcomes 160000, period stats 4800, instance metrics 400, progress 400/400).
 
-Options not implemented (they change schema or behaviour, owner decision): drop the redundant
-`experiment_instance_fill.experiment_id` FK or both fill FKs (the `instance_id` cascade already covers
-deletion); persist fills only for sampled or top-N instances; coarser fill rows.
+## Parquet instance files (#164)
+
+The fills, orders, journals and trade outcomes of an instance are Parquet files in its workspace
+(`src/internal/instanceparquet`); Postgres keeps period stats, status, timing and metrics. The same
+harness measures the current code.
+
+TODO: no numbers yet. To record: the wall time of `TestBenchPersistGrid` (3000 instances, zigzag and walk,
+Go and cpp, median of three), the write time of the four files per instance inside the persister, the size
+of the files per instance, and the `/activity` and `/chart-series` latency on the largest instance.
+Record them here with the host, the load average and the commit they were measured on.

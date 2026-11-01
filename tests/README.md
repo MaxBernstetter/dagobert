@@ -5,7 +5,7 @@
 ## Layout
 - `system/ingest`, `calculation-technical-indicator`, `calculation-signal`, `execution`: one job each. Fakes: Binance over local HTTP, a seeded Parquet file or SQLite row, a fake Bybit response.
 - `system/backtest`: the single-backtest image; skipped without `DATA_DIR` and lake data.
-- `system/experiment`: the experiment path (`dagobert-backtest`): engine switch and C++ (`engine_test.go`), persistence to SQLite and Postgres (`persist_test.go`, `persist_pg_test.go`), ma-cross sizing, and a persistence benchmark (`bench_persist_test.go`, needs `BENCH_INSTANCES`).
+- `system/experiment`: the experiment path (`dagobert-backtest`), on a scratch Postgres (`POSTGRES_TEST_URL`; the tests fail without it): engine switch and C++ (`engine_test.go`), persistence (`persist_test.go`, `persist_pg_test.go`), ma-cross sizing, the API over the instance Parquet files (`api_instance_files_test.go`), and a persistence benchmark (`bench_persist_test.go`, needs `BENCH_INSTANCES`). Fixtures are created by `createExperimentPG` (`pg_fixture_test.go`).
 - `system/internal/lakefile`: shared helper that writes seeded candle files.
 - `bruno/binance`: manual HTTP requests, not run by CI.
 

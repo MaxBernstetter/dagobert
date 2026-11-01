@@ -3,7 +3,7 @@
 How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md); the live per-candle pipeline is in [pipeline-data-flow.md](pipeline-data-flow.md).
 
 - **Experiment**: one row with shared settings (range, capital, costs, provider) and N instances.
-- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace is `data/experiments/<experiment_id>/instances/<instance_id>/` (`store.ExperimentWorkspaceDir`).
+- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace is `data/experiments/<experiment_id>/instances/<instance_id>/` (`store.ExperimentWorkspaceDir`): `report.json` and the Parquet files `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` (`src/internal/instanceparquet`).
 
 ## The picture
 
@@ -24,10 +24,11 @@ sequenceDiagram
     O->>W: prepare
     W->>L: coverage, ingest gaps, indicator window, KPI handoff files
     O->>W: simulate (one or many batches)
-    W->>P: batched COPY and UPDATE per instance
-    W->>L: report.json per instance
+    W->>P: batched period stats and UPDATE per instance
+    W->>L: report.json and Parquet files per instance
     O->>W: finalize
-    W->>P: experiment_kpi, performance, final status
+    W->>L: read trade_outcomes.parquet per instance
+    W->>P: performance, final status, drop the prepare cache
     loop every 1500 ms
         B->>A: GET /experiments/{id}/progress
         A->>P: read row
@@ -47,9 +48,8 @@ flowchart TD
     G --> Q["result queue (instanceResult)"]
     C4 --> Q
     Q --> PS["runPersister (one goroutine)"]
-    PS --> R["report.json (+ S3 copy)"]
-    PS --> PG["Postgres: COPY fills, outcomes, period stats, UPDATE instances"]
-    PS --> SQ["SQLite: status, timing, metrics only"]
+    PS --> R["report.json (+ S3 copy) and Parquet: fills, orders, journals, trade outcomes"]
+    PS --> PG["Postgres: period stats, UPDATE instances (status, timing, metrics), progress"]
 ```
 
 ## Lifecycle
@@ -93,19 +93,19 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 | Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
 | Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, `ingest.sqlite` | progress stages 1-3; workspaces, paper wallet; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
-| Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | `report.json`, Postgres rows or SQLite rows | batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
-| Finalize | `RunExperimentFinalize` | instance statuses | `experiment_kpi` rows, `experiment_performance` (Postgres), final status | zero completed -> `failed`; any failed -> `partial`; else `completed` |
+| Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | `report.json` and Parquet files per instance; Postgres period stats, status, timing, metrics | Parquet write error fails the instance (its files are removed); batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
+| Finalize | `RunExperimentFinalize` | instance statuses, `trade_outcomes.parquet` | `experiment_performance` (Postgres), final status, then the prepare cache (`.cache`) is removed | zero completed -> `failed`; any failed -> `partial`; else `completed`. Re-finalizing a finished experiment is not supported (the cache is gone); a new run re-prepares it |
 
-Catalog choice in the worker: Postgres when `DATABASE_URL` is set (`pgcatalog.Open`), else SQLite `data/backtests.sqlite` (`experiment_catalog.go`).
+The catalog is Postgres. The worker needs `DATABASE_URL` (`pgcatalog.Open`); without it the run fails (`experiment_catalog.go`).
 
 Where state lives:
 
 | State | Location |
 |---|---|
-| Experiment, instances, fills, outcomes, period stats, performance | Postgres (`db/sqlc/schema.sql`: `experiment`, `experiment_instance`, `experiment_instance_fill`, `experiment_instance_period_stat`, `experiment_trade_outcome`, `experiment_performance`, ...) |
+| Experiment, instances, metrics, period stats, performance | Postgres (`db/sqlc/schema.sql`: `experiment`, `experiment_instance`, `experiment_instance_period_stat`, `experiment_performance`, `experiment_period_stat`, `experiment_outcome_stat`) |
 | Candles | `data/parquet/provider=.../` (read-only here), gaps in `ingest.sqlite` `unavailable` |
-| Indicator window per symbol | `experiment_kpi` (SQLite store), handed to simulate through files in the experiment dir |
-| Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: wallet and fill journal, `report.json` |
+| Indicator window per symbol | `data/experiments/<experiment_id>/.cache` (handoff files from prepare to simulate and finalize), removed at the end of finalize |
+| Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet, `report.json`, `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` |
 | Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
 
 Production `technical_indicator.sqlite` is never written by an experiment.
@@ -116,10 +116,10 @@ Both paths share: the playbook config is resolved and validated per slug, the ru
 
 ### Go path
 
-1. `FastSimulatedPipelineOpts(ws, win, playbook, sym, closes, opts)` (`src/calculation-signal/runner/fast_pipeline.go`) with `Slim` and `SkipSampler`: no signal or action SQLite rows.
-2. Per bar of the shared `kpi.Window`: `Strategy.Evaluate(framework.Context)`, sizing (`sizing.Unit`, planned size), then `SimulateBarWithModel` updates the wallet and writes the fill journal in the workspace.
-3. `LoadInstanceFills` reads the journal once; `BuildInstanceReport` (`runner/instance_report.go`) builds KPIs, monthly and yearly stats and series in memory.
-4. The result goes to the queue; the persister writes `report.json` and the rows.
+1. `FastSimulatedPipelineOpts(ws, win, playbook, sym, closes, opts)` (`src/calculation-signal/runner/fast_pipeline.go`) with `Slim`, `SkipSampler` and `Capture`: no signal or action SQLite rows, no execution SQLite and no wallet write.
+2. Per bar of the shared `kpi.Window`: `Strategy.Evaluate(framework.Context)`, sizing (`sizing.Unit`, planned size), then `SimulateBarWithModel` updates the wallet and the captured orders and journals (`execrunner.Activity`).
+3. `FillsFromActivity` derives the fills from the captured journals; `BuildInstanceReport` (`runner/instance_report.go`) builds KPIs, monthly and yearly stats and series in memory.
+4. The result goes to the queue; the persister writes `report.json` and the Parquet files.
 
 ### C++ path
 
@@ -128,7 +128,7 @@ Both paths share: the playbook config is resolved and validated per slug, the ru
 3. `ReplayActions` turns the reported sized actions into `ReplayAction`s; `RunKPIWorkers` -> `ReplayKPI` (`kpi_worker.go`) replays them against bar closes with the same `SimulateBarWithModel`, rescales sizes by replayed wallet equity over the C++ book equity, and builds the report with `BuildInstanceReportFromSim`. No disk or database access.
 4. Same queue and persister as the Go path.
 
-No per-instance fallback to Go: an unsupported playbook or missing binary fails the instance; a crashed shard fails all its instances.
+`ReplayKPI` returns the same orders and journals as the Go path (`KPIResult.Orders`, `KPIResult.Journals`), so both engines write identical instance files. No per-instance fallback to Go: an unsupported playbook or missing binary fails the instance; a crashed shard fails all its instances.
 
 ### Where the two paths must agree
 
@@ -154,7 +154,7 @@ Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`).
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATABASE_URL` | unset | Postgres catalog. Unset: API routes are not mounted in the orchestrator and the worker uses SQLite |
+| `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API (routes are mounted only when set) |
 | `EXPERIMENT_ENGINE` | `go` | `go` or `cpp`; anything else fails simulate |
 | `EXPERIMENT_SIM_WORKERS` | 4 | Go compute goroutines |
 | `EXPERIMENT_CPP_PROCESSES` | CPU count | concurrent `--sweep` processes |
@@ -165,15 +165,14 @@ Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`).
 | `EXPERIMENT_MAP_MAX_CONCURRENCY` | 8 | parallel simulate batches in the local pool |
 | `EXPERIMENT_SFN_ARN` | unset | state machine for the Map fan-out; unset uses the local pool |
 | `EXPERIMENT_ARTIFACTS` | `fs` | `s3` also copies `report.json` to S3 |
-| `EXPERIMENT_CATALOG` | `postgres` in compose | only forwarded to jobs (`data_plane_env.go`); catalog selection is by `DATABASE_URL` |
 | `EXPERIMENT_PHASE`, `EXPERIMENT_INSTANCE_IDS`, `EXPERIMENT_INSTANCE_FILE`, `EXPERIMENT_RETRY_FAILED` | set by the orchestrator | worker internals |
 
-Persistence constants (not env): batch 200 results or 250 ms, queue `min(instances, 4096)`, report writers 8, 4 concurrent commits on Postgres (1 on SQLite), 3 retries (`persist_pipeline.go`).
+Persistence constants (not env): batch 200 results or 250 ms, queue `min(instances, 4096)`, report writers 8, 4 concurrent commits on Postgres, 3 retries (`persist_pipeline.go`).
 
 ## Known limits
 
-- The SQLite catalog does not store fills, outcomes or period stats; Postgres does. Timings between the two are not comparable.
-- Postgres write volume dominates the C++ engine on large runs (about 5 M fills for 3000 instances); see #164 and `docs/development/05-cpp-benchmark.md`.
+- Experiments completed before the Parquet instance files (#164) have no `trade_outcomes.parquet`, and `fills`/`orders`/`journals` are missing too. Their activity and charts are empty and their trade outcomes are gone from `/kpis` and `/performance`. Re-running the experiment rebuilds them; re-finalizing without re-running does not (the prepare cache is removed at finalize). This is a deliberate behaviour change; no backfill exists.
+- Fills are not written to Postgres any more, so large runs no longer pay for a fill COPY. Write cost of the new files is not measured yet (TODO in `docs/development/05-cpp-benchmark.md`).
 - Single-flight: the orchestrator runs one backtest or experiment job at a time; the run hook silently returns if one is active, and job status is lost on orchestrator restart.
 - The legacy single-backtest path (`backtest.Run`, `BACKTEST_ID`, `POST /backtest/run`, `task backtest-run`) is still wired and untouched by this flow.
 - The C++ engine supports only `ma-cross` and `signal-consensus`.
