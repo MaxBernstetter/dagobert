@@ -43,15 +43,9 @@ func TestBuildChartBarsSortsByTime(t *testing.T) {
 	}
 }
 
-func TestEquityFromJournalsKeepsFullStartingBook(t *testing.T) {
-	journals := []journalRow{{
-		OrderLinkID: "ma-cross:BTCUSDT:3000",
-		Side:        "buy",
-		BaseQty:     "1",
-		QuoteQty:    "100000",
-		Price:       "100000",
-	}}
-	points := equityFromJournals(journals, 100_000)
+func TestEquityFromFillsKeepsFullStartingBook(t *testing.T) {
+	fills := []chartFill{{closeMs: 3000, side: "buy", base: 1, quote: 100000, price: 100000}}
+	points := equityFromFills(fills, 100_000)
 	if len(points) != 2 {
 		t.Fatalf("points = %d", len(points))
 	}

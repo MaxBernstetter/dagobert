@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/fs"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
@@ -196,24 +195,4 @@ func markersFromFills(fills []chartFill) []*v1.ChartMarker {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].TimeSec < out[j].TimeSec })
 	return out
-}
-
-// journalFills converts legacy journal rows to chart fills; rows without a candle close or with
-// unparsable quantities are skipped.
-func journalFills(journals []journalRow) []chartFill {
-	var fills []chartFill
-	for _, j := range journals {
-		ms := candleCloseFromLink(j.OrderLinkID)
-		if ms == 0 {
-			continue
-		}
-		base, err1 := strconv.ParseFloat(j.BaseQty, 64)
-		quote, err2 := strconv.ParseFloat(j.QuoteQty, 64)
-		price, err3 := strconv.ParseFloat(j.Price, 64)
-		if err1 != nil || err2 != nil || err3 != nil {
-			continue
-		}
-		fills = append(fills, chartFill{closeMs: ms, side: strings.ToLower(j.Side), base: base, quote: quote, price: price})
-	}
-	return fills
 }

@@ -2,6 +2,7 @@ package backtest
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -94,7 +95,7 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 	}
 	_ = os.Setenv("VENUE_SIMULATE", "1")
 
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -296,7 +297,7 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		failedSymbols = map[string]string{}
 	}
 
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -435,12 +436,7 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	if err != nil {
 		return err
 	}
-	bySymbol, err := LoadExperimentSymKPI(dataDir, experimentID)
-	if err != nil {
-		return err
-	}
-
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -449,12 +445,6 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	fail := func(e error) error {
 		_ = cat.MarkExperimentFailed(experimentID, e.Error())
 		return e
-	}
-
-	for _, bundle := range bySymbol {
-		if err := cat.UpsertExperimentKPIRows(experimentID, bundle.rows); err != nil {
-			return fail(fmt.Errorf("persist experiment kpi: %w", err))
-		}
 	}
 
 	final, err := cat.GetExperiment(experimentID)
@@ -491,15 +481,25 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 		if err := cat.MarkExperimentPartial(experimentID, summary); err != nil {
 			return err
 		}
+		removeExperimentCache(dataDir, experimentID)
 		return nil
 	}
-	return cat.MarkExperimentCompleted(experimentID)
+	if err := cat.MarkExperimentCompleted(experimentID); err != nil {
+		return err
+	}
+	removeExperimentCache(dataDir, experimentID)
+	return nil
+}
+
+// removeExperimentCache deletes the prepare cache once the experiment is final. Best effort: the
+// results are in Postgres and the Parquet files already.
+func removeExperimentCache(dataDir, experimentID string) {
+	if err := os.RemoveAll(ExperimentCacheDir(dataDir, experimentID)); err != nil {
+		log.Printf("experiment %s: remove cache: %v", experimentID, err)
+	}
 }
 
 func writeExperimentPerformance(cat *experimentRunCatalog, dataDir, experimentID string) error {
-	if !cat.usesPostgres() {
-		return nil
-	}
 	results, err := cat.pg.LoadCompletedResults(cat.ctx(), experimentID, dataDir)
 	if err != nil {
 		return err

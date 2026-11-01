@@ -104,10 +104,7 @@ func (p *persister) release(n int) {
 // runPersister drains results until the channel is closed and returns once everything is flushed.
 func runPersister(cat *experimentRunCatalog, experimentID string, total, alreadyDone int, in <-chan instanceResult) {
 	p := &persister{cat: cat, experimentID: experimentID, total: total, done: alreadyDone}
-	parallel := 1
-	if cat.usesPostgres() {
-		parallel = persistParallelPG
-	}
+	parallel := persistParallelPG
 	sem := make(chan struct{}, parallel)
 	var inflight sync.WaitGroup
 	defer inflight.Wait()

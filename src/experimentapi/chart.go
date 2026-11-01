@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"math"
 	"net/http"
 	"os"
@@ -424,67 +423,11 @@ func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toS
 
 func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
 	fills, err := instanceparquet.ReadFills(instanceWorkspace(inst))
-	if err == nil {
-		cf := chartFillsFromParquet(fills)
-		return equityFromFills(cf, startCash), markersFromFills(cf)
+	if err != nil {
+		return nil, nil // no fills file: no portfolio, no markers
 	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	// Legacy instance: the fills live in its execution.sqlite.
-	db, err := openReadOnlySQLite(filepath.Join(instanceWorkspace(inst), "execution.sqlite"))
-	if err != nil || db == nil {
-		return nil, nil
-	}
-	defer db.Close()
-	journals, _ := readJournalRows(db)
-	rows, _ := readActivityRows(db)
-	return equityFromJournals(journals, startCash), markersFromActivity(rows)
-}
-
-// equityFromJournals is equityFromFills over legacy journal rows.
-func equityFromJournals(journals []journalRow, startCash float64) []*v1.ChartPoint {
-	return equityFromFills(journalFills(journals), startCash)
-}
-
-func candleCloseFromLink(link string) int64 {
-	last := strings.LastIndex(link, ":")
-	if last < 0 || last+1 >= len(link) {
-		return 0
-	}
-	ms, err := strconv.ParseInt(link[last+1:], 10, 64)
-	if err != nil || ms <= 0 {
-		return 0
-	}
-	return ms
-}
-
-func markersFromActivity(rows []activityRow) []*v1.ChartMarker {
-	var out []*v1.ChartMarker
-	for _, row := range rows {
-		if row.Kind != "fill" || row.CandleClose <= 0 {
-			continue
-		}
-		raw := ""
-		if row.Decision != nil {
-			raw = strings.ToLower(*row.Decision)
-		}
-		if raw == "" && row.Side != nil {
-			raw = strings.ToLower(*row.Side)
-		}
-		var side v1.ChartSide
-		switch raw {
-		case "buy":
-			side = v1.ChartSide_CHART_SIDE_BUY
-		case "sell":
-			side = v1.ChartSide_CHART_SIDE_SELL
-		default:
-			continue
-		}
-		out = append(out, &v1.ChartMarker{TimeSec: row.CandleClose / 1000, Side: side})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].TimeSec < out[j].TimeSec })
-	return out
+	cf := chartFillsFromParquet(fills)
+	return equityFromFills(cf, startCash), markersFromFills(cf)
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

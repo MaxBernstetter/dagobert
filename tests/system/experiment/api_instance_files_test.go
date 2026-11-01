@@ -250,60 +250,19 @@ func removeInstanceParquet(t *testing.T, ws string) {
 	}
 }
 
-// TestExperimentPerformanceStableOnRefinalize: /performance is rebuilt from trade_outcomes.parquet on
-// every finalize, so a second finalize over the same files gives the same numbers.
-func TestExperimentPerformanceStableOnRefinalize(t *testing.T) {
-	url := pgScratchDB(t)
-	dataDir := tempDataDir(t)
-	seedLiveMarker(t, dataDir)
-	endMs := 240 * hour
-	writeCrossingParquet(t, dataDir, symbol, endMs)
-	settings := store.DefaultExperimentSettings()
-	settings.Base, settings.Quote = "BTC", "USDT"
-	settings.FromMs, settings.ToMs = 0, endMs
-	settings.RedownloadMissing = false
-	rec, err := createExperimentPG(url, "api-performance", settings, []fixtureSpec{
-		{Label: "a", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
-		{Label: "b", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":6,"slowHr":12}`)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("DATA_DIR", dataDir)
-	t.Setenv("DATABASE_URL", url)
-	t.Setenv("VENUE_SIMULATE", "1")
-	t.Setenv("DATABASE_URL", url)
-	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
-		t.Fatal(err)
-	}
-
-	pool, err := pgxpool.New(t.Context(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(pool.Close)
-	mux := http.NewServeMux()
-	experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{}))
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	f := apiFixture{srv: srv, dataDir: dataDir, experiment: rec.ID}
-
-	code, first := f.get(t, "/performance")
+// TestExperimentPerformanceFromParquet: /performance is built from the instances' trade_outcomes.parquet
+// at finalize, and the prepare cache is gone once the experiment is final.
+func TestExperimentPerformanceFromParquet(t *testing.T) {
+	f := newAPIFixture(t, "")
+	code, body := f.get(t, "/performance")
 	if code != http.StatusOK {
-		t.Fatalf("performance %d: %s", code, first)
+		t.Fatalf("performance %d: %s", code, body)
 	}
-	if err := backtest.RunExperimentFinalize(dataDir, rec.ID); err != nil {
-		t.Fatal(err)
+	if !strings.Contains(string(body), `"results":[{`) {
+		t.Fatalf("performance has no results: %s", body)
 	}
-	code, second := f.get(t, "/performance")
-	if code != http.StatusOK {
-		t.Fatalf("performance after finalize %d: %s", code, second)
-	}
-	if string(first) != string(second) {
-		t.Fatalf("performance changed on refinalize:\n%s\n%s", first, second)
-	}
-	if !strings.Contains(string(first), `"results":[{`) {
-		t.Fatalf("performance has no results: %s", first)
+	if _, err := os.Stat(filepath.Join(f.dataDir, "experiments", f.experiment, ".cache")); !os.IsNotExist(err) {
+		t.Fatalf("prepare cache still present after finalize: %v", err)
 	}
 }
 
@@ -328,5 +287,28 @@ func TestExperimentAPIDeleteRemovesFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("experiment directory still exists after delete: %v", err)
+	}
+}
+
+// TestExperimentRunNeedsDatabase: the experiment catalog is Postgres; a run without DATABASE_URL fails
+// before it touches any instance.
+func TestExperimentRunNeedsDatabase(t *testing.T) {
+	url := pgScratchDB(t)
+	dataDir := tempDataDir(t)
+	seedLiveMarker(t, dataDir)
+	writeCrossingParquet(t, dataDir, symbol, 240*hour)
+	settings := store.DefaultExperimentSettings()
+	settings.Base, settings.Quote = "BTC", "USDT"
+	settings.FromMs, settings.ToMs = 0, 240*hour
+	rec, err := createExperimentPG(url, "no-db", settings, []fixtureSpec{
+		{Label: "a", Playbook: "ma-cross", Config: json.RawMessage(`{"fastHr":3,"slowHr":6}`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", "")
+	if err := backtest.RunExperiment(dataDir, rec.ID); err == nil {
+		t.Fatal("run without DATABASE_URL must fail")
 	}
 }
