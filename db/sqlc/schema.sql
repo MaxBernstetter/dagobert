@@ -21,6 +21,7 @@ CREATE TABLE "experiment" (
   "spread_bps" double precision NOT NULL DEFAULT 0,
   "slippage_bps" double precision NOT NULL DEFAULT 0,
   "fee_bps" double precision NOT NULL DEFAULT 0,
+  "parallelism" integer NULL,
   "created_at_ms" bigint NOT NULL,
   "started_at_ms" bigint NULL,
   "finished_at_ms" bigint NULL,

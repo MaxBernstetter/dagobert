@@ -40,6 +40,7 @@ func Mount(mux *http.ServeMux, s *Server) {
 	}
 	handle(mux, "GET /api/v1/experiments", s.handleListExperiments)
 	handle(mux, "GET /api/v1/experiments/strategies", s.handleListStrategies)
+	handle(mux, "GET /api/v1/experiments/limits", s.handleExperimentLimits)
 	handle(mux, "GET /api/v1/experiments/{id}/status", s.handleExperimentStatus)
 	handle(mux, "POST /api/v1/experiments", s.handleCreateStudy)
 	handle(mux, "GET /api/v1/experiments/{id}", s.handleGetExperiment)

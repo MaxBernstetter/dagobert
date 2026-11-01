@@ -2,6 +2,7 @@ package pgcatalog
 
 import (
 	"encoding/json"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/persist"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
@@ -38,6 +39,7 @@ func experimentRecordFromRow(s experimentdb.Experiment, insts []experimentdb.Exp
 			SpreadBps:         s.SpreadBps,
 			SlippageBps:       s.SlippageBps,
 			FeeBps:            s.FeeBps,
+			Parallelism:       persist.ParallelismValue(s.Parallelism),
 		},
 	}
 	if s.StartedAtMs.Valid {

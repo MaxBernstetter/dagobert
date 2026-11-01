@@ -56,7 +56,12 @@ func cppBinaryPath(slug string) (string, error) {
 	return p, nil
 }
 
-func cppProcesses() int {
+// cppProcesses is the number of concurrent C++ sweep processes: the experiment's own setting when set
+// (validated by the API), else EXPERIMENT_CPP_PROCESSES (the fallback default), else one per CPU.
+func cppProcesses(setting int) int {
+	if setting >= 1 {
+		return setting
+	}
 	if n, err := strconv.Atoi(strings.TrimSpace(os.Getenv("EXPERIMENT_CPP_PROCESSES"))); err == nil && n >= 1 {
 		return n
 	}
@@ -104,7 +109,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		}
 		groups[k] = append(groups[k], inst)
 	}
-	procs := cppProcesses()
+	procs := cppProcesses(meta.Settings.Parallelism)
 	var shards []cppShard
 	for _, k := range order {
 		insts := groups[k]

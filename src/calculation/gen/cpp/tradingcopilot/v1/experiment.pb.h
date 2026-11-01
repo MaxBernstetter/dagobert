@@ -808,9 +808,10 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSettings final : public :
     kCashReserveQuoteFieldNumber = 10,
     kMinOrderQuoteFieldNumber = 11,
     kSpreadBpsFieldNumber = 14,
+    kRedownloadMissingFieldNumber = 12,
+    kParallelismFieldNumber = 17,
     kSlippageBpsFieldNumber = 15,
     kFeeBpsFieldNumber = 16,
-    kRedownloadMissingFieldNumber = 12,
   };
   // string provider = 1 [json_name = "provider"];
   void clear_provider() ;
@@ -962,6 +963,27 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSettings final : public :
   void _internal_set_spread_bps(double value);
 
   public:
+  // bool redownload_missing = 12 [json_name = "redownloadMissing"];
+  void clear_redownload_missing() ;
+  [[nodiscard]] bool redownload_missing() const;
+  void set_redownload_missing(bool value);
+
+  private:
+  bool _internal_redownload_missing() const;
+  void _internal_set_redownload_missing(bool value);
+
+  public:
+  // optional int32 parallelism = 17 [json_name = "parallelism"];
+  [[nodiscard]] bool has_parallelism() const;
+  void clear_parallelism() ;
+  [[nodiscard]] ::int32_t parallelism() const;
+  void set_parallelism(::int32_t value);
+
+  private:
+  ::int32_t _internal_parallelism() const;
+  void _internal_set_parallelism(::int32_t value);
+
+  public:
   // double slippage_bps = 15 [json_name = "slippageBps"];
   void clear_slippage_bps() ;
   [[nodiscard]] double slippage_bps() const;
@@ -982,21 +1004,11 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSettings final : public :
   void _internal_set_fee_bps(double value);
 
   public:
-  // bool redownload_missing = 12 [json_name = "redownloadMissing"];
-  void clear_redownload_missing() ;
-  [[nodiscard]] bool redownload_missing() const;
-  void set_redownload_missing(bool value);
-
-  private:
-  bool _internal_redownload_missing() const;
-  void _internal_set_redownload_missing(bool value);
-
-  public:
   // @@protoc_insertion_point(class_scope:tradingcopilot.v1.ExperimentSettings)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 16,
+      ::google::protobuf::internal::TcParseTable<5, 17,
                           0, 82,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -1038,9 +1050,10 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSettings final : public :
     double cash_reserve_quote_;
     double min_order_quote_;
     double spread_bps_;
+    bool redownload_missing_;
+    ::int32_t parallelism_;
     double slippage_bps_;
     double fee_bps_;
-    bool redownload_missing_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1995,14 +2008,15 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
     kSpreadBpsFieldNumber = 34,
     kSlippageBpsFieldNumber = 35,
     kFeeBpsFieldNumber = 36,
+    kRedownloadMissingFieldNumber = 32,
+    kProgressInstanceTotalFieldNumber = 58,
+    kParallelismFieldNumber = 37,
+    kProgressStageFieldNumber = 54,
     kCreatedAtMsFieldNumber = 51,
     kStartedAtMsFieldNumber = 52,
     kFinishedAtMsFieldNumber = 53,
-    kProgressStageFieldNumber = 54,
     kProgressStagesFieldNumber = 55,
     kProgressInstanceDoneFieldNumber = 57,
-    kProgressInstanceTotalFieldNumber = 58,
-    kRedownloadMissingFieldNumber = 32,
     kListPlaybooksFieldNumber = 70,
     kListSymbolsFieldNumber = 71,
   };
@@ -2281,6 +2295,47 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
   void _internal_set_fee_bps(double value);
 
   public:
+  // bool redownload_missing = 32 [json_name = "redownloadMissing"];
+  void clear_redownload_missing() ;
+  [[nodiscard]] bool redownload_missing() const;
+  void set_redownload_missing(bool value);
+
+  private:
+  bool _internal_redownload_missing() const;
+  void _internal_set_redownload_missing(bool value);
+
+  public:
+  // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
+  void clear_progress_instance_total() ;
+  [[nodiscard]] ::int32_t progress_instance_total() const;
+  void set_progress_instance_total(::int32_t value);
+
+  private:
+  ::int32_t _internal_progress_instance_total() const;
+  void _internal_set_progress_instance_total(::int32_t value);
+
+  public:
+  // optional int32 parallelism = 37 [json_name = "parallelism"];
+  [[nodiscard]] bool has_parallelism() const;
+  void clear_parallelism() ;
+  [[nodiscard]] ::int32_t parallelism() const;
+  void set_parallelism(::int32_t value);
+
+  private:
+  ::int32_t _internal_parallelism() const;
+  void _internal_set_parallelism(::int32_t value);
+
+  public:
+  // int32 progress_stage = 54 [json_name = "progressStage"];
+  void clear_progress_stage() ;
+  [[nodiscard]] ::int32_t progress_stage() const;
+  void set_progress_stage(::int32_t value);
+
+  private:
+  ::int32_t _internal_progress_stage() const;
+  void _internal_set_progress_stage(::int32_t value);
+
+  public:
   // int64 created_at_ms = 51 [json_name = "createdAtMs"];
   void clear_created_at_ms() ;
   [[nodiscard]] ::int64_t created_at_ms() const;
@@ -2313,16 +2368,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
   void _internal_set_finished_at_ms(::int64_t value);
 
   public:
-  // int32 progress_stage = 54 [json_name = "progressStage"];
-  void clear_progress_stage() ;
-  [[nodiscard]] ::int32_t progress_stage() const;
-  void set_progress_stage(::int32_t value);
-
-  private:
-  ::int32_t _internal_progress_stage() const;
-  void _internal_set_progress_stage(::int32_t value);
-
-  public:
   // int32 progress_stages = 55 [json_name = "progressStages"];
   void clear_progress_stages() ;
   [[nodiscard]] ::int32_t progress_stages() const;
@@ -2341,26 +2386,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
   private:
   ::int32_t _internal_progress_instance_done() const;
   void _internal_set_progress_instance_done(::int32_t value);
-
-  public:
-  // int32 progress_instance_total = 58 [json_name = "progressInstanceTotal"];
-  void clear_progress_instance_total() ;
-  [[nodiscard]] ::int32_t progress_instance_total() const;
-  void set_progress_instance_total(::int32_t value);
-
-  private:
-  ::int32_t _internal_progress_instance_total() const;
-  void _internal_set_progress_instance_total(::int32_t value);
-
-  public:
-  // bool redownload_missing = 32 [json_name = "redownloadMissing"];
-  void clear_redownload_missing() ;
-  [[nodiscard]] bool redownload_missing() const;
-  void set_redownload_missing(bool value);
-
-  private:
-  bool _internal_redownload_missing() const;
-  void _internal_set_redownload_missing(bool value);
 
   public:
   // repeated string list_playbooks = 70 [json_name = "listPlaybooks"];
@@ -2419,7 +2444,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<5, 32,
+      ::google::protobuf::internal::TcParseTable<5, 33,
                           1, 164,
                           11>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -2446,7 +2471,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
         ::google::protobuf::internal::InternalVisibility visibility,
         ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
         const Experiment& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::HasBits<2> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr id_;
     ::google::protobuf::internal::ArenaStringPtr name_;
@@ -2470,14 +2495,15 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Experiment final : public ::google:
     double spread_bps_;
     double slippage_bps_;
     double fee_bps_;
+    bool redownload_missing_;
+    ::int32_t progress_instance_total_;
+    ::int32_t parallelism_;
+    ::int32_t progress_stage_;
     ::int64_t created_at_ms_;
     ::int64_t started_at_ms_;
     ::int64_t finished_at_ms_;
-    ::int32_t progress_stage_;
     ::int32_t progress_stages_;
     ::int32_t progress_instance_done_;
-    ::int32_t progress_instance_total_;
-    bool redownload_missing_;
     ::google::protobuf::RepeatedPtrField<::std::string> list_playbooks_;
     ::google::protobuf::RepeatedPtrField<::std::string> list_symbols_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -4003,7 +4029,7 @@ inline void Experiment::_internal_set_min_order_quote(double value) {
 inline void Experiment::clear_redownload_missing() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.redownload_missing_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x20000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00400000U);
 }
 inline bool Experiment::redownload_missing() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.redownload_missing)
@@ -4011,7 +4037,7 @@ inline bool Experiment::redownload_missing() const {
 }
 inline void Experiment::set_redownload_missing(bool value) {
   _internal_set_redownload_missing(value);
-  SetHasBit(_impl_._has_bits_[0], 0x20000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00400000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.redownload_missing)
 }
 inline bool Experiment::_internal_redownload_missing() const {
@@ -4159,11 +4185,39 @@ inline void Experiment::_internal_set_fee_bps(double value) {
   _impl_.fee_bps_ = value;
 }
 
+// optional int32 parallelism = 37 [json_name = "parallelism"];
+inline bool Experiment::has_parallelism() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x01000000U);
+  return value;
+}
+inline void Experiment::clear_parallelism() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.parallelism_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x01000000U);
+}
+inline ::int32_t Experiment::parallelism() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.parallelism)
+  return _internal_parallelism();
+}
+inline void Experiment::set_parallelism(::int32_t value) {
+  _internal_set_parallelism(value);
+  SetHasBit(_impl_._has_bits_[0], 0x01000000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.parallelism)
+}
+inline ::int32_t Experiment::_internal_parallelism() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.parallelism_;
+}
+inline void Experiment::_internal_set_parallelism(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.parallelism_ = value;
+}
+
 // int64 created_at_ms = 51 [json_name = "createdAtMs"];
 inline void Experiment::clear_created_at_ms() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.created_at_ms_ = ::int64_t{0};
-  ClearHasBit(_impl_._has_bits_[0], 0x00400000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x04000000U);
 }
 inline ::int64_t Experiment::created_at_ms() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.created_at_ms)
@@ -4171,7 +4225,7 @@ inline ::int64_t Experiment::created_at_ms() const {
 }
 inline void Experiment::set_created_at_ms(::int64_t value) {
   _internal_set_created_at_ms(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00400000U);
+  SetHasBit(_impl_._has_bits_[0], 0x04000000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.created_at_ms)
 }
 inline ::int64_t Experiment::_internal_created_at_ms() const {
@@ -4185,13 +4239,13 @@ inline void Experiment::_internal_set_created_at_ms(::int64_t value) {
 
 // optional int64 started_at_ms = 52 [json_name = "startedAtMs"];
 inline bool Experiment::has_started_at_ms() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00800000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x08000000U);
   return value;
 }
 inline void Experiment::clear_started_at_ms() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.started_at_ms_ = ::int64_t{0};
-  ClearHasBit(_impl_._has_bits_[0], 0x00800000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x08000000U);
 }
 inline ::int64_t Experiment::started_at_ms() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.started_at_ms)
@@ -4199,7 +4253,7 @@ inline ::int64_t Experiment::started_at_ms() const {
 }
 inline void Experiment::set_started_at_ms(::int64_t value) {
   _internal_set_started_at_ms(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00800000U);
+  SetHasBit(_impl_._has_bits_[0], 0x08000000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.started_at_ms)
 }
 inline ::int64_t Experiment::_internal_started_at_ms() const {
@@ -4213,13 +4267,13 @@ inline void Experiment::_internal_set_started_at_ms(::int64_t value) {
 
 // optional int64 finished_at_ms = 53 [json_name = "finishedAtMs"];
 inline bool Experiment::has_finished_at_ms() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x01000000U);
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x10000000U);
   return value;
 }
 inline void Experiment::clear_finished_at_ms() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.finished_at_ms_ = ::int64_t{0};
-  ClearHasBit(_impl_._has_bits_[0], 0x01000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x10000000U);
 }
 inline ::int64_t Experiment::finished_at_ms() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.finished_at_ms)
@@ -4227,7 +4281,7 @@ inline ::int64_t Experiment::finished_at_ms() const {
 }
 inline void Experiment::set_finished_at_ms(::int64_t value) {
   _internal_set_finished_at_ms(value);
-  SetHasBit(_impl_._has_bits_[0], 0x01000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x10000000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.finished_at_ms)
 }
 inline ::int64_t Experiment::_internal_finished_at_ms() const {
@@ -4267,7 +4321,7 @@ inline void Experiment::_internal_set_progress_stage(::int32_t value) {
 inline void Experiment::clear_progress_stages() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.progress_stages_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x04000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x20000000U);
 }
 inline ::int32_t Experiment::progress_stages() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.progress_stages)
@@ -4275,7 +4329,7 @@ inline ::int32_t Experiment::progress_stages() const {
 }
 inline void Experiment::set_progress_stages(::int32_t value) {
   _internal_set_progress_stages(value);
-  SetHasBit(_impl_._has_bits_[0], 0x04000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x20000000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.progress_stages)
 }
 inline ::int32_t Experiment::_internal_progress_stages() const {
@@ -4355,7 +4409,7 @@ inline void Experiment::set_allocated_progress_stage_label(::std::string* PROTOB
 inline void Experiment::clear_progress_instance_done() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.progress_instance_done_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x08000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x40000000U);
 }
 inline ::int32_t Experiment::progress_instance_done() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.progress_instance_done)
@@ -4363,7 +4417,7 @@ inline ::int32_t Experiment::progress_instance_done() const {
 }
 inline void Experiment::set_progress_instance_done(::int32_t value) {
   _internal_set_progress_instance_done(value);
-  SetHasBit(_impl_._has_bits_[0], 0x08000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x40000000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.progress_instance_done)
 }
 inline ::int32_t Experiment::_internal_progress_instance_done() const {
@@ -4379,7 +4433,7 @@ inline void Experiment::_internal_set_progress_instance_done(::int32_t value) {
 inline void Experiment::clear_progress_instance_total() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.progress_instance_total_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x10000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00800000U);
 }
 inline ::int32_t Experiment::progress_instance_total() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.Experiment.progress_instance_total)
@@ -4387,7 +4441,7 @@ inline ::int32_t Experiment::progress_instance_total() const {
 }
 inline void Experiment::set_progress_instance_total(::int32_t value) {
   _internal_set_progress_instance_total(value);
-  SetHasBit(_impl_._has_bits_[0], 0x10000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00800000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.Experiment.progress_instance_total)
 }
 inline ::int32_t Experiment::_internal_progress_instance_total() const {
@@ -4409,7 +4463,7 @@ inline int Experiment::list_playbooks_size() const {
 inline void Experiment::clear_list_playbooks() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.list_playbooks_.Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x40000000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x80000000U);
 }
 inline ::std::string* PROTOBUF_NONNULL Experiment::add_list_playbooks()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4417,7 +4471,7 @@ inline ::std::string* PROTOBUF_NONNULL Experiment::add_list_playbooks()
   ::std::string* _s =
       _internal_mutable_list_playbooks()->InternalAddWithArena(
           ::google::protobuf::MessageLite::internal_visibility(), GetArena());
-  SetHasBit(_impl_._has_bits_[0], 0x40000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
   // @@protoc_insertion_point(field_add_mutable:tradingcopilot.v1.Experiment.list_playbooks)
   return _s;
 }
@@ -4445,7 +4499,7 @@ inline void Experiment::add_list_playbooks(Arg_&& value, Args_... args) {
       ::google::protobuf::MessageLite::internal_visibility(), GetArena(),
       *_internal_mutable_list_playbooks(), ::std::forward<Arg_>(value),
       args... );
-  SetHasBit(_impl_._has_bits_[0], 0x40000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
   // @@protoc_insertion_point(field_add:tradingcopilot.v1.Experiment.list_playbooks)
 }
 inline const ::google::protobuf::RepeatedPtrField<::std::string>& Experiment::list_playbooks()
@@ -4455,7 +4509,7 @@ inline const ::google::protobuf::RepeatedPtrField<::std::string>& Experiment::li
 }
 inline ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL
 Experiment::mutable_list_playbooks() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x40000000U);
+  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
   // @@protoc_insertion_point(field_mutable_list:tradingcopilot.v1.Experiment.list_playbooks)
   ::google::protobuf::internal::TSanWrite(&_impl_);
   return _internal_mutable_list_playbooks();
@@ -4481,7 +4535,7 @@ inline int Experiment::list_symbols_size() const {
 inline void Experiment::clear_list_symbols() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.list_symbols_.Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x80000000U);
+  ClearHasBit(_impl_._has_bits_[1], 0x00000001U);
 }
 inline ::std::string* PROTOBUF_NONNULL Experiment::add_list_symbols()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -4489,7 +4543,7 @@ inline ::std::string* PROTOBUF_NONNULL Experiment::add_list_symbols()
   ::std::string* _s =
       _internal_mutable_list_symbols()->InternalAddWithArena(
           ::google::protobuf::MessageLite::internal_visibility(), GetArena());
-  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
+  SetHasBit(_impl_._has_bits_[1], 0x00000001U);
   // @@protoc_insertion_point(field_add_mutable:tradingcopilot.v1.Experiment.list_symbols)
   return _s;
 }
@@ -4517,7 +4571,7 @@ inline void Experiment::add_list_symbols(Arg_&& value, Args_... args) {
       ::google::protobuf::MessageLite::internal_visibility(), GetArena(),
       *_internal_mutable_list_symbols(), ::std::forward<Arg_>(value),
       args... );
-  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
+  SetHasBit(_impl_._has_bits_[1], 0x00000001U);
   // @@protoc_insertion_point(field_add:tradingcopilot.v1.Experiment.list_symbols)
 }
 inline const ::google::protobuf::RepeatedPtrField<::std::string>& Experiment::list_symbols()
@@ -4527,7 +4581,7 @@ inline const ::google::protobuf::RepeatedPtrField<::std::string>& Experiment::li
 }
 inline ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL
 Experiment::mutable_list_symbols() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x80000000U);
+  SetHasBit(_impl_._has_bits_[1], 0x00000001U);
   // @@protoc_insertion_point(field_mutable_list:tradingcopilot.v1.Experiment.list_symbols)
   ::google::protobuf::internal::TSanWrite(&_impl_);
   return _internal_mutable_list_symbols();
@@ -5033,7 +5087,7 @@ inline void ExperimentSettings::_internal_set_min_order_quote(double value) {
 inline void ExperimentSettings::clear_redownload_missing() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.redownload_missing_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00008000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
 }
 inline bool ExperimentSettings::redownload_missing() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentSettings.redownload_missing)
@@ -5041,7 +5095,7 @@ inline bool ExperimentSettings::redownload_missing() const {
 }
 inline void ExperimentSettings::set_redownload_missing(bool value) {
   _internal_set_redownload_missing(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentSettings.redownload_missing)
 }
 inline bool ExperimentSettings::_internal_redownload_missing() const {
@@ -5145,7 +5199,7 @@ inline void ExperimentSettings::_internal_set_spread_bps(double value) {
 inline void ExperimentSettings::clear_slippage_bps() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.slippage_bps_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00008000U);
 }
 inline double ExperimentSettings::slippage_bps() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentSettings.slippage_bps)
@@ -5153,7 +5207,7 @@ inline double ExperimentSettings::slippage_bps() const {
 }
 inline void ExperimentSettings::set_slippage_bps(double value) {
   _internal_set_slippage_bps(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentSettings.slippage_bps)
 }
 inline double ExperimentSettings::_internal_slippage_bps() const {
@@ -5169,7 +5223,7 @@ inline void ExperimentSettings::_internal_set_slippage_bps(double value) {
 inline void ExperimentSettings::clear_fee_bps() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.fee_bps_ = 0;
-  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00010000U);
 }
 inline double ExperimentSettings::fee_bps() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentSettings.fee_bps)
@@ -5177,7 +5231,7 @@ inline double ExperimentSettings::fee_bps() const {
 }
 inline void ExperimentSettings::set_fee_bps(double value) {
   _internal_set_fee_bps(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentSettings.fee_bps)
 }
 inline double ExperimentSettings::_internal_fee_bps() const {
@@ -5187,6 +5241,34 @@ inline double ExperimentSettings::_internal_fee_bps() const {
 inline void ExperimentSettings::_internal_set_fee_bps(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.fee_bps_ = value;
+}
+
+// optional int32 parallelism = 17 [json_name = "parallelism"];
+inline bool ExperimentSettings::has_parallelism() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00004000U);
+  return value;
+}
+inline void ExperimentSettings::clear_parallelism() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.parallelism_ = 0;
+  ClearHasBit(_impl_._has_bits_[0], 0x00004000U);
+}
+inline ::int32_t ExperimentSettings::parallelism() const {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.ExperimentSettings.parallelism)
+  return _internal_parallelism();
+}
+inline void ExperimentSettings::set_parallelism(::int32_t value) {
+  _internal_set_parallelism(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.ExperimentSettings.parallelism)
+}
+inline ::int32_t ExperimentSettings::_internal_parallelism() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.parallelism_;
+}
+inline void ExperimentSettings::_internal_set_parallelism(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.parallelism_ = value;
 }
 
 // -------------------------------------------------------------------

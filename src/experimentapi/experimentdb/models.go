@@ -31,6 +31,7 @@ type Experiment struct {
 	SpreadBps             float64     `json:"spread_bps"`
 	SlippageBps           float64     `json:"slippage_bps"`
 	FeeBps                float64     `json:"fee_bps"`
+	Parallelism           pgtype.Int4 `json:"parallelism"`
 	CreatedAtMs           int64       `json:"created_at_ms"`
 	StartedAtMs           pgtype.Int8 `json:"started_at_ms"`
 	FinishedAtMs          pgtype.Int8 `json:"finished_at_ms"`

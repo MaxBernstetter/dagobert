@@ -27,6 +27,8 @@ type ExperimentSettings struct {
 	SpreadBps         float64 `json:"spreadBps"`
 	SlippageBps       float64 `json:"slippageBps"`
 	FeeBps            float64 `json:"feeBps"`
+	// Parallelism is the C++ sweep process count; 0 = auto (one per CPU).
+	Parallelism int `json:"parallelism,omitempty"`
 }
 
 // PipelineSymbol is the KPI/signal/execution series id for this experiment market.

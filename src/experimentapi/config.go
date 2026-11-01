@@ -219,6 +219,10 @@ func mergeSettings(in *v1.ExperimentSettings) *v1.ExperimentSettings {
 	if in.FeeBps != 0 {
 		out.FeeBps = in.FeeBps
 	}
+	if in.GetParallelism() > 0 {
+		v := in.GetParallelism()
+		out.Parallelism = &v
+	}
 	return out
 }
 
