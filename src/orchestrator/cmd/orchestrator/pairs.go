@@ -26,24 +26,48 @@ var (
 
 const pairsCacheTTL = 24 * time.Hour
 
+// handleProviderPairs serves the market snapshot stored by the provider's setup. A provider that is not
+// ready has no snapshot yet; then the markets are fetched live, as before, and nothing is stored.
 func handleProviderPairs(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	if id == "" {
 		http.Error(w, "provider id required", http.StatusBadRequest)
 		return
 	}
-	pairs, err := listProviderPairs(r.Context(), id)
+	store, ok := requireConnectorStore(w)
+	if !ok {
+		return
+	}
+	rec, found, err := store.GetProvider(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	type row struct {
 		Base  string `json:"base"`
 		Quote string `json:"quote"`
 	}
-	out := make([]row, 0, len(pairs))
-	for _, p := range pairs {
-		out = append(out, row{Base: p.Base, Quote: p.Quote})
+	var out []row
+	if found && rec.Status == "ready" {
+		stored, err := store.ProviderPairs(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		out = make([]row, 0, len(stored))
+		for _, p := range stored {
+			out = append(out, row{Base: p.Base, Quote: p.Quote})
+		}
+	} else {
+		pairs, err := listProviderPairs(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		out = make([]row, 0, len(pairs))
+		for _, p := range pairs {
+			out = append(out, row{Base: p.Base, Quote: p.Quote})
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400")

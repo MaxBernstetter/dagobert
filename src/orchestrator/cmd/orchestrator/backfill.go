@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -193,6 +194,14 @@ func serveBackfill(ctx context.Context) {
 		go runStudyJob(jobCtx, req.ID, req.RetryFailed)
 		writeJSON(w, http.StatusAccepted, experimentJob)
 	})
+	// Connector state uses the same Postgres catalog convention as the experiments.
+	if cat, err := pgcatalog.Open(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
+	} else if cat != nil {
+		connectorStore = cat
+	} else {
+		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; connector routes answer 503")
+	}
 	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if dbURL != "" {
 		pool, err := pgxpool.New(ctx, dbURL)

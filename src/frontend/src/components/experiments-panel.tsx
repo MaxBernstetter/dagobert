@@ -327,7 +327,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     void refresh().catch((err) => setError(err instanceof Error ? err.message : "load failed"));
   }, [refresh]);
 
-  // Warm pairs for ready providers (disk snapshot after Ingestion activate).
+  // Warm pairs for ready providers (stored snapshot after Ingestion activate).
   useEffect(() => {
     void (async () => {
       try {

@@ -8,7 +8,7 @@ Builds on [ingest-list-assets](ingest-list-assets.md) and [ingest-provider-facad
 
 | # | Choice |
 |---|--------|
-| Secrets / config | **`DATA_DIR` catalog** (Next server-side read/write only; never send secret values to the browser) |
+| State | **Postgres**: activation, status, progress, non-secret config (`provider`) and the setup snapshot (`provider_pair`). Secrets stay in a file under `DATA_DIR` and are never sent to the browser |
 | Activate | **Activate = setup**; provider becomes selectable in Experiments **only after setup succeeds** |
 | Feedback | Setup shows **status** (`inactive` / `setting_up` / `ready` / `failed`) and **progress** when applicable |
 | First provider | **Binance** (public; no API key required today; schema supports secret fields for later providers) |
@@ -25,11 +25,15 @@ Builds on [ingest-list-assets](ingest-list-assets.md) and [ingest-provider-facad
 ```text
 DATA_DIR/
   providers/
-    catalog.json          # activation + non-secret config + status/progress
-    secrets.json          # mode 0600; API keys etc. — never returned by API
-    binance/
-      pairs.json          # durable ListPairs snapshot written by setup
+    secrets.json          # mode 0600; API keys etc. — never returned by API, never in Postgres
 ```
+
+Postgres (`db/schema/connector`, `db/sqlc/queries/connectors.sql`, `src/experimentapi/pgcatalog/connectors.go`):
+
+- `provider` (one row per provider): `activated`, `status`, `error`, `progress_label`/`progress_done`/`progress_total`, `config` (jsonb, SQL NULL when never saved), `updated_at_ms`.
+- `provider_pair` (provider_id, base, quote, ordinal): the snapshot of a successful setup, in upstream order.
+
+The connector routes need `DATABASE_URL`; without it they answer 503 with a message. The orchestrator uses the same `pgcatalog` connection as the experiment catalog (its own pool).
 
 ## Setup (Binance)
 
@@ -38,10 +42,12 @@ On Activate / Retry:
 1. Persist submitted config/secrets.
 2. `status=setting_up`, progress label e.g. “Fetching markets”.
 3. Call adapter `ListPairs` via orchestrator.
-4. Write `providers/binance/pairs.json`; update progress to pair count.
-5. `status=ready`, `activated=true`. On error: `status=failed`, `activated=false`.
+4. Fetch the markets; progress becomes the pair count.
+5. One transaction: `status=ready`, `activated=true` and the snapshot in `provider_pair` (replacing the previous one). On error: `status=failed`, `activated=false`, the previous snapshot is kept.
 
-Deactivate: mark inactive; keep pairs+config on disk; remove from Experiments immediately.
+Deactivate: mark inactive; keep the snapshot and config in Postgres; remove from Experiments immediately.
+
+Upgrade caveat: the earlier file-based catalog (`DATA_DIR/providers/catalog.json`, `providers/binance/pairs.json`) is not imported. Existing installs re-activate Binance in Connectors once after the upgrade.
 
 ## API
 
@@ -53,7 +59,9 @@ Deactivate: mark inactive; keep pairs+config on disk; remove from Experiments im
 | `PATCH` | `/api/v1/providers/{id}` | Upsert public config + optional secrets |
 | `POST` | `/api/v1/providers/{id}/activate` | Start setup |
 | `POST` | `/api/v1/providers/{id}/deactivate` | Drop from ready set |
-| `GET` | `/api/v1/providers/{id}/pairs` | Disk snapshot only (provider must be ready); feeds Experiments market multi-select |
+| `GET` | `/api/v1/providers/{id}/pairs` | Stored snapshot when the provider is ready, otherwise the markets fetched live (nothing is stored); feeds Experiments market multi-select |
+
+Not implemented (the list above is the plan): `GET /api/v1/providers/ready`, `PATCH /api/v1/providers/{id}`. The readiness filter for Experiments is the `status` in `GET /api/v1/providers`.
 
 ## Acceptance
 
@@ -61,7 +69,7 @@ Deactivate: mark inactive; keep pairs+config on disk; remove from Experiments im
 - Before activation (or after deactivate), absent from Experiments.
 - Secret values never appear in network responses or client bundles.
 - Setup failure surfaces error + Retry.
-- Reload restores catalog state from `DATA_DIR`.
+- Reload restores the provider state from Postgres (re-activation is needed once after the move from the file catalog).
 
 ## Out of scope
 
