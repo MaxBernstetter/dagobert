@@ -5,7 +5,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## What works today
 
 - **Live pipeline.** Five Go job containers per 3-hour UTC candle: ingest, technical indicators, signal, market action, execution. The orchestrator runs them in order and places a paper order on the Bybit EU demo host.
-- **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. The Go engine is the default. The C++ engine is opt-in with `EXPERIMENT_ENGINE=cpp` and covers `ma-cross` and `signal-consensus`; it is equivalence-tested against Go (`TestSmaCrossGoVsCppEquivalence`, `TestConsensusGoVsCppEquivalence`).
+- **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. Experiments run on the C++ engine only (`ma-cross` and `signal-consensus`); the Go engine and `EXPERIMENT_ENGINE` were removed (#164). The replayed output is checked by `TestSmaCrossCppReplayConsistent` and `TestConsensusCppReplayConsistent`.
 - **Decimal candles.** Parquet candles use fixed-scale decimals; the reader also accepts the old string schema (`task data:migrate-candles`).
 - **Position sizing.** Unit risk, heat and max units, in both engines ([position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md)).
 
@@ -18,12 +18,12 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 
 ## Measured performance
 
-The figures in [05-cpp-benchmark](development/05-cpp-benchmark.md) were measured before #164 (SQLite catalog, Postgres fill COPY) and are kept as history. Since #164 nothing is measured: the Parquet instance files have no numbers yet (TODO in that document).
+3000 ma-cross instances on the C++ engine, 22 CPUs, throwaway Postgres 16 ([05-cpp-benchmark](development/05-cpp-benchmark.md)): the run takes 14.9 s (zigzag lake, median of three) and 16.9 s (random-walk lake, median of three); all instances complete and the experiment directory is 232 MiB and 484 MiB. The older figures in that document are Go-era history.
 
 ## Next steps, in priority order
 
-1. Measure the instance Parquet files: write cost per instance, file size, `/activity` and `/chart-series` latency, on a 3000-instance run ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). Record the numbers in [05-cpp-benchmark](development/05-cpp-benchmark.md).
-2. Make C++ the default experiment engine, then move the live path to C++ and delete the Go jobs. No issue yet; needs more validation first (see [architecture/backtesting.md](architecture/backtesting.md)).
+1. Measure the browser load of the instance detail page (`/activity`, `/chart-series`) on a 3000-instance experiment ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). The run and file numbers are in [05-cpp-benchmark](development/05-cpp-benchmark.md).
+2. Move the live path to C++ and delete the Go jobs. No issue yet; needs more validation first (see [architecture/backtesting.md](architecture/backtesting.md)).
 3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.

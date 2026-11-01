@@ -161,7 +161,7 @@ Persistence constants (not env): batch 200 results or 250 ms, queue `min(instanc
 ## Known limits
 
 - Experiments completed before the Parquet instance files (#164) have no `trade_outcomes.parquet`, and `fills`/`orders`/`journals` are missing too. Their activity and charts are empty and their trade outcomes are gone from `/kpis` and `/performance`. Re-running the experiment rebuilds them; re-finalizing without re-running does not (the prepare cache is removed at finalize). This is a deliberate behaviour change; no backfill exists.
-- Fills are not written to Postgres any more, so large runs no longer pay for a fill COPY. Write cost of the new files is not measured yet (TODO in `docs/development/05-cpp-benchmark.md`).
+- Fills are not written to Postgres any more, so large runs no longer pay for a fill COPY. The Parquet files of a 3000-instance run take 232 MiB (zigzag lake) and 484 MiB (random walk) and the run takes 14.9 s and 16.9 s (medians of three); see `docs/development/05-cpp-benchmark.md`.
 - Single-flight: the orchestrator runs one backtest or experiment job at a time; the run hook silently returns if one is active, and job status is lost on orchestrator restart.
 - The legacy single-backtest path (`backtest.Run`, `BACKTEST_ID`, `POST /backtest/run`, `task backtest-run`) is still wired and untouched by this flow.
 - The C++ engine supports only `ma-cross` and `signal-consensus`.
