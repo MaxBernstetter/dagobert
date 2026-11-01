@@ -60,14 +60,19 @@ func scratchDB(t *testing.T) string {
 	return url
 }
 
+// fakeBinanceHits counts the exchangeInfo requests the fake served since the test began.
+var fakeBinanceHits atomic.Int32
+
 // fakeBinance serves /api/v3/exchangeInfo with three spot markets, or a 500 while fail is set.
 func fakeBinance(t *testing.T, fail *atomic.Bool) string {
 	t.Helper()
+	fakeBinanceHits.Store(0)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v3/exchangeInfo" {
 			http.NotFound(w, r)
 			return
 		}
+		fakeBinanceHits.Add(1)
 		if fail.Load() {
 			http.Error(w, "upstream down", http.StatusInternalServerError)
 			return

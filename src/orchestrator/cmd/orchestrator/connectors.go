@@ -74,6 +74,7 @@ var providerSetupMu sync.Mutex
 func mountConnectors(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/providers", handleListProviders)
 	mux.HandleFunc("GET /api/v1/providers/{id}", handleGetProvider)
+	mux.HandleFunc("PATCH /api/v1/providers/{id}", handlePatchProvider)
 	mux.HandleFunc("POST /api/v1/providers/{id}/activate", handleActivateProvider)
 	mux.HandleFunc("POST /api/v1/providers/{id}/deactivate", handleDeactivateProvider)
 	mux.HandleFunc("GET /api/v1/connectors/trading", handleTradingConnectors)
@@ -267,9 +268,7 @@ func handleActivateProvider(w http.ResponseWriter, r *http.Request) {
 	zero := 0
 	entry.Progress = &providerProgress{Label: "Fetching markets", Done: &zero, Total: nil}
 	entry.UpdatedAtMs = time.Now().UnixMilli()
-	if entry.Config == nil {
-		entry.Config = map[string]string{"baseUrl": binanceProvider.fields[0].Default}
-	}
+	// The default base URL is shown, not stored: a stored value would hide BINANCE_BASE_URL.
 	if err := saveProviderEntry(r.Context(), store, binanceProvider.id, entry); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -289,7 +288,8 @@ func finishProviderSetup(store *pgcatalog.Catalog) {
 		log.Printf("connectors: load %s: %v", binanceProvider.id, err)
 		return
 	}
-	pairs, err := listProviderPairs(ctx, binanceProvider.id)
+	// A setup always asks the exchange: the in-memory pairs cache must not answer an activation.
+	pairs, err := listProviderPairs(ctx, binanceProvider.id, true)
 	if err != nil {
 		entry.Status = "failed"
 		entry.Activated = false

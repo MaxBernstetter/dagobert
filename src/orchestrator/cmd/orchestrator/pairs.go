@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -59,7 +58,7 @@ func handleProviderPairs(w http.ResponseWriter, r *http.Request) {
 			out = append(out, row{Base: p.Base, Quote: p.Quote})
 		}
 	} else {
-		pairs, err := listProviderPairs(r.Context(), id)
+		pairs, err := listProviderPairs(r.Context(), id, false)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
@@ -77,15 +76,21 @@ func handleProviderPairs(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func listProviderPairs(ctx context.Context, id string) ([]provider.Pair, error) {
-	pairsCacheMu.Lock()
-	if e, ok := pairsCache[id]; ok && time.Since(e.at) < pairsCacheTTL {
+// listProviderPairs returns the markets of a provider from its effective base URL. fresh bypasses the
+// in-memory cache (activation asks the exchange); the result is cached either way.
+func listProviderPairs(ctx context.Context, id string, fresh bool) ([]provider.Pair, error) {
+	base := providerBaseURL(ctx, id)
+	key := id + "|" + base
+	if !fresh {
+		pairsCacheMu.Lock()
+		if e, ok := pairsCache[key]; ok && time.Since(e.at) < pairsCacheTTL {
+			pairsCacheMu.Unlock()
+			return e.pairs, nil
+		}
 		pairsCacheMu.Unlock()
-		return e.pairs, nil
 	}
-	pairsCacheMu.Unlock()
 
-	ad, err := openProviderAdapter(id)
+	ad, err := openProviderAdapter(id, base)
 	if err != nil {
 		return nil, err
 	}
@@ -94,18 +99,14 @@ func listProviderPairs(ctx context.Context, id string) ([]provider.Pair, error) 
 		return nil, err
 	}
 	pairsCacheMu.Lock()
-	pairsCache[id] = pairsCacheEntry{at: time.Now(), pairs: pairs}
+	pairsCache[key] = pairsCacheEntry{at: time.Now(), pairs: pairs}
 	pairsCacheMu.Unlock()
 	return pairs, nil
 }
 
-func openProviderAdapter(id string) (provider.Adapter, error) {
+func openProviderAdapter(id, base string) (provider.Adapter, error) {
 	switch id {
 	case "binance":
-		base := strings.TrimSpace(os.Getenv("BINANCE_BASE_URL"))
-		if base == "" {
-			base = "https://data-api.binance.vision"
-		}
 		return binance.New(binance.Options{BaseURL: base})
 	default:
 		return nil, fmt.Errorf("unknown provider %s", id)

@@ -465,7 +465,7 @@ func runCatalogDocker(ctx context.Context, idEnv, id, label, containerName strin
 		"-e", "DATA_DIR=/data",
 		"-e", idEnv+"="+id,
 		"-e", "VENUE_SIMULATE=1",
-		"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
+		"-e", "BINANCE_BASE_URL="+jobBaseURL(),
 	)
 	if net := composeNetwork(ctx); net != "" {
 		args = append(args, "--network", net)

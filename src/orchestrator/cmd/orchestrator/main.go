@@ -355,7 +355,7 @@ func runJobLocked(ctx context.Context, in taskInput) (int, error) {
 			from = ingestFrom(provider, base, quote, barOpen)
 		}
 		args = append(args,
-			"-e", "BINANCE_BASE_URL="+env("BINANCE_BASE_URL", "https://data-api.binance.vision"),
+			"-e", "BINANCE_BASE_URL="+jobBaseURL(),
 			"dagobert-ingest",
 			"-from", strconv.FormatInt(from, 10),
 			"-to", strconv.FormatInt(in.CandleClose, 10),
