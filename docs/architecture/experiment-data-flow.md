@@ -39,14 +39,11 @@ The simulate phase, per instance:
 
 ```mermaid
 flowchart TD
-    S["RunExperimentSimulate"] --> E{"EXPERIMENT_ENGINE"}
-    E -->|go| G["EXPERIMENT_SIM_WORKERS goroutines<br/>FastSimulatedPipelineOpts per instance"]
-    E -->|cpp| C1["BuildBarRange once per symbol"]
-    C1 --> C2["shards per symbol and playbook<br/>RunSweep (strategy binary --sweep)"]
+    S["RunExperimentSimulate"] --> C1["BuildBarRange once per symbol"]
+    C1 --> C2["shards per symbol and playbook<br/>RunSweep (C++ strategy binary --sweep)"]
     C2 --> C3["ReplayActions"]
-    C3 --> C4["RunKPIWorkers (ReplayKPI)"]
-    G --> Q["result queue (instanceResult)"]
-    C4 --> Q
+    C3 --> C4["RunKPIWorkers (ReplayKPI, Go)"]
+    C4 --> Q["result queue (instanceResult)"]
     Q --> PS["runPersister (one goroutine)"]
     PS --> R["report.json (+ S3 copy) and Parquet: fills, orders, journals, trade outcomes"]
     PS --> PG["Postgres: period stats, UPDATE instances (status, timing, metrics), progress"]
@@ -112,27 +109,18 @@ Production `technical_indicator.sqlite` is never written by an experiment.
 
 ## One instance in detail
 
-Both paths share: the playbook config is resolved and validated per slug, the run uses `VENUE_SIMULATE=1`, sizing comes from `allocate.PolicyFromEnv()` (`ALLOC_*`, copied from the experiment settings by `applyExperimentEnv`), and the fill model is `execrunner.SimulateBarWithModel` (`src/internal/venue/sim`: spread, slippage and fee in bps against the bar close).
-
-### Go path
-
-1. `FastSimulatedPipelineOpts(ws, win, playbook, sym, closes, opts)` (`src/calculation-signal/runner/fast_pipeline.go`) with `Slim`, `SkipSampler` and `Capture`: no signal or action SQLite rows, no execution SQLite and no wallet write.
-2. Per bar of the shared `kpi.Window`: `Strategy.Evaluate(framework.Context)`, sizing (`sizing.Unit`, planned size), then `SimulateBarWithModel` updates the wallet and the captured orders and journals (`execrunner.Activity`).
-3. `FillsFromActivity` derives the fills from the captured journals; `BuildInstanceReport` (`runner/instance_report.go`) builds KPIs, monthly and yearly stats and series in memory.
-4. The result goes to the queue; the persister writes `report.json` and the Parquet files.
-
-### C++ path
+The experiment engine is C++ only. The strategy decides in C++; Go replays the decisions with the same fill model as the live pipeline, so the numbers an experiment shows are the numbers the live simulation would produce for the same actions.
 
 1. `BuildBarRange` (`src/calculation-technical-indicator/runner/bar_range.go`) once per symbol: aggregated bars, sub-candle closes, warm-up bars.
 2. `cppSimulate` (`src/backtest/cpp_engine.go`) groups instances by symbol and playbook, cuts shards (see knobs), and per shard `BuildSweepRequest` then `RunSweep` runs `strategy-sma-cross` or `strategy-signal-consensus` with `--sweep` (protobuf `SweepRequest` in, run report out, `src/backtest/cpp_sweep.go`).
-3. `ReplayActions` turns the reported sized actions into `ReplayAction`s; `RunKPIWorkers` -> `ReplayKPI` (`kpi_worker.go`) replays them against bar closes with the same `SimulateBarWithModel`, rescales sizes by replayed wallet equity over the C++ book equity, and builds the report with `BuildInstanceReportFromSim`. No disk or database access.
-4. Same queue and persister as the Go path.
+3. `ReplayActions` turns the reported sized actions into `ReplayAction`s. `RunKPIWorkers` -> `ReplayKPI` (`src/calculation-signal/runner/kpi_worker.go`) replays them against the bar closes with `execrunner.SimulateBarWithModel` (`src/internal/venue/sim`: spread, slippage and fee in bps against the bar close), rescales sizes by the replayed wallet equity over the C++ book equity, and builds the report with `BuildInstanceReportFromSim`. The orders, journals and fills it returns are the instance files. No disk or database access.
+4. The same queue and persister as before. A run uses `VENUE_SIMULATE=1`; sizing comes from `allocate.PolicyFromEnv()` (`ALLOC_*`, copied from the experiment settings by `applyExperimentEnv`).
 
-`ReplayKPI` returns the same orders and journals as the Go path (`KPIResult.Orders`, `KPIResult.Journals`), so both engines write identical instance files. No per-instance fallback to Go: an unsupported playbook or missing binary fails the instance; a crashed shard fails all its instances.
+No fallback: an unsupported playbook or a missing binary fails the instance with the variable name; a crashed shard fails all its instances.
 
-### Where the two paths must agree
+### Checks
 
-The Go path cannot trade on its first evaluated bar, so the C++ `trade_from_ms` is one bar later. `TestSmaCrossGoVsCppEquivalence` and `TestConsensusGoVsCppEquivalence` (`src/backtest/cpp_sweep_test.go`) compare fills (timestamp and side exact, quantity and price within 1e-9) and KPIs (within 1e-6). Details in [backtesting.md](backtesting.md).
+`src/backtest/cpp_replay_test.go` runs the sweep and the replay over seeded lakes and checks the persisted shape: one journal and one fill order per fill, the same values in both, and period statistics that add up to the trade outcomes. The configs must fire vol_cut and pyramid (ma-cross) and close trades. Details in [backtesting.md](backtesting.md).
 
 ## Progress and what the frontend polls
 
@@ -157,9 +145,8 @@ Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API (routes are mounted only when set) |
-| `EXPERIMENT_ENGINE` | `go` | `go` or `cpp`; anything else fails simulate |
-| `EXPERIMENT_SIM_WORKERS` | 4 | Go compute goroutines |
-| `EXPERIMENT_CPP_PROCESSES` | CPU count | concurrent `--sweep` processes |
+| `EXPERIMENT_SIM_WORKERS` | CPU count | Go KPI replay workers (CPU bound) |
+| `EXPERIMENT_CPP_PROCESSES` | CPU count | concurrent C++ `--sweep` processes |
 | `EXPERIMENT_CPP_SHARD_MAX` | 500 | upper bound of instances per shard (shard = `ceil(n/processes)` capped here) |
 | `CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN` | set in the worker image (`/usr/local/bin/...`) | C++ strategy executables |
 | `EXPERIMENT_RUN_BACKEND` | `docker` | `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |

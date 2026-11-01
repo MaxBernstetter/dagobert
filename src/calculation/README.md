@@ -15,7 +15,7 @@ Invoking the target of the other preset fails with a message naming the right pr
 
 Add a strategy by calling `dagobert_register_strategy_run(<exe> <fixture-config.json>)` in its `CMakeLists.txt` (see `strategies/sma-cross`). Executables for the experiment engine are picked via `CPP_SMA_CROSS_BIN` (`build/<preset>/strategies/sma-cross/strategy-sma-cross`) and `CPP_SIGNAL_CONSENSUS_BIN` (`build/<preset>/strategies/consensus/strategy-signal-consensus`); the `dagobert-backtest` image sets both.
 
-Benchmark and baseline: `docs/development/05-cpp-benchmark.md` (`task cpp:bench`).
+Benchmark and baseline: `docs/development/05-cpp-benchmark.md` (the experiment benchmark `TestBenchPersistGrid`).
 
 ## C++ dependency build
 

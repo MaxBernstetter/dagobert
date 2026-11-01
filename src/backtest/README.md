@@ -16,16 +16,16 @@ Runs experiments: many strategy instances over historical candles, using the sam
 - `store/`: the legacy single-backtest catalog (`backtests.sqlite`, table `backtest`) and the shared experiment value types (`types.go`). The SQLite experiment catalog is gone.
 - `run.go`: the older single-backtest path (`BACKTEST_ID`, `task backtest-run`).
 
-## Engines
-`EXPERIMENT_ENGINE=go|cpp` (`cpp_engine.go`); default `go`, anything else fails. Go: `EXPERIMENT_SIM_WORKERS` (default 4) goroutines call `signalrunner.FastSimulatedPipelineOpts`. C++: instances are grouped by symbol and playbook and sharded (`EXPERIMENT_CPP_SHARD_MAX`, `EXPERIMENT_CPP_PROCESSES`); `cpp_sweep.go` builds the protobuf `SweepRequest`, runs the binary named by `CPP_SMA_CROSS_BIN` or `CPP_SIGNAL_CONSENSUS_BIN`, and replays the actions in Go (`kpi_worker.go` in `calculation-signal/runner`). Only ma-cross and signal-consensus are supported; there is no Go fallback, an unsupported playbook or missing binary fails the instance. The live pipeline does not use C++.
+## Engine
+Experiments run on the C++ engine only (`cpp_engine.go`; the Go engine and `EXPERIMENT_ENGINE` were removed). Instances are grouped by symbol and playbook and sharded (`EXPERIMENT_CPP_SHARD_MAX`, default 500). `EXPERIMENT_CPP_PROCESSES` (default: one per CPU) is the number of concurrent `--sweep` processes. `cpp_sweep.go` builds the protobuf `SweepRequest`, runs the binary named by `CPP_SMA_CROSS_BIN` or `CPP_SIGNAL_CONSENSUS_BIN`, and `kpi_worker.go` (`calculation-signal/runner`) replays the actions in Go with `EXPERIMENT_SIM_WORKERS` workers (default: one per CPU). Only ma-cross and signal-consensus are supported; an unsupported playbook or a missing binary fails the instance with a clear error. The live pipeline does not use C++.
 
 ## Persistence
 `persist_pipeline.go`: compute goroutines push results into a queue; one persister batches (up to 200 or 250 ms), writes `report.json` and the instance Parquet files (fills, orders, journals, trade outcomes; a failed instance removes them), then commits Postgres with retries and bisection down to a single instance. Postgres holds period stats, status, timing and metrics (COPY, `pgcatalog/instance_batch.go`). Compute never touches the database.
 
 ## Tests and benchmarks
-- Unit tests: `go test ./src/backtest/...`. System tests: `tests/system/experiment` (needs Postgres, see `src/experimentapi/README.md`); experiments are created in the scratch database by `createExperimentPG`.
-- Go-vs-C++ equivalence: `TestSmaCrossGoVsCppEquivalence`, `TestConsensusGoVsCppEquivalence` in `cpp_sweep_test.go`; skipped unless the binary is built (`task cpp:build`) or its `CPP_*_BIN` is set.
-- `bench_test.go` (`BenchmarkGoExperiment`, needs `BENCH_LAKE_DIR`) and `task cpp:bench`; see `docs/development/05-cpp-benchmark.md`.
+- Unit tests: `go test ./src/backtest/...`. System tests: `tests/system/experiment` (needs Postgres, see `src/experimentapi/README.md`); experiments are created in the scratch database by `createExperimentPG`. The experiment tests need the C++ binaries (`CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN`).
+- Replay consistency: `TestSmaCrossCppReplayConsistent`, `TestConsensusCppReplayConsistent` in `cpp_replay_test.go`; they skip without the binaries.
+- The persistence benchmark: `TestBenchPersistGrid` (`tests/system/experiment/bench_persist_test.go`, `BENCH_INSTANCES`); see `docs/development/05-cpp-benchmark.md`.
 
 ## Before changing
-Go and C++ must produce the same results: change both or update the equivalence tests. Keep persistence out of the compute path.
+The replay must keep the live fill model (`SimulateBarWithModel`) and the persisted shape the replay consistency tests check. Keep persistence out of the compute path.

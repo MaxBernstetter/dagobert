@@ -13,7 +13,7 @@ There are two ways to use it:
 flowchart LR
   subgraph exp [Experiments]
     UI[Browser frontend] --> API[Experiment API]
-    API --> W[Experiment worker container<br/>Go engine or C++ engine]
+    API --> W[Experiment worker container<br/>C++ sweep + Go KPI replay]
     API --> PG[(Postgres)]
     W --> PG
   end
@@ -37,7 +37,7 @@ flowchart LR
 ```
 
 - The Experiment API runs inside the orchestrator process. It is only mounted when `DATABASE_URL` is set, so it needs Postgres. Compose sets this for you.
-- The worker is the `dagobert-backtest` image. `EXPERIMENT_ENGINE=go` is the default. `cpp` is opt-in and supports `ma-cross` and `signal-consensus` only.
+- The worker is the `dagobert-backtest` image. Experiments always run on the C++ engine (`ma-cross` and `signal-consensus` only; other playbooks fail the experiment). The Go code only replays the C++ actions into fills and reports, with the same fill model as the live pipeline.
 - The live pipeline always uses the Go jobs.
 - The frontend talks only to the Experiment API. It does not read `data/`.
 
@@ -83,7 +83,7 @@ Run `task --list` for all of them.
 | `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |
 | `task seed-demo-year` | Wipe `data/`, backfill 1 year of BTC, run `ma-cross` with a simulated venue. |
 | `task test` | System tests for the job images. |
-| `task cpp:deps`, `cpp:build`, `cpp:test`, `cpp:bench` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test, benchmark against Go. |
+| `task cpp:deps`, `cpp:build`, `cpp:test` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test. The experiment benchmark is `TestBenchPersistGrid`, see `docs/development/05-cpp-benchmark.md`. |
 | `task db:up`, `db:migrate`, `db:diff name=...`, `db:sqlc` | Postgres: start it, apply Atlas migrations, generate a migration, regenerate sqlc code. |
 | `task proto:lint`, `proto:gen`, `proto:breaking` | Protobuf checks and code generation. |
 | `task data:migrate-candles` | Rewrite old string candle files to the decimal schema. |
