@@ -145,7 +145,9 @@ Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`).
 | `GET .../{id}/progress` | status, stage (1 prepare, 2 market data, 3 indicators, 4 instance simulation), instance done/total, failed count | polled every 1500 ms while selected (`components/experiments-panel.tsx`), then the instance page reloads |
 | `GET .../{id}/instances` | paginated, SQL sort and filter on metric columns | instance table |
 | `GET .../instances/{instanceId}` | one instance row | detail |
-| `.../report`, `.../kpis`, `.../activity`, `.../chart-series?from=&to=` (unix s) | report, win-rate ladders, fills, chart data | instance detail |
+| `.../report`, `.../kpis`, `.../activity`, `.../chart-series?from=&to=[&maxPoints=N]` (unix s) | report, win-rate ladders, fills, chart data | instance detail |
+
+Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip`). `maxPoints` on `chart-series` buckets the candles to at most N (OHLC aggregated, indicators at the bucket's last candle); portfolio and markers stay exact. The frontend sends about two candles per viewport pixel (400 to 4000), and each zoom or range preset fetches its window with the same budget. See `src/experimentapi/README.md`.
 | `GET .../{id}/performance` | experiment-level reduction | performance view |
 | `GET .../{id}/status` | aggregate status (`status.go`) | not used by `api.ts` |
 | `POST .../{id}/run`, `POST .../{id}/cancel`, `DELETE .../{id}` | actions | buttons |

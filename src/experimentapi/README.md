@@ -5,6 +5,10 @@ The HTTP API behind the experiments UI, backed by Postgres. It creates experimen
 ## Routes
 All under `/api/v1/experiments`, registered in `api.go` (`Mount`): list, `strategies`, create (manual list or grid), get, delete, `{id}/status`, `{id}/progress`, `{id}/performance`, `{id}/instances`, `{id}/instances/{instanceId}` plus `/chart-series`, `/report`, `/kpis`, `/activity`, and `POST {id}/run` and `{id}/cancel`.
 
+## Response encoding and budgets
+- Gzip: every route is wrapped in `gzipHandler` (`gzip.go`, applied in `Mount`). A request with `Accept-Encoding: gzip` (q > 0) gets a gzip body with the same status and `Content-Type`; without it the body is unchanged. Every response carries `Vary: Accept-Encoding`.
+- `GET .../instances/{instanceId}/chart-series?from=&to=[&maxPoints=N]` (protobuf `ChartSeries`): with `maxPoints` above 0 and more candles in the window than that, the candles are grouped into at most N consecutive buckets of equal size (the last may be smaller). Bucket: open of the first candle, high and low over the bucket, close of the last, time of the first. Each indicator takes its value at the bucket's last candle. Portfolio and markers are not downsampled. Absent, 0 or negative keeps every candle; a non-integer is a 400. The unbudgeted response is unchanged. Bucketing is `candleBuckets` and `downsampleSeries` in `chart.go`.
+
 ## Layout
 - `handlers.go`, `create.go`, `grid.go`: list/create/run/cancel; creation materializes instances asynchronously (status `materializing`, then `draft`).
 - `instance_detail.go`, `instance_files.go`, `chart.go`, `performance_api.go`, `status.go`, `strategies.go`: read endpoints. Instance activity, chart series and trade outcomes are read from the instance Parquet files (`src/internal/instanceparquet`); a missing file is an empty result, not an error.

@@ -25,6 +25,7 @@ Everything lives under `src/`; the `@` alias (`vite.config.ts`, `tsconfig.json`)
 
 - `main.tsx`, `App.tsx`: entry point and routes (react-router).
 - `api.ts`, `wikiCatalog.ts`, `WikiPages.tsx`, `ChartPanel.tsx`: API client, wiki catalog and pages, chart.
+- Instance charts (`components/strategy-charts.tsx`, `time-chart.tsx`) load `chart-series` with `maxPoints` from `lib/chart-series-cache.ts` (`chartMaxPoints`, `chartSeriesWindowUrl`). Zoom and range presets refetch their window with the same budget; buy and hold uses the full-range series. The data is cached by URL. Rendering speed is not covered by a test suite.
 - `components/`: UI (`components/ui/` holds the shadcn primitives; `link.tsx` wraps the router link).
 - `lib/`: helpers and API types; `lib/gen/` is generated protobuf-es output (`task proto:gen`).
 - `hooks/`, `types/`: React hooks and shared types.
