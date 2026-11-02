@@ -1,6 +1,6 @@
 # Experiment and instance data flow
 
-How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md); the live per-candle pipeline is in [pipeline-data-flow.md](pipeline-data-flow.md).
+How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md).
 
 - **Experiment**: one row with shared settings (range, capital, costs, provider) and N instances.
 - **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace is `data/experiments/<experiment_id>/instances/<instance_id>/` (`store.ExperimentWorkspaceDir`).

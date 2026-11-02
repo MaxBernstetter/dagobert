@@ -5,14 +5,12 @@ dotenv: ['.env']
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
   HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/calculation-signal/playbooks"
-  HOST_SECRETS_FILE: "{{.ROOT_DIR}}/.secrets"
 
 env:
   DOCKER_BUILDKIT: "1"
   COMPOSE_BAKE: "true"
   HOST_DATA_DIR: "{{.HOST_DATA_DIR}}"
   HOST_PLAYBOOKS_DIR: "{{.HOST_PLAYBOOKS_DIR}}"
-  HOST_SECRETS_FILE: "{{.HOST_SECRETS_FILE}}"
   HOST_UID:
     sh: id -u
   HOST_GID:
@@ -47,13 +45,10 @@ tasks:
       - go run ./src/cmd/migrate-candles {{.DATA_DIR | default "./data"}}
 
   build:jobs:
-    desc: Build the four pipeline job images (orchestrator starts these)
+    desc: Build the data job images (ingest, technical indicators) and the backtest image
     cmds:
       - docker build -f docker/ingest/Dockerfile -t dagobert-ingest .
       - docker build -f docker/calculation-technical-indicator/Dockerfile -t dagobert-calculation-technical-indicator .
-      - docker build -f docker/calculation-signal/Dockerfile -t dagobert-calculation-signal .
-      - docker build -f docker/calculation-market-action/Dockerfile -t dagobert-calculation-market-action .
-      - docker build -f docker/execution/Dockerfile -t dagobert-execution .
       - docker build -f docker/backtest/Dockerfile -t dagobert-backtest .
 
   build:stack:
@@ -68,17 +63,15 @@ tasks:
       - task: build:stack
 
   up:
-    desc: Start Floci, the orchestrator, and the web app (run task build once for job images)
+    desc: Start Floci, Postgres, the orchestrator, and the web app (run task build once for job images)
     cmds:
       - mkdir -p data/parquet
-      - task: ensure-secrets
       - docker compose up
 
   up:build:
     desc: Build everything, then start the stack (production frontend)
     cmds:
       - mkdir -p data/parquet
-      - task: ensure-secrets
       - task: build
       - docker compose up
 
@@ -88,7 +81,6 @@ tasks:
       COMPOSE_FILE: compose.yaml
     cmds:
       - mkdir -p data/parquet
-      - task: ensure-secrets
       - docker compose build frontend
       - docker compose up
 
@@ -96,21 +88,7 @@ tasks:
     desc: Same as task up but runs compose file watch (sync/rebuild rules)
     cmds:
       - mkdir -p data/parquet
-      - task: ensure-secrets
       - docker compose up --watch
-
-  ensure-secrets:
-    internal: true
-    desc: Empty .secrets file so Compose does not create a directory on a missing bind mount
-    cmds:
-      - |
-        secrets="{{.HOST_SECRETS_FILE}}"
-        if [ -d "$secrets" ] && [ -z "$(ls -A "$secrets")" ]; then
-          rmdir "$secrets"
-        fi
-        if [ ! -e "$secrets" ]; then
-          touch "$secrets"
-        fi
 
   frontend:deps:
     desc: Sync package-lock into the frontend container node_modules volume (after new npm deps)
@@ -122,18 +100,13 @@ tasks:
     cmds:
       - docker compose down
 
-  run:
-    desc: Start one state-machine execution for CANDLE_CLOSE_MS
-    cmds:
-      - docker compose exec -T -e CANDLE_CLOSE_MS={{.CANDLE_CLOSE_MS | default "1700006400000"}} orchestrator /orchestrator run
-
   test:
     desc: System-test the job images
     cmds:
-      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/calculation-signal ./tests/system/execution ./tests/system/backtest ./tests/system/experiment -count=1 -timeout 20m
+      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/backtest ./tests/system/experiment -count=1 -timeout 20m
 
   seed-demo-year:
-    desc: Wipe data/, backfill 1y BTC, run ma-cross pipeline with simulated venue (no Bybit)
+    desc: Wipe data/, backfill 1y BTC and replay ma-cross over it with the simulated venue
     cmds:
       - mkdir -p data/parquet
       - go run ./src/cmd/seed-demo-year
@@ -212,12 +185,6 @@ tasks:
             -e TF_VAR_supabase_database_password \
             -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" apply "${TF_ARGS[@]}"
         fi
-
-  infra:seed-ssm:
-    desc: Step 2 — push .secrets BYBIT_* into Floci SSM
-    cmds:
-      - chmod +x scripts/seed-ssm-from-secrets.sh
-      - ./scripts/seed-ssm-from-secrets.sh
 
   db:up:
     desc: Start Compose Postgres (control plane)

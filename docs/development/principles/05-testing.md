@@ -32,8 +32,8 @@ There is no browser or contract test suite yet. Do not add one as a side effect 
 
 Tests prove correctness before a change ships. Operation proves it after:
 
-- After a run, `task run` for the new close shows the action and, when an order is sent, the fill and balances in the app.
-- A rerun of the same close does not place a second order.
+- After a run, the experiment shows its instances, fills and KPIs in the app.
+- A rerun of the same experiment gives the same results.
 
 ## Done means
 

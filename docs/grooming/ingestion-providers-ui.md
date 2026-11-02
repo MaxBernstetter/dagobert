@@ -1,6 +1,6 @@
 # Connectors page — provider activation
 
-UI at `/connectors` (Ingestion section) for configuring plugged-in market-data providers. Activate runs setup; only ready providers appear in Experiments. The Trading section lists Bybit credentials from `.secrets` (masked).
+UI at `/connectors` (Ingestion section) for configuring plugged-in market-data providers. Activate runs setup; only ready providers appear in Experiments.
 
 Builds on [ingest-list-assets](ingest-list-assets.md) and [ingest-provider-facade](ingest-provider-facade.md).
 
@@ -66,6 +66,5 @@ Deactivate: mark inactive; keep pairs+config on disk; remove from Experiments im
 ## Out of scope
 
 - New exchange adapters beyond descriptors
-- Migrating Bybit execution secrets into this catalog
 - Candle backfill UI on this page
 - Friendly asset names

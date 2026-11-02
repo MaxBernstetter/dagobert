@@ -14,7 +14,7 @@ export function rowExecutionHint(row: ActivityRow, live: LiveState): string | nu
     case "fill":
       return null;
     case "rejection":
-      return "Bybit rejected the order; see venue status. Retrying this candle will not send again unless the row is cleared.";
+      return "The simulated venue rejected the order; see venue status.";
     case "no-trade":
       return null;
     case "pending":
@@ -78,9 +78,9 @@ export function strategyPageIntro(awaiting: number, live: LiveState): string {
 export function executionKindHelp(kind: ActivityRow["kind"]): string {
   switch (kind) {
     case "fill":
-      return "Execution stored a fill from Bybit order history.";
+      return "Execution stored a simulated fill.";
     case "rejection":
-      return "Bybit rejected the order; we stored the error and will not re-send on retry.";
+      return "The simulated venue rejected the order; the error was stored.";
     case "no-trade":
       return "Strategy skipped trading; execution recorded no-trade without placing an order.";
     case "pending":

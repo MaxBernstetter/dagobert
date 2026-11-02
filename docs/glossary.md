@@ -2,22 +2,21 @@
 
 Alphabetical. Each entry names where to look in the code.
 
-- **action**: the sized decision the market-action job writes after a signal (`action` table in `calculation_signal.sqlite`). `src/calculation-market-action/`; in experiments the same shape is `experiment_instance_action`.
+- **action**: the sized decision derived from a signal (`action` table in `calculation_signal.sqlite`). `src/calculation-market-action/`; in experiments the same shape is `experiment_instance_action`.
 - **backfill**: fetching and processing historical candles ahead of time. The orchestrator serves it over HTTP on `:8090`. `src/orchestrator/cmd/orchestrator/backfill.go`.
-- **candle close**: the end of a 3-hour UTC candle; the orchestrator starts one pipeline execution per close. `nextBoundary` in `src/orchestrator/cmd/orchestrator/main.go`.
+- **candle close**: the end of a 3-hour UTC candle; the bar a playbook decides on.
 - **catalog**: the store of experiments and instances with their status and metrics. Postgres when `DATABASE_URL` is set, otherwise `data/backtests.sqlite`. `src/backtest/experiment_catalog.go`, `src/experimentapi/pgcatalog/`.
 - **consensus (signal-consensus)**: playbook that combines several indicator sub-signals into buy, hold or sell. `src/calculation-signal/playbooks/signal-consensus/`.
 - **equivalence test**: test that runs the Go and C++ engines on the same lake and compares fills and KPIs. `TestSmaCrossGoVsCppEquivalence`, `TestConsensusGoVsCppEquivalence` in `src/backtest/`.
 - **experiment**: one run definition with shared settings (date range, capital, costs, provider) and many instances. Stored in the catalog; workspace `data/experiments/<experiment_id>/`.
-- **fill**: an executed order (side, quantity, price, costs), real or simulated. `src/execution/`, `src/internal/venue/sim`; per-instance fills in `experiment_instance_fill`.
+- **fill**: a simulated order execution (side, quantity, price, costs). `src/execution/`, `src/internal/venue/sim`; per-instance fills in `experiment_instance_fill`.
 - **grid**: experiment mode that expands axes of parameter values into the cartesian product of instances (up to 20000). `src/experimentapi/grid.go`.
 - **instance**: one strategy configuration (playbook, strategy config, one symbol) inside an experiment. Workspace `data/experiments/<experiment_id>/instances/<instance_id>/` (`ExperimentWorkspaceDir`, `src/backtest/store/experiment.go`).
 - **KPI window**: the indicator values per bar, loaded into memory for replay. `kpi.Window`, `src/internal/kpi/window.go`; built by `BuildKPIRange` in `src/calculation-technical-indicator/runner/range.go`.
 - **KPI worker**: goroutine pool that replays C++ actions against bar closes and builds the instance report. `RunKPIWorkers`, `ReplayKPI` in `src/calculation-signal/runner/kpi_worker.go`.
 - **lake**: the Hive-partitioned Parquet candle store under `data/parquet/provider=.../base=.../quote=.../year=...` (or S3/Floci). `src/shared/datalayout.go`, `src/internal/lakeobject`.
-- **live pipeline**: the five-job per-candle flow: ingest, technical indicators, signal, market action, execution. `src/orchestrator/cmd/orchestrator/main.go`.
 - **ma-cross**: moving-average crossover playbook. `src/calculation-signal/playbooks/ma-cross/`; C++ in `src/calculation/`.
-- **orchestrator**: Go process that schedules executions, runs job images through Docker, and hosts the Experiment API and backfill. `src/orchestrator/`.
+- **orchestrator**: Go process that runs job images through Docker and hosts the Experiment API and backfill. `src/orchestrator/`.
 - **playbook**: a named trading strategy (`strategy.go`, `DESCRIPTION.md`) mapped by `src/calculation-signal/internal/playbooks/registry.go`.
 - **prepare / simulate / finalize**: the three phases of an experiment run. Prepare checks market data and builds indicators; simulate runs instances (in batches when `EXPERIMENT_RUN_BACKEND` is `batched` or `sfn`); finalize writes KPIs and sets the final status. `src/backtest/run_experiment_phases.go`.
 - **sizing (heat, unit risk, maxUnits)**: position sizing from a stop distance. `unitRiskPct` is the share of equity lost if the stop hits, `heatPct` caps total open risk, `maxUnits` caps pyramided buys. `src/calculation-signal/internal/sizing/sizing.go`, [position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md).

@@ -1,5 +1,5 @@
 ### Ingest and execution
-Lookup for the services: [Binance public klines](../ingest/binance-public-klines.md), [Bybit EU spot demo](../execution/bybit-eu-demo.md).
+Lookup for the services: [Binance public klines](../ingest/binance-public-klines.md).
 
 ### Development principles
 How to plan and implement a piece, and the Definition of done: [principles](principles/README.md).

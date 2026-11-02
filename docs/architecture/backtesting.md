@@ -66,7 +66,7 @@ Execution simulation uses `src/internal/venue/sim` (spread, slippage, and fee in
 
 ## What a run is
 
-A backtest replays a playbook over historical 3-hour bars and reports fills, wallet and KPIs, compared with buy-and-hold over the same range. It runs the same playbook code as the live pipeline. Results are simulated and are not a claim of profitable trading.
+A backtest replays a playbook over historical 3-hour bars and reports fills, wallet and KPIs, compared with buy-and-hold over the same range. Results are simulated and are not a claim of profitable trading.
 
 Retry, progress and outputs are described above. The Performance view compares total return with buy-and-hold from the first bar, starting from the same USDC.
 
@@ -95,7 +95,7 @@ Stored with each experiment and copied into the job environment when the run sta
 
 The starting book is initial USDC plus initial USDT, placed entirely in the venue quote (USDC for BTC and ETH). A buy may spend that whole balance, and a sell exits the whole base position. A run already stored with a lower target weight keeps that setting until it is edited and run again.
 
-The reference price is the close of the 3-hour bar. A buy fills at `close x (1 + spread/2 + slippage)`, a sell at `close x (1 - spread/2 - slippage)`, and the fee applies to the quote notional after that. Live simulated execution (`VENUE_SIMULATE=1`) uses the same `SIM_*` variables. The model uses fixed basis-point values, not the order book.
+The reference price is the close of the 3-hour bar. A buy fills at `close x (1 + spread/2 + slippage)`, a sell at `close x (1 - spread/2 - slippage)`, and the fee applies to the quote notional after that. The model uses fixed basis-point values, not the order book.
 
 ## Entrypoints
 

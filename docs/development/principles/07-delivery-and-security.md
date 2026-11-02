@@ -11,9 +11,7 @@ How changes get from a commit to a running stack, and the security rules every p
 
 ## Security
 
-- No secrets in the repository. Bybit keys live in the gitignored `.secrets` file, passed only to the execution container. Use `.env` for non-secret config.
-- Only the execution container holds venue credentials. The frontend and orchestrator never read `.secrets`.
-- The Bybit key is accepted only on the demo host (`https://api-demo.bybit.eu`). Do not point execution at a live endpoint.
+- No secrets in the repository. Use `.env` (gitignored) for local config. Dagobert needs no exchange credentials: it only reads public market data and simulates fills.
 - The orchestrator mounts the Docker socket. Keep it on the internal Compose network and off any public port.
 
 ## Checks when planning a piece

@@ -100,7 +100,7 @@ Shared across providers: `max_retries`, `backoff_factor`, `retry_wait`, `max_ret
 2. Skip every open time in that range that is already stored or marked unavailable for that provider.
 3. Fetch the missing closed `1h` klines. Drop a row whose close time is still in the future.
 4. Write the seven stored fields to Hive-style Parquet (columns as in [Candle file format](#candle-file-format)): `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.schema_version` (`2`), `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in `ingest.sqlite` with PK `(provider, base, quote, open_time)`.
-5. Do not compute indicators. Do not call Bybit.
+5. Do not compute indicators. Do not call any other exchange.
 
 `USDCUSDT` is ingested because the execution service converts a USDT close into USDC with `usdc_price = usdt_close / usdcusdt_close`.
 

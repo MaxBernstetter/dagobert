@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/internal/money"
-	"github.com/MaxBernstetter/dagobert/src/internal/venue/bybit"
 )
 
 // Enabled when historical seeding or local demo should not call the venue API.
@@ -96,16 +95,23 @@ func QuoteAndBase(dataDir, quoteCur, baseCur string) (quoteCash, baseHeld float6
 	return money.RoundCoin(quoteCur, s.Coins[quoteCur]), money.RoundCoin(baseCur, s.Coins[baseCur]), nil
 }
 
-// Balances returns snapshots compatible with market-action sizing (string field for live Bybit parity).
-func Balances(dataDir string) ([]bybit.BalanceSnapshot, error) {
+// BalanceSnapshot is one wallet coin balance, with the amount as a fixed-scale decimal string.
+type BalanceSnapshot struct {
+	Currency        string
+	CashBalance     string
+	TransactionTime int64
+}
+
+// Balances returns the paper wallet as balance snapshots for sizing.
+func Balances(dataDir string) ([]BalanceSnapshot, error) {
 	s, err := load(dataDir)
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now().UnixMilli()
-	out := make([]bybit.BalanceSnapshot, 0, len(s.Coins))
+	out := make([]BalanceSnapshot, 0, len(s.Coins))
 	for cur, amt := range s.Coins {
-		out = append(out, bybit.BalanceSnapshot{
+		out = append(out, BalanceSnapshot{
 			Currency:        cur,
 			CashBalance:     formatBalanceString(cur, amt),
 			TransactionTime: now,

@@ -9,9 +9,9 @@ export const STRATEGY_COLUMN_HELP = {
   rule: "Playbook rule (legacy column).",
   decision: "Sized market action decision.",
   execution:
-    "Whether the execution job stored an outcome. Hover a badge for this row. Not the same as Bybit’s transaction log.",
+    "Whether the execution job stored an outcome. Hover a badge for this row.",
   venue:
-    "Exchange order status after we called Bybit (e.g. Filled, Created). Empty when we never reached the venue.",
+    "Simulated order status (e.g. Filled). Empty when no order was placed.",
 } as const;
 
 export const STRATEGY_PAGE_HELP =

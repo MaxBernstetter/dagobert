@@ -3,7 +3,7 @@
 `tests/system/<job>/` builds the real job image with `docker build` and runs it against faked upstreams. The tests do not import service packages, so they prove behaviour at the container boundary.
 
 ## Layout
-- `system/ingest`, `calculation-technical-indicator`, `calculation-signal`, `execution`: one job each. Fakes: Binance over local HTTP, a seeded Parquet file or SQLite row, a fake Bybit response.
+- `system/ingest`, `calculation-technical-indicator`: one data job each. Fakes: Binance over local HTTP, a seeded Parquet file.
 - `system/backtest`: the single-backtest image; skipped without `DATA_DIR` and lake data.
 - `system/experiment`: the experiment path (`dagobert-backtest`): engine switch and C++ (`engine_test.go`), persistence to SQLite and Postgres (`persist_test.go`, `persist_pg_test.go`), ma-cross sizing, and a persistence benchmark (`bench_persist_test.go`, needs `BENCH_INSTANCES`).
 - `system/internal/lakefile`: shared helper that writes seeded candle files.

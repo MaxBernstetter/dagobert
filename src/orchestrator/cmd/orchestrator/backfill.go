@@ -297,7 +297,6 @@ func clearStaleBackfill() {
 	}
 	cur.Finished = time.Now().UTC().Format(time.RFC3339)
 	writeBackfill(cur)
-	writeLive(taskInput{Stage: cur.Kind}, false, 1)
 }
 
 func backfillTargets(symbols []string) ([]string, error) {
@@ -364,7 +363,6 @@ func runBackfill(ctx context.Context, req backfillRequest) {
 	status.Error = failed
 	status.Finished = time.Now().UTC().Format(time.RFC3339)
 	writeBackfill(status)
-	writeLive(taskInput{Stage: req.Kind}, false, 0)
 }
 
 func backfillPath() string {

@@ -1,5 +1,5 @@
 # execution
 
-The last job in the live pipeline and the only container with Bybit credentials. It reads the market action, places the paper order on the Bybit EU demo host, and stores the fill in `execution.sqlite`. Layout: `cmd/execution` (entrypoint), `internal/` (job logic, `venue/` clients `bybit`, `paper`, `sim`), `runner/` (container contract: args, env, exit codes 0/1/2).
+The simulated venue layer shared by experiments and the demo replay. There is no container and no real exchange: orders are filled in memory against the paper wallet with the cost model from `internal/venue/sim` and stored in `execution.sqlite` (per-instance workspace). Layout: `internal/job` (order and journal shapes), `internal/store` (SQLite tables), `runner/` (`SimulateBar`, `SimBatch`: one bar's decision to fill/rejection rows).
 
-Run through the orchestrator (`task run`). Test: `go test ./tests/system/execution -count=1` (fake Bybit; needs docker). `venue/sim` is also used by backtests, so changes there affect experiment results. Details: `docs/architecture/pipeline-data-flow.md`.
+`venue/sim` drives experiment results, so changes there change every report. Covered by `tests/system/experiment` and the unit tests in `src/internal/venue/sim`.

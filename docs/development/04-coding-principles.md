@@ -14,9 +14,7 @@ A test proves the correct result. It does not prove how the code is arranged.
 |---|---|
 | ingest | A faked HTTP API response (Binance klines). |
 | calculation-technical-indicator | A Parquet file of closed 1-hour candles. |
-| calculation-signal | A seeded database row (the KPI record). |
-| calculation-market-action | A seeded signal row and a faked Bybit balance response. |
-| execution | A seeded action row, and a faked venue response when the case sends an order. |
+| backtest / experiment | A seeded Parquet lake and an experiment definition. |
 
 The test does not import the service's packages. It builds the image, starts the container, and reads the outputs. The implementation stays unknown to the test.
 

@@ -73,7 +73,6 @@ func mountConnectors(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/providers/{id}", handleGetProvider)
 	mux.HandleFunc("POST /api/v1/providers/{id}/activate", handleActivateProvider)
 	mux.HandleFunc("POST /api/v1/providers/{id}/deactivate", handleDeactivateProvider)
-	mux.HandleFunc("GET /api/v1/connectors/trading", handleTradingConnectors)
 }
 
 func dataDir() string {
@@ -257,63 +256,4 @@ func finishProviderSetup() {
 	}
 	body, _ := json.MarshalIndent(map[string]any{"pairs": rows}, "", "  ")
 	_ = os.WriteFile(filepath.Join(dir, "pairs.json"), append(body, '\n'), 0o644)
-}
-
-func handleTradingConnectors(w http.ResponseWriter, r *http.Request) {
-	env := map[string]string{}
-	if path := strings.TrimSpace(os.Getenv("SECRETS_FILE")); path != "" {
-		if raw, err := os.ReadFile(path); err == nil {
-			env = parseSecretsEnv(string(raw))
-		}
-	}
-	key := strings.TrimSpace(env["BYBIT_API_KEY"])
-	secret := strings.TrimSpace(env["BYBIT_API_SECRET"])
-	host := strings.TrimSpace(env["BYBIT_BASE_URL"])
-	if host == "" {
-		host = "https://api-demo.bybit.eu"
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"connectors": []map[string]any{{
-			"id":          "bybit",
-			"label":       "Bybit",
-			"description": "EU spot demo — paper orders only. Credentials from .secrets.",
-			"host":        host,
-			"configured":  key != "" && secret != "",
-			"secrets": []map[string]any{
-				{"key": "BYBIT_API_KEY", "label": "API key", "configured": key != "", "masked": maskTail(key)},
-				{"key": "BYBIT_API_SECRET", "label": "API secret", "configured": secret != "", "masked": maskTail(secret)},
-			},
-		}},
-	})
-}
-
-func maskTail(value string) string {
-	if value == "" {
-		return ""
-	}
-	n := 7
-	if len(value) < n {
-		n = len(value)
-	}
-	return "***" + value[len(value)-n:]
-}
-
-func parseSecretsEnv(raw string) map[string]string {
-	out := map[string]string{}
-	for _, line := range strings.Split(raw, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-		trimmed = strings.TrimPrefix(trimmed, "export ")
-		eq := strings.IndexByte(trimmed, '=')
-		if eq <= 0 {
-			continue
-		}
-		key := strings.TrimSpace(trimmed[:eq])
-		value := strings.TrimSpace(trimmed[eq+1:])
-		value = strings.Trim(value, `"'`)
-		out[key] = value
-	}
-	return out
 }
