@@ -17,6 +17,8 @@ export type ExperimentSettings = {
   spreadBps?: number;
   slippageBps?: number;
   feeBps?: number;
+  /** C++ sweep processes; omitted or 0 = auto (one per CPU of the server). */
+  parallelism?: number;
 };
 
 export type Experiment = {

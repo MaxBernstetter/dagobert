@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include "types.hpp" // IWYU pragma: keep
 
 #include <cstddef>
 #include <optional>

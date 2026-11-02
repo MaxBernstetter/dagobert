@@ -60,7 +60,7 @@ func (q *Queries) CountInstancesFiltered(ctx context.Context, arg CountInstances
 }
 
 const getInstance = `-- name: GetInstance :one
-SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
+SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, strategy_config_json, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
 FROM experiment_instance
 WHERE experiment_id = $1 AND id = $2
 `
@@ -95,6 +95,7 @@ func (q *Queries) GetInstance(ctx context.Context, arg GetInstanceParams) (Exper
 		&i.CfgAtrStopMult,
 		&i.CfgMinBarsFlatAfterSell,
 		&i.CfgMinBarsLongBeforeSell,
+		&i.StrategyConfigJson,
 		&i.MetricDurationMs,
 		&i.MetricCagr,
 		&i.MetricMaxDrawdown,
@@ -125,16 +126,17 @@ INSERT INTO experiment_instance (
   status, error,
   cfg_fast_hr, cfg_slow_hr,
   cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear,
-  cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell
+  cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell,
+  strategy_config_json
 ) VALUES (
   $1, $2, $3, $4, $5,
   $6, $7, $8,
   $9, $10,
   $11, $12,
   $13, $14, $15, $16,
-  $17, $18, $19
+  $17, $18, $19, $20
 )
-RETURNING id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
+RETURNING id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, strategy_config_json, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
 `
 
 type InsertInstanceParams struct {
@@ -157,6 +159,7 @@ type InsertInstanceParams struct {
 	CfgAtrStopMult           pgtype.Float8 `json:"cfg_atr_stop_mult"`
 	CfgMinBarsFlatAfterSell  pgtype.Int4   `json:"cfg_min_bars_flat_after_sell"`
 	CfgMinBarsLongBeforeSell pgtype.Int4   `json:"cfg_min_bars_long_before_sell"`
+	StrategyConfigJson       pgtype.Text   `json:"strategy_config_json"`
 }
 
 func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) (ExperimentInstance, error) {
@@ -180,6 +183,7 @@ func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) 
 		arg.CfgAtrStopMult,
 		arg.CfgMinBarsFlatAfterSell,
 		arg.CfgMinBarsLongBeforeSell,
+		arg.StrategyConfigJson,
 	)
 	var i ExperimentInstance
 	err := row.Scan(
@@ -204,6 +208,7 @@ func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) 
 		&i.CfgAtrStopMult,
 		&i.CfgMinBarsFlatAfterSell,
 		&i.CfgMinBarsLongBeforeSell,
+		&i.StrategyConfigJson,
 		&i.MetricDurationMs,
 		&i.MetricCagr,
 		&i.MetricMaxDrawdown,
@@ -228,7 +233,7 @@ func (q *Queries) InsertInstance(ctx context.Context, arg InsertInstanceParams) 
 }
 
 const listInstancesByExperiment = `-- name: ListInstancesByExperiment :many
-SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
+SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, strategy_config_json, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
 FROM experiment_instance
 WHERE experiment_id = $1
 ORDER BY label ASC, id ASC
@@ -265,6 +270,7 @@ func (q *Queries) ListInstancesByExperiment(ctx context.Context, experimentID uu
 			&i.CfgAtrStopMult,
 			&i.CfgMinBarsFlatAfterSell,
 			&i.CfgMinBarsLongBeforeSell,
+			&i.StrategyConfigJson,
 			&i.MetricDurationMs,
 			&i.MetricCagr,
 			&i.MetricMaxDrawdown,
@@ -296,7 +302,7 @@ func (q *Queries) ListInstancesByExperiment(ctx context.Context, experimentID uu
 }
 
 const listInstancesByIDs = `-- name: ListInstancesByIDs :many
-SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
+SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, strategy_config_json, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
 FROM experiment_instance
 WHERE experiment_id = $1 AND id = ANY($2::uuid[])
 `
@@ -337,6 +343,7 @@ func (q *Queries) ListInstancesByIDs(ctx context.Context, arg ListInstancesByIDs
 			&i.CfgAtrStopMult,
 			&i.CfgMinBarsFlatAfterSell,
 			&i.CfgMinBarsLongBeforeSell,
+			&i.StrategyConfigJson,
 			&i.MetricDurationMs,
 			&i.MetricCagr,
 			&i.MetricMaxDrawdown,
@@ -368,7 +375,7 @@ func (q *Queries) ListInstancesByIDs(ctx context.Context, arg ListInstancesByIDs
 }
 
 const listInstancesPage = `-- name: ListInstancesPage :many
-SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
+SELECT id, experiment_id, label, playbook, symbol, config_hash, playbook_key, workspace_rel_path, status, error, started_at_ms, finished_at_ms, cfg_fast_hr, cfg_slow_hr, cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear, cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell, strategy_config_json, metric_duration_ms, metric_cagr, metric_max_drawdown, metric_sharpe, metric_sortino, metric_monthly_return_avg, metric_monthly_return_med, metric_yearly_return_avg, metric_yearly_return_med, metric_trades_per_month_avg, metric_trades_per_month_med, metric_wins, metric_losses, metric_breakeven, metric_win_rate, metric_monthly_win_rate_avg, metric_monthly_win_rate_med, metric_yearly_win_rate_avg, metric_yearly_win_rate_med
 FROM experiment_instance
 WHERE experiment_id = $1
   AND ($2::text = '' OR status = $2)
@@ -477,6 +484,7 @@ func (q *Queries) ListInstancesPage(ctx context.Context, arg ListInstancesPagePa
 			&i.CfgAtrStopMult,
 			&i.CfgMinBarsFlatAfterSell,
 			&i.CfgMinBarsLongBeforeSell,
+			&i.StrategyConfigJson,
 			&i.MetricDurationMs,
 			&i.MetricCagr,
 			&i.MetricMaxDrawdown,

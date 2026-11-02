@@ -6,6 +6,16 @@ if(NOT DAGOBERT_MODE STREQUAL "debug" AND NOT DAGOBERT_MODE STREQUAL "optimized"
     "DAGOBERT_MODE must be 'debug' or 'optimized' (got '${DAGOBERT_MODE}')")
 endif()
 
+# Linker for every link step: mold (default) or lld. Select with
+# -DDAGOBERT_LINKER=lld.
+set(DAGOBERT_LINKER "mold" CACHE STRING "Linker: mold or lld")
+set_property(CACHE DAGOBERT_LINKER PROPERTY STRINGS mold lld)
+if(NOT DAGOBERT_LINKER STREQUAL "lld" AND NOT DAGOBERT_LINKER STREQUAL "mold")
+  message(
+    FATAL_ERROR
+    "DAGOBERT_LINKER must be 'lld' or 'mold' (got '${DAGOBERT_LINKER}')")
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -34,9 +44,9 @@ set(CMAKE_BUILD_RPATH "$ORIGIN")
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/DagobertWarnings.cmake)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=lld")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=${DAGOBERT_LINKER}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=${DAGOBERT_LINKER}")
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=${DAGOBERT_LINKER}")
 
 if(DAGOBERT_MODE STREQUAL "debug")
   set(_dagobert_debug_flags
@@ -44,8 +54,8 @@ if(DAGOBERT_MODE STREQUAL "debug")
   )
   set(CMAKE_C_FLAGS_DEBUG "${_dagobert_debug_flags}")
   set(CMAKE_CXX_FLAGS_DEBUG "${_dagobert_debug_flags}")
-  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-fuse-ld=lld")
-  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-fuse-ld=lld")
+  set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-fuse-ld=${DAGOBERT_LINKER}")
+  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-fuse-ld=${DAGOBERT_LINKER}")
 elseif(DAGOBERT_MODE STREQUAL "optimized")
   # DAGOBERT_PORTABLE=ON (container images): baseline x86-64/arm64 code, runs on
   # any CPU of the architecture. Default: tuned for the build host.
@@ -60,10 +70,13 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
   set(CMAKE_CXX_FLAGS_RELEASE
       "-O3 -DNDEBUG ${_dagobert_cpu} -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
   )
+  # ThinLTO codegen cache: unchanged modules reuse their codegen result on
+  # relink. Same flag for lld and mold (mold 3 forwards it to the LLVM plugin).
+  set(_dagobert_thinlto_cache "-Wl,--thinlto-cache-dir=${CMAKE_BINARY_DIR}/thinlto-cache")
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE
-      "-flto=thin -fuse-ld=lld -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
+      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2 ${_dagobert_thinlto_cache}")
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE
-      "-flto=thin -fuse-ld=lld -Wl,--gc-sections -Wl,--as-needed -Wl,-O2")
+      "-flto=thin -fuse-ld=${DAGOBERT_LINKER} -Wl,--gc-sections -Wl,--as-needed -Wl,-O2 ${_dagobert_thinlto_cache}")
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Valgrind.cmake)

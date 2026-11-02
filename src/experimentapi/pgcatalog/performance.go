@@ -2,19 +2,29 @@ package pgcatalog
 
 import (
 	"context"
+	"errors"
+	"io/fs"
+	"path/filepath"
+	"sync"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/google/uuid"
 )
 
-// LoadCompletedResults rebuilds one Result per completed instance from stored facts.
-func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID string) ([]performance.Result, error) {
+// outcomeReadWorkers bounds the concurrent reads of the per-instance trade outcome files.
+const outcomeReadWorkers = 8
+
+// LoadCompletedResults rebuilds one Result per completed instance. Trade outcomes come from each
+// instance's trade_outcomes.parquet under dataDir (a missing file is no trades); period stats come
+// from Postgres. Instances with neither trades nor period stats are left out.
+func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDir string) ([]performance.Result, error) {
 	eid, err := parseExperimentID(experimentID)
 	if err != nil {
 		return nil, err
 	}
-	trades, err := c.q.ListTradeOutcomesForExperiment(ctx, eid)
+	insts, err := c.q.ListInstancesByExperiment(ctx, eid)
 	if err != nil {
 		return nil, err
 	}
@@ -23,39 +33,21 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID string)
 		return nil, err
 	}
 	type acc struct {
-		trades  []performance.ClosedTrade
 		monthly []performance.PeriodCount
 		yearly  []performance.PeriodCount
 	}
-	order := make([]string, 0)
-	byID := map[string]*acc{}
-	ensure := func(id string) *acc {
-		if row, ok := byID[id]; ok {
-			return row
-		}
-		row := &acc{}
-		byID[id] = row
-		order = append(order, id)
-		return row
-	}
-	for _, tr := range trades {
-		row := ensure(tr.InstanceID.String())
-		ct := performance.ClosedTrade{Quote: float64(tr.Quote), Side: int(tr.Side)}
-		if tr.Percent.Valid {
-			p := float64(tr.Percent.Float32)
-			ct.Percent = &p
-		}
-		row.trades = append(row.trades, ct)
-	}
+	periodsByInst := map[string]*acc{}
 	for _, p := range periods {
 		if !p.WinCount.Valid || !p.TradeCount.Valid || p.TradeCount.Int32 <= 0 {
 			continue
 		}
-		row := ensure(p.InstanceID.String())
-		bucket := performance.PeriodCount{Period: p.PeriodKey, Trades: int(p.TradeCount.Int32)}
-		if p.WinCount.Valid {
-			bucket.Wins = int(p.WinCount.Int32)
+		key := p.InstanceID.String()
+		row := periodsByInst[key]
+		if row == nil {
+			row = &acc{}
+			periodsByInst[key] = row
 		}
+		bucket := performance.PeriodCount{Period: p.PeriodKey, Trades: int(p.TradeCount.Int32), Wins: int(p.WinCount.Int32)}
 		switch p.PeriodKind {
 		case "year":
 			row.yearly = append(row.yearly, bucket)
@@ -63,12 +55,65 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID string)
 			row.monthly = append(row.monthly, bucket)
 		}
 	}
-	out := make([]performance.Result, 0, len(order))
-	for _, id := range order {
-		row := byID[id]
-		out = append(out, performance.Assemble(row.trades, row.monthly, row.yearly))
+
+	completed := make([]experimentdb.ExperimentInstance, 0, len(insts))
+	for _, inst := range insts {
+		if inst.Status == "completed" {
+			completed = append(completed, inst)
+		}
+	}
+	trades := make([][]performance.ClosedTrade, len(completed))
+	errs := make([]error, len(completed))
+	sem := make(chan struct{}, outcomeReadWorkers)
+	var wg sync.WaitGroup
+	for i := range completed {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			trades[i], errs[i] = instanceTrades(completed[i], dataDir)
+		}(i)
+	}
+	wg.Wait()
+
+	out := make([]performance.Result, 0, len(completed))
+	for i, inst := range completed {
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		row := periodsByInst[inst.ID.String()]
+		if len(trades[i]) == 0 && row == nil {
+			continue
+		}
+		var monthly, yearly []performance.PeriodCount
+		if row != nil {
+			monthly, yearly = row.monthly, row.yearly
+		}
+		out = append(out, performance.Assemble(trades[i], monthly, yearly))
 	}
 	return out, nil
+}
+
+// instanceTrades reads the closed trades of one instance from its trade outcome file.
+func instanceTrades(inst experimentdb.ExperimentInstance, dataDir string) ([]performance.ClosedTrade, error) {
+	outcomes, err := instanceparquet.ReadTradeOutcomes(filepath.Join(dataDir, inst.WorkspaceRelPath))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	closed := make([]performance.ClosedTrade, 0, len(outcomes))
+	for _, tr := range outcomes {
+		ct := performance.ClosedTrade{Quote: float64(tr.Quote), Side: int(tr.Side)}
+		if tr.Percent != nil {
+			p := float64(*tr.Percent)
+			ct.Percent = &p
+		}
+		closed = append(closed, ct)
+	}
+	return closed, nil
 }
 
 // ReplaceExperimentPerformance writes the experiment reduction. An empty result deletes it.

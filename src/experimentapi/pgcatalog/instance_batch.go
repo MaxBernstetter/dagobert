@@ -8,13 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// InstanceBatchItem is the final state of one instance plus its activity rows.
+// InstanceBatchItem is the final state of one instance plus its period stats. Fills and trade
+// outcomes live in the instance Parquet files, not in Postgres.
 type InstanceBatchItem struct {
 	store.InstanceBatchItem
-	Symbol   string
-	Stats    []PeriodStatRow
-	Fills    []FillRow
-	Outcomes []TradeOutcomeRow
+	Symbol string
+	Stats  []PeriodStatRow
 }
 
 const updateInstancesBatchSQL = `
@@ -56,9 +55,8 @@ func f32(p *float64) *float32 {
 	return &v
 }
 
-// PersistInstanceBatch commits many instances in one transaction: replaces fills, trade
-// outcomes and period stats (COPY), sets status, timing and metrics together, and updates
-// the experiment progress counter.
+// PersistInstanceBatch commits many instances in one transaction: replaces the period stats
+// (COPY), sets status, timing and metrics together, and updates the experiment progress counter.
 func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string, items []InstanceBatchItem, progressDone, progressTotal int) error {
 	sid, err := parseExperimentID(experimentID)
 	if err != nil {
@@ -77,12 +75,6 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := c.q.WithTx(tx)
-	if err := q.DeleteFillsForInstances(ctx, ids); err != nil {
-		return err
-	}
-	if err := q.DeleteTradeOutcomesForInstances(ctx, ids); err != nil {
-		return err
-	}
 	if err := q.DeletePeriodStatsForInstances(ctx, ids); err != nil {
 		return err
 	}
@@ -130,16 +122,6 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 			rows = append(rows, row)
 		}
 		statRows = append(statRows, rows...)
-	}
-	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_instance_fill"},
-		[]string{"id", "experiment_id", "instance_id", "action_id", "symbol", "ts_ms", "side", "qty", "price", "fee", "fee_asset"},
-		&fillSource{items: items, ids: ids, exp: pgUUID(sid), cur: -1}); err != nil {
-		return err
-	}
-	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_trade_outcome"},
-		[]string{"instance_id", "ordinal", "side", "quote", "percent"},
-		&outcomeSource{items: items, ids: ids, cur: -1}); err != nil {
-		return err
 	}
 	if len(statRows) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_instance_period_stat"},

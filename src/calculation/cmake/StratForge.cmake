@@ -7,7 +7,7 @@ FetchContent_Declare(
   stratforge
   GIT_REPOSITORY https://github.com/StratCraftsAI/StratForge.git
   GIT_TAG ${_dagobert_stratforge_sha}
-  GIT_SHALLOW TRUE)
+  GIT_SHALLOW FALSE)
 
 set(SF_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(SF_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

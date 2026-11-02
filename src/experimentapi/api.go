@@ -34,20 +34,25 @@ func NewServer(pool *pgxpool.Pool, hooks Hooks) *Server {
 
 // Mount registers /api/v1/experiments* routes on mux.
 func Mount(mux *http.ServeMux, s *Server) {
-	mux.HandleFunc("GET /api/v1/experiments", s.handleListExperiments)
-	mux.HandleFunc("GET /api/v1/experiments/strategies", s.handleListStrategies)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/status", s.handleExperimentStatus)
-	mux.HandleFunc("POST /api/v1/experiments", s.handleCreateStudy)
-	mux.HandleFunc("GET /api/v1/experiments/{id}", s.handleGetExperiment)
-	mux.HandleFunc("DELETE /api/v1/experiments/{id}", s.handleDeleteExperiment)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/progress", s.handleStudyProgress)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/performance", s.handleExperimentPerformance)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances", s.handleListInstances)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances/{instanceId}", s.handleGetInstance)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances/{instanceId}/chart-series", s.handleChartSeries)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances/{instanceId}/report", s.handleInstanceReport)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances/{instanceId}/kpis", s.handleInstanceKPIs)
-	mux.HandleFunc("GET /api/v1/experiments/{id}/instances/{instanceId}/activity", s.handleInstanceActivity)
-	mux.HandleFunc("POST /api/v1/experiments/{id}/run", s.handleRunExperiment)
-	mux.HandleFunc("POST /api/v1/experiments/{id}/cancel", s.handleCancelStudy)
+	// Every route is gzip-capable: the chart series and activity rows are large JSON or protobuf bodies.
+	handle := func(mux *http.ServeMux, pattern string, h http.HandlerFunc) {
+		mux.Handle(pattern, gzipHandler(h))
+	}
+	handle(mux, "GET /api/v1/experiments", s.handleListExperiments)
+	handle(mux, "GET /api/v1/experiments/strategies", s.handleListStrategies)
+	handle(mux, "GET /api/v1/experiments/limits", s.handleExperimentLimits)
+	handle(mux, "GET /api/v1/experiments/{id}/status", s.handleExperimentStatus)
+	handle(mux, "POST /api/v1/experiments", s.handleCreateStudy)
+	handle(mux, "GET /api/v1/experiments/{id}", s.handleGetExperiment)
+	handle(mux, "DELETE /api/v1/experiments/{id}", s.handleDeleteExperiment)
+	handle(mux, "GET /api/v1/experiments/{id}/progress", s.handleStudyProgress)
+	handle(mux, "GET /api/v1/experiments/{id}/performance", s.handleExperimentPerformance)
+	handle(mux, "GET /api/v1/experiments/{id}/instances", s.handleListInstances)
+	handle(mux, "GET /api/v1/experiments/{id}/instances/{instanceId}", s.handleGetInstance)
+	handle(mux, "GET /api/v1/experiments/{id}/instances/{instanceId}/chart-series", s.handleChartSeries)
+	handle(mux, "GET /api/v1/experiments/{id}/instances/{instanceId}/report", s.handleInstanceReport)
+	handle(mux, "GET /api/v1/experiments/{id}/instances/{instanceId}/kpis", s.handleInstanceKPIs)
+	handle(mux, "GET /api/v1/experiments/{id}/instances/{instanceId}/activity", s.handleInstanceActivity)
+	handle(mux, "POST /api/v1/experiments/{id}/run", s.handleRunExperiment)
+	handle(mux, "POST /api/v1/experiments/{id}/cancel", s.handleCancelStudy)
 }

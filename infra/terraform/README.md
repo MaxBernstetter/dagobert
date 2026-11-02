@@ -20,7 +20,7 @@ terraform apply -var='environment=local' -var='aws_region=us-east-1'
 Verify:
 
 ```bash
-export AWS_ENDPOINT_URL=http://localhost:4566
+export AWS_ENDPOINT_URL=http://localhost:11566
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION=us-east-1

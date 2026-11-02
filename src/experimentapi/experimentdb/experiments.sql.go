@@ -35,7 +35,7 @@ func (q *Queries) DeleteExperiment(ctx context.Context, id uuid.UUID) error {
 }
 
 const getExperiment = `-- name: GetExperiment :one
-SELECT id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
+SELECT id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, parallelism, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
 FROM experiment
 WHERE id = $1
 `
@@ -65,6 +65,7 @@ func (q *Queries) GetExperiment(ctx context.Context, id uuid.UUID) (Experiment, 
 		&i.SpreadBps,
 		&i.SlippageBps,
 		&i.FeeBps,
+		&i.Parallelism,
 		&i.CreatedAtMs,
 		&i.StartedAtMs,
 		&i.FinishedAtMs,
@@ -84,6 +85,7 @@ INSERT INTO experiment (
   initial_usdc, initial_usdt, initial_base,
   target_weight_pct, cash_reserve_quote, min_order_quote,
   redownload_missing, algo, spread_bps, slippage_bps, fee_bps,
+  parallelism,
   created_at_ms, started_at_ms, finished_at_ms,
   progress_stage, progress_stages, progress_stage_label,
   progress_instance_done, progress_instance_total
@@ -93,11 +95,12 @@ INSERT INTO experiment (
   $11, $12, $13,
   $14, $15, $16,
   $17, $18, $19, $20, $21,
+  $30,
   $22, $23, $24,
   $25, $26, $27,
   $28, $29
 )
-RETURNING id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
+RETURNING id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, parallelism, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
 `
 
 type InsertExperimentParams struct {
@@ -130,6 +133,7 @@ type InsertExperimentParams struct {
 	ProgressStageLabel    string      `json:"progress_stage_label"`
 	ProgressInstanceDone  int32       `json:"progress_instance_done"`
 	ProgressInstanceTotal int32       `json:"progress_instance_total"`
+	Parallelism           pgtype.Int4 `json:"parallelism"`
 }
 
 func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentParams) (Experiment, error) {
@@ -163,6 +167,7 @@ func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentPara
 		arg.ProgressStageLabel,
 		arg.ProgressInstanceDone,
 		arg.ProgressInstanceTotal,
+		arg.Parallelism,
 	)
 	var i Experiment
 	err := row.Scan(
@@ -187,6 +192,7 @@ func (q *Queries) InsertExperiment(ctx context.Context, arg InsertExperimentPara
 		&i.SpreadBps,
 		&i.SlippageBps,
 		&i.FeeBps,
+		&i.Parallelism,
 		&i.CreatedAtMs,
 		&i.StartedAtMs,
 		&i.FinishedAtMs,
@@ -254,7 +260,7 @@ func (q *Queries) ListDistinctSymbols(ctx context.Context, experimentID uuid.UUI
 }
 
 const listExperiments = `-- name: ListExperiments :many
-SELECT id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
+SELECT id, name, description, status, error, provider, base, quote, from_ms, to_ms, initial_usdc, initial_usdt, initial_base, target_weight_pct, cash_reserve_quote, min_order_quote, redownload_missing, algo, spread_bps, slippage_bps, fee_bps, parallelism, created_at_ms, started_at_ms, finished_at_ms, progress_stage, progress_stages, progress_stage_label, progress_instance_done, progress_instance_total
 FROM experiment
 ORDER BY created_at_ms DESC
 `
@@ -290,6 +296,7 @@ func (q *Queries) ListExperiments(ctx context.Context) ([]Experiment, error) {
 			&i.SpreadBps,
 			&i.SlippageBps,
 			&i.FeeBps,
+			&i.Parallelism,
 			&i.CreatedAtMs,
 			&i.StartedAtMs,
 			&i.FinishedAtMs,

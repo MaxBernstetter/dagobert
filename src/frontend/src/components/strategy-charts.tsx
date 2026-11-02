@@ -1,9 +1,9 @@
 
-import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { cloneElement, isValidElement, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { ChevronRight, Loader2 } from "lucide-react";
 import type { PortfolioPoint, TradeMarker } from "@/lib/portfolio-series";
 import { emptyChartColumns, type ChartColumns, type ChartIndicatorMeta } from "@/lib/chart-series-types";
-import { loadChartSeries, peekChartSeries } from "@/lib/chart-series-cache";
+import { chartMaxPoints, chartSeriesWindowUrl, loadChartSeries, peekChartSeries } from "@/lib/chart-series-cache";
 import { indicatorColor } from "@/components/chart-theme";
 import { TimeChart, type ChartHandle, type LayerVisibility, type SeriesPoint, type TimeBand } from "@/components/time-chart";
 import { cn } from "@/lib/utils";
@@ -214,8 +214,18 @@ export function StrategyCharts({
   hold = false,
   onReveal,
 }: Props) {
-  const [columns, setColumns] = useState<ChartColumns>(() => (chartSeriesPath ? peekChartSeries(chartSeriesPath) : null) ?? emptyChartColumns);
-  const [loading, setLoading] = useState(() => (chartSeriesPath ? peekChartSeries(chartSeriesPath) == null : false));
+  // The instance's chart series for the whole window, budgeted to the viewport: buy and hold and the
+  // first paint use it. A zoom or range preset loads the visible window with the same budget.
+  const [budget] = useState(() => chartMaxPoints());
+  const basePath = chartSeriesPath ? chartSeriesPath.split("?")[0] ?? chartSeriesPath : undefined;
+  const fullPath = basePath ? chartSeriesWindowUrl(basePath, fromSec, toSec, budget) : undefined;
+  const instanceKey = basePath ? `${basePath}|${fromSec}|${toSec}` : "";
+  const [dataWindow, setDataWindow] = useState<{ from: number; to: number } | null>(null);
+  const dataPath = dataWindow && basePath ? chartSeriesWindowUrl(basePath, dataWindow.from, dataWindow.to, budget) : fullPath;
+
+  const [columns, setColumns] = useState<ChartColumns>(() => (fullPath ? peekChartSeries(fullPath) : null) ?? emptyChartColumns);
+  const [fullColumns, setFullColumns] = useState<ChartColumns>(() => (fullPath ? peekChartSeries(fullPath) : null) ?? emptyChartColumns);
+  const [loading, setLoading] = useState(() => (fullPath ? peekChartSeries(fullPath) == null : false));
   const [fetchError, setFetchError] = useState("");
   const [range, setRange] = useState<RangeId | null>("all");
   const [visibility, setVisibility] = useState<LayerVisibility>({
@@ -225,33 +235,49 @@ export function StrategyCharts({
     markers: true,
     indicators: {},
   });
-  const [activePath, setActivePath] = useState(chartSeriesPath);
-  if (activePath !== chartSeriesPath) {
-    const cached = chartSeriesPath ? peekChartSeries(chartSeriesPath) : null;
-    setActivePath(chartSeriesPath);
+  const [activeKey, setActiveKey] = useState(instanceKey);
+  if (activeKey !== instanceKey) {
+    // Another instance or window of the experiment: its data is not this one's, drop it.
+    setActiveKey(instanceKey);
+    setDataWindow(null);
     setFetchError("");
-    if (cached) {
-      setColumns(cached);
-      setLoading(false);
-    } else {
-      setColumns(emptyChartColumns);
-      setLoading(Boolean(chartSeriesPath));
-    }
+    setColumns(emptyChartColumns);
+    setFullColumns(emptyChartColumns);
+    setLoading(Boolean(instanceKey));
   }
+
+  // Full-range series: the reference for buy and hold, so zooming does not move that line.
+  useEffect(() => {
+    if (!fullPath) return;
+    let cancelled = false;
+    loadChartSeries(fullPath)
+      .then((data) => {
+        if (!cancelled) startTransition(() => setFullColumns(data));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [fullPath]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!chartSeriesPath) {
+    if (!dataPath) {
       setColumns(emptyChartColumns);
       setLoading(false);
       setFetchError("");
       return;
     }
-    if (!peekChartSeries(chartSeriesPath)) setLoading(true);
+    const cached = peekChartSeries(dataPath);
+    if (cached) {
+      startTransition(() => setColumns(cached));
+      setLoading(false);
+    }
     setFetchError("");
-    loadChartSeries(chartSeriesPath)
+    loadChartSeries(dataPath)
       .then((data) => {
-        if (!cancelled) setColumns(data);
+        // Keep the previous window on screen until the new one is here: no spinner between zooms.
+        if (!cancelled) startTransition(() => setColumns(data));
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -265,7 +291,7 @@ export function StrategyCharts({
     return () => {
       cancelled = true;
     };
-  }, [playbook, symbol, fromSec, toSec, chartSeriesPath]);
+  }, [dataPath]);
 
   const indicators = columns.indicators;
   useEffect(() => {
@@ -281,7 +307,7 @@ export function StrategyCharts({
     () => [...seriesPoints].sort((a, b) => a.time - b.time),
     [seriesPoints],
   );
-  const buyHold = useMemo(() => buyHoldPoints(columns, chartPoints[0]?.value), [columns, chartPoints]);
+  const buyHold = useMemo(() => buyHoldPoints(fullColumns, chartPoints[0]?.value), [fullColumns, chartPoints]);
   const priceIndicators = useMemo(() => indicators.filter((i) => !isOscillator(i)), [indicators]);
   const oscillators = useMemo(() => indicators.filter(isOscillator), [indicators]);
   const [painted, setPainted] = useState<{ path: string | undefined; ids: Set<string> }>({
@@ -330,8 +356,24 @@ export function StrategyCharts({
     }
   }, []);
 
+  // A zoom changes the window the candles are loaded for. The data follows after a short pause
+  // (wheel zoom fires on every step), the view moves at once.
+  const windowTimer = useRef<number | undefined>(undefined);
+  const loadWindow = useCallback((from: number, to: number, now: boolean) => {
+    window.clearTimeout(windowTimer.current);
+    const full = from <= fromSec && to >= toSec;
+    const next = full ? null : { from, to };
+    if (now) {
+      setDataWindow(next);
+      return;
+    }
+    windowTimer.current = window.setTimeout(() => setDataWindow(next), 250);
+  }, [fromSec, toSec]);
+  useEffect(() => () => window.clearTimeout(windowTimer.current), []);
+
   const onRange = useCallback((id: string, from: number, to: number) => {
     if (syncingRef.current) return;
+    loadWindow(from, to, false);
     syncingRef.current = true;
     try {
       for (const [other, chart] of chartsRef.current) {
@@ -340,7 +382,7 @@ export function StrategyCharts({
     } finally {
       syncingRef.current = false;
     }
-  }, []);
+  }, [loadWindow]);
 
   const applyWindow = useCallback((from: number, to: number) => {
     syncingRef.current = true;
@@ -351,20 +393,25 @@ export function StrategyCharts({
     }
   }, []);
 
+
   const pickRange = useCallback((id: RangeId) => {
     setRange(id);
     const r = rangeFor(id, fromSec, toSec);
-    if (r) applyWindow(r.from, r.to);
-  }, [applyWindow, fromSec, toSec]);
+    if (!r) return;
+    applyWindow(r.from, r.to);
+    loadWindow(r.from, r.to, true);
+  }, [applyWindow, fromSec, toSec, loadWindow]);
   const zoomToBand = useCallback((from: number, to: number) => {
     setRange(null);
     setTimeBand(null);
     applyWindow(from, to);
-  }, [applyWindow]);
+    loadWindow(from, to, true);
+  }, [applyWindow, loadWindow]);
   const resetAll = useCallback(() => {
     setRange("all");
     applyWindow(fromSec, toSec);
-  }, [applyWindow, fromSec, toSec]);
+    loadWindow(fromSec, toSec, true);
+  }, [applyWindow, fromSec, toSec, loadWindow]);
 
   useEffect(() => {
     if (!onRangeToolbar) return;

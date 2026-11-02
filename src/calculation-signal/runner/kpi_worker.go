@@ -10,6 +10,7 @@ import (
 	marketrunner "github.com/MaxBernstetter/dagobert/src/calculation-market-action/runner"
 	"github.com/MaxBernstetter/dagobert/src/calculation-signal/internal/framework"
 	execrunner "github.com/MaxBernstetter/dagobert/src/execution/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
@@ -66,8 +67,11 @@ type StrategyKPIBar = framework.StrategyKPIBar
 type KPIResult struct {
 	Key    string
 	Fills  []StrategyKPIFill
-	Report InstanceReport
-	Err    error
+	Orders []instanceparquet.Order
+	// Journals are the fill journal rows behind Fills, in the same order.
+	Journals []instanceparquet.Journal
+	Report   InstanceReport
+	Err      error
 }
 
 // ReplayKPI replays the actions against the bar prices with the same fill model as the
@@ -110,6 +114,9 @@ func ReplayKPI(job KPIJob) KPIResult {
 		position = step.Position
 		_, baseAfter := wallet.QuoteAndBase(instBase(job.Symbol))
 		held = trackHeld(held, a, job.Policy.MinOrderQuote, baseBefore, baseAfter, job.Bars[i].Close)
+		orders, journals := execrunner.ActivityFromStep(step, int32(len(res.Orders)), int32(len(res.Journals)))
+		res.Orders = append(res.Orders, orders...)
+		res.Journals = append(res.Journals, journals...)
 		for _, j := range step.Journals {
 			base, _ := strconv.ParseFloat(strings.TrimSpace(j.BaseQty), 64)
 			quote, _ := strconv.ParseFloat(strings.TrimSpace(j.QuoteQty), 64)

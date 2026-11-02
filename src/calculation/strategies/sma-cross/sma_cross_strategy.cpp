@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include "sma_cross_strategy.hpp"
 
 #include "position.hpp"
@@ -8,7 +9,6 @@
 
 #include "exit_policy.hpp"
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {

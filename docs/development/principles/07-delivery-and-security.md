@@ -16,6 +16,6 @@ How changes get from a commit to a running stack, and the security rules every p
 
 ## Checks when planning a piece
 
-- Does it need a new secret? It goes into `.secrets` or the Terraform/SSM path, never into the repo.
+- Does it need a new secret? It goes into the gitignored `.env` or the Terraform/SSM path, never into the repo.
 - Does it expose anything new on a port? Check `compose.yaml` and the published ports.
 - Can every new step run locally with one `task` command? Is any logic in a Taskfile that belongs in a script?

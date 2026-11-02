@@ -22,7 +22,7 @@ variable "project" {
 variable "floci_endpoint" {
   description = "Floci / LocalStack base URL when environment=local"
   type        = string
-  default     = "http://localhost:4566"
+  default     = "http://localhost:11566"
 }
 
 variable "name_prefix" {

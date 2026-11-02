@@ -1,26 +1,27 @@
 package experiment_test
 
 import (
-	"context"
+	"io/fs"
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/parquet-go/parquet-go"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 )
 
 // TestBenchPersistGrid measures one RunExperiment over a large ma-cross grid. It is a manual
-// harness, skipped unless BENCH_INSTANCES is set. With DATABASE_URL set the run goes through
-// Postgres (the grid is mirrored into it; the database must hold db/sqlc/schema.sql), else SQLite.
+// harness, skipped unless BENCH_INSTANCES is set. The grid is created in the scratch Postgres
+// (POSTGRES_TEST_URL), the same catalog the run writes to.
 //
 //	BENCH_INSTANCES=3000 EXPERIMENT_SIM_WORKERS=22 go test ./tests/system/experiment -run BenchPersistGrid -v
 //
@@ -31,59 +32,93 @@ func TestBenchPersistGrid(t *testing.T) {
 	if n < 1 {
 		t.Skip("BENCH_INSTANCES not set")
 	}
-	dbURL := os.Getenv("DATABASE_URL")
-	t.Setenv("DATABASE_URL", "")
-	dataDir, cat, rec := gridExperiment(t, n)
-	if dbURL != "" {
-		t.Setenv("DATABASE_URL", dbURL)
-		mirrorToPostgres(t, dbURL, rec)
-	}
+	dataDir, url, rec := gridExperiment(t, n)
+	load := hostLoad()
 	start := time.Now()
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
 	elapsed := time.Since(start)
-	completed := -1
-	if dbURL == "" {
-		got, err := cat.GetExperiment(rec.ID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		completed = countStatus(got)[store.StatusCompleted]
-	}
-	t.Logf("BENCH instances=%d workers=%s postgres=%v wall=%s completed(sqlite)=%d",
-		n, os.Getenv("EXPERIMENT_SIM_WORKERS"), dbURL != "", elapsed.Round(time.Millisecond), completed)
+	got := loadExperimentPG(t, url, rec.ID)
+	t.Logf("BENCH instances=%d kpi_workers=%d cpp_processes=%d wall=%s completed=%d",
+		n, backtest.ExperimentSimWorkers(), cppProcesses(), elapsed.Round(time.Millisecond), countStatus(got)[store.StatusCompleted])
+	t.Logf("BENCH host loadavg before=%s after=%s cpus=%d", load, hostLoad(), runtime.NumCPU())
+	logExperimentFiles(t, filepath.Join(dataDir, "experiments", rec.ID))
 }
 
-func mirrorToPostgres(t *testing.T, dbURL string, rec store.ExperimentRecord) {
+// cppProcesses is the effective C++ process count: EXPERIMENT_CPP_PROCESSES, else one per CPU.
+func cppProcesses() int {
+	if v, err := strconv.Atoi(os.Getenv("EXPERIMENT_CPP_PROCESSES")); err == nil && v >= 1 {
+		return v
+	}
+	return runtime.NumCPU()
+}
+
+// hostLoad is /proc/loadavg (1, 5, 15 minute averages), or "n/a".
+func hostLoad() string {
+	raw, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return "n/a"
+	}
+	return strings.Join(strings.Fields(string(raw))[:3], " ")
+}
+
+// logExperimentFiles reports, per file name, the file count, the bytes and (for Parquet) the rows of the
+// experiment directory after the run.
+func logExperimentFiles(t *testing.T, root string) {
 	t.Helper()
-	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dbURL)
+	type tally struct {
+		files, bytes, rows int64
+	}
+	byName := map[string]*tally{}
+	var total int64
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		name := d.Name()
+		if strings.HasSuffix(name, ".json") && name != "report.json" {
+			name = "*.json"
+		}
+		tl := byName[name]
+		if tl == nil {
+			tl = &tally{}
+			byName[name] = tl
+		}
+		tl.files++
+		tl.bytes += info.Size()
+		total += info.Size()
+		if strings.HasSuffix(name, ".parquet") {
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			pf, err := parquet.OpenFile(f, info.Size())
+			if err != nil {
+				return err
+			}
+			tl.rows += pf.NumRows()
+		}
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(pool.Close)
-	q := experimentdb.New(pool)
-	eid := uuid.MustParse(rec.ID)
-	s := rec.Settings
-	if _, err := q.InsertExperiment(ctx, experimentdb.InsertExperimentParams{
-		ID: eid, Name: "bench", Status: store.StatusDraft, Provider: s.Provider, Base: s.Base, Quote: s.Quote,
-		FromMs: s.FromMs, ToMs: s.ToMs, InitialUsdc: s.InitialUSDC, InitialUsdt: s.InitialUSDT,
-		TargetWeightPct: s.TargetWeightPct, MinOrderQuote: s.MinOrderQuote, Algo: "v1",
-		CreatedAtMs: time.Now().UnixMilli(),
-	}); err != nil {
-		t.Fatal(err)
+	names := make([]string, 0, len(byName))
+	for n := range byName {
+		names = append(names, n)
 	}
-	for _, inst := range rec.Instances {
-		if _, err := q.InsertInstance(ctx, experimentdb.InsertInstanceParams{
-			ID: uuid.MustParse(inst.ID), ExperimentID: eid, Label: inst.Label, Playbook: inst.Playbook,
-			Symbol: inst.Symbol, ConfigHash: inst.ConfigHash, PlaybookKey: inst.PlaybookKey,
-			WorkspaceRelPath: inst.WorkspaceRelPath, Status: store.StatusDraft,
-			CfgFastHr: pgtype.Int4{Int32: 3, Valid: true}, CfgSlowHr: pgtype.Int4{Int32: 12, Valid: true},
-		}); err != nil {
-			t.Fatal(err)
-		}
+	sort.Strings(names)
+	for _, n := range names {
+		tl := byName[n]
+		t.Logf("BENCH files %-22s count=%-6d bytes=%-12d rows=%d", n, tl.files, tl.bytes, tl.rows)
 	}
+	t.Logf("BENCH experiment dir %s total bytes=%d (%.1f MiB)", root, total, float64(total)/(1<<20))
 }
 
 // writeWalkParquet writes endMs of hourly bars as a seeded geometric random walk (seed 110).

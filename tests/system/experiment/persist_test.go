@@ -26,9 +26,11 @@ func gridConfig(i int) map[string]any {
 	}
 }
 
-// gridExperiment seeds a crossing fixture and an ma-cross grid of n instances.
-func gridExperiment(t *testing.T, n int) (string, *store.Catalog, store.ExperimentRecord) {
+// gridExperiment seeds a crossing fixture and an ma-cross grid of n instances in a scratch
+// Postgres. DATABASE_URL points the run at that database.
+func gridExperiment(t *testing.T, n int) (string, string, pgRun) {
 	t.Helper()
+	url := pgScratchDB(t)
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
 	endMs := 240 * hour
@@ -40,30 +42,27 @@ func gridExperiment(t *testing.T, n int) (string, *store.Catalog, store.Experime
 	} else {
 		writeCrossingParquet(t, dataDir, symbol, endMs)
 	}
-	cat, err := store.Open(dataDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { cat.Close() })
 	settings := store.DefaultExperimentSettings()
 	settings.Base, settings.Quote = "BTC", "USDT"
 	settings.FromMs, settings.ToMs = 0, endMs
 	settings.RedownloadMissing = false
-	var specs []store.ExperimentInstanceSpec
+	var specs []fixtureSpec
 	for i := 0; i < n; i++ {
 		cfg, _ := json.Marshal(gridConfig(i))
-		specs = append(specs, store.ExperimentInstanceSpec{Label: fmt.Sprintf("g%02d", i), Playbook: "ma-cross", StrategyConfig: cfg})
+		specs = append(specs, fixtureSpec{Label: fmt.Sprintf("g%02d", i), Playbook: "ma-cross", Config: cfg})
 	}
-	rec, err := cat.CreateStudy("grid", "", settings, specs)
+	rec, err := createExperimentPG(url, "grid", settings, specs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("DATA_DIR", dataDir)
+	t.Setenv("DATABASE_URL", url)
 	t.Setenv("VENUE_SIMULATE", "1")
-	return dataDir, cat, rec
+	t.Setenv("DATABASE_URL", url)
+	return dataDir, url, rec
 }
 
-func countStatus(rec store.ExperimentRecord) map[string]int {
+func countStatus(rec pgRun) map[string]int {
 	out := map[string]int{}
 	for _, inst := range rec.Instances {
 		out[inst.Status]++
@@ -73,14 +72,11 @@ func countStatus(rec store.ExperimentRecord) map[string]int {
 
 func TestExperimentPersistsAllInstances(t *testing.T) {
 	const n = 20
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted {
 		t.Fatalf("status %q error %q", got.Status, got.Error)
 	}
@@ -94,7 +90,7 @@ func TestExperimentPersistsAllInstances(t *testing.T) {
 		if inst.StartedAt == nil || inst.FinishedAt == nil {
 			t.Fatalf("instance %s missing timing", inst.Label)
 		}
-		if _, err := os.Stat(filepath.Join(store.ExperimentWorkspaceDir(dataDir, inst), "report.json")); err != nil {
+		if _, err := os.Stat(filepath.Join(instanceDir(dataDir, inst), "report.json")); err != nil {
 			t.Fatalf("instance %s report.json: %v", inst.Label, err)
 		}
 	}
@@ -102,7 +98,7 @@ func TestExperimentPersistsAllInstances(t *testing.T) {
 
 func TestExperimentPersistenceFailureIsRetryable(t *testing.T) {
 	const n = 12
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	poison := map[string]bool{rec.Instances[2].ID: true, rec.Instances[7].ID: true}
 	backtest.PersistRetryBackoff = []time.Duration{time.Millisecond, time.Millisecond, time.Millisecond}
 	backtest.PersistCommitHook = func(ids []string) error {
@@ -118,10 +114,7 @@ func TestExperimentPersistenceFailureIsRetryable(t *testing.T) {
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusPartial {
 		t.Fatalf("status %q want partial (error %q)", got.Status, got.Error)
 	}
@@ -142,10 +135,7 @@ func TestExperimentPersistenceFailureIsRetryable(t *testing.T) {
 	if err := backtest.RunExperiment(dataDir, rec.ID); err != nil {
 		t.Fatal(err)
 	}
-	got, err = cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got = loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted {
 		t.Fatalf("after retry status %q error %q", got.Status, got.Error)
 	}
@@ -157,7 +147,7 @@ func TestExperimentPersistenceFailureIsRetryable(t *testing.T) {
 // Calculation must finish while the persistence stage is still stuck on a slow database.
 func TestExperimentComputeIndependentOfPersistenceLatency(t *testing.T) {
 	const n = 20
-	dataDir, cat, rec := gridExperiment(t, n)
+	dataDir, url, rec := gridExperiment(t, n)
 	const delay = 3 * time.Second
 	var computeDoneAt, firstCommitAt atomic.Int64
 	backtest.PersistCommitHook = func([]string) error {
@@ -178,10 +168,7 @@ func TestExperimentComputeIndependentOfPersistenceLatency(t *testing.T) {
 		t.Fatalf("compute finished %v after the first slowed commit; compute waited on persistence",
 			time.Duration(computeDoneAt.Load()-firstCommitAt.Load()))
 	}
-	got, err := cat.GetExperiment(rec.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := loadExperimentPG(t, url, rec.ID)
 	if got.Status != store.StatusCompleted || countStatus(got)[store.StatusCompleted] != n {
 		t.Fatalf("status %q counts %v", got.Status, countStatus(got))
 	}

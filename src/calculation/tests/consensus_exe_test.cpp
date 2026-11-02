@@ -4,7 +4,7 @@
 
 #include "tradingcopilot/v1/run_report.pb.h"
 
-#include <sys/wait.h>
+#include <sys/wait.h> // IWYU pragma: keep
 
 #include <cstdio>
 #include <filesystem>
@@ -16,8 +16,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-const fs::path kLake =
-    fs::path(__FILE__).parent_path() / "fixtures" / "lake_consensus";
+const fs::path kLake = fs::path(DAGOBERT_TEST_FIXTURES_DIR) / "lake_consensus";
 
 struct BinaryRun {
   int exit_code{-1};

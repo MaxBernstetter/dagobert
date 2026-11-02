@@ -34,10 +34,23 @@ tasks:
       - task: cpp:build
       - ctest --test-dir build/{{.PRESET | default "debug"}} --output-on-failure
 
-  cpp:bench:
-    desc: Benchmark optimized C++ strategies against the Go experiment path (RUNS=15); needs task cpp:build PRESET=optimized
+  cpp:iwyu:
+    desc: Report include-what-you-use findings for src/calculation (report only, PRESET=debug|optimized)
     cmds:
-      - scripts/cpp-bench.sh {{.RUNS | default "15"}}
+      - cmake --preset {{.PRESET | default "debug"}} -S src/calculation
+      - PRESET={{.PRESET | default "debug"}} scripts/cpp-iwyu.sh report
+
+  cpp:iwyu:check:
+    desc: Fail on unnecessary includes not in src/calculation/iwyu-baseline.txt (PRESET=debug|optimized)
+    cmds:
+      - cmake --preset {{.PRESET | default "debug"}} -S src/calculation
+      - PRESET={{.PRESET | default "debug"}} scripts/cpp-iwyu.sh check
+
+  cpp:iwyu:baseline:
+    desc: Regenerate src/calculation/iwyu-baseline.txt from the current unnecessary includes (PRESET=debug|optimized)
+    cmds:
+      - cmake --preset {{.PRESET | default "debug"}} -S src/calculation
+      - PRESET={{.PRESET | default "debug"}} scripts/cpp-iwyu.sh baseline
 
   data:migrate-candles:
     desc: Rewrite legacy string candle files under DATA_DIR (default ./data) in the decimal schema; idempotent, verified, atomic
@@ -85,9 +98,12 @@ tasks:
       - docker compose up
 
   dev:
-    desc: Same as task up but runs compose file watch (sync/rebuild rules)
+    desc: Same as task up but builds the job and compose images, migrates the database, and runs compose file watch (sync/rebuild rules)
     cmds:
       - mkdir -p data/parquet
+      - task: build:jobs
+      - task: build:stack
+      - task: db:migrate
       - docker compose up --watch
 
   frontend:deps:
@@ -119,7 +135,7 @@ tasks:
   experiment-run:
     desc: Run one multi-instance experiment (EXPERIMENT_ID=uuid, uses dagobert-backtest image)
     cmds:
-      - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 -e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS | default "4"}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
+      - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 {{if .EXPERIMENT_SIM_WORKERS}}-e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS}}{{end}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
 
   infra:local:
     desc: Step 1 — apply Terraform against Floci (S3/SSM/IAM)
@@ -129,7 +145,7 @@ tasks:
         export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN:-}"
         export TF_VAR_supabase_database_password="${SUPABASE_DB_PWD:-}"
         TF_IMG=hashicorp/terraform:1.9
-        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "4566"}}"
+        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "11566"}}"
         if command -v terraform >/dev/null 2>&1; then
           (cd infra/terraform && terraform init -input=false && \
             terraform apply -input=false -auto-approve \
@@ -187,15 +203,20 @@ tasks:
         fi
 
   db:up:
-    desc: Start Compose Postgres (control plane)
+    desc: Start Compose Postgres (control plane) and create the Supabase roles the migrations revoke from
     cmds:
-      - docker compose up -d postgres
+      - docker compose up -d --wait postgres
+      - |
+        for role in anon authenticated; do
+          docker compose exec -T postgres psql -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" -tAc "SELECT 1 FROM pg_roles WHERE rolname='$role'" | grep -q 1 \
+            || docker compose exec -T postgres psql -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" -c "CREATE ROLE $role NOLOGIN"
+        done
 
   db:diff:
     desc: Atlas — edit HCL then generate a migration (name=… optional)
     dir: db
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"
@@ -287,7 +308,7 @@ tasks:
     dir: db
     deps: [db:up]
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "5432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"

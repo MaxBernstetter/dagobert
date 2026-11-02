@@ -6,16 +6,7 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go mod download
-COPY src/shared ./src/shared
-COPY src/ingest/provider ./src/ingest/provider
-COPY src/internal/awsenv ./src/internal/awsenv
-COPY src/internal/lakeobject ./src/internal/lakeobject
-COPY src/internal/candlefile ./src/internal/candlefile
-COPY src/internal/parquetmeta ./src/internal/parquetmeta
-COPY src/orchestrator ./src/orchestrator
-COPY src/experimentapi ./src/experimentapi
-COPY src/calculation-performance ./src/calculation-performance
-COPY src/gen ./src/gen
+COPY src ./src
 ENV CGO_ENABLED=0
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

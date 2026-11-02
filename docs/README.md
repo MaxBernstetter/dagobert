@@ -33,7 +33,7 @@ Index: [development/README.md](development/README.md).
 - [development/03-agent-harness.md](development/03-agent-harness.md): which model does which work.
 - [development/04-coding-principles.md](development/04-coding-principles.md): job containers, system tests, audit.
 - [development/principles/README.md](development/principles/README.md): planning and implementation principles and the Definition of done.
-- [development/05-cpp-benchmark.md](development/05-cpp-benchmark.md): C++ versus Go benchmark and Postgres persistence cost.
+- [development/05-cpp-benchmark.md](development/05-cpp-benchmark.md): the C++ experiment engine: benchmark history and the current 3000-instance measurement.
 - [development/protobuf.md](development/protobuf.md): protobuf and Buf contracts.
 - [development/seed-demo-year.md](development/seed-demo-year.md): seed one year of demo history.
 - [../tools/claude-plugin/README.md](../tools/claude-plugin/README.md): the agent plugin (groomer, planner, validator, worker).

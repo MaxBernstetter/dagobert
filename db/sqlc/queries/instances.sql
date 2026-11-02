@@ -5,14 +5,15 @@ INSERT INTO experiment_instance (
   status, error,
   cfg_fast_hr, cfg_slow_hr,
   cfg_rsi_bull, cfg_rsi_bear, cfg_vol_ratio_bull, cfg_vol_ratio_bear,
-  cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell
+  cfg_atr_stop_mult, cfg_min_bars_flat_after_sell, cfg_min_bars_long_before_sell,
+  strategy_config_json
 ) VALUES (
   $1, $2, $3, $4, $5,
   $6, $7, $8,
   $9, $10,
   $11, $12,
   $13, $14, $15, $16,
-  $17, $18, $19
+  $17, $18, $19, $20
 )
 RETURNING *;
 

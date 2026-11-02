@@ -5,9 +5,33 @@ package persist
 import (
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// ParallelismFromDB is the stored process count; NULL (auto) is nil, so the field is omitted.
+func ParallelismFromDB(v pgtype.Int4) *int32 {
+	if !v.Valid {
+		return nil
+	}
+	x := v.Int32
+	return &x
+}
+
+// ParallelismToDB stores a positive process count; nil and 0 (auto) are stored as NULL.
+func ParallelismToDB(v *int32) pgtype.Int4 {
+	if v != nil && *v > 0 {
+		return pgtype.Int4{Int32: *v, Valid: true}
+	}
+	return pgtype.Int4{}
+}
+
+// ParallelismValue is the stored count as a plain int; NULL is 0 (auto).
+func ParallelismValue(v pgtype.Int4) int {
+	if v.Valid {
+		return int(v.Int32)
+	}
+	return 0
+}
 
 func optInt64(v pgtype.Int8) *int64 {
 	if !v.Valid {
@@ -65,6 +89,7 @@ func ExperimentFromDB(s experimentdb.Experiment, listPlaybooks, listSymbols []st
 		SpreadBps:             s.SpreadBps,
 		SlippageBps:           s.SlippageBps,
 		FeeBps:                s.FeeBps,
+		Parallelism:           ParallelismFromDB(s.Parallelism),
 		CreatedAtMs:           s.CreatedAtMs,
 		StartedAtMs:           optInt64(s.StartedAtMs),
 		FinishedAtMs:          optInt64(s.FinishedAtMs),
@@ -102,6 +127,7 @@ func SettingsFromExperiment(s *v1.Experiment) *v1.ExperimentSettings {
 		SpreadBps:         s.SpreadBps,
 		SlippageBps:       s.SlippageBps,
 		FeeBps:            s.FeeBps,
+		Parallelism:       s.Parallelism,
 	}
 }
 
@@ -126,6 +152,7 @@ func ApplySettings(dst *v1.Experiment, settings *v1.ExperimentSettings) {
 	dst.SpreadBps = settings.SpreadBps
 	dst.SlippageBps = settings.SlippageBps
 	dst.FeeBps = settings.FeeBps
+	dst.Parallelism = settings.Parallelism
 }
 
 // ProgressFromDB maps experiment progress.
@@ -232,41 +259,6 @@ func InstanceFromDB(i experimentdb.ExperimentInstance) *v1.ExperimentInstance {
 		if ok {
 			out.SignalConsensus = cfg
 		}
-	}
-	return out
-}
-
-// ActionFromDB maps experiment_instance_action.
-func ActionFromDB(a experimentdb.ExperimentInstanceAction) *v1.ExperimentInstanceAction {
-	return &v1.ExperimentInstanceAction{
-		Id:           a.ID.String(),
-		ExperimentId: a.ExperimentID.String(),
-		InstanceId:   a.InstanceID.String(),
-		Symbol:       a.Symbol,
-		BarOpenMs:    a.BarOpenMs,
-		Side:         a.Side,
-		WeightPct:    optFloat64(a.WeightPct),
-		Reason:       a.Reason,
-	}
-}
-
-// FillFromDB maps experiment_instance_fill.
-func FillFromDB(f experimentdb.ExperimentInstanceFill) *v1.ExperimentInstanceFill {
-	out := &v1.ExperimentInstanceFill{
-		Id:           f.ID.String(),
-		ExperimentId: f.ExperimentID.String(),
-		InstanceId:   f.InstanceID.String(),
-		Symbol:       f.Symbol,
-		TsMs:         f.TsMs,
-		Side:         f.Side,
-		Qty:          f.Qty,
-		Price:        f.Price,
-		Fee:          f.Fee,
-		FeeAsset:     f.FeeAsset,
-	}
-	if f.ActionID.Valid {
-		id := uuid.UUID(f.ActionID.Bytes).String()
-		out.ActionId = &id
 	}
 	return out
 }

@@ -1,6 +1,6 @@
 #include "bars_parquet.hpp"
 
-#include <arrow/array.h>
+#include <arrow/array.h> // IWYU pragma: keep
 #include <arrow/io/file.h>
 #include <arrow/table.h>
 #include <arrow/type.h>

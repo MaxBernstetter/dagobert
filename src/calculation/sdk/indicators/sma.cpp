@@ -2,7 +2,6 @@
 
 #include "exit_policy.hpp"
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {

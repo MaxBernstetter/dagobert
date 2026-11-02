@@ -27,7 +27,7 @@ function normalizePairs(raw: unknown): MarketPair[] {
 
 /**
  * Load markets for a ready provider from the Ingestion snapshot
- * (`DATA_DIR/providers/{id}/pairs.json` via `/api/v1/providers/{id}/pairs`).
+ * (the stored setup snapshot via `/api/v1/providers/{id}/pairs`).
  */
 export function loadProviderPairs(provider: string): Promise<MarketPair[]> {
   const id = normalizeMarketProvider(provider);

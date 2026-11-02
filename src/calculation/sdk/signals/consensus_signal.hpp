@@ -4,7 +4,6 @@
 #include "sizing.hpp"
 #include "types.hpp"
 
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <optional>

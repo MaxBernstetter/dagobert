@@ -174,6 +174,8 @@ func specsFromGrid(playbook string, axes []*v1.GridAxis, fallbackSymbol string) 
 	return specs, nil
 }
 
+// numberVal reads a numeric config value. Pointers (a proto optional field) are read through when set;
+// a nil pointer is "not set" like a missing key.
 func numberVal(v interface{}) (float64, bool) {
 	switch x := v.(type) {
 	case float64:
@@ -186,10 +188,18 @@ func numberVal(v interface{}) (float64, bool) {
 		return float64(x), true
 	case int64:
 		return float64(x), true
-	default:
-		if v == nil {
-			return 0, false
+	case *float64:
+		if x != nil {
+			return *x, true
 		}
-		return 0, false
+	case *int32:
+		if x != nil {
+			return float64(*x), true
+		}
+	case *int64:
+		if x != nil {
+			return float64(*x), true
+		}
 	}
+	return 0, false
 }

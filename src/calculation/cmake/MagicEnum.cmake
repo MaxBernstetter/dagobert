@@ -6,7 +6,6 @@ set(_dagobert_magic_enum_sha
 FetchContent_Declare(
   magic_enum
   GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
-  GIT_TAG ${_dagobert_magic_enum_sha}
-  GIT_SHALLOW TRUE)
+  GIT_TAG ${_dagobert_magic_enum_sha})
 
 FetchContent_MakeAvailable(magic_enum)

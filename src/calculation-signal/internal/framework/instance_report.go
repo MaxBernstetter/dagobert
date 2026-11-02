@@ -58,22 +58,6 @@ func ReadInstanceReport(workspaceDir string) (InstanceReport, error) {
 	return report, nil
 }
 
-// BarsFromCloses builds StrategyKPIBar marks from a shared KPI window and candle closes.
-func BarsFromCloses(win interface {
-	Close(barOpen int64) (float64, error)
-}, aggMS int64, candleCloses []int64) []StrategyKPIBar {
-	out := make([]StrategyKPIBar, 0, len(candleCloses))
-	for _, closeMs := range candleCloses {
-		barOpen := closeMs - aggMS
-		px, err := win.Close(barOpen)
-		if err != nil || px <= 0 {
-			continue
-		}
-		out = append(out, StrategyKPIBar{CloseMs: closeMs, Close: px})
-	}
-	return out
-}
-
 // BuildInstanceReportFromSim assembles KPIs + statistics after a slim/full sim.
 func BuildInstanceReportFromSim(
 	run RunReport,

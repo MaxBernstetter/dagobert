@@ -21,7 +21,7 @@ type Props = {
   id?: string;
 };
 
-export function BacktestDatePicker({ label, value, onChange, min, max, id }: Props) {
+function BacktestDatePickerInner({ label, value, onChange, min, max, id }: Props) {
   const [open, setOpen] = React.useState(false);
 
   const selected = React.useMemo(() => backtestDateInputToPickerDate(value), [value]);
@@ -103,3 +103,9 @@ export function BacktestDatePicker({ label, value, onChange, min, max, id }: Pro
     </div>
   );
 }
+
+/**
+ * Memoized: the experiments panel re-renders on its polling tick. A picker whose props did not change
+ * keeps its open calendar (and the month and year dropdowns in it) instead of re-rendering.
+ */
+export const BacktestDatePicker = React.memo(BacktestDatePickerInner);

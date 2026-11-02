@@ -1,0 +1,8 @@
+# IWYU mapping for src/calculation (passed to iwyu via --mapping_file by
+# scripts/cpp-iwyu.sh). Each entry maps a private or implementation header to
+# the public header that should be suggested instead:
+#   { include: ["<bits/chrono.h>", "private", "<chrono>", "public"] },
+# Add an entry only when IWYU suggests a private header that a finding would
+# otherwise point at. Format errors make IWYU fail loudly.
+[
+]

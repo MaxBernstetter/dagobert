@@ -80,30 +80,32 @@ type Experiment struct {
 	Status      string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	Error       string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
 	// Settings (public.experiment columns).
-	Provider              string  `protobuf:"bytes,21,opt,name=provider,proto3" json:"provider,omitempty"`
-	Base                  string  `protobuf:"bytes,22,opt,name=base,proto3" json:"base,omitempty"`
-	Quote                 string  `protobuf:"bytes,23,opt,name=quote,proto3" json:"quote,omitempty"`
-	FromMs                int64   `protobuf:"varint,24,opt,name=from_ms,json=fromMs,proto3" json:"from_ms,omitempty"`
-	ToMs                  int64   `protobuf:"varint,25,opt,name=to_ms,json=toMs,proto3" json:"to_ms,omitempty"`
-	InitialUsdc           float64 `protobuf:"fixed64,26,opt,name=initial_usdc,json=initialUsdc,proto3" json:"initial_usdc,omitempty"`
-	InitialUsdt           float64 `protobuf:"fixed64,27,opt,name=initial_usdt,json=initialUsdt,proto3" json:"initial_usdt,omitempty"`
-	InitialBase           float64 `protobuf:"fixed64,28,opt,name=initial_base,json=initialBase,proto3" json:"initial_base,omitempty"`
-	TargetWeightPct       float64 `protobuf:"fixed64,29,opt,name=target_weight_pct,json=targetWeightPct,proto3" json:"target_weight_pct,omitempty"`
-	CashReserveQuote      float64 `protobuf:"fixed64,30,opt,name=cash_reserve_quote,json=cashReserveQuote,proto3" json:"cash_reserve_quote,omitempty"`
-	MinOrderQuote         float64 `protobuf:"fixed64,31,opt,name=min_order_quote,json=minOrderQuote,proto3" json:"min_order_quote,omitempty"`
-	RedownloadMissing     bool    `protobuf:"varint,32,opt,name=redownload_missing,json=redownloadMissing,proto3" json:"redownload_missing,omitempty"`
-	Algo                  string  `protobuf:"bytes,33,opt,name=algo,proto3" json:"algo,omitempty"`
-	SpreadBps             float64 `protobuf:"fixed64,34,opt,name=spread_bps,json=spreadBps,proto3" json:"spread_bps,omitempty"`
-	SlippageBps           float64 `protobuf:"fixed64,35,opt,name=slippage_bps,json=slippageBps,proto3" json:"slippage_bps,omitempty"`
-	FeeBps                float64 `protobuf:"fixed64,36,opt,name=fee_bps,json=feeBps,proto3" json:"fee_bps,omitempty"`
-	CreatedAtMs           int64   `protobuf:"varint,51,opt,name=created_at_ms,json=createdAtMs,proto3" json:"created_at_ms,omitempty"`
-	StartedAtMs           *int64  `protobuf:"varint,52,opt,name=started_at_ms,json=startedAtMs,proto3,oneof" json:"started_at_ms,omitempty"`
-	FinishedAtMs          *int64  `protobuf:"varint,53,opt,name=finished_at_ms,json=finishedAtMs,proto3,oneof" json:"finished_at_ms,omitempty"`
-	ProgressStage         int32   `protobuf:"varint,54,opt,name=progress_stage,json=progressStage,proto3" json:"progress_stage,omitempty"`
-	ProgressStages        int32   `protobuf:"varint,55,opt,name=progress_stages,json=progressStages,proto3" json:"progress_stages,omitempty"`
-	ProgressStageLabel    string  `protobuf:"bytes,56,opt,name=progress_stage_label,json=progressStageLabel,proto3" json:"progress_stage_label,omitempty"`
-	ProgressInstanceDone  int32   `protobuf:"varint,57,opt,name=progress_instance_done,json=progressInstanceDone,proto3" json:"progress_instance_done,omitempty"`
-	ProgressInstanceTotal int32   `protobuf:"varint,58,opt,name=progress_instance_total,json=progressInstanceTotal,proto3" json:"progress_instance_total,omitempty"`
+	Provider          string  `protobuf:"bytes,21,opt,name=provider,proto3" json:"provider,omitempty"`
+	Base              string  `protobuf:"bytes,22,opt,name=base,proto3" json:"base,omitempty"`
+	Quote             string  `protobuf:"bytes,23,opt,name=quote,proto3" json:"quote,omitempty"`
+	FromMs            int64   `protobuf:"varint,24,opt,name=from_ms,json=fromMs,proto3" json:"from_ms,omitempty"`
+	ToMs              int64   `protobuf:"varint,25,opt,name=to_ms,json=toMs,proto3" json:"to_ms,omitempty"`
+	InitialUsdc       float64 `protobuf:"fixed64,26,opt,name=initial_usdc,json=initialUsdc,proto3" json:"initial_usdc,omitempty"`
+	InitialUsdt       float64 `protobuf:"fixed64,27,opt,name=initial_usdt,json=initialUsdt,proto3" json:"initial_usdt,omitempty"`
+	InitialBase       float64 `protobuf:"fixed64,28,opt,name=initial_base,json=initialBase,proto3" json:"initial_base,omitempty"`
+	TargetWeightPct   float64 `protobuf:"fixed64,29,opt,name=target_weight_pct,json=targetWeightPct,proto3" json:"target_weight_pct,omitempty"`
+	CashReserveQuote  float64 `protobuf:"fixed64,30,opt,name=cash_reserve_quote,json=cashReserveQuote,proto3" json:"cash_reserve_quote,omitempty"`
+	MinOrderQuote     float64 `protobuf:"fixed64,31,opt,name=min_order_quote,json=minOrderQuote,proto3" json:"min_order_quote,omitempty"`
+	RedownloadMissing bool    `protobuf:"varint,32,opt,name=redownload_missing,json=redownloadMissing,proto3" json:"redownload_missing,omitempty"`
+	Algo              string  `protobuf:"bytes,33,opt,name=algo,proto3" json:"algo,omitempty"`
+	SpreadBps         float64 `protobuf:"fixed64,34,opt,name=spread_bps,json=spreadBps,proto3" json:"spread_bps,omitempty"`
+	SlippageBps       float64 `protobuf:"fixed64,35,opt,name=slippage_bps,json=slippageBps,proto3" json:"slippage_bps,omitempty"`
+	FeeBps            float64 `protobuf:"fixed64,36,opt,name=fee_bps,json=feeBps,proto3" json:"fee_bps,omitempty"`
+	// C++ sweep processes of the run; 0 = auto (see ExperimentSettings.parallelism).
+	Parallelism           *int32 `protobuf:"varint,37,opt,name=parallelism,proto3,oneof" json:"parallelism,omitempty"`
+	CreatedAtMs           int64  `protobuf:"varint,51,opt,name=created_at_ms,json=createdAtMs,proto3" json:"created_at_ms,omitempty"`
+	StartedAtMs           *int64 `protobuf:"varint,52,opt,name=started_at_ms,json=startedAtMs,proto3,oneof" json:"started_at_ms,omitempty"`
+	FinishedAtMs          *int64 `protobuf:"varint,53,opt,name=finished_at_ms,json=finishedAtMs,proto3,oneof" json:"finished_at_ms,omitempty"`
+	ProgressStage         int32  `protobuf:"varint,54,opt,name=progress_stage,json=progressStage,proto3" json:"progress_stage,omitempty"`
+	ProgressStages        int32  `protobuf:"varint,55,opt,name=progress_stages,json=progressStages,proto3" json:"progress_stages,omitempty"`
+	ProgressStageLabel    string `protobuf:"bytes,56,opt,name=progress_stage_label,json=progressStageLabel,proto3" json:"progress_stage_label,omitempty"`
+	ProgressInstanceDone  int32  `protobuf:"varint,57,opt,name=progress_instance_done,json=progressInstanceDone,proto3" json:"progress_instance_done,omitempty"`
+	ProgressInstanceTotal int32  `protobuf:"varint,58,opt,name=progress_instance_total,json=progressInstanceTotal,proto3" json:"progress_instance_total,omitempty"`
 	// List enrichment (not columns).
 	ListPlaybooks []string `protobuf:"bytes,70,rep,name=list_playbooks,json=listPlaybooks,proto3" json:"list_playbooks,omitempty"`
 	ListSymbols   []string `protobuf:"bytes,71,rep,name=list_symbols,json=listSymbols,proto3" json:"list_symbols,omitempty"`
@@ -290,6 +292,13 @@ func (x *Experiment) GetFeeBps() float64 {
 	return 0
 }
 
+func (x *Experiment) GetParallelism() int32 {
+	if x != nil && x.Parallelism != nil {
+		return *x.Parallelism
+	}
+	return 0
+}
+
 func (x *Experiment) GetCreatedAtMs() int64 {
 	if x != nil {
 		return x.CreatedAtMs
@@ -386,8 +395,10 @@ type ExperimentSettings struct {
 	SpreadBps         float64                `protobuf:"fixed64,14,opt,name=spread_bps,json=spreadBps,proto3" json:"spread_bps,omitempty"`
 	SlippageBps       float64                `protobuf:"fixed64,15,opt,name=slippage_bps,json=slippageBps,proto3" json:"slippage_bps,omitempty"`
 	FeeBps            float64                `protobuf:"fixed64,16,opt,name=fee_bps,json=feeBps,proto3" json:"fee_bps,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// C++ sweep processes for the run. 0 = auto: one per CPU of the worker (capped by the server maximum).
+	Parallelism   *int32 `protobuf:"varint,17,opt,name=parallelism,proto3,oneof" json:"parallelism,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ExperimentSettings) Reset() {
@@ -528,6 +539,13 @@ func (x *ExperimentSettings) GetSlippageBps() float64 {
 func (x *ExperimentSettings) GetFeeBps() float64 {
 	if x != nil {
 		return x.FeeBps
+	}
+	return 0
+}
+
+func (x *ExperimentSettings) GetParallelism() int32 {
+	if x != nil && x.Parallelism != nil {
+		return *x.Parallelism
 	}
 	return 0
 }
@@ -1073,7 +1091,7 @@ var File_tradingcopilot_v1_experiment_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_experiment_proto_rawDesc = "" +
 	"\n" +
-	"\"tradingcopilot/v1/experiment.proto\x12\x11tradingcopilot.v1\x1a tradingcopilot/v1/strategy.proto\"\x97\t\n" +
+	"\"tradingcopilot/v1/experiment.proto\x12\x11tradingcopilot.v1\x1a tradingcopilot/v1/strategy.proto\"\xce\t\n" +
 	"\n" +
 	"Experiment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -1097,10 +1115,11 @@ const file_tradingcopilot_v1_experiment_proto_rawDesc = "" +
 	"\n" +
 	"spread_bps\x18\" \x01(\x01R\tspreadBps\x12!\n" +
 	"\fslippage_bps\x18# \x01(\x01R\vslippageBps\x12\x17\n" +
-	"\afee_bps\x18$ \x01(\x01R\x06feeBps\x12\"\n" +
+	"\afee_bps\x18$ \x01(\x01R\x06feeBps\x12%\n" +
+	"\vparallelism\x18% \x01(\x05H\x00R\vparallelism\x88\x01\x01\x12\"\n" +
 	"\rcreated_at_ms\x183 \x01(\x03R\vcreatedAtMs\x12'\n" +
-	"\rstarted_at_ms\x184 \x01(\x03H\x00R\vstartedAtMs\x88\x01\x01\x12)\n" +
-	"\x0efinished_at_ms\x185 \x01(\x03H\x01R\ffinishedAtMs\x88\x01\x01\x12%\n" +
+	"\rstarted_at_ms\x184 \x01(\x03H\x01R\vstartedAtMs\x88\x01\x01\x12)\n" +
+	"\x0efinished_at_ms\x185 \x01(\x03H\x02R\ffinishedAtMs\x88\x01\x01\x12%\n" +
 	"\x0eprogress_stage\x186 \x01(\x05R\rprogressStage\x12'\n" +
 	"\x0fprogress_stages\x187 \x01(\x05R\x0eprogressStages\x120\n" +
 	"\x14progress_stage_label\x188 \x01(\tR\x12progressStageLabel\x124\n" +
@@ -1108,9 +1127,10 @@ const file_tradingcopilot_v1_experiment_proto_rawDesc = "" +
 	"\x17progress_instance_total\x18: \x01(\x05R\x15progressInstanceTotal\x12%\n" +
 	"\x0elist_playbooks\x18F \x03(\tR\rlistPlaybooks\x12!\n" +
 	"\flist_symbols\x18G \x03(\tR\vlistSymbols\x12A\n" +
-	"\bsettings\x18P \x01(\v2%.tradingcopilot.v1.ExperimentSettingsR\bsettingsB\x10\n" +
+	"\bsettings\x18P \x01(\v2%.tradingcopilot.v1.ExperimentSettingsR\bsettingsB\x0e\n" +
+	"\f_parallelismB\x10\n" +
 	"\x0e_started_at_msB\x11\n" +
-	"\x0f_finished_at_ms\"\x91\x04\n" +
+	"\x0f_finished_at_ms\"\xc8\x04\n" +
 	"\x12ExperimentSettings\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x12\n" +
 	"\x04base\x18\x02 \x01(\tR\x04base\x12\x14\n" +
@@ -1129,7 +1149,9 @@ const file_tradingcopilot_v1_experiment_proto_rawDesc = "" +
 	"\n" +
 	"spread_bps\x18\x0e \x01(\x01R\tspreadBps\x12!\n" +
 	"\fslippage_bps\x18\x0f \x01(\x01R\vslippageBps\x12\x17\n" +
-	"\afee_bps\x18\x10 \x01(\x01R\x06feeBps\"\xef\x03\n" +
+	"\afee_bps\x18\x10 \x01(\x01R\x06feeBps\x12%\n" +
+	"\vparallelism\x18\x11 \x01(\x05H\x00R\vparallelism\x88\x01\x01B\x0e\n" +
+	"\f_parallelism\"\xef\x03\n" +
 	"\x12ExperimentProgress\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x14\n" +
@@ -1233,6 +1255,7 @@ func file_tradingcopilot_v1_experiment_proto_init() {
 	}
 	file_tradingcopilot_v1_strategy_proto_init()
 	file_tradingcopilot_v1_experiment_proto_msgTypes[0].OneofWrappers = []any{}
+	file_tradingcopilot_v1_experiment_proto_msgTypes[1].OneofWrappers = []any{}
 	file_tradingcopilot_v1_experiment_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

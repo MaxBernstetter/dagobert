@@ -6,10 +6,10 @@
 
 | Process | Role |
 |---|---|
-| Frontend | The Vite SPA (`src/frontend`), published on `WEB_PORT` (default 3001). Reads through the Experiment API only; no `./data` mount. Does not start jobs. |
-| Postgres | `postgres:16-alpine` on `POSTGRES_PORT` (default 5432), volume `postgres_data`. Catalog of experiments, instances and fills. The orchestrator mounts the Experiment API when `DATABASE_URL` is set. |
-| Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `backtests.sqlite` (experiment catalog fallback when there is no `DATABASE_URL`) and `data/experiments/<experiment_id>/` (per-instance workspaces). The jobs and the orchestrator mount this directory; the frontend does not. The experiment catalog lives in Postgres. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
-| Orchestrator | Floci on host port `FLOCI_PORT` (default 4566), and a starter process that owns the Docker socket. Also serves the Experiment API on `ORCHESTRATOR_PORT` (default 8090). |
+| Frontend | The Vite SPA (`src/frontend`), published on `WEB_PORT` (default 11001). Reads through the Experiment API only; no `./data` mount. Does not start jobs. |
+| Postgres | `postgres:16-alpine` on `POSTGRES_PORT` (default 11432), volume `postgres_data`. Catalog of experiments and instances, and the connector state (`provider`, `provider_pair`). The orchestrator mounts the Experiment API and the connector routes when `DATABASE_URL` is set. Secrets are not in Postgres. |
+| Persistence | The `./data` volume: Hive-style `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) plus `ingest.sqlite`, `technical_indicator.sqlite`, `backtests.sqlite` (legacy single-backtest catalog) and `data/experiments/<experiment_id>/` (per-instance workspaces). The jobs and the orchestrator mount this directory; the frontend does not. The experiment catalog and the connector state live in Postgres; `DATA_DIR/providers/secrets.json` holds the connector secrets. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
+| Orchestrator | Floci on host port `FLOCI_PORT` (default 11566), and a starter process that owns the Docker socket. Also serves the Experiment API and the connector routes (`/api/v1/providers`, Connectors page) on `ORCHESTRATOR_PORT` (default 11090). The connector routes need `DATABASE_URL`; the Binance base URL is the saved config, else `BINANCE_BASE_URL`, else the public default. |
 
 The job images (`dagobert-ingest`, `dagobert-calculation-technical-indicator`, `dagobert-backtest`) are runners. They appear when a backfill or an experiment needs them and exit when done.
 
@@ -30,7 +30,7 @@ Floci's Lambda cannot see the host Docker socket. The orchestrator is the proces
 | `task build` | Job images plus compose images (orchestrator, production frontend). |
 | `task build:jobs` / `task build:stack` | Build only the job images or only the compose services. |
 | `task up` | `docker compose up` with `compose.override.yaml` (dev frontend: bind-mount of `src/frontend` + Vite dev server). |
-| `task dev` | `docker compose up --watch` (same stack; Compose sync/rebuild on file changes). |
+| `task dev` | `task build:jobs`, `task build:stack`, `task db:migrate`, then `docker compose up --watch` (same stack; Compose sync/rebuild on file changes). `db:up` also creates the Supabase roles `anon` and `authenticated` the migrations revoke from. |
 | `task up:prod` | `COMPOSE_FILE=compose.yaml` only — production frontend image (`target: prod`). |
 | `task up:build` | `task build` then `task up` (job images + compose build). |
 | `task down` | Stops the stack. Does not delete `./data`. |

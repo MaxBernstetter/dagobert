@@ -1,10 +1,11 @@
+#include "tradingcopilot/v1/strategy.pb.h"
+#include "tradingcopilot/v1/run_report.pb.h"
 #include "sizing_proto.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 
 #include "exit_policy.hpp"
 
-#include <cstdlib>
 #include <iostream>
 
 namespace dagobert {

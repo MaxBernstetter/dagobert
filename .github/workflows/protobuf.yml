@@ -27,6 +27,7 @@ jobs:
           lint: true
           format: false
           breaking: false
+          push: false
       - name: buf breaking
         continue-on-error: true
         uses: bufbuild/buf-action@v1
@@ -36,4 +37,5 @@ jobs:
           lint: false
           format: false
           breaking: true
+          push: false
           breaking_against: "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"

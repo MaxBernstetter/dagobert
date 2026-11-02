@@ -2,14 +2,13 @@ package backtest
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
-	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
@@ -93,7 +92,7 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 	}
 	_ = os.Setenv("VENUE_SIMULATE", "1")
 
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -274,10 +273,6 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		return fmt.Errorf("no instance ids to simulate")
 	}
 	_ = os.Setenv("VENUE_SIMULATE", "1")
-	engine, err := experimentEngine()
-	if err != nil {
-		return err
-	}
 
 	meta, err := ReadExperimentPrepareMeta(dataDir, experimentID)
 	if err != nil {
@@ -289,13 +284,12 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	}
 	settings := meta.Settings
 	applyExperimentEnv(dataDir, settings)
-	from, to := meta.From, meta.To
 	failedSymbols := meta.FailedSymbols
 	if failedSymbols == nil {
 		failedSymbols = map[string]string{}
 	}
 
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -361,55 +355,7 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		queue <- r
 	}
 
-	if engine == engineCpp {
-		cppSimulate(dataDir, meta, bySymbol, compute, queue)
-		if SimulateComputeDoneHook != nil {
-			SimulateComputeDoneHook()
-		}
-		close(queue)
-		<-persistDone
-		return nil
-	}
-
-	aggMS := signalstore.AggregationDurationMS()
-	startCash := settings.InitialUSDC + settings.InitialUSDT
-	next := make(chan store.ExperimentInstance)
-	var wg sync.WaitGroup
-	for w := 0; w < ExperimentSimWorkers(); w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for inst := range next {
-				sym := store.InstanceSymbol(inst, settings)
-				bundle := bySymbol[sym]
-				ws := store.ExperimentWorkspaceDir(dataDir, inst)
-				res := instanceResult{inst: inst, sym: sym, ws: ws}
-				opts := &signalrunner.PipelineOpts{
-					StrategyConfig: inst.StrategyConfig,
-					PlaybookKey:    inst.PlaybookKey,
-					Slim:           true,
-					SkipSampler:    true,
-				}
-				runRep, err := signalrunner.FastSimulatedPipelineOpts(ws, bundle.win, inst.Playbook, sym, bundle.closes, opts, nil)
-				res.timing = store.InstanceRunTiming{StartedAtMs: runRep.StartedAtMs, FinishedAtMs: runRep.FinishedAtMs}
-				if err == nil {
-					res.fills, err = signalrunner.LoadInstanceFills(ws, inst.PlaybookKey)
-				}
-				if err == nil {
-					res.report = signalrunner.BuildInstanceReport(
-						runRep, inst.PlaybookKey, sym, from, to, startCash, res.fills, bundle.win, bundle.closes, aggMS,
-					)
-				}
-				res.err = err
-				queue <- res
-			}
-		}()
-	}
-	for _, inst := range compute {
-		next <- inst
-	}
-	close(next)
-	wg.Wait()
+	cppSimulate(dataDir, meta, bySymbol, compute, queue)
 	if SimulateComputeDoneHook != nil {
 		SimulateComputeDoneHook()
 	}
@@ -431,12 +377,7 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	if err != nil {
 		return err
 	}
-	bySymbol, err := LoadExperimentSymKPI(dataDir, experimentID)
-	if err != nil {
-		return err
-	}
-
-	cat, err := openExperimentRunCatalog(dataDir)
+	cat, err := openExperimentRunCatalog()
 	if err != nil {
 		return err
 	}
@@ -445,12 +386,6 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	fail := func(e error) error {
 		_ = cat.MarkExperimentFailed(experimentID, e.Error())
 		return e
-	}
-
-	for _, bundle := range bySymbol {
-		if err := cat.UpsertExperimentKPIRows(experimentID, bundle.rows); err != nil {
-			return fail(fmt.Errorf("persist experiment kpi: %w", err))
-		}
 	}
 
 	final, err := cat.GetExperiment(experimentID)
@@ -480,23 +415,33 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	if okN == 0 {
 		return fail(fmt.Errorf("%s", summary))
 	}
-	if err := writeExperimentPerformance(cat, experimentID); err != nil {
+	if err := writeExperimentPerformance(cat, dataDir, experimentID); err != nil {
 		return fail(err)
 	}
 	if failN > 0 {
 		if err := cat.MarkExperimentPartial(experimentID, summary); err != nil {
 			return err
 		}
+		removeExperimentCache(dataDir, experimentID)
 		return nil
 	}
-	return cat.MarkExperimentCompleted(experimentID)
+	if err := cat.MarkExperimentCompleted(experimentID); err != nil {
+		return err
+	}
+	removeExperimentCache(dataDir, experimentID)
+	return nil
 }
 
-func writeExperimentPerformance(cat *experimentRunCatalog, experimentID string) error {
-	if !cat.usesPostgres() {
-		return nil
+// removeExperimentCache deletes the prepare cache once the experiment is final. Best effort: the
+// results are in Postgres and the Parquet files already.
+func removeExperimentCache(dataDir, experimentID string) {
+	if err := os.RemoveAll(ExperimentCacheDir(dataDir, experimentID)); err != nil {
+		log.Printf("experiment %s: remove cache: %v", experimentID, err)
 	}
-	results, err := cat.pg.LoadCompletedResults(cat.ctx(), experimentID)
+}
+
+func writeExperimentPerformance(cat *experimentRunCatalog, dataDir, experimentID string) error {
+	results, err := cat.pg.LoadCompletedResults(cat.ctx(), experimentID, dataDir)
 	if err != nil {
 		return err
 	}

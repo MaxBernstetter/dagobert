@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -16,10 +17,12 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// DefaultExperimentSimWorkers is used when EXPERIMENT_SIM_WORKERS is unset or invalid.
-const DefaultExperimentSimWorkers = 4
+// DefaultExperimentSimWorkers is used when EXPERIMENT_SIM_WORKERS is unset or invalid: one KPI replay
+// worker per CPU. The replay is CPU bound Go work that runs beside the C++ sweep processes.
+var DefaultExperimentSimWorkers = runtime.NumCPU()
 
-// ExperimentSimWorkers returns the simulation worker-pool size from EXPERIMENT_SIM_WORKERS (default 4, min 1).
+// ExperimentSimWorkers returns the KPI replay worker count from EXPERIMENT_SIM_WORKERS (default: the CPU
+// count, min 1).
 func ExperimentSimWorkers() int {
 	raw := strings.TrimSpace(os.Getenv("EXPERIMENT_SIM_WORKERS"))
 	if raw == "" {

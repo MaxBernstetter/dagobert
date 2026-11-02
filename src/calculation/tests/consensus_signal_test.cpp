@@ -9,7 +9,6 @@
 #include <google/protobuf/util/json_util.h>
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <sstream>

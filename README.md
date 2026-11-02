@@ -9,25 +9,23 @@ Dagobert is a backtesting framework for systematic crypto spot swing trading on 
 - **Indicators.** ATR, close-distance, EMA, SMA, MACD, RSI and volume-mean, each documented in its own README under [src/calculation-technical-indicator/internal/indicators](src/calculation-technical-indicator/internal/indicators).
 - **KPIs.** Active return, CAGR, max drawdown, Sharpe, Sortino and win rate, compared with buy-and-hold over the same range.
 - **Cost model.** Spread, slippage and fee in basis points against the bar close ([docs/architecture/backtesting.md](docs/architecture/backtesting.md)).
-- **Two engines.** Go is the default. C++ is opt-in (`EXPERIMENT_ENGINE=cpp`), covers `ma-cross` and `signal-consensus`, and is equivalence-tested against Go. A 3000-instance run takes about 4-6 s with the SQLite catalog ([docs/STATUS.md](docs/STATUS.md)).
+- **C++ engine.** Experiments run on the C++ sweep (`ma-cross` and `signal-consensus`; other playbooks fail the experiment). Go replays the sweep's actions into fills and reports with the same fill model. Each experiment sets its own "Parallel processes" (auto = one per CPU). Benchmarks: [docs/development/05-cpp-benchmark.md](docs/development/05-cpp-benchmark.md).
 - **Data lake.** Binance klines as Hive-partitioned Parquet with decimal prices. Missing exchange hours are recorded as `unavailable`, never invented. Missing history is fetched automatically when an experiment starts.
 - **Wiki.** The UI renders the indicator, playbook and KPI docs, so the docs in the repo are the docs in the app.
 
 ## Quickstart
 
-You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI is also needed once for `task db:migrate` (it is not in the devbox shell).
+You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI is also needed for the migration step (it is not in the devbox shell).
 
 ```bash
 devbox shell
-task build        # job and compose images; the first build compiles the C++ engine and is the slow step
-task up           # Floci, Postgres, orchestrator, frontend (dev server)
-task db:migrate   # create the Postgres schema (once, and after new migrations)
+task dev          # builds the images (the first build compiles the C++ engine and is the slow step), migrates Postgres, starts the stack with compose watch
 ```
 
-Open [http://localhost:3001](http://localhost:3001), create an experiment and start it. The first run downloads the candles it needs from Binance. Change the port with `WEB_PORT` in `.env` (see `env.example` for the others).
+Open [http://localhost:11001](http://localhost:11001), create an experiment and start it. The first run downloads the candles it needs from Binance. Change the port with `WEB_PORT` in `.env` (see `env.example` for the others).
 
 - `task seed-demo-year` fills `data/` with one year of BTC and replays `ma-cross` over it. It wipes `data/`.
-- `task dev` is `task up` plus compose watch. `task up:prod` serves the production frontend image. `task down` stops the stack and keeps `./data`.
+- Without watch: `task build`, `task up`, then `task db:migrate` once. `task up:prod` serves the production frontend image. `task down` stops the stack and keeps `./data`.
 - `EXPERIMENT_ID=<uuid> task experiment-run` runs an existing experiment from the command line.
 
 ## How it works
@@ -36,7 +34,7 @@ Open [http://localhost:3001](http://localhost:3001), create an experiment and st
 flowchart LR
   UI[Browser frontend] --> API[Experiment API<br/>inside the orchestrator]
   API --> PG[(Postgres<br/>experiment catalog)]
-  API --> W[dagobert-backtest container<br/>Go or C++ engine]
+  API --> W[dagobert-backtest container<br/>C++ sweep + Go replay]
   W --> PG
   W --> LAKE[(data/ lake:<br/>Parquet + SQLite)]
   ORCH[Orchestrator] -. starts containers .-> W
@@ -72,13 +70,15 @@ Run `task --list` for all of them.
 | Task | What it does |
 | --- | --- |
 | `task build` | Build the job images and the compose images. |
-| `task up` / `task dev` | Start the stack with the dev frontend (`dev` adds compose watch). |
-| `task up:prod` | Start the stack with the production frontend image. |
+| `task up` | Start the stack with the dev frontend. Runs `docker compose up`. |
+| `task dev` | Build the job and compose images, apply the Postgres migrations, then `up` with compose watch. |
+| `task up:prod` | Start the stack without the override (production frontend). |
+| `task up:build` | Build everything, then start the stack. |
 | `task down` | Stop the stack. `./data` is kept. |
 | `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |
 | `task seed-demo-year` | Wipe `data/`, backfill 1 year of BTC, replay `ma-cross`. |
 | `task test` | System tests for the job images. |
-| `task cpp:deps`, `cpp:build`, `cpp:test`, `cpp:bench` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test, benchmark against Go. |
+| `task cpp:deps`, `cpp:build`, `cpp:test` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test. The experiment benchmark is `TestBenchPersistGrid`, see `docs/development/05-cpp-benchmark.md`. |
 | `task db:up`, `db:migrate`, `db:diff name=...`, `db:sqlc` | Postgres: start it, apply Atlas migrations, generate a migration, regenerate sqlc code. |
 | `task proto:lint`, `proto:gen`, `proto:breaking` | Protobuf checks and code generation. |
 | `task data:migrate-candles` | Rewrite old string candle files to the decimal schema. |

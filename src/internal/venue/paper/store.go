@@ -25,7 +25,7 @@ func path(dataDir string) string {
 	return filepath.Join(dataDir, "paper_venue.json")
 }
 
-// Reset writes demo starting balances (Bybit EU demo–like USDC cash, no BTC).
+// Reset writes demo starting balances (USDC cash, no BTC).
 func Reset(dataDir string) error {
 	s := state{Coins: map[string]float64{
 		"USDC": 50_000,

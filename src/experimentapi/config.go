@@ -94,15 +94,22 @@ func strategyMapFromSpec(spec *v1.ExperimentInstanceSpec) map[string]interface{}
 	}
 	if spec.SignalConsensus != nil {
 		c := spec.SignalConsensus
-		return map[string]interface{}{
-			"rsiBull":               c.RsiBull,
-			"rsiBear":               c.RsiBear,
-			"volRatioBull":          c.VolRatioBull,
-			"volRatioBear":          c.VolRatioBear,
-			"atrStopMult":           c.AtrStopMult,
-			"minBarsFlatAfterSell":  c.MinBarsFlatAfterSell,
-			"minBarsLongBeforeSell": c.MinBarsLongBeforeSell,
+		raw := map[string]interface{}{
+			"rsiBull":      c.RsiBull,
+			"rsiBear":      c.RsiBear,
+			"volRatioBull": c.VolRatioBull,
+			"volRatioBear": c.VolRatioBear,
+			"atrStopMult":  c.AtrStopMult,
 		}
+		// The cooldowns are proto optional fields: unset keeps the default (8/4), an explicit 0 stays 0.
+		// The value is copied, not the pointer: the readers take value types only.
+		if c.MinBarsFlatAfterSell != nil {
+			raw["minBarsFlatAfterSell"] = *c.MinBarsFlatAfterSell
+		}
+		if c.MinBarsLongBeforeSell != nil {
+			raw["minBarsLongBeforeSell"] = *c.MinBarsLongBeforeSell
+		}
+		return raw
 	}
 	return nil
 }
@@ -211,6 +218,10 @@ func mergeSettings(in *v1.ExperimentSettings) *v1.ExperimentSettings {
 	}
 	if in.FeeBps != 0 {
 		out.FeeBps = in.FeeBps
+	}
+	if in.GetParallelism() > 0 {
+		v := in.GetParallelism()
+		out.Parallelism = &v
 	}
 	return out
 }

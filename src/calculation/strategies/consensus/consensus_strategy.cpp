@@ -1,3 +1,4 @@
+#include "tradingcopilot/v1/run_envelope.pb.h"
 #include "consensus_strategy.hpp"
 
 #include "series.hpp"
