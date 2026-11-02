@@ -173,8 +173,12 @@ func LoadRange(dataDir, provider, base, quote, algo string, from, to, aggMS int6
 	if len(filtered) == 0 {
 		return nil, false, nil
 	}
-	// Coverage: first bar_open <= from aligned bucket and last close >= to-ish — soft check on span.
+	// Coverage: the cached bars must start within one bucket of from and end within one bucket of to
+	// (a trailing partial bucket is allowed). A cache that ends earlier is a miss, so the caller rebuilds.
 	if filtered[0].BarOpen > from+aggMS {
+		return nil, false, nil
+	}
+	if last := filtered[len(filtered)-1]; to-(last.BarOpen+aggMS) >= aggMS {
 		return nil, false, nil
 	}
 	return filtered, true, nil

@@ -153,14 +153,3 @@ func StudyArtifactsBackend() string {
 	}
 	return "fs"
 }
-
-// SecretsBackend is "ssm", "file", or "auto" (default: try SSM when endpoint/prefix set, else file).
-func SecretsBackend() string {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("SECRETS_BACKEND")))
-	switch v {
-	case "ssm", "file", "auto":
-		return v
-	default:
-		return "auto"
-	}
-}

@@ -50,32 +50,6 @@ resource "aws_ssm_parameter" "binance_base_url" {
   value = "https://data-api.binance.vision"
 }
 
-resource "aws_ssm_parameter" "bybit_base_url" {
-  name  = "/${var.project}/${var.environment}/BYBIT_BASE_URL"
-  type  = "String"
-  value = "https://api-demo.bybit.eu"
-}
-
-resource "aws_ssm_parameter" "bybit_api_key" {
-  name  = "/${var.project}/${var.environment}/BYBIT_API_KEY"
-  type  = "SecureString"
-  value = "replace-me"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "bybit_api_secret" {
-  name  = "/${var.project}/${var.environment}/BYBIT_API_SECRET"
-  type  = "SecureString"
-  value = "replace-me"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
 # Execution role for future Lambda / Fargate tasks (no resources attached yet).
 data "aws_iam_policy_document" "task_assume" {
   statement {

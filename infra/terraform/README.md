@@ -42,7 +42,6 @@ Prod also creates one Supabase project when `supabase_organization_id` is set, a
 
 ## Next layers (not in this root yet)
 
-- Step Functions state machine + EventBridge Scheduler (3h)
 - Lambda / Fargate task definitions for job images
 - HTTP API Gateway
 

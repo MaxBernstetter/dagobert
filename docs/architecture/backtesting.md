@@ -21,7 +21,7 @@ Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/rep
 
 The simulate phase is a three-stage pipeline. Database writes never run on the calculation path.
 
-1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines, one per CPU by default): replay the C++ actions with `ReplayKPI`. The fills, orders and journal rows come from the same fill model as the live pipeline; the report (KPIs, statistics, period series) is built in memory. The result (`instanceResult`: instance, report, fills, orders, journals, timing, error) goes to a queue. Compute workers touch no database and no mutex.
+1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines, one per CPU by default): replay the C++ actions with `ReplayKPI`. The fills, orders and journal rows come from the simulated fill model; the report (KPIs, statistics, period series) is built in memory. The result (`instanceResult`: instance, report, fills, orders, journals, timing, error) goes to a queue. Compute workers touch no database and no mutex.
 2. **Queue**: a bounded channel with capacity `min(instances, 4096)` (about 10 KB per result). The send only blocks when more than 4096 results wait for persistence.
 3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` and the instance Parquet files (`fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet`, `src/internal/instanceparquet`; atomic, one row group each) and the S3 copy of `report.json`, with a pool of 8. A failed instance removes its Parquet files. Then it commits the batch in **one transaction**:
    - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on period stats, `COPY` of the period stats, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently (separate connections; progress uses `GREATEST`).
@@ -65,7 +65,7 @@ Execution simulation uses `src/internal/venue/sim` (spread, slippage, and fee in
 
 ## What a run is
 
-A backtest replays a playbook over historical 3-hour bars and reports fills, wallet and KPIs, compared with buy-and-hold over the same range. It runs the same playbook code as the live pipeline. Results are simulated and are not a claim of profitable trading.
+A backtest replays a playbook over historical 3-hour bars and reports fills, wallet and KPIs, compared with buy-and-hold over the same range. Results are simulated and are not a claim of profitable trading.
 
 Retry, progress and outputs are described above. The Performance view compares total return with buy-and-hold from the first bar, starting from the same USDC.
 
@@ -94,7 +94,7 @@ Stored with each experiment and copied into the job environment when the run sta
 
 The starting book is initial USDC plus initial USDT, placed entirely in the venue quote (USDC for BTC and ETH). A buy may spend that whole balance, and a sell exits the whole base position. A run already stored with a lower target weight keeps that setting until it is edited and run again.
 
-The reference price is the close of the 3-hour bar. A buy fills at `close x (1 + spread/2 + slippage)`, a sell at `close x (1 - spread/2 - slippage)`, and the fee applies to the quote notional after that. Live simulated execution (`VENUE_SIMULATE=1`) uses the same `SIM_*` variables. The model uses fixed basis-point values, not the order book.
+The reference price is the close of the 3-hour bar. A buy fills at `close x (1 + spread/2 + slippage)`, a sell at `close x (1 - spread/2 - slippage)`, and the fee applies to the quote notional after that. The model uses fixed basis-point values, not the order book.
 
 ## Entrypoints
 

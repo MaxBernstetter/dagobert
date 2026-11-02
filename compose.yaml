@@ -1,6 +1,6 @@
 # Long-running stack: Floci, Postgres, the orchestrator, and the web app.
-# Job images are started by the orchestrator. They are not services here.
-# HOST_DATA_DIR, HOST_PLAYBOOKS_DIR, and HOST_SECRETS_FILE are host paths
+# Job images (ingest, technical indicators, backtest) are started by the orchestrator. They are not services here.
+# HOST_DATA_DIR and HOST_PLAYBOOKS_DIR are host paths
 # because the orchestrator talks to the host Docker socket.
 
 services:
@@ -43,20 +43,16 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       DEPLOY_ENV: ${DEPLOY_ENV:-local}
-      SSM_PREFIX: ${SSM_PREFIX:-/dagobert/local}
       LAKE_BUCKET: ${LAKE_BUCKET:-dagobert-local-lake}
       EXPERIMENT_ARTIFACTS: ${EXPERIMENT_ARTIFACTS:-fs}
       EXPERIMENTS_TABLE: ${EXPERIMENTS_TABLE:-dagobert-local-experiments}
       EXPERIMENT_CATALOG: ${EXPERIMENT_CATALOG:-postgres}
       LAKE_BACKEND: ${LAKE_BACKEND:-fs}
       LAKE_DUAL_WRITE: ${LAKE_DUAL_WRITE:-0}
-      SECRETS_BACKEND: ${SECRETS_BACKEND:-auto}
       HOST_DATA_DIR: ${HOST_DATA_DIR:-./data}
       HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:-./src/calculation-signal/playbooks}
-      HOST_SECRETS_FILE: ${HOST_SECRETS_FILE:-./.secrets}
       HOST_UID: ${HOST_UID:-0}
       HOST_GID: ${HOST_GID:-0}
-      SECRETS_FILE: /secrets/.secrets
       BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://data-api.binance.vision}
       EXPERIMENT_SIM_WORKERS: ${EXPERIMENT_SIM_WORKERS:-}           # KPI replay workers; empty = one per CPU
       EXPERIMENT_CPP_PROCESSES: ${EXPERIMENT_CPP_PROCESSES:-}        # C++ sweep processes; empty = one per CPU
@@ -70,12 +66,10 @@ services:
       EXPERIMENT_SFN_ARN: ${EXPERIMENT_SFN_ARN:-}
       # Always use Compose DNS name — do not inherit host DATABASE_URL (127.0.0.1).
       DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@postgres:5432/${POSTGRES_DB:-trading}?sslmode=disable&search_path=public
-      LIVE_DIR: /data
     ports:
       - "127.0.0.1:${ORCHESTRATOR_PORT:-11090}:8090"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOST_SECRETS_FILE:-./.secrets}:/secrets/.secrets:ro
       - ${HOST_DATA_DIR:-./data}:/data
     depends_on:
       floci:

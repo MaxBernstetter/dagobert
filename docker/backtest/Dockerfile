@@ -21,7 +21,7 @@ RUN deps/build.sh optimized
 FROM debian:trixie AS cpp-build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential clang lld cmake ninja-build git ca-certificates \
-      util-linux pkg-config python3 && rm -rf /var/lib/apt/lists/*
+      util-linux pkg-config python3 mold && rm -rf /var/lib/apt/lists/*
 COPY --from=cpp-deps /deps /deps
 COPY src/calculation /calc
 ENV DAGOBERT_DEPS_ROOT=/deps

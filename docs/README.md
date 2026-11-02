@@ -14,10 +14,8 @@ One line per document, grouped by purpose. Current state and next steps: [STATUS
 ## Architecture
 
 - [architecture/local-stack.md](architecture/local-stack.md): the local Docker Compose stack and what it persists.
-- [architecture/pipeline-data-flow.md](architecture/pipeline-data-flow.md): the live five-job pipeline step by step.
 - [architecture/experiment-data-flow.md](architecture/experiment-data-flow.md): experiment and instance flow from the API to the stored result.
 - [architecture/backtesting.md](architecture/backtesting.md): the experiment engine (Go and C++), phases and persistence.
-- [architecture/calculation-market-action.md](architecture/calculation-market-action.md): how the signal is sized against live balances.
 - [architecture/wiki-catalog.md](architecture/wiki-catalog.md): how indicator and playbook docs feed the frontend Wiki.
 
 ## Features and specs
@@ -43,7 +41,6 @@ Index: [development/README.md](development/README.md).
 ## Contracts
 
 - Ingest: [ingest/binance-public-klines.md](ingest/binance-public-klines.md) (Binance klines, decimal candle schema).
-- Execution: [execution/bybit-eu-demo.md](execution/bybit-eu-demo.md) (Bybit EU demo venue).
 - Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there.
 - Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS, Supabase).
 
@@ -60,7 +57,6 @@ Current:
 - [atlas-schema.md](grooming/atlas-schema.md): Atlas schema and migrations.
 - [ti-parquet-cache.md](grooming/ti-parquet-cache.md): technical-indicator Parquet cache.
 - [ingest-provider-facade.md](grooming/ingest-provider-facade.md), [ingest-fetch-facade-refactor.md](grooming/ingest-fetch-facade-refactor.md), [ingest-list-assets.md](grooming/ingest-list-assets.md), [ingestion-providers-ui.md](grooming/ingestion-providers-ui.md): ingest provider design.
-- [saxo-openapi-evaluation.md](grooming/saxo-openapi-evaluation.md): evaluation of the Saxo OpenAPI.
 
 Archived (kept for history):
 

@@ -1,6 +1,6 @@
 # Experiment and instance data flow
 
-How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md); the live per-candle pipeline is in [pipeline-data-flow.md](pipeline-data-flow.md).
+How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md).
 
 - **Experiment**: one row with shared settings (range, capital, costs, provider) and N instances.
 - **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace is `data/experiments/<experiment_id>/instances/<instance_id>/` (`store.ExperimentWorkspaceDir`): `report.json` and the Parquet files `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` (`src/internal/instanceparquet`).
@@ -109,7 +109,7 @@ Production `technical_indicator.sqlite` is never written by an experiment.
 
 ## One instance in detail
 
-The experiment engine is C++ only. The strategy decides in C++; Go replays the decisions with the same fill model as the live pipeline, so the numbers an experiment shows are the numbers the live simulation would produce for the same actions.
+The experiment engine is C++ only. The strategy decides in C++; Go replays the decisions with the simulated fill model, so the numbers an experiment shows are the numbers the live simulation would produce for the same actions.
 
 1. `BuildBarRange` (`src/calculation-technical-indicator/runner/bar_range.go`) once per symbol: aggregated bars, sub-candle closes, warm-up bars.
 2. `cppSimulate` (`src/backtest/cpp_engine.go`) groups instances by symbol and playbook, cuts shards (see knobs), and per shard `BuildSweepRequest` then `RunSweep` runs `strategy-sma-cross` or `strategy-signal-consensus` with `--sweep` (protobuf `SweepRequest` in, run report out, `src/backtest/cpp_sweep.go`).

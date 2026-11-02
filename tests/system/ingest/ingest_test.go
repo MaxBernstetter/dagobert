@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -321,7 +322,15 @@ func serve(t *testing.T, h http.HandlerFunc) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := &http.Server{Handler: h}
+	// Only klines requests reach the test handler. Stray requests from other local processes probing
+	// loopback ports must not count as ingest traffic.
+	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/api/v3/klines") {
+			http.NotFound(w, r)
+			return
+		}
+		h(w, r)
+	})}
 	go srv.Serve(ln)
 	t.Cleanup(func() { srv.Close() })
 	return "http://" + ln.Addr().String()
