@@ -21,11 +21,11 @@ RUN deps/build.sh optimized
 FROM debian:trixie AS cpp-build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential clang lld cmake ninja-build git ca-certificates \
-      util-linux pkg-config python3 && rm -rf /var/lib/apt/lists/*
+      util-linux pkg-config python3 mold && rm -rf /var/lib/apt/lists/*
 COPY --from=cpp-deps /deps /deps
 COPY src/calculation /calc
 ENV DAGOBERT_DEPS_ROOT=/deps
-RUN cmake -S /calc -B /out -G Ninja -DDAGOBERT_MODE=optimized -DDAGOBERT_PORTABLE=ON -DDAGOBERT_LINKER=lld \
+RUN cmake -S /calc -B /out -G Ninja -DDAGOBERT_MODE=optimized -DDAGOBERT_PORTABLE=ON \
       -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ && \
     cmake --build /out --target strategy-sma-cross strategy-signal-consensus
 
