@@ -21,9 +21,9 @@ Single system test (the job image must already be built):
 go test ./tests/system/ingest -run TestName -count=1 -timeout 20m
 ```
 
-Unit tests for shared packages run directly with `go test ./src/internal/...` and `go test ./src/shared/...`.
+CI (`.github/workflows/tests.yml`) runs all of this on every PR, every merge to main and nightly. Unit tests for shared packages run directly with `go test ./src/internal/...` and `go test ./src/shared/...`.
 
-Frontend (`src/frontend`, Vite + React + TypeScript): `npm run build` is the typecheck gate; there is no lint or test script and no browser test suite. Run it locally with `npm run dev`, or in the container via `task dev`.
+Frontend (`src/frontend`, Vite + React + TypeScript): `npx tsc --noEmit` is the typecheck (`npm run build` is `vite build` only); there is no lint or test script and no browser test suite. Run it locally with `npm run dev`, or in the container via `task dev`.
 
 Database and codegen: `task db:diff name=...` (Atlas, edit HCL in `db/`), `task db:migrate`, `task db:sqlc`, `task proto:gen` (`task proto:lint` and `task proto:breaking` before changing `proto/`).
 

@@ -1,0 +1,124 @@
+name: tests
+
+# Runs the whole test suite on every pull request and on every push to main (every merge), plus nightly
+# so drift (base images, upstream packages) is caught within a day. A failing run on main opens or
+# updates the "main is red" issue, which records the commit where it broke.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI: "true"
+
+jobs:
+  go:
+    name: go build, unit and system tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trading
+          POSTGRES_PASSWORD: trading
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trading"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POSTGRES_TEST_URL: postgres://trading:trading@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: docker/setup-buildx-action@v3
+
+      # The experiment system tests run the C++ strategy executables on the runner. They are built in
+      # the worker image's cpp-build stage (glibc 2.38 or older, no libstdc++ dependency).
+      - name: Build C++ strategy executables
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backtest/Dockerfile
+          target: cpp-build
+          outputs: type=local,dest=${{ runner.temp }}/cpp-out
+          cache-from: type=gha,scope=backtest
+          cache-to: type=gha,scope=backtest,mode=max
+      - name: Locate the executables
+        run: |
+          echo "CPP_SMA_CROSS_BIN=$RUNNER_TEMP/cpp-out/out/strategies/sma-cross/strategy-sma-cross" >> "$GITHUB_ENV"
+          echo "CPP_SIGNAL_CONSENSUS_BIN=$RUNNER_TEMP/cpp-out/out/strategies/consensus/strategy-signal-consensus" >> "$GITHUB_ENV"
+          ls -l "$RUNNER_TEMP"/cpp-out/out/strategies/*/strategy-*
+
+      # Guards the image itself (this is what broke when the linker default changed).
+      - name: Build the dagobert-backtest image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backtest/Dockerfile
+          tags: dagobert-backtest:ci
+          cache-from: type=gha,scope=backtest
+
+      - run: go build ./...
+      - run: go vet ./...
+      - name: Unit and system tests
+        run: go test ./src/... ./tests/system/... -count=1 -timeout 40m
+
+  frontend:
+    name: frontend typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  main-red:
+    name: record failure on main
+    needs: [go, frontend]
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the "main is red" issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="main is red: tests failing"
+          body="Run: $RUN_URL
+          Commit: ${{ github.sha }} (${{ github.event_name }})
+          The tests workflow failed on main. Fix it or revert; close this issue when main is green again."
+          gh label create ci-broken --repo "$GITHUB_REPOSITORY" --color B60205 2>/dev/null || true
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --label ci-broken --state open --json number --jq '.[0].number')
+          if [ -n "$num" ]; then
+            gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "Still red. $body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label ci-broken --title "$title" --body "$body"
+          fi

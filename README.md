@@ -86,11 +86,11 @@ Run `task --list` for all of them.
 ## Tests
 
 ```bash
-task test                                                          # system tests, takes a while
+task test                                                          # system tests, takes a while (CI runs everything on each PR and each merge to main)
 go test ./tests/system/ingest -run TestName -count=1 -timeout 20m  # one system test (image built first)
 go test ./src/internal/... ./src/shared/...                        # unit tests
 task cpp:test                                                      # C++ tests
-cd src/frontend && npm run build                                   # frontend typecheck
+cd src/frontend && npx tsc --noEmit && npm run build                # frontend typecheck and build
 ```
 
 There is no browser test suite.

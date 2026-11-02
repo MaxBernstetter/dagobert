@@ -24,7 +24,7 @@ func cppSmaCrossBin(t *testing.T) string {
 			return p
 		}
 	}
-	t.Skip("strategy-sma-cross not built (task cpp:build) and CPP_SMA_CROSS_BIN unset")
+	skipOrFailInCI(t, "strategy-sma-cross not built (task cpp:build) and CPP_SMA_CROSS_BIN unset")
 	return ""
 }
 
@@ -40,7 +40,7 @@ func cppSignalConsensusBin(t *testing.T) string {
 			return p
 		}
 	}
-	t.Skip("strategy-signal-consensus not built (task cpp:build) and CPP_SIGNAL_CONSENSUS_BIN unset")
+	skipOrFailInCI(t, "strategy-signal-consensus not built (task cpp:build) and CPP_SIGNAL_CONSENSUS_BIN unset")
 	return ""
 }
 
@@ -174,4 +174,14 @@ func falseBin(t *testing.T) string {
 		t.Skip("no false binary")
 	}
 	return p
+}
+
+// skipOrFailInCI skips locally when a prerequisite is missing, but fails when CI is set, so a broken
+// build step cannot turn the system tests into a silent pass.
+func skipOrFailInCI(t *testing.T, reason string) {
+	t.Helper()
+	if os.Getenv("CI") != "" {
+		t.Fatal(reason)
+	}
+	t.Skip(reason)
 }

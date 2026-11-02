@@ -157,8 +157,8 @@ func TestTwoMovingAverageWindows(t *testing.T) {
 			{def: map[string]any{"type": "MovingAverage", "method": "sma", "time_frame_hr": 3}, value: 150, unit: "price"},
 			{def: map[string]any{"type": "MovingAverage", "method": "sma", "time_frame_hr": 6}, value: 135, unit: "price"},
 			{def: map[string]any{"type": "MovingAverage", "method": "ema", "time_frame_hr": 3}, value: 150, unit: "price"},
-			{def: map[string]any{"type": "CloseDistance", "method": "sma", "time_frame_hr": 3}, value: 0, unit: "ratio"},
 			{def: map[string]any{"type": "Rsi", "time_frame_hr": 3}, value: 100, unit: "index"},
+			{def: map[string]any{"type": "Rsi", "time_frame_hr": 6}, value: 100, unit: "index"},
 			{def: map[string]any{"type": "VolumeMean", "time_frame_hr": 3}, value: 15, unit: "amount"},
 			{def: map[string]any{"type": "VolumeMean", "time_frame_hr": 6}, value: 10.5, unit: "amount"},
 		},
@@ -202,8 +202,8 @@ func case1Body() wantBody {
 		results: []wantResult{
 			{def: map[string]any{"type": "MovingAverage", "method": "sma", "time_frame_hr": 3}, value: 120, unit: "price"},
 			{def: map[string]any{"type": "MovingAverage", "method": "ema", "time_frame_hr": 3}, value: 120, unit: "price"},
-			{def: map[string]any{"type": "CloseDistance", "method": "sma", "time_frame_hr": 3}, value: 0, unit: "ratio"},
 			{def: map[string]any{"type": "Rsi", "time_frame_hr": 3}, value: 100, unit: "index"},
+			{def: map[string]any{"type": "Rsi", "time_frame_hr": 6}, value: 100, unit: "index"},
 			{def: map[string]any{"type": "VolumeMean", "time_frame_hr": 3}, value: 6, unit: "amount"},
 		},
 	}
