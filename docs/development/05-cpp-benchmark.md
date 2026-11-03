@@ -110,8 +110,9 @@ harness, and covers the warm-up iteration too).
 Intel Core Ultra 9 185H, 22 logical CPUs, Linux 7.0, clang 22.1.8 (C++), Go 1.24.
 C++ flags (optimized preset): `-O3 -DNDEBUG -flto=thin -ffunction-sections
 -fdata-sections -g -fno-omit-frame-pointer`, lld with `--gc-sections`.
-`-march=native` is requested but ignored under Nix (`NIX_ENFORCE_NO_NATIVE`),
-so the binaries target generic x86-64. 30 runs each, warm page cache.
+`-march=native` was requested but ignored under Nix (`NIX_ENFORCE_NO_NATIVE`),
+so these binaries target generic x86-64. Local builds are host-tuned since #195;
+the numbers below were not re-measured. 30 runs each, warm page cache.
 
 | strategy | C++ median ms | C++ p95 ms | C++ RSS MB | Go e2e median ms | Go e2e p95 ms | Go e2e RSS MB | Go prepare ms | Go simulate ms | speedup (median) |
 |---|---|---|---|---|---|---|---|---|---|
@@ -199,7 +200,8 @@ are not instruction-bound. Step 2 alone: 26.77 M to 25.66 M instructions
 ### Tried and rejected
 
 - Nothing was reverted. `-O2` vs `-O3`, LTO and `-march` were not tried:
-  compute is a few percent of the run and `-march=native` is ignored in Nix.
+  compute is a few percent of the run and `-march=native` was ignored in Nix
+  (fixed for local builds in #195, not re-measured).
 
 ### Remaining candidates
 

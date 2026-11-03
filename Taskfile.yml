@@ -20,13 +20,15 @@ tasks:
   cpp:deps:
     desc: Build the shared C++ dependency prefix once (PRESET=debug|optimized); needed before configuring src/calculation
     cmds:
-      - src/calculation/deps/build.sh {{.PRESET | default "debug"}}
+      - NIX_ENFORCE_NO_NATIVE=0 src/calculation/deps/build.sh {{.PRESET | default "debug"}}
 
   cpp:build:
     desc: Configure and build src/calculation (PRESET=debug|optimized); one build per build dir at a time
     cmds:
-      - cmake --preset {{.PRESET | default "debug"}} -S src/calculation
-      - flock build/{{.PRESET | default "debug"}}.lock cmake --build build/{{.PRESET | default "debug"}}
+      # Local builds are host-tuned: the Nix clang wrapper (NIX_ENFORCE_NO_NATIVE=1) would drop -march=native.
+      # Container images stay portable (DAGOBERT_PORTABLE=ON, see src/calculation/README.md).
+      - NIX_ENFORCE_NO_NATIVE=0 cmake --preset {{.PRESET | default "debug"}} -S src/calculation
+      - NIX_ENFORCE_NO_NATIVE=0 flock build/{{.PRESET | default "debug"}}.lock cmake --build build/{{.PRESET | default "debug"}}
 
   cpp:test:
     desc: Run the C++ tests (PRESET=debug|optimized)

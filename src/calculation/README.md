@@ -48,9 +48,12 @@ task cpp:test PRESET=debug      # build + ctest
   `protobuf::libprotobuf`.
 - googletest, magic_enum and StratForge are small and still use FetchContent.
 
-## Portable build (container images)
+## Build targets: local (host-tuned) and portable
 
-The optimized preset tunes for the build host (`-march=native`). For an image built elsewhere set `DAGOBERT_PORTABLE=1` for `deps/build.sh` and `-DDAGOBERT_PORTABLE=ON` for the main configure; both use `-mtune=generic` instead. The key gets a `-portable` marker, so the prefix never collides with the host-tuned one. `DAGOBERT_CC` / `DAGOBERT_CXX` override the compiler of `deps/build.sh`. `docker/backtest/Dockerfile` does this in two stages: `cpp-deps` (recipe files only, cached) and `cpp-build`.
+- **Local** (`task cpp:deps` / `task cpp:build`): the optimized preset is tuned for the build host (`-march=native`). The Nix clang wrapper drops that flag when `NIX_ENFORCE_NO_NATIVE=1` (the devbox default), so the tasks set `NIX_ENFORCE_NO_NATIVE=0`. If you call `cmake` yourself inside devbox, export it too; configure warns when the flag was dropped. The binary may not run on an older CPU.
+- **Portable** (container images, anything built elsewhere): see below. The Dockerfile builds on Debian, not Nix, and passes `DAGOBERT_PORTABLE` explicitly.
+
+For an image built elsewhere set `DAGOBERT_PORTABLE=1` for `deps/build.sh` and `-DDAGOBERT_PORTABLE=ON` for the main configure; both use `-mtune=generic` instead. The key gets a `-portable` marker, so the prefix never collides with the host-tuned one. `DAGOBERT_CC` / `DAGOBERT_CXX` override the compiler of `deps/build.sh`. `docker/backtest/Dockerfile` does this in two stages: `cpp-deps` (recipe files only, cached) and `cpp-build`.
 
 ## Toolchain
 
