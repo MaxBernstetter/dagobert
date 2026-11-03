@@ -63,6 +63,15 @@ elseif(DAGOBERT_MODE STREQUAL "optimized")
     set(_dagobert_cpu "-mtune=generic")
   else()
     set(_dagobert_cpu "-march=native -mtune=native")
+    # The Nix clang wrapper (NIX_ENFORCE_NO_NATIVE=1) drops -march=native and only says so on stderr.
+    execute_process(
+      COMMAND "${CMAKE_CXX_COMPILER}" -march=native -E -x c++ /dev/null
+      OUTPUT_QUIET
+      ERROR_VARIABLE _dagobert_cpu_probe)
+    if(_dagobert_cpu_probe MATCHES "impure flag -march=native")
+      message(WARNING "The compiler wrapper dropped -march=native: this optimized build targets a "
+                      "generic CPU. Set NIX_ENFORCE_NO_NATIVE=0 (task cpp:build does).")
+    endif()
   endif()
   set(CMAKE_C_FLAGS_RELEASE
       "-O3 -DNDEBUG ${_dagobert_cpu} -flto=thin -ffunction-sections -fdata-sections -g -fno-omit-frame-pointer"
