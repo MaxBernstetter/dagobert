@@ -42,7 +42,7 @@ Index: [development/README.md](development/README.md).
 
 - Ingest: [ingest/binance-public-klines.md](ingest/binance-public-klines.md) (Binance klines, decimal candle schema).
 - Indicators: one README per package under [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/); the unit and canonical-definition rules are in `interface.go` there.
-- Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS, Supabase).
+- Infrastructure: [../infra/terraform/README.md](../infra/terraform/README.md) (Floci and AWS).
 
 ## Design notes (docs/grooming)
 

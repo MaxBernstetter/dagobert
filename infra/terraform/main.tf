@@ -1,7 +1,6 @@
 # ---------------------------------------------------------------------------
-# $0-at-idle data plane: S3 lake + SSM (+ shared task IAM).
-# Control plane is Postgres (Compose / Supabase), not DynamoDB.
-# No NAT, ALB, RDS, Secrets Manager, or always-on compute.
+# Data plane: S3 lake + SSM (+ shared task IAM). The relational control plane is Aurora (database.tf).
+# No NAT, ALB, Secrets Manager, or always-on compute.
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "lake" {

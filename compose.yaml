@@ -1,33 +1,24 @@
-# Long-running stack: Floci, Postgres, the orchestrator, and the web app.
+# Long-running stack: Floci (runs Aurora via Terraform, see infra/terraform), the orchestrator, and the web app.
 # Job images (ingest, technical indicators, backtest) are started by the orchestrator. They are not services here.
 # HOST_DATA_DIR and HOST_PLAYBOOKS_DIR are host paths
 # because the orchestrator talks to the host Docker socket.
+
+name: dagobert
 
 services:
   floci:
     image: floci/floci:latest
     ports:
       - "127.0.0.1:${FLOCI_PORT:-11566}:4566"
+      # Aurora proxy ports (Terraform pins the cluster to 7001).
+      - "127.0.0.1:7001-7099:7001-7099"
     environment:
       FLOCI_HOSTNAME: floci
-    restart: unless-stopped
-
-  # Control plane (experiments / stats / activity). Floci does not emulate Postgres.
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-11432}:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-trading}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trading}
-      POSTGRES_DB: ${POSTGRES_DB:-trading}
+      # Floci starts the Aurora container itself, on this compose network, advertised as "floci".
+      FLOCI_SERVICES_DOCKER_NETWORK: dagobert_default
+      FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trading} -d ${POSTGRES_DB:-trading}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
   orchestrator:
@@ -64,8 +55,8 @@ services:
       EXPERIMENT_BATCH_SIZE: ${EXPERIMENT_BATCH_SIZE:-64}
       EXPERIMENT_MAP_MAX_CONCURRENCY: ${EXPERIMENT_MAP_MAX_CONCURRENCY:-8}
       EXPERIMENT_SFN_ARN: ${EXPERIMENT_SFN_ARN:-}
-      # Always use Compose DNS name — do not inherit host DATABASE_URL (127.0.0.1).
-      DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@postgres:5432/${POSTGRES_DB:-trading}?sslmode=disable&search_path=public
+      # Aurora on Floci. Always the compose DNS name: do not inherit a host DATABASE_URL (127.0.0.1).
+      DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@floci:7001/${POSTGRES_DB:-trading}?sslmode=require&search_path=public
     ports:
       - "127.0.0.1:${ORCHESTRATOR_PORT:-11090}:8090"
     volumes:
@@ -74,8 +65,6 @@ services:
     depends_on:
       floci:
         condition: service_started
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
 
   # Published UI is the Vite SPA (src/frontend).
@@ -94,6 +83,3 @@ services:
       orchestrator:
         condition: service_started
     restart: unless-stopped
-
-volumes:
-  postgres_data:

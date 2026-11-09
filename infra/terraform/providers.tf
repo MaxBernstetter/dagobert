@@ -1,5 +1,6 @@
-# Local (Floci): point every used service at :4566.
-# Prod: omit custom endpoints; use real IAM / SSO credentials.
+# One switch: var.environment.
+#   local: static fake keys + every service endpoint on Floci. Nothing here can reach AWS.
+#   prod:  default credential chain, real endpoints. Blocked unless var.allow_cloud_deploy (see gate.tf).
 
 provider "aws" {
   region = var.aws_region
@@ -31,16 +32,11 @@ provider "aws" {
       cloudwatchlogs = var.floci_endpoint
       ecs            = var.floci_endpoint
       ec2            = var.floci_endpoint
+      rds            = var.floci_endpoint
     }
   }
 
   default_tags {
     tags = local.tags
   }
-}
-
-# Token comes from .env SUPABASE_ACCESS_TOKEN. Task maps it to TF_VAR_supabase_access_token.
-# Leave the variable empty on local applies so this provider is not called.
-provider "supabase" {
-  access_token = var.supabase_access_token
 }

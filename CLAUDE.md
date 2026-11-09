@@ -47,7 +47,7 @@ Database and codegen: `task db:diff name=...` (Atlas, edit HCL in `db/`), `task 
 
 **Tests.** `tests/system/<job>/` builds and runs the real job image with a faked upstream (Binance HTTP, a seeded Parquet file). These tests are the proof of behaviour; they do not import service packages. Unit tests exist only for pure logic (`money`, `venue/sim`, indicator math, playbook logic). Per `docs/development/04-coding-principles.md`, do not add tests that lock internal call order or private types.
 
-**Infra.** `infra/terraform` provisions S3/SSM/IAM against Floci locally (`task infra:local`), and Supabase for prod (`task infra:prod`). Compose Postgres is the control-plane DB for local dev.
+**Infra.** `infra/terraform` provisions the VPC, the Aurora PostgreSQL Serverless v2 cluster, S3, SSM and IAM. The same code runs against Floci locally (`task infra:local`) and real AWS in CI only (`task infra:prod` refuses without `CI=true` and credentials). Aurora on Floci is the control-plane DB for local dev.
 
 ## Conventions and workflow
 

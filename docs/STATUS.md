@@ -14,7 +14,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 - `CPP_*_BIN` is read only by the experiment engine (`src/backtest/cpp_engine.go`).
 - Leftover naming: simulated rows still carry `venue: bybit` and the `VENUE_SIMULATE` flag; instrument USDC venue mappings in `src/internal/instruments` are unchanged.
 - The trader overview UI was dropped (milestone M6 closed as not planned).
-- Production deployment is not evidenced as running. The repo has Terraform for AWS and a Supabase project (`infra/terraform`, `task infra:prod`, `task db:migrate:supabase`), but `docs/grooming/serverless-aws.md` says a live Supabase apply still waits on a project URL, and nothing in the repo records an applied prod stack. Treat prod as prepared, not confirmed.
+- Production deployment is not evidenced as running. The repo has Terraform for AWS (`infra/terraform`: VPC, Aurora PostgreSQL Serverless v2, S3, SSM, IAM; `task infra:prod` runs in CI only). Nothing records an applied prod stack, and prod migrations need a job inside the VPC that does not exist yet. Treat prod as prepared, not confirmed.
 
 ## Measured performance
 
@@ -23,7 +23,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## Next steps, in priority order
 
 1. Measure the browser load of the instance detail page (`/activity`, `/chart-series`) on a 3000-instance experiment ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). The run and file numbers are in [05-cpp-benchmark](development/05-cpp-benchmark.md).
-3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
+3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 (Supabase) is superseded by Aurora: the relational database is the first piece migrated to the serverless stack (VPC, API Gateway, C++ Lambda and ECS frontend follow).
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 

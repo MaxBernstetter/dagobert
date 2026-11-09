@@ -98,9 +98,27 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
 
+  terraform:
+    name: terraform fmt and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - run: terraform fmt -check -recursive
+        working-directory: infra/terraform
+      - run: terraform init -backend=false -input=false
+        working-directory: infra/terraform
+      - run: terraform validate
+        working-directory: infra/terraform
+
   main-red:
     name: record failure on main
-    needs: [go, frontend]
+    needs: [go, frontend, terraform]
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:

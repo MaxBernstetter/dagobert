@@ -59,7 +59,7 @@ flowchart LR
 | `src/calculation-market-action`, `src/execution`, `src/internal/venue` | Sizing, simulated fills and the paper wallet used by every run. |
 | `src/ingest` | Binance klines into the Parquet lake. |
 | `src/calculation` | C++ engine (`ma-cross`, `signal-consensus`). |
-| `db`, `proto`, `infra` | Postgres schema (Atlas, sqlc), protobuf contracts, Terraform for Floci and AWS/Supabase. |
+| `db`, `proto`, `infra` | Postgres schema (Atlas, sqlc), protobuf contracts, Terraform for Floci and AWS (VPC, Aurora, S3, SSM, IAM). |
 | `tests/system` | System tests: build a job image, run it against faked upstreams, check the output. |
 | `docs` | Architecture, contracts, status and workflow. Index: [docs/README.md](docs/README.md). |
 

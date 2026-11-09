@@ -14,12 +14,16 @@ output "ssm_prefix" {
   value = "/${var.project}/${var.environment}"
 }
 
-output "supabase_project_id" {
-  value = local.create_supabase ? supabase_project.control[0].id : ""
+output "database_host" {
+  value = aws_rds_cluster.main.endpoint
+}
+
+output "database_port" {
+  value = aws_rds_cluster.main.port
 }
 
 output "database_url_ssm" {
-  value = local.create_supabase ? aws_ssm_parameter.database_url[0].name : ""
+  value = aws_ssm_parameter.database_url.name
 }
 
 output "floci_hint" {

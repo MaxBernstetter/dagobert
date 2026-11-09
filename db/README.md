@@ -9,11 +9,11 @@ Postgres schema for the control plane: experiments, instances, period stats, per
 
 ## Workflow
 1. Edit the HCL in `schema/`.
-2. `task db:diff name=<change>` generates a migration (uses a dev Postgres via Docker). Known limit: the dev database replays `20261024140000_revoke_app_table_api_grants.sql`, which needs the Supabase `anon` role, so the diff fails on a plain Postgres. Then write the migration by hand, check it on a scratch database (`db/sqlc/schema.sql` plus the new file), and run `atlas migrate hash --dir file://migrations`.
-3. `task db:migrate` applies migrations to `DATABASE_URL` (starts compose Postgres via `task db:up`). `task db:migrate:supabase` targets `SUPABASE_DB_URL`.
+2. `task db:diff name=<change>` generates a migration (uses a dev Postgres via Docker). Known limit: the dev database replays `20261024140000_revoke_app_table_api_grants.sql`, which needs the `anon` role (created by `task db:up` on the Aurora database, absent on a plain Postgres), so the diff fails on a plain Postgres. Then write the migration by hand, check it on a scratch database (`db/sqlc/schema.sql` plus the new file), and run `atlas migrate hash --dir file://migrations`.
+3. `task db:migrate` applies migrations to `DATABASE_URL` (default: the Aurora cluster on Floci; `task db:up` applies Terraform first). Prod Aurora is private to its VPC, so prod migrations cannot run from a dev machine or a CI runner outside the VPC; that is open until a migration job runs inside the VPC.
 4. If queries or the schema changed for Go: update `sqlc/schema.sql` and `queries/`, then `task db:sqlc`. Commit the generated Go.
 
-`task db:up` only starts the Postgres service; whether `task up` migrates is not automated, so run `task db:migrate` once.
+`task up` and `task dev` run `task db:migrate`.
 
 ## Before changing
 Migrations are append-only once merged. A rename is a new migration (see `20261024120000_rename_study_to_experiment.sql`). Keep `sqlc/schema.sql` in step with the HCL.

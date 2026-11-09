@@ -87,10 +87,10 @@ resource "aws_lambda_function" "experiment_worker" {
 
   environment {
     variables = {
-      VENUE_SIMULATE     = "1"
+      VENUE_SIMULATE = "1"
       # Experiment catalog is Postgres. DynamoDB is not required for this worker.
       EXPERIMENT_CATALOG = "postgres"
-      DATABASE_URL       = var.experiment_database_url
+      DATABASE_URL       = local.database_url
     }
   }
 }
@@ -114,9 +114,9 @@ locals {
               Parameters = {
                 FunctionName = local.experiment_worker_arn
                 Payload = {
-                  "experimentId.$"     = "$$.Execution.Input.experimentId"
-                  "instanceIds.$" = "$"
-                  "dataDir.$"     = "$$.Execution.Input.dataDir"
+                  "experimentId.$" = "$$.Execution.Input.experimentId"
+                  "instanceIds.$"  = "$"
+                  "dataDir.$"      = "$$.Execution.Input.dataDir"
                 }
               }
               End = true

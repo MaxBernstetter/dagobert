@@ -1,48 +1,41 @@
-# Terraform — dagobert (Floci + AWS)
+# Terraform — dagobert (Floci and AWS)
 
-Creates the **$0-at-idle** data plane: S3 lake, SSM parameters, and a shared task IAM role. The experiment catalog lives in Postgres, not DynamoDB.
+One root, one code path. `var.environment` is the only switch:
 
-No NAT, ALB, RDS, Secrets Manager, or always-on compute.
+| `environment` | Target | Credentials | Guard |
+|---|---|---|---|
+| `local` (default) | Floci on `:11566` | fixed fake keys, every service endpoint on Floci | cannot reach AWS |
+| `prod` | real AWS | default credential chain | refused unless `allow_cloud_deploy=true` |
 
-## Local (Floci)
+## What it creates
 
-```bash
-# From repo root — Floci already in compose, or:
-#   floci start && eval $(floci env)
+- `network.tf`: VPC, three private subnets, security groups (`app` may reach `database` on 5432), DB subnet group. No internet gateway, no NAT.
+- `database.tf`: Aurora PostgreSQL Serverless v2 cluster and writer (`db.serverless`, 0.5 to 2 ACU by default), `DATABASE_URL` in SSM (SecureString).
+- `main.tf`: S3 lake, SSM parameters, task IAM role. `experiment_fanout.tf`: Step Functions map and optional experiment Lambda.
 
-docker compose up -d floci
-
-cd infra/terraform
-terraform init
-terraform apply -var='environment=local' -var='aws_region=us-east-1'
-```
-
-Verify:
+## Apply
 
 ```bash
-export AWS_ENDPOINT_URL=http://localhost:11566
-export AWS_ACCESS_KEY_ID=test
-export AWS_SECRET_ACCESS_KEY=test
-export AWS_DEFAULT_REGION=us-east-1
-
-aws s3 ls
-aws ssm get-parameters-by-path --path /dagobert/local
+task infra:local          # Floci: starts it, applies, same as `task infra:apply ENV=local`
+task infra:prod           # CI only
 ```
 
-## Prod (real AWS)
+Both run `scripts/infra-apply.sh`, using `terraform` if installed, else the `hashicorp/terraform` image.
 
-```bash
-cd infra/terraform
-terraform apply -var='environment=prod' -var='aws_region=eu-central-1'
-```
+## Why a dev setup cannot deploy to the cloud
 
-Use an IAM/SSO profile with rights to create S3, IAM, SSM. Do **not** set `AWS_ENDPOINT_URL`.
+Three independent checks, all refusing by default:
 
-Prod also creates one Supabase project when `supabase_organization_id` is set, and stores the direct Postgres URL in SSM at `/{project}/{environment}/DATABASE_URL`. Put `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PWD` in the repo `.env`. `task infra:prod` maps those to the Terraform variables. Apply the Atlas migrations in `db/migrations` to that URL. Local applies do not create a Supabase project.
+1. `scripts/infra-apply.sh prod` exits unless `CI=true` and AWS credentials are present.
+2. `local` unsets every AWS credential variable before Terraform runs and uses fake keys.
+3. `gate.tf` fails any `environment=prod` plan unless `allow_cloud_deploy=true`. Only the script in CI sets `TF_VAR_allow_cloud_deploy`.
 
-## Next layers (not in this root yet)
+## Database
 
-- Lambda / Fargate task definitions for job images
-- HTTP API Gateway
+Local: Floci starts a real Postgres container for the cluster and proxies it on port 7001 with TLS, so URLs use `sslmode=require` in both environments. The master password is `POSTGRES_PASSWORD` (default `trading`) locally and generated in prod.
 
-See `docs/grooming/serverless-aws.md`.
+Prod Aurora is private to the VPC. Atlas migrations cannot reach it from outside; running them from inside the VPC is not built yet.
+
+## Next layers
+
+API Gateway plus Lambda for the Experiment API, the C++ simulation Lambda behind Step Functions, the frontend on ECS. See `docs/grooming/serverless-aws.md`.

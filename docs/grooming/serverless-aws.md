@@ -84,7 +84,7 @@ Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/S
 | **9** | Hard | sqlc + Go Experiment API (`/v1/experiments*`) | ✅ |
 | **10** | Hard | Jobs write Postgres stats/actions; UI drops `report.json` | ✅ |
 | **11** | Medium | Chart API → parquet (S3/Floci) | implemented |
-| **12** | Medium | Supabase Free + same migrations + revoke anon | implemented |
+| **12** | Medium | ~~Supabase Free~~ superseded: Aurora PostgreSQL Serverless v2 via Terraform, same migrations | Aurora on Floci done; prod migrations need an in-VPC job |
 | **13** | Hard | Vite SPA → API only (drop Next BFF) | implemented |
 | **14** | Hard | Fan-out workers write Postgres (finish step 6) | ✅ implemented |
 
