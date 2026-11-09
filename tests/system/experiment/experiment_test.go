@@ -79,12 +79,7 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		if *inst.FinishedAt < *inst.StartedAt {
 			t.Fatalf("instance %s finished_at %d < started_at %d", inst.Label, *inst.FinishedAt, *inst.StartedAt)
 		}
-		ws := instanceDir(dataDir, inst)
-		reportPath := filepath.Join(ws, "report.json")
-		body, err := os.ReadFile(reportPath)
-		if err != nil {
-			t.Fatalf("instance %s missing report.json: %v", inst.Label, err)
-		}
+		body := readReport(t, instanceRef(dataDir, inst))
 		var report struct {
 			Run struct {
 				StartedAtMs  int64 `json:"startedAtMs"`
@@ -102,10 +97,10 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 			} `json:"statistics"`
 		}
 		if err := json.Unmarshal(body, &report); err != nil {
-			t.Fatalf("instance %s report.json: %v", inst.Label, err)
+			t.Fatalf("instance %s report: %v", inst.Label, err)
 		}
 		if report.Run.StartedAtMs != *inst.StartedAt || report.Run.FinishedAtMs != *inst.FinishedAt {
-			t.Fatalf("instance %s report timing mismatch columns vs file", inst.Label)
+			t.Fatalf("instance %s report timing mismatch columns vs report", inst.Label)
 		}
 		if report.Run.DurationMs != report.Run.FinishedAtMs-report.Run.StartedAtMs {
 			t.Fatalf("instance %s durationMs %d != finished-started", inst.Label, report.Run.DurationMs)
@@ -123,8 +118,8 @@ func TestStudyMultiInstanceCorrectness(t *testing.T) {
 		t.Fatal("live calculation_signal.sqlite marker row was overwritten")
 	}
 
-	wsA := instanceDir(dataDir, got.Instances[0])
-	wsB := instanceDir(dataDir, got.Instances[1])
+	wsA := instanceRef(dataDir, got.Instances[0])
+	wsB := instanceRef(dataDir, got.Instances[1])
 	buysA := countSignalsWithDecision(t, wsA, "buy")
 	buysB := countSignalsWithDecision(t, wsB, "buy")
 	fillsA := countFills(t, wsA)
@@ -400,9 +395,9 @@ func TestStudySignalConsensusSizing(t *testing.T) {
 			t.Fatalf("instance %s status %q error %q", inst.Label, inst.Status, inst.Error)
 		}
 	}
-	ws := map[string]string{}
+	ws := map[string]instRef{}
 	for _, inst := range got.Instances {
-		ws[inst.Label] = instanceDir(dataDir, inst)
+		ws[inst.Label] = instanceRef(dataDir, inst)
 	}
 	legacy, okL := firstBuyQuote(t, ws["legacy"])
 	sized, okS := firstBuyQuote(t, ws["sized"])

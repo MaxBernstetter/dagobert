@@ -428,7 +428,11 @@ func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toS
 }
 
 func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
-	fills, err := instanceparquet.ReadFills(instanceWorkspace(inst))
+	dir, err := instanceShard(inst)
+	if err != nil {
+		return nil, nil // no shard: no portfolio, no markers
+	}
+	fills, err := instanceparquet.ReadFills(dir, inst.ID.String())
 	if err != nil {
 		return nil, nil // no fills file: no portfolio, no markers
 	}

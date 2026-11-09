@@ -1,19 +1,15 @@
 package experimentapi
 
 import (
-	"errors"
-	"io/fs"
 	"sort"
 	"strings"
 
-	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
-// The instance Parquet files (orders, journals, fills, trade outcomes) are read straight from the
-// instance workspace. A missing file is a valid empty result for orders and journals; callers
+// The instance row groups of the shard Parquet files (orders, journals, fills) are read straight from
+// the instance's shard directory. A missing file is a valid empty result for orders and journals; callers
 // check errors.Is(err, fs.ErrNotExist) to decide between the Parquet and the legacy SQLite source.
 
 // activityRowsFromOrders maps order rows to the activity rows the UI renders, newest candle first.
@@ -122,33 +118,6 @@ func chartFillsFromParquet(fills []instanceparquet.Fill) []chartFill {
 		out = append(out, chartFill{closeMs: f.TsMs, side: f.Side, base: f.BaseQty, quote: f.QuoteQty, price: f.Price})
 	}
 	return out
-}
-
-// instanceTradeOutcomes returns the closed trades of an instance from trade_outcomes.parquet. A
-// missing file is no trades.
-func instanceTradeOutcomes(inst experimentdb.ExperimentInstance) ([]performance.ClosedTrade, error) {
-	outcomes, err := instanceparquet.ReadTradeOutcomes(instanceWorkspace(inst))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return closedTrades(outcomes), nil
-}
-
-// closedTrades maps trade outcome rows to the performance input.
-func closedTrades(outcomes []instanceparquet.TradeOutcome) []performance.ClosedTrade {
-	closed := make([]performance.ClosedTrade, 0, len(outcomes))
-	for _, tr := range outcomes {
-		ct := performance.ClosedTrade{Quote: float64(tr.Quote), Side: int(tr.Side)}
-		if tr.Percent != nil {
-			pct := float64(*tr.Percent)
-			ct.Percent = &pct
-		}
-		closed = append(closed, ct)
-	}
-	return closed
 }
 
 // equityFromFills is the mark-to-market curve: a start point one second before the first fill, then

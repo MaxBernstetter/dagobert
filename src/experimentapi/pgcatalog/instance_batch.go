@@ -9,15 +9,17 @@ import (
 )
 
 // InstanceBatchItem is the final state of one instance: status, timing and aggregated metrics.
-// Everything row-shaped (fills, trade outcomes, period stats) lives in the instance Parquet files.
+// Everything row-shaped (fills, trade outcomes, period stats) lives in the shard Parquet files;
+// ShardKey locates them and is stored only for completed instances.
 type InstanceBatchItem struct {
 	store.InstanceBatchItem
-	Symbol string
+	Symbol   string
+	ShardKey string
 }
 
 const updateInstancesBatchSQL = `
 UPDATE experiment_instance e SET
-  status = t.status, error = t.error, started_at_ms = t.started, finished_at_ms = t.finished,
+  status = t.status, error = t.error, shard_key = t.shard, started_at_ms = t.started, finished_at_ms = t.finished,
   metric_duration_ms = t.m01, metric_cagr = t.m02, metric_max_drawdown = t.m03, metric_sharpe = t.m04,
   metric_sortino = t.m05, metric_monthly_return_avg = t.m06, metric_monthly_return_med = t.m07,
   metric_yearly_return_avg = t.m08, metric_yearly_return_med = t.m09,
@@ -29,9 +31,9 @@ FROM unnest(
   $2::uuid[], $3::text[], $4::text[], $5::bigint[], $6::bigint[], $7::bigint[],
   $8::float8[], $9::float8[], $10::float8[], $11::float8[], $12::float8[], $13::float8[], $14::float8[],
   $15::float8[], $16::float8[], $17::float8[], $18::int[], $19::int[], $20::int[],
-  $21::real[], $22::real[], $23::real[], $24::real[]
+  $21::real[], $22::real[], $23::real[], $24::real[], $25::text[]
 ) AS t(id, status, error, started, finished, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11,
-       m12, m13, m14, m15, m16, m17, m18)
+       m12, m13, m14, m15, m16, m17, m18, shard)
 WHERE e.experiment_id = $1 AND e.id = t.id`
 
 const updateProgressSQL = `
@@ -75,6 +77,7 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 
 	status := make([]string, n)
 	errs := make([]string, n)
+	shards := make([]string, n)
 	started := make([]*int64, n)
 	finished := make([]*int64, n)
 	f8 := make([][]*float64, 10)
@@ -95,7 +98,7 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 			status[i], errs[i] = store.StatusFailed, it.Error
 			continue
 		}
-		status[i] = store.StatusCompleted
+		status[i], shards[i] = store.StatusCompleted, it.ShardKey
 		m := it.Metrics
 		f8[0][i], f8[1][i], f8[2][i], f8[3][i] = m.Cagr, m.MaxDrawdown, m.Sharpe, m.Sortino
 		f8[4][i], f8[5][i], f8[6][i], f8[7][i] = m.MonthlyReturnAvg, m.MonthlyReturnMed, m.YearlyReturnAvg, m.YearlyReturnMed
@@ -117,6 +120,7 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 	for _, col := range f4 {
 		args = append(args, col)
 	}
+	args = append(args, shards)
 	if _, err := tx.Exec(ctx, updateInstancesBatchSQL, args...); err != nil {
 		return err
 	}

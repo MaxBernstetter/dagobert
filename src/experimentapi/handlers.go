@@ -98,7 +98,7 @@ func (s *Server) handleDeleteExperiment(w http.ResponseWriter, r *http.Request) 
 	writeProto(w, http.StatusOK, &v1.OkResponse{Ok: true})
 }
 
-// removeExperimentFiles deletes the experiment's directory under DATA_DIR (its instance workspaces).
+// removeExperimentFiles deletes the experiment's directory under DATA_DIR (its instance workspaces and result shards).
 // Best effort: the experiment is already gone from Postgres, so a failure is logged, not returned.
 func removeExperimentFiles(id uuid.UUID) {
 	root := strings.TrimSpace(os.Getenv("DATA_DIR"))

@@ -46,6 +46,7 @@ CREATE TABLE "experiment_instance" (
   "config_hash" text NOT NULL DEFAULT '',
   "playbook_key" text NOT NULL DEFAULT '',
   "workspace_rel_path" text NOT NULL DEFAULT '',
+  "shard_key" text NOT NULL DEFAULT '',
   "status" text NOT NULL,
   "error" text NOT NULL DEFAULT '',
   "started_at_ms" bigint NULL,

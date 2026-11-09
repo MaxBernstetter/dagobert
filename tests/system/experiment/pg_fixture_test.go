@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,9 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
-	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	macross "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/ma-cross"
 	signalconsensus "github.com/MaxBernstetter/dagobert/src/calculation-signal/playbooks/signal-consensus"
+	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 )
 
@@ -84,6 +83,7 @@ type pgInst struct {
 	PlaybookKey      string
 	ConfigHash       string
 	WorkspaceRelPath string
+	ShardKey         string
 	Status           string
 	Error            string
 	StartedAt        *int64
@@ -103,7 +103,7 @@ type pgRun struct {
 func toPGInst(i experimentdb.ExperimentInstance) pgInst {
 	out := pgInst{
 		ID: i.ID.String(), Label: i.Label, Playbook: i.Playbook, Symbol: i.Symbol, PlaybookKey: i.PlaybookKey, ConfigHash: i.ConfigHash,
-		WorkspaceRelPath: i.WorkspaceRelPath, Status: i.Status, Error: i.Error,
+		WorkspaceRelPath: i.WorkspaceRelPath, ShardKey: i.ShardKey, Status: i.Status, Error: i.Error,
 	}
 	if i.StartedAtMs.Valid {
 		v := i.StartedAtMs.Int64
@@ -252,9 +252,4 @@ func loadExperimentPG(t *testing.T, url, id string) pgRun {
 		out.Instances = append(out.Instances, toPGInst(i))
 	}
 	return out
-}
-
-// instanceDir is the workspace of one instance under dataDir.
-func instanceDir(dataDir string, inst pgInst) string {
-	return filepath.Join(dataDir, inst.WorkspaceRelPath)
 }

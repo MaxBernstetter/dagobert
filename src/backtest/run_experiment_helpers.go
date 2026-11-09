@@ -143,11 +143,11 @@ func applyExperimentEnv(dataDir string, s store.ExperimentSettings) {
 	_ = shared.EnsureDataLayout(dataDir)
 }
 
-// uploadInstanceReport dual-writes report.json to S3 when EXPERIMENT_ARTIFACTS=s3.
-func uploadInstanceReport(workspaceRelPath, workspaceDir string) error {
+// uploadInstanceReport dual-writes the report JSON to S3 when EXPERIMENT_ARTIFACTS=s3, under the
+// instance's workspace_rel_path.
+func uploadInstanceReport(workspaceRelPath string, body []byte) error {
 	if !artifacts.Enabled() {
 		return nil
 	}
-	local := filepath.Join(workspaceDir, artifacts.ReportFileName)
-	return artifacts.PutReportFile(context.Background(), workspaceRelPath, local)
+	return artifacts.PutBytes(context.Background(), artifacts.ObjectKey(workspaceRelPath), body)
 }

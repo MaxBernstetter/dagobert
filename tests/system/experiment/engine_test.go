@@ -61,10 +61,7 @@ func TestExperimentPersistsResults(t *testing.T) {
 		if inst.StartedAt == nil || inst.FinishedAt == nil {
 			t.Fatalf("instance %s missing timing", inst.Label)
 		}
-		b, err := os.ReadFile(filepath.Join(instanceDir(dataDir, inst), "report.json"))
-		if err != nil {
-			t.Fatalf("instance %s report.json: %v", inst.Label, err)
-		}
+		b := readReport(t, instanceRef(dataDir, inst))
 		var rep struct {
 			KPIs struct {
 				Comparison struct {
@@ -161,9 +158,7 @@ func TestExperimentSignalConsensusPersistsResults(t *testing.T) {
 		t.Fatalf("status %q error %q counts %v", got.Status, got.Error, countStatus(got))
 	}
 	for _, inst := range got.Instances {
-		if _, err := os.Stat(filepath.Join(instanceDir(dataDir, inst), "report.json")); err != nil {
-			t.Fatalf("instance %s: %v", inst.Label, err)
-		}
+		readReport(t, instanceRef(dataDir, inst))
 	}
 }
 

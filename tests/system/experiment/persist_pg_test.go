@@ -3,8 +3,10 @@ package experiment_test
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -103,24 +105,45 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 		t.Fatalf("poisoned instance status %q err %v", poisonStatus, err)
 	}
 
-	// Fills, trade outcomes and period stats are files: Postgres keeps none of them, and each instance
-	// that completed has its journal, fill, outcome and period stat files, the poisoned one has none.
+	// Fills, trade outcomes and period stats are shard files: Postgres keeps none of them. Each
+	// instance that completed has a shard_key naming a shard with all six files and its own row groups;
+	// the poisoned one has no shard_key. Instance directories hold no Parquet files and no report.json.
 	wantFills, wantOutcomes := 0, 0
-	for _, inst := range rec.Instances {
-		ws := filepath.Join(dataDir, inst.WorkspaceRelPath)
+	shards := map[string]bool{}
+	for _, inst := range loadExperimentPG(t, url, rec.ID).Instances {
+		ref := instanceRef(dataDir, inst)
 		if inst.ID == poison {
-			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet", "period_stats.parquet"} {
-				if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
-					t.Fatalf("poisoned instance keeps %s: %v", name, err)
-				}
+			if inst.ShardKey != "" {
+				t.Fatalf("poisoned instance has shard_key %q", inst.ShardKey)
 			}
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(ws, "period_stats.parquet")); err != nil {
-			t.Fatalf("completed instance %s has no period_stats.parquet: %v", inst.ID, err)
+		if !strings.HasPrefix(inst.ShardKey, "experiments/"+rec.ID+"/shards/") {
+			t.Fatalf("completed instance %s shard_key %q", inst.ID, inst.ShardKey)
 		}
-		wantFills += len(readJournalFile(t, ws))
-		wantOutcomes += len(readOutcomeFile(t, ws))
+		if !shards[inst.ShardKey] {
+			shards[inst.ShardKey] = true
+			for _, name := range []string{"reports.parquet", "journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet", "period_stats.parquet"} {
+				if _, err := os.Stat(filepath.Join(ref.dir, name)); err != nil {
+					t.Fatalf("shard %s: %v", inst.ShardKey, err)
+				}
+			}
+		}
+		readReport(t, ref)
+		wantFills += len(readJournalFile(t, ref))
+		wantOutcomes += len(readOutcomeFile(t, ref))
+	}
+	if len(shards) == 0 || len(shards) >= n/2 {
+		t.Fatalf("%d shards for %d instances: instances of a flush must share a shard", len(shards), n)
+	}
+	err = filepath.WalkDir(filepath.Join(dataDir, "experiments", rec.ID, "instances"), func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && (strings.HasSuffix(path, ".parquet") || filepath.Base(path) == "report.json") {
+			t.Errorf("per-instance file %s", path)
+		}
+		return err
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
 	}
 	var gotOutcomes int
 	var fillTable, outcomeTable, statTable *string

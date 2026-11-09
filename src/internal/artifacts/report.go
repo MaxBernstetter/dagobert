@@ -1,4 +1,4 @@
-// Package artifacts stores experiment instance report.json on S3 (Floci or AWS).
+// Package artifacts stores experiment instance report JSON on S3 (Floci or AWS).
 package artifacts
 
 import (
@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -31,18 +30,6 @@ func ObjectKey(workspaceRelPath string) string {
 // Enabled is true when EXPERIMENT_ARTIFACTS=s3 and LAKE_BUCKET is set.
 func Enabled() bool {
 	return awsenv.StudyArtifactsBackend() == "s3" && awsenv.LakeBucket() != ""
-}
-
-// PutReportFile uploads an existing local report.json to the lake bucket.
-func PutReportFile(ctx context.Context, workspaceRelPath, localReportPath string) error {
-	if !Enabled() {
-		return nil
-	}
-	body, err := os.ReadFile(localReportPath)
-	if err != nil {
-		return err
-	}
-	return PutBytes(ctx, ObjectKey(workspaceRelPath), body)
 }
 
 // PutBytes writes raw report JSON to S3.

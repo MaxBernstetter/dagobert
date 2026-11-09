@@ -12,7 +12,7 @@ Runs experiments: many strategy instances over historical candles, using the pla
 ## Key files
 - `run_experiment_phases.go`, `run_experiment_helpers.go`: the phases and shared helpers.
 - `experiment_catalog.go`: the experiment catalog is Postgres (`pgcatalog`); `DATABASE_URL` is required and a run without it fails.
-- `instance_files.go`: maps trade outcomes to the Parquet rows (`src/internal/instanceparquet`).
+- `instance_files.go`: maps an instance result to its shard rows (`src/internal/instanceparquet`).
 - `store/`: the legacy single-backtest catalog (`backtests.sqlite`, table `backtest`) and the shared experiment value types (`types.go`). The SQLite experiment catalog is gone.
 - `run.go`: the older single-backtest path (`BACKTEST_ID`, `task backtest-run`).
 
@@ -20,7 +20,7 @@ Runs experiments: many strategy instances over historical candles, using the pla
 Experiments run on the C++ engine only (`cpp_engine.go`; the Go engine and `EXPERIMENT_ENGINE` were removed). Instances are grouped by symbol and playbook and sharded (`EXPERIMENT_CPP_SHARD_MAX`, default 500). `EXPERIMENT_CPP_PROCESSES` (default: one per CPU) is the number of concurrent `--sweep` processes. `cpp_sweep.go` builds the protobuf `SweepRequest`, runs the binary named by `CPP_SMA_CROSS_BIN` or `CPP_SIGNAL_CONSENSUS_BIN`, and `kpi_worker.go` (`calculation-signal/runner`) replays the actions in Go with `EXPERIMENT_SIM_WORKERS` workers (default: one per CPU). Only ma-cross and signal-consensus are supported; an unsupported playbook or a missing binary fails the instance with a clear error. The live pipeline does not use C++.
 
 ## Persistence
-`persist_pipeline.go`: compute goroutines push results into a queue; one persister batches (up to 200 or 250 ms), writes `report.json` and the instance Parquet files (fills, orders, journals, trade outcomes, period stats; a failed instance removes them), then commits Postgres with retries and bisection down to a single instance. Postgres holds status, timing and aggregated metrics (`pgcatalog/instance_batch.go`), no instance rows. Compute never touches the database.
+`persist_pipeline.go`: compute goroutines push results into a queue; one persister batches (up to 200 or 250 ms), writes one shard directory per flush, `experiments/<id>/shards/<uuid>/` (`reports.parquet`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats`; one row group per instance, see `src/internal/instanceparquet`), then commits Postgres with retries and bisection down to a single instance. All commit attempts and sub-batches reuse the same shard; a failed shard write fails every instance of the flush and removes the directory; an instance that fails afterwards keeps unreachable rows in the shard (no `shard_key`). Postgres holds status, timing, aggregated metrics and the `shard_key` of completed instances (`pgcatalog/instance_batch.go`), no instance rows. Compute never touches the database.
 
 ## Tests and benchmarks
 - Unit tests: `go test ./src/backtest/...`. System tests: `tests/system/experiment` (needs Postgres, see `src/experimentapi/README.md`); experiments are created in the scratch database by `createExperimentPG`. The experiment tests need the C++ binaries (`CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN`).

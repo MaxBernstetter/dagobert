@@ -1,8 +1,10 @@
 package experiment_test
 
 import (
+	"encoding/json"
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -12,8 +14,82 @@ import (
 	"github.com/parquet-go/parquet-go"
 )
 
-// The experiment instance files are read with parquet-go directly, as the API does not
-// belong to the test: fills.parquet and journals.parquet of one instance workspace.
+// The shard files are read with parquet-go directly, as the API does not belong to the test: the
+// footer key trading_copilot.instances maps an instance id to its row group, and only that row group
+// is read.
+
+// instRef locates one instance's rows: its shard directory under dataDir and its id. An empty dir is
+// an instance without shard_key (failed, not run).
+type instRef struct {
+	dir, id string
+}
+
+// instanceRef is the shard reference of one instance, from the shard_key in the catalog.
+func instanceRef(dataDir string, inst pgInst) instRef {
+	if inst.ShardKey == "" {
+		return instRef{id: inst.ID}
+	}
+	return instRef{dir: filepath.Join(dataDir, inst.ShardKey), id: inst.ID}
+}
+
+// readRows returns the rows of one instance in one shard file; no shard, no file or no row group is no rows.
+func readRows[T any](t *testing.T, ref instRef, file string) []T {
+	t.Helper()
+	if ref.dir == "" {
+		return nil
+	}
+	f, err := os.Open(filepath.Join(ref.dir, file))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pf, err := parquet.OpenFile(f, info.Size())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, ok := pf.Lookup("trading_copilot.instances")
+	if !ok {
+		t.Fatalf("%s: footer trading_copilot.instances missing", file)
+	}
+	var index map[string]int
+	if err := json.Unmarshal([]byte(raw), &index); err != nil {
+		t.Fatal(err)
+	}
+	g, ok := index[ref.id]
+	if !ok {
+		return nil
+	}
+	rg := pf.RowGroups()[g]
+	rows := make([]T, rg.NumRows())
+	r := parquet.NewGenericRowGroupReader[T](rg)
+	defer r.Close()
+	if n, err := r.Read(rows); int64(n) != rg.NumRows() {
+		t.Fatalf("%s: read %d of %d rows: %v", file, n, rg.NumRows(), err)
+	}
+	return rows
+}
+
+type reportFile struct {
+	InstanceID string `parquet:"instance_id"`
+	ReportJSON string `parquet:"report_json"`
+}
+
+// readReport returns the report JSON of one instance from reports.parquet; it fails when there is none.
+func readReport(t *testing.T, ref instRef) []byte {
+	t.Helper()
+	rows := readRows[reportFile](t, ref, "reports.parquet")
+	if len(rows) != 1 || rows[0].InstanceID != ref.id {
+		t.Fatalf("instance %s: want one report row in %s, got %+v", ref.id, ref.dir, rows)
+	}
+	return []byte(rows[0].ReportJSON)
+}
 
 type journalFile struct {
 	OrderLinkID string `parquet:"order_link_id"`
@@ -24,16 +100,9 @@ type journalFile struct {
 }
 
 // readJournalFile returns the journal rows of one instance; a missing file is no rows.
-func readJournalFile(t *testing.T, ws string) []journalFile {
+func readJournalFile(t *testing.T, ref instRef) []journalFile {
 	t.Helper()
-	rows, err := parquet.ReadFile[journalFile](filepath.Join(ws, "journals.parquet"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return rows
+	return readRows[journalFile](t, ref, "journals.parquet")
 }
 
 type outcomeFile struct {
@@ -43,16 +112,9 @@ type outcomeFile struct {
 }
 
 // readOutcomeFile returns the trade outcome rows of one instance; a missing file is no rows.
-func readOutcomeFile(t *testing.T, ws string) []outcomeFile {
+func readOutcomeFile(t *testing.T, ref instRef) []outcomeFile {
 	t.Helper()
-	rows, err := parquet.ReadFile[outcomeFile](filepath.Join(ws, "trade_outcomes.parquet"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return rows
+	return readRows[outcomeFile](t, ref, "trade_outcomes.parquet")
 }
 
 type fillFile struct {
@@ -61,21 +123,14 @@ type fillFile struct {
 	QuoteQty float64 `parquet:"quote_qty"`
 }
 
-func readFillFile(t *testing.T, ws string) []fillFile {
+func readFillFile(t *testing.T, ref instRef) []fillFile {
 	t.Helper()
-	rows, err := parquet.ReadFile[fillFile](filepath.Join(ws, "fills.parquet"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return rows
+	return readRows[fillFile](t, ref, "fills.parquet")
 }
 
 // decisionCloses lists the candle close of each fill on the given side ("buy" or "sell"), read from
 // the order link id, which is playbookKey:symbol:candleClose.
-func decisionCloses(t *testing.T, workspace, decision string) []int64 {
+func decisionCloses(t *testing.T, workspace instRef, decision string) []int64 {
 	t.Helper()
 	side := map[string]string{"buy": "Buy", "sell": "Sell"}[decision]
 	if side == "" {
@@ -99,17 +154,17 @@ func decisionCloses(t *testing.T, workspace, decision string) []int64 {
 	return out
 }
 
-func countSignalsWithDecision(t *testing.T, workspace, decision string) int {
+func countSignalsWithDecision(t *testing.T, workspace instRef, decision string) int {
 	return len(decisionCloses(t, workspace, decision))
 }
 
-func countFills(t *testing.T, workspace string) int {
+func countFills(t *testing.T, workspace instRef) int {
 	t.Helper()
 	return len(readJournalFile(t, workspace))
 }
 
 // distinctPlaybooks lists the playbook keys of the fills, from the order link ids.
-func distinctPlaybooks(t *testing.T, workspace string) []string {
+func distinctPlaybooks(t *testing.T, workspace instRef) []string {
 	t.Helper()
 	seen := map[string]struct{}{}
 	var out []string
@@ -135,7 +190,7 @@ func distinctPlaybooks(t *testing.T, workspace string) []string {
 }
 
 // buyQuotes lists the quote spent by each buy fill, ordered by order link id.
-func buyQuotes(t *testing.T, ws string) []float64 {
+func buyQuotes(t *testing.T, ws instRef) []float64 {
 	t.Helper()
 	var links []string
 	quotes := map[string]float64{}
@@ -159,7 +214,7 @@ func buyQuotes(t *testing.T, ws string) []float64 {
 }
 
 // firstBuyQuote returns the quote spent by the first buy in order link id order.
-func firstBuyQuote(t *testing.T, ws string) (float64, bool) {
+func firstBuyQuote(t *testing.T, ws instRef) (float64, bool) {
 	t.Helper()
 	q := buyQuotes(t, ws)
 	if len(q) == 0 {
@@ -169,7 +224,7 @@ func firstBuyQuote(t *testing.T, ws string) (float64, bool) {
 }
 
 // netCashFlow sums the quote of sells less buys over the fills (finite for any valid fill set).
-func netCashFlow(t *testing.T, ws string) float64 {
+func netCashFlow(t *testing.T, ws instRef) float64 {
 	t.Helper()
 	var net float64
 	for _, f := range readFillFile(t, ws) {

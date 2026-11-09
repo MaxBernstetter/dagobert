@@ -51,6 +51,7 @@ type ExperimentInstance struct {
 	ConfigHash               string        `json:"config_hash"`
 	PlaybookKey              string        `json:"playbook_key"`
 	WorkspaceRelPath         string        `json:"workspace_rel_path"`
+	ShardKey                 string        `json:"shard_key"`
 	Status                   string        `json:"status"`
 	Error                    string        `json:"error"`
 	StartedAtMs              pgtype.Int8   `json:"started_at_ms"`

@@ -9,9 +9,9 @@ Alphabetical. Each entry names where to look in the code.
 - **consensus (signal-consensus)**: playbook that combines several indicator sub-signals into buy, hold or sell. `src/calculation-signal/playbooks/signal-consensus/`.
 - **replay consistency test**: test that runs the C++ sweep and the replay (`ReplayKPI`) on seeded lakes and checks the journals, orders, fills and period statistics against each other. `TestSmaCrossCppReplayConsistent`, `TestConsensusCppReplayConsistent` in `src/backtest/cpp_replay_test.go`.
 - **experiment**: one run definition with shared settings (date range, capital, costs, provider) and many instances. Stored in the catalog; workspace `data/experiments/<experiment_id>/`.
-- **fill**: a simulated order execution (side, quantity, price, costs). `src/execution/`, `src/internal/venue/sim`; per-instance fills in the instance `fills.parquet`.
+- **fill**: a simulated order execution (side, quantity, price, costs). `src/execution/`, `src/internal/venue/sim`; per-instance fills in the instance's row group of the shard `fills.parquet`.
 - **grid**: experiment mode that expands axes of parameter values into the cartesian product of instances (up to 20000). `src/experimentapi/grid.go`.
-- **instance**: one strategy configuration (playbook, strategy config, one symbol) inside an experiment. Workspace `data/experiments/<experiment_id>/instances/<instance_id>/` (`ExperimentWorkspaceDir`, `src/backtest/store/types.go`).
+- **instance**: one strategy configuration (playbook, strategy config, one symbol) inside an experiment. Workspace `data/experiments/<experiment_id>/instances/<instance_id>/` (`ExperimentWorkspaceDir`, `src/backtest/store/types.go`); results are row groups in its shard (`shard_key`).
 - **KPI window**: the indicator values per bar, loaded into memory for replay. `kpi.Window`, `src/internal/kpi/window.go`; built by `BuildKPIRange` in `src/calculation-technical-indicator/runner/range.go`.
 - **KPI worker**: goroutine pool that replays C++ actions against bar closes and builds the instance report. `RunKPIWorkers`, `ReplayKPI` in `src/calculation-signal/runner/kpi_worker.go`.
 - **lake**: the Hive-partitioned Parquet candle store under `data/parquet/provider=.../base=.../quote=.../year=...` (or S3/Floci). `src/shared/datalayout.go`, `src/internal/lakeobject`.
@@ -23,4 +23,4 @@ Alphabetical. Each entry names where to look in the code.
 - **shard**: a slice of instances of one symbol and playbook sent to one C++ `--sweep` process, at most `EXPERIMENT_CPP_SHARD_MAX` (default 500). `src/backtest/cpp_engine.go`.
 - **sweep**: one C++ strategy run over many configurations at once (`--sweep`, protobuf `SweepRequest` in, `RunReport` out). `src/backtest/cpp_sweep.go`.
 - **unavailable hours**: exchange hours confirmed missing, recorded in the `ingest_unavailable` table instead of invented candles; they do not block an experiment. `src/ingest/internal/job/run.go`, `src/backtest/coverage.go`.
-- **workspace**: the per-instance directory holding its paper wallet, `report.json` and the Parquet files (fills, orders, journals, trade outcomes). See instance.
+- **workspace**: the per-instance directory holding its paper wallet. Its results live in a shard, see instance.

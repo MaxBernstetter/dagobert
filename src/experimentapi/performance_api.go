@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"net/http"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
@@ -39,11 +40,15 @@ func winRateDef() kpisDef {
 }
 
 func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentdb.ExperimentInstance, resp *kpisResponse) error {
-	closed, err := instanceTradeOutcomes(inst)
+	dir, err := instanceShard(inst)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil // no shard: no trades, no periods
+	}
+	closed, err := pgcatalog.InstanceTrades(dir, inst.ID.String())
 	if err != nil {
 		return err
 	}
-	monthly, yearly, err := pgcatalog.PeriodCounts(instanceWorkspace(inst))
+	monthly, yearly, err := pgcatalog.PeriodCounts(dir, inst.ID.String())
 	if err != nil {
 		return err
 	}

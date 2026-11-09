@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/parquet-go/parquet-go"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
@@ -22,10 +23,11 @@ import (
 )
 
 // apiFixture runs two ma-cross instances on the crossing fixture, mirrors the experiment into a
-// scratch Postgres and serves the Experiment API over httptest. The second instance's Parquet files
-// are removed afterwards, so it stands for an instance without them.
+// scratch Postgres and serves the Experiment API over httptest. The second instance is moved into a
+// shard of its own that holds its report but no rows, so it stands for an instance without them.
 type apiFixture struct {
 	srv        *httptest.Server
+	pool       *pgxpool.Pool
 	dataDir    string
 	rec        pgRun
 	traded     pgInst
@@ -35,8 +37,8 @@ type apiFixture struct {
 }
 
 // newAPIFixture runs two ma-cross instances on the crossing fixture in a scratch Postgres and serves
-// the Experiment API over httptest. The second instance's Parquet files are removed afterwards, so
-// it stands for an instance without them.
+// the Experiment API over httptest. The second instance is moved into a shard of its own that holds
+// its report but no rows, so it stands for an instance without them.
 func newAPIFixture(t *testing.T) apiFixture {
 	t.Helper()
 	url := pgScratchDB(t)
@@ -64,23 +66,22 @@ func newAPIFixture(t *testing.T) apiFixture {
 		t.Fatal(err)
 	}
 	got := loadExperimentPG(t, url, rec.ID)
-	for _, inst := range got.Instances {
-		if inst.Label == "missing" {
-			removeInstanceParquet(t, instanceDir(dataDir, inst))
-		}
-	}
-
 	pool, err := pgxpool.New(t.Context(), url)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
+	for _, inst := range got.Instances {
+		if inst.Label == "missing" {
+			moveToReportOnlyShard(t, pool, dataDir, rec.ID, inst)
+		}
+	}
 	mux := http.NewServeMux()
 	experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{}))
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	f := apiFixture{srv: srv, dataDir: dataDir, rec: got, endSec: endMs / 1000, experiment: rec.ID}
+	f := apiFixture{srv: srv, pool: pool, dataDir: dataDir, rec: got, endSec: endMs / 1000, experiment: rec.ID}
 	for _, inst := range got.Instances {
 		switch inst.Label {
 		case "traded":
@@ -189,7 +190,7 @@ func TestExperimentAPIInstanceFiles(t *testing.T) {
 		t.Fatalf("kpis shape: %v %s", err, body)
 	}
 
-	// An instance without its Parquet files: empty arrays, still 200.
+	// An instance without rows in its shard: empty arrays, still 200.
 	code, body = f.get(t, f.instancePath(f.missing, "activity"))
 	if code != http.StatusOK {
 		t.Fatalf("missing activity %d: %s", code, body)
@@ -214,17 +215,65 @@ func TestExperimentAPIInstanceFiles(t *testing.T) {
 	}
 }
 
-// removeInstanceParquet deletes the four instance files, as the orchestrator's delete does.
-func removeInstanceParquet(t *testing.T, ws string) {
+// moveToReportOnlyShard points the instance at a new shard that holds its report and no rows.
+func moveToReportOnlyShard(t *testing.T, pool *pgxpool.Pool, dataDir, experimentID string, inst pgInst) {
 	t.Helper()
-	for _, name := range []string{"fills.parquet", "orders.parquet", "journals.parquet", "trade_outcomes.parquet"} {
-		if err := os.Remove(filepath.Join(ws, name)); err != nil && !os.IsNotExist(err) {
-			t.Fatal(err)
-		}
+	report := readReport(t, instanceRef(dataDir, inst))
+	key := "experiments/" + experimentID + "/shards/report-only"
+	dir := filepath.Join(dataDir, key)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Create(filepath.Join(dir, "reports.parquet"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := parquet.NewGenericWriter[reportFile](f, parquet.KeyValueMetadata("trading_copilot.instances", fmt.Sprintf(`{%q:0}`, inst.ID)))
+	if _, err := w.Write([]reportFile{{InstanceID: inst.ID, ReportJSON: string(report)}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(t.Context(), `UPDATE experiment_instance SET shard_key=$2 WHERE id=$1`, inst.ID, key); err != nil {
+		t.Fatal(err)
 	}
 }
 
-// TestExperimentPerformanceFromParquet: /performance is built from the instances' trade_outcomes.parquet
+// TestExperimentAPIInstanceWithoutShardKey: an instance without shard_key (not completed, or run
+// before shards) reads like a missing file: no report or KPIs (404), empty activity and chart (200).
+func TestExperimentAPIInstanceWithoutShardKey(t *testing.T) {
+	f := newAPIFixture(t)
+	if _, err := f.pool.Exec(t.Context(), `UPDATE experiment_instance SET shard_key='' WHERE id=$1`, f.traded.ID); err != nil {
+		t.Fatal(err)
+	}
+	for _, suffix := range []string{"report", "kpis"} {
+		if code, body := f.get(t, f.instancePath(f.traded, suffix)); code != http.StatusNotFound {
+			t.Fatalf("%s: status %d want 404: %s", suffix, code, body)
+		}
+	}
+	code, body := f.get(t, f.instancePath(f.traded, "activity"))
+	if code != http.StatusOK {
+		t.Fatalf("activity %d: %s", code, body)
+	}
+	checkActivity(t, body, false)
+	code, body = f.get(t, f.instancePath(f.traded, fmt.Sprintf("chart-series?from=0&to=%d", f.endSec)))
+	if code != http.StatusOK {
+		t.Fatalf("chart-series %d", code)
+	}
+	series := &v1.ChartSeries{}
+	if err := proto.Unmarshal(body, series); err != nil {
+		t.Fatal(err)
+	}
+	if len(series.Portfolio) != 0 || len(series.Markers) != 0 {
+		t.Fatalf("portfolio %d markers %d", len(series.Portfolio), len(series.Markers))
+	}
+}
+
+// TestExperimentPerformanceFromParquet: /performance is built from the instances' trade outcome row groups
 // at finalize, and the prepare cache is gone once the experiment is final.
 func TestExperimentPerformanceFromParquet(t *testing.T) {
 	f := newAPIFixture(t)

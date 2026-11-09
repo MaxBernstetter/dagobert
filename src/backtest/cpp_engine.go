@@ -92,7 +92,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 	aggMS := signalstore.AggregationDurationMS()
 	startCash := settings.InitialUSDC + settings.InitialUSDT
 	fail := func(inst store.ExperimentInstance, err error) {
-		queue <- instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), err: err}
+		queue <- instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), err: err}
 	}
 
 	// Group by (symbol, playbook), then shard. Unsupported playbooks fail their instances.
@@ -146,7 +146,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		for batch := range results {
 			for _, r := range batch {
 				inst := byKey[r.Key]
-				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
+				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
 				if r.Err == nil {
 					res.timing = store.InstanceRunTiming{StartedAtMs: r.Report.Run.StartedAtMs, FinishedAtMs: r.Report.Run.FinishedAtMs}
 				}

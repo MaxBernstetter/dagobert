@@ -349,7 +349,7 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	persistDone := make(chan struct{})
 	go func() {
 		defer close(persistDone)
-		runPersister(cat, experimentID, instTotal, skipped, queue)
+		runPersister(cat, dataDir, experimentID, instTotal, skipped, queue)
 	}()
 	for _, r := range precomputed {
 		queue <- r

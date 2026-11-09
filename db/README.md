@@ -1,6 +1,6 @@
 # db
 
-Postgres schema for the control plane: experiments, instances (status and aggregated metrics), experiment performance, the ingest ledger (`ingest_stored`, `ingest_unavailable`) and the connector state (`provider`, `provider_pair`; secrets stay in files). Fills, orders, journals, trade outcomes and period stats are Parquet files in each instance workspace, not tables. Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
+Postgres schema for the control plane: experiments, instances (status and aggregated metrics), experiment performance, the ingest ledger (`ingest_stored`, `ingest_unavailable`) and the connector state (`provider`, `provider_pair`; secrets stay in files). Fills, orders, journals, trade outcomes, period stats and the instance report are Parquet row groups in shard files (`experiments/<id>/shards/<shard>/`), not tables; `experiment_instance.shard_key` is the shard directory of a completed instance (empty until then) and `workspace_rel_path` its workspace directory (paper wallet; key of the S3 report copy). Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
 
 ## Layout
 - `schema/`: the desired state as Atlas HCL (`*.pg.hcl`), grouped `experiment/`, `activity/`, `connector/` and `ingest/`; `atlas.hcl` defines the `local` env.

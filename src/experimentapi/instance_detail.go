@@ -15,8 +15,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The instance detail endpoints read the instance workspace written by the backtest job:
-// report.json (KPIs and statistics) and the Parquet files of the instance (orders, fills, journals).
+// The instance detail endpoints read the shard written by the backtest job: the instance's report
+// (KPIs and statistics) and its row groups in the shard Parquet files (orders, fills, journals).
+// An instance without shard_key (not completed) reads like a missing file.
 
 // instanceForRequest loads the instance named in the path and checks that it belongs to the experiment.
 func (s *Server) instanceForRequest(w http.ResponseWriter, r *http.Request) (experimentdb.ExperimentInstance, bool) {
@@ -42,22 +43,35 @@ func (s *Server) instanceForRequest(w http.ResponseWriter, r *http.Request) (exp
 	return inst, true
 }
 
-// instanceWorkspace is the directory of one instance under DATA_DIR.
-func instanceWorkspace(inst experimentdb.ExperimentInstance) string {
+// instanceShard is the shard directory of the instance under DATA_DIR. The error satisfies
+// errors.Is(err, fs.ErrNotExist) when the instance has no shard.
+func instanceShard(inst experimentdb.ExperimentInstance) (string, error) {
+	if inst.ShardKey == "" {
+		return "", fs.ErrNotExist
+	}
 	root := strings.TrimSpace(os.Getenv("DATA_DIR"))
 	if root == "" {
 		root = "/data"
 	}
-	return filepath.Join(root, inst.WorkspaceRelPath)
+	return filepath.Join(root, inst.ShardKey), nil
 }
 
-// handleInstanceReport serves GET .../instances/{instanceId}/report: the report.json file as written.
+// readInstanceReport is the report JSON of the instance as stored in its shard.
+func readInstanceReport(inst experimentdb.ExperimentInstance) ([]byte, error) {
+	dir, err := instanceShard(inst)
+	if err != nil {
+		return nil, err
+	}
+	return instanceparquet.ReadReport(dir, inst.ID.String())
+}
+
+// handleInstanceReport serves GET .../instances/{instanceId}/report: the report JSON as stored in the shard.
 func (s *Server) handleInstanceReport(w http.ResponseWriter, r *http.Request) {
 	inst, ok := s.instanceForRequest(w, r)
 	if !ok {
 		return
 	}
-	raw, err := os.ReadFile(filepath.Join(instanceWorkspace(inst), "report.json"))
+	raw, err := readInstanceReport(inst)
 	if errors.Is(err, fs.ErrNotExist) {
 		writeError(w, http.StatusNotFound, "report not found")
 		return
@@ -117,7 +131,7 @@ type detailStats struct {
 
 func readDetailReport(inst experimentdb.ExperimentInstance) (detailReport, error) {
 	var report detailReport
-	raw, err := os.ReadFile(filepath.Join(instanceWorkspace(inst), "report.json"))
+	raw, err := readInstanceReport(inst)
 	if err != nil {
 		return report, err
 	}
@@ -173,7 +187,7 @@ type kpisStatistics struct {
 	Loss              *outcomeSide      `json:"loss,omitempty"`
 }
 
-// handleInstanceKPIs serves GET .../instances/{instanceId}/kpis: KPIs, comparison, and statistics from report.json.
+// handleInstanceKPIs serves GET .../instances/{instanceId}/kpis: KPIs, comparison, and statistics from the report.
 func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
 	inst, ok := s.instanceForRequest(w, r)
 	if !ok {
@@ -313,7 +327,7 @@ type activityResponse struct {
 }
 
 // handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from the
-// instance Parquet files. An instance without orders.parquet has no activity (empty arrays).
+// instance's shard row groups. An instance without orders has no activity (empty arrays).
 func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) {
 	inst, ok := s.instanceForRequest(w, r)
 	if !ok {
@@ -328,8 +342,11 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 		Playbook:       inst.PlaybookKey,
 		Symbol:         inst.Symbol,
 	}
-	ws := instanceWorkspace(inst)
-	orders, err := instanceparquet.ReadOrders(ws)
+	ws, err := instanceShard(inst)
+	var orders []instanceparquet.Order
+	if err == nil {
+		orders, err = instanceparquet.ReadOrders(ws, inst.ID.String())
+	}
 	if errors.Is(err, fs.ErrNotExist) {
 		writeJSON(w, http.StatusOK, resp)
 		return
@@ -339,7 +356,7 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	resp.Rows = activityRowsFromOrders(orders)
-	journals, err := instanceparquet.ReadJournals(ws)
+	journals, err := instanceparquet.ReadJournals(ws, inst.ID.String())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

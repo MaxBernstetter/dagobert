@@ -3,7 +3,7 @@
 How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md).
 
 - **Experiment**: one row with shared settings (range, capital, costs, provider) and N instances.
-- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace is `data/experiments/<experiment_id>/instances/<instance_id>/` (`store.ExperimentWorkspaceDir`): `report.json` and the Parquet files `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` (`src/internal/instanceparquet`).
+- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace (`workspace_rel_path`, `data/experiments/<experiment_id>/instances/<instance_id>/`, `store.ExperimentWorkspaceDir`) holds the paper wallet. Its results are row groups in a shard (`shard_key`, `data/experiments/<experiment_id>/shards/<shard_id>/`): one shard per persister flush, one Parquet file per datatype (`reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats`), one row group per instance, located through the footer key `trading_copilot.instances` (instance id to row group index; an instance without rows of a type has no group) (`src/internal/instanceparquet`).
 
 ## The picture
 
@@ -25,7 +25,7 @@ sequenceDiagram
     W->>L: coverage, ingest gaps, indicator window, KPI handoff files
     O->>W: simulate (one or many batches)
     W->>P: batched UPDATE per instance
-    W->>L: report.json and Parquet files per instance
+    W->>L: shard Parquet files per flush
     O->>W: finalize
     W->>L: read trade_outcomes.parquet per instance
     W->>P: performance, final status, drop the prepare cache
@@ -45,7 +45,7 @@ flowchart TD
     C3 --> C4["RunKPIWorkers (ReplayKPI, Go)"]
     C4 --> Q["result queue (instanceResult)"]
     Q --> PS["runPersister (one goroutine)"]
-    PS --> R["report.json (+ S3 copy) and Parquet: fills, orders, journals, trade outcomes"]
+    PS --> R["Shard Parquet: report, fills, orders, journals, trade outcomes, period stats (+ S3 copy of the report)"]
     PS --> PG["Postgres: UPDATE instances (status, timing, metrics), progress"]
 ```
 
@@ -90,7 +90,7 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 | Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
 | Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; workspaces, paper wallet; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
-| Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | `report.json` and Parquet files per instance; Postgres status, timing, metrics | Parquet write error fails the instance (its files are removed); batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
+| Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | one shard per flush; Postgres status, timing, metrics, `shard_key` | shard write error fails every instance of the flush (the shard directory is removed); a failed instance has no `shard_key`; batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
 | Finalize | `RunExperimentFinalize` | instance statuses, `trade_outcomes.parquet` | `experiment_performance` (Postgres), final status, then the prepare cache (`.cache`) is removed | zero completed -> `failed`; any failed -> `partial`; else `completed`. Re-finalizing a finished experiment is not supported (the cache is gone); a new run re-prepares it |
 
 The catalog is Postgres. The worker needs `DATABASE_URL` (`pgcatalog.Open`); without it the run fails (`experiment_catalog.go`).
@@ -103,7 +103,8 @@ Where state lives:
 | Instance period stats (month and year buckets) | `period_stats.parquet` in the instance workspace, next to the fill, order, journal and outcome files |
 | Candles | `data/parquet/provider=.../` (read-only here), gaps in the `ingest_unavailable` table |
 | Indicator window per symbol | `data/experiments/<experiment_id>/.cache` (handoff files from prepare to simulate and finalize), removed at the end of finalize |
-| Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet, `report.json`, `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` |
+| Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet |
+| Per flush | `data/experiments/<experiment_id>/shards/<shard_id>/`: `reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats` `.parquet`, one row group per instance |
 | Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
 
 Indicator bars (`parquet/ti/` in the lake) are the only persisted indicator output; an experiment never writes them except as a cache of a cold computation.
@@ -157,14 +158,14 @@ Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip
 | `EXPERIMENT_BATCH_SIZE` | 64 | instances per simulate container (batched/sfn) |
 | `EXPERIMENT_MAP_MAX_CONCURRENCY` | 8 | parallel simulate batches in the local pool |
 | `EXPERIMENT_SFN_ARN` | unset | state machine for the Map fan-out; unset uses the local pool |
-| `EXPERIMENT_ARTIFACTS` | `fs` | `s3` also copies `report.json` to S3 |
+| `EXPERIMENT_ARTIFACTS` | `fs` | `s3` also copies each instance report JSON to S3 |
 | `EXPERIMENT_PHASE`, `EXPERIMENT_INSTANCE_IDS`, `EXPERIMENT_INSTANCE_FILE`, `EXPERIMENT_RETRY_FAILED` | set by the orchestrator | worker internals |
 
 Persistence constants (not env): batch 200 results or 250 ms, queue `min(instances, 4096)`, report writers 8, 4 concurrent commits on Postgres, 3 retries (`persist_pipeline.go`).
 
 ## Known limits
 
-- Experiments completed before the Parquet instance files (#164) have no `trade_outcomes.parquet`, and `fills`/`orders`/`journals` are missing too. Their activity and charts are empty and their trade outcomes are gone from `/kpis` and `/performance`. Re-running the experiment rebuilds them; re-finalizing without re-running does not (the prepare cache is removed at finalize). This is a deliberate behaviour change; no backfill exists.
+- Experiments completed before the shard layout have no `shard_key` (and, before #164, no Parquet files at all). There is no fallback to the old per-instance files and no backfill: report, KPIs, activity and charts are empty for them (report and KPIs 404). Their activity and charts are empty and their trade outcomes are gone from `/kpis` and `/performance`. Re-running the experiment rebuilds them; re-finalizing without re-running does not (the prepare cache is removed at finalize). This is a deliberate behaviour change; no backfill exists.
 - Fills are not written to Postgres any more, so large runs no longer pay for a fill COPY. The Parquet files of a 3000-instance run take 232 MiB (zigzag lake) and 484 MiB (random walk) and the run takes 14.9 s and 16.9 s (medians of three); see `docs/development/05-cpp-benchmark.md`.
 - Single-flight: the orchestrator runs one backtest or experiment job at a time; the run hook silently returns if one is active, and job status is lost on orchestrator restart.
 - The legacy single-backtest path (`backtest.Run`, `BACKTEST_ID`, `POST /backtest/run`, `task backtest-run`) is still wired and untouched by this flow.
