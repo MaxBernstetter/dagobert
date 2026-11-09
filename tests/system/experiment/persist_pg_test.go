@@ -103,34 +103,34 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 		t.Fatalf("poisoned instance status %q err %v", poisonStatus, err)
 	}
 
-	// Fills and trade outcomes are files now: Postgres keeps none of them, and each instance that
-	// completed has its journal, fill and outcome files, the poisoned one has none.
+	// Fills, trade outcomes and period stats are files: Postgres keeps none of them, and each instance
+	// that completed has its journal, fill, outcome and period stat files, the poisoned one has none.
 	wantFills, wantOutcomes := 0, 0
 	for _, inst := range rec.Instances {
 		ws := filepath.Join(dataDir, inst.WorkspaceRelPath)
 		if inst.ID == poison {
-			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet"} {
+			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet", "period_stats.parquet"} {
 				if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
 					t.Fatalf("poisoned instance keeps %s: %v", name, err)
 				}
 			}
 			continue
 		}
+		if _, err := os.Stat(filepath.Join(ws, "period_stats.parquet")); err != nil {
+			t.Fatalf("completed instance %s has no period_stats.parquet: %v", inst.ID, err)
+		}
 		wantFills += len(readJournalFile(t, ws))
 		wantOutcomes += len(readOutcomeFile(t, ws))
 	}
-	var gotOutcomes, statInstances int
-	var fillTable, outcomeTable *string
-	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text`).Scan(&fillTable, &outcomeTable); err != nil {
+	var gotOutcomes int
+	var fillTable, outcomeTable, statTable *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text, to_regclass('public.experiment_instance_period_stat')::text`).Scan(&fillTable, &outcomeTable, &statTable); err != nil {
 		t.Fatal(err)
 	}
-	if fillTable != nil || outcomeTable != nil {
-		t.Fatalf("dropped tables still exist: fill=%v outcome=%v", fillTable, outcomeTable)
+	if fillTable != nil || outcomeTable != nil || statTable != nil {
+		t.Fatalf("dropped tables still exist: fill=%v outcome=%v period_stat=%v", fillTable, outcomeTable, statTable)
 	}
 	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&gotOutcomes); err != nil {
-		t.Fatal(err)
-	}
-	if err := pool.QueryRow(ctx, `SELECT count(DISTINCT instance_id) FROM experiment_instance_period_stat`).Scan(&statInstances); err != nil {
 		t.Fatal(err)
 	}
 	if wantFills == 0 {
@@ -138,8 +138,5 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 	}
 	if gotOutcomes != wantOutcomes || wantOutcomes == 0 {
 		t.Fatalf("outcomes in metrics %d, outcome files %d", gotOutcomes, wantOutcomes)
-	}
-	if statInstances != n-1 {
-		t.Fatalf("period stats for %d instances want %d", statInstances, n-1)
 	}
 }

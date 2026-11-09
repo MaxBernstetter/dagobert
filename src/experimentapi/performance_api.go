@@ -8,6 +8,7 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -42,25 +43,9 @@ func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentd
 	if err != nil {
 		return err
 	}
-	periods, err := s.q.ListInstancePeriodStats(ctx, inst.ID)
+	monthly, yearly, err := pgcatalog.PeriodCounts(instanceWorkspace(inst))
 	if err != nil {
 		return err
-	}
-	var monthly, yearly []performance.PeriodCount
-	for _, p := range periods {
-		if !p.WinCount.Valid || !p.TradeCount.Valid || p.TradeCount.Int32 <= 0 {
-			continue
-		}
-		bucket := performance.PeriodCount{Period: p.PeriodKey, Trades: int(p.TradeCount.Int32)}
-		if p.WinCount.Valid {
-			bucket.Wins = int(p.WinCount.Int32)
-		}
-		switch p.PeriodKind {
-		case "year":
-			yearly = append(yearly, bucket)
-		case "month":
-			monthly = append(monthly, bucket)
-		}
 	}
 	result := performance.Assemble(closed, monthly, yearly)
 	if result.ClosedTrades() == 0 {

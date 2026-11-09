@@ -106,20 +106,6 @@ CREATE INDEX "experiment_instance_experiment_id_sortino_idx" ON "experiment_inst
 CREATE INDEX "experiment_instance_experiment_id_status_idx" ON "experiment_instance" ("experiment_id", "status");
 -- Create index "experiment_instance_experiment_id_symbol_idx" to table: "experiment_instance"
 CREATE INDEX "experiment_instance_experiment_id_symbol_idx" ON "experiment_instance" ("experiment_id", "symbol");
--- Create "experiment_instance_period_stat" table
-CREATE TABLE "experiment_instance_period_stat" (
-  "instance_id" uuid NOT NULL,
-  "period_kind" text NOT NULL,
-  "period_key" text NOT NULL,
-  "return_pct" double precision NULL,
-  "trade_count" integer NULL,
-  "win_count" integer NULL,
-  PRIMARY KEY ("instance_id", "period_kind", "period_key"),
-  CONSTRAINT "experiment_instance_period_stat_instance_id_fk" FOREIGN KEY ("instance_id") REFERENCES "experiment_instance" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
-);
--- Create index "experiment_instance_period_stat_kind_idx" to table: "experiment_instance_period_stat"
-CREATE INDEX "experiment_instance_period_stat_kind_idx" ON "experiment_instance_period_stat" ("instance_id", "period_kind");
-
 CREATE TABLE "experiment_performance" (
   "experiment_id" uuid NOT NULL,
   "wins" integer NOT NULL,

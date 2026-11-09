@@ -41,6 +41,11 @@ func WriteTradeOutcomes(dir string, meta Meta, rows []TradeOutcome) error {
 	return writeFile(dir, TradeOutcomesFile, meta, rows)
 }
 
+// WritePeriodStats writes period_stats.parquet.
+func WritePeriodStats(dir string, meta Meta, rows []PeriodStat) error {
+	return writeFile(dir, PeriodStatsFile, meta, rows)
+}
+
 func writeFile[T any](dir, name string, meta Meta, rows []T) (err error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

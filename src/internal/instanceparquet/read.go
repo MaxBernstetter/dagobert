@@ -28,6 +28,11 @@ func ReadTradeOutcomes(dir string) ([]TradeOutcome, error) {
 	return readFile[TradeOutcome](dir, TradeOutcomesFile)
 }
 
+// ReadPeriodStats reads period_stats.parquet.
+func ReadPeriodStats(dir string) ([]PeriodStat, error) {
+	return readFile[PeriodStat](dir, PeriodStatsFile)
+}
+
 func readFile[T any](dir, name string) ([]T, error) {
 	path := filepath.Join(dir, name)
 	rows, err := parquet.ReadFile[T](path)

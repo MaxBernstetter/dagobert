@@ -15,7 +15,7 @@ All under `/api/v1/experiments`, registered in `api.go` (`Mount`): list, `strate
 ## Layout
 - `handlers.go`, `create.go`, `grid.go`: list/create/run/cancel; creation materializes instances asynchronously (status `materializing`, then `draft`).
 - `instance_detail.go`, `instance_files.go`, `chart.go`, `performance_api.go`, `status.go`, `strategies.go`: read endpoints. Instance activity, chart series and trade outcomes are read from the instance Parquet files (`src/internal/instanceparquet`); a missing file is an empty result, not an error.
-- `pgcatalog/`: Postgres catalog used by the backtest worker too (`Open` keys on `DATABASE_URL`); `instance_batch.go` persists instance status, timing, metrics and period stats (COPY). `performance.go` rebuilds the experiment performance from the outcome files at finalize.
+- `pgcatalog/`: Postgres catalog used by the backtest worker too (`Open` keys on `DATABASE_URL`); `instance_batch.go` persists instance status, timing and metrics. `performance.go` rebuilds the experiment performance from the outcome and period stat files at finalize.
 - `experimentdb/`: sqlc-generated queries. Do not edit by hand; see `db/README.md`.
 - `persist/`, `protojson.go`, `map.go`: mapping between rows and protobuf messages.
 

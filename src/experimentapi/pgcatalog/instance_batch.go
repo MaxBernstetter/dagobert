@@ -8,12 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// InstanceBatchItem is the final state of one instance plus its period stats. Fills and trade
-// outcomes live in the instance Parquet files, not in Postgres.
+// InstanceBatchItem is the final state of one instance: status, timing and aggregated metrics.
+// Everything row-shaped (fills, trade outcomes, period stats) lives in the instance Parquet files.
 type InstanceBatchItem struct {
 	store.InstanceBatchItem
 	Symbol string
-	Stats  []PeriodStatRow
 }
 
 const updateInstancesBatchSQL = `
@@ -55,8 +54,7 @@ func f32(p *float64) *float32 {
 	return &v
 }
 
-// PersistInstanceBatch commits many instances in one transaction: replaces the period stats
-// (COPY), sets status, timing and metrics together, and updates the experiment progress counter.
+// PersistInstanceBatch commits many instances in one transaction: sets status, timing and metrics together, and updates the experiment progress counter.
 func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string, items []InstanceBatchItem, progressDone, progressTotal int) error {
 	sid, err := parseExperimentID(experimentID)
 	if err != nil {
@@ -74,12 +72,7 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	q := c.q.WithTx(tx)
-	if err := q.DeletePeriodStatsForInstances(ctx, ids); err != nil {
-		return err
-	}
 
-	var statRows [][]any
 	status := make([]string, n)
 	errs := make([]string, n)
 	started := make([]*int64, n)
@@ -109,26 +102,6 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 		f8[8][i], f8[9][i] = m.TradesPerMonthAvg, m.TradesPerMonthMed
 		i4[0][i], i4[1][i], i4[2][i] = m.Wins, m.Losses, m.Breakeven
 		f4[0][i], f4[1][i], f4[2][i], f4[3][i] = f32(m.MonthlyWinRateAvg), f32(m.MonthlyWinRateMed), f32(m.YearlyWinRateAvg), f32(m.YearlyWinRateMed)
-		seen := map[string]int{}
-		var rows [][]any
-		for _, p := range it.Stats {
-			row := []any{pgUUID(ids[i]), p.Kind, p.Key, ptrAny(p.ReturnPct), ptrAny(p.TradeCount), ptrAny(p.WinCount)}
-			k := p.Kind + "\x00" + p.Key
-			if at, ok := seen[k]; ok {
-				rows[at] = row
-				continue
-			}
-			seen[k] = len(rows)
-			rows = append(rows, row)
-		}
-		statRows = append(statRows, rows...)
-	}
-	if len(statRows) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"experiment_instance_period_stat"},
-			[]string{"instance_id", "period_kind", "period_key", "return_pct", "trade_count", "win_count"},
-			pgx.CopyFromRows(statRows)); err != nil {
-			return err
-		}
 	}
 	dur := make([]*int64, n)
 	for i, it := range items {

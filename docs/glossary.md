@@ -5,7 +5,7 @@ Alphabetical. Each entry names where to look in the code.
 - **action**: the sized decision derived from a signal. `src/calculation-market-action/`. Experiments do not store actions; their orders are in the instance `orders.parquet`.
 - **backfill**: fetching and processing historical candles ahead of time. The orchestrator serves it over HTTP on `:11090`. `src/orchestrator/cmd/orchestrator/backfill.go`.
 - **candle close**: the end of a 3-hour UTC candle; the bar a playbook decides on.
-- **catalog**: the store of experiments and instances with their status, metrics and period stats. Postgres (`DATABASE_URL` is required). The legacy single backtest keeps `data/backtests.sqlite`. `src/backtest/experiment_catalog.go`, `src/experimentapi/pgcatalog/`.
+- **catalog**: the store of experiments and instances with their status and aggregated metrics (instance rows such as period stats are Parquet files). Postgres (`DATABASE_URL` is required). The legacy single backtest keeps `data/backtests.sqlite`. `src/backtest/experiment_catalog.go`, `src/experimentapi/pgcatalog/`.
 - **consensus (signal-consensus)**: playbook that combines several indicator sub-signals into buy, hold or sell. `src/calculation-signal/playbooks/signal-consensus/`.
 - **replay consistency test**: test that runs the C++ sweep and the replay (`ReplayKPI`) on seeded lakes and checks the journals, orders, fills and period statistics against each other. `TestSmaCrossCppReplayConsistent`, `TestConsensusCppReplayConsistent` in `src/backtest/cpp_replay_test.go`.
 - **experiment**: one run definition with shared settings (date range, capital, costs, provider) and many instances. Stored in the catalog; workspace `data/experiments/<experiment_id>/`.

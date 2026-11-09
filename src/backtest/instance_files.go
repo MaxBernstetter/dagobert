@@ -23,7 +23,10 @@ func writeInstanceFiles(experimentID string, r instanceResult) error {
 	if err := instanceparquet.WriteFills(r.ws, meta, fillRowsFromKPI(r.fills)); err != nil {
 		return err
 	}
-	return instanceparquet.WriteTradeOutcomes(r.ws, meta, tradeOutcomeParquetRows(r.report.Performance))
+	if err := instanceparquet.WriteTradeOutcomes(r.ws, meta, tradeOutcomeParquetRows(r.report.Performance)); err != nil {
+		return err
+	}
+	return instanceparquet.WritePeriodStats(r.ws, meta, periodStatRows(r.report, r.fills))
 }
 
 func fillRowsFromKPI(fills []signalrunner.StrategyKPIFill) []instanceparquet.Fill {

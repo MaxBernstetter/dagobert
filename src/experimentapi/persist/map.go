@@ -262,14 +262,3 @@ func InstanceFromDB(i experimentdb.ExperimentInstance) *v1.ExperimentInstance {
 	}
 	return out
 }
-
-// PeriodStatFromDB maps experiment_instance_period_stat.
-func PeriodStatFromDB(p experimentdb.ExperimentInstancePeriodStat) *v1.ExperimentInstancePeriodStat {
-	return &v1.ExperimentInstancePeriodStat{
-		InstanceId: p.InstanceID.String(),
-		PeriodKind: p.PeriodKind,
-		PeriodKey:  p.PeriodKey,
-		ReturnPct:  optFloat64(p.ReturnPct),
-		TradeCount: optInt32(p.TradeCount),
-	}
-}

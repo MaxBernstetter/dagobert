@@ -90,6 +90,18 @@ func TestRoundTripJournalsAndOutcomes(t *testing.T) {
 		t.Fatalf("journals: %+v err=%v", gotJ, err)
 	}
 
+	stats := []PeriodStat{
+		{Kind: "month", Key: "2023-04", ReturnPct: func() *float64 { v := 0.02; return &v }(), TradeCount: i32p(3), WinCount: i32p(2)},
+		{Kind: "year", Key: "2023", TradeCount: i32p(3)},
+	}
+	if err := WritePeriodStats(dir, testMeta, stats); err != nil {
+		t.Fatal(err)
+	}
+	gotS, err := ReadPeriodStats(dir)
+	if err != nil || !reflect.DeepEqual(gotS, stats) {
+		t.Fatalf("period stats: %+v err=%v", gotS, err)
+	}
+
 	outcomes := []TradeOutcome{{Ordinal: 0, Side: 1, Quote: 12.5, Percent: f32p(0.03)}, {Ordinal: 1, Side: 0, Quote: -4}}
 	if err := WriteTradeOutcomes(dir, testMeta, outcomes); err != nil {
 		t.Fatal(err)
@@ -200,6 +212,9 @@ func TestRemoveDeletesAllFilesAndIgnoresMissing(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := WriteJournals(dir, testMeta, []Journal{{OrderLinkID: "x"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := WritePeriodStats(dir, testMeta, []PeriodStat{{Kind: "year", Key: "2023"}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := Remove(dir); err != nil {

@@ -1,6 +1,7 @@
 // Package instanceparquet stores the row-heavy data of one experiment instance as Parquet files
-// next to its report.json: fills, orders, fill journals and trade outcomes. One file per
-// instance per datatype, written atomically, read directly by the Experiment API.
+// next to its report.json: fills, orders, fill journals, trade outcomes and period stats. One file per
+// instance per datatype, written atomically, read directly by the Experiment API. The database holds
+// only experiment metadata and aggregates, never rows of instance data.
 //
 // The package is neutral: it defines its own row types and does not import the execution store.
 package instanceparquet
@@ -23,6 +24,7 @@ const (
 	OrdersFile        = "orders.parquet"
 	JournalsFile      = "journals.parquet"
 	TradeOutcomesFile = "trade_outcomes.parquet"
+	PeriodStatsFile   = "period_stats.parquet"
 )
 
 // Footer key–value metadata keys, in the style of parquetmeta.
@@ -103,14 +105,24 @@ type TradeOutcome struct {
 	Percent *float32 `parquet:"percent,optional,snappy"`
 }
 
+// PeriodStat is one month or year bucket of an instance: its return, trade count and win count.
+// Kind is "month" or "year"; Key is the period label. A nil field was not computed for the bucket.
+type PeriodStat struct {
+	Kind       string   `parquet:"period_kind,dict,snappy"`
+	Key        string   `parquet:"period_key,snappy"`
+	ReturnPct  *float64 `parquet:"return_pct,optional,snappy"`
+	TradeCount *int32   `parquet:"trade_count,optional,snappy"`
+	WinCount   *int32   `parquet:"win_count,optional,snappy"`
+}
+
 // ErrNotExist-style results: a missing file yields empty rows and an error for which
 // errors.Is(err, fs.ErrNotExist) holds.
 var ErrMissing = fs.ErrNotExist
 
-// Remove deletes the four instance files from dir. Missing files are not an error.
+// Remove deletes the instance files from dir. Missing files are not an error.
 func Remove(dir string) error {
 	var firstErr error
-	for _, name := range []string{FillsFile, OrdersFile, JournalsFile, TradeOutcomesFile} {
+	for _, name := range []string{FillsFile, OrdersFile, JournalsFile, TradeOutcomesFile, PeriodStatsFile} {
 		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) && firstErr == nil {
 			firstErr = err
 		}

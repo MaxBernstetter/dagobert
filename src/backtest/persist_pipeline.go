@@ -62,11 +62,7 @@ func (r instanceResult) item() store.InstanceBatchItem {
 }
 
 func (r instanceResult) pgItem() pgcatalog.InstanceBatchItem {
-	it := pgcatalog.InstanceBatchItem{InstanceBatchItem: r.item(), Symbol: r.sym}
-	if r.err == nil {
-		it.Stats = periodStatRows(r.report, r.fills)
-	}
-	return it
+	return pgcatalog.InstanceBatchItem{InstanceBatchItem: r.item(), Symbol: r.sym}
 }
 
 func persistBackoff(attempt int) time.Duration {
