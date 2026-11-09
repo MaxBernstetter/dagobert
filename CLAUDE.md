@@ -9,8 +9,9 @@ Run from `devbox shell` (provides Go 1.24 and Task). Module: `github.com/MaxBern
 ```bash
 task build              # job images + compose images
 task build:jobs         # only the job images (ingest, technical indicators, backtest)
-task up                 # compose stack: Floci, orchestrator, dev frontend on :11001
-task dev                # builds job and compose images, migrates the DB, then up with compose watch
+task up                 # compose stack: Floci, orchestrator; Terraform adds Aurora and the frontend (ECS) on :11001
+task dev                # builds job and compose images, then task up
+task frontend:dev       # Vite dev server with hot reload on the host (:3000)
 task down               # stop stack; ./data is kept
 task test               # system tests for the job images (builds each image, runs it)
 ```
@@ -23,7 +24,7 @@ go test ./tests/system/ingest -run TestName -count=1 -timeout 20m
 
 CI (`.github/workflows/tests.yml`) runs all of this on every PR, every merge to main and nightly. Unit tests for shared packages run directly with `go test ./src/internal/...` and `go test ./src/shared/...`.
 
-Frontend (`src/frontend`, Vite + React + TypeScript): `npx tsc --noEmit` is the typecheck (`npm run build` is `vite build` only); there is no lint or test script and no browser test suite. Run it locally with `npm run dev`, or in the container via `task dev`.
+Frontend (`src/frontend`, Vite + React + TypeScript): `npx tsc --noEmit` is the typecheck (`npm run build` is `vite build` only); there is no lint or test script and no browser test suite. Run it locally with `npm run dev` (or `task frontend:dev`); the stack serves the production image from ECS.
 
 Database and codegen: `task db:diff name=...` (Atlas, edit HCL in `db/`), `task db:migrate`, `task db:sqlc`, `task proto:gen` (`task proto:lint` and `task proto:breaking` before changing `proto/`).
 
@@ -47,7 +48,7 @@ Database and codegen: `task db:diff name=...` (Atlas, edit HCL in `db/`), `task 
 
 **Tests.** `tests/system/<job>/` builds and runs the real job image with a faked upstream (Binance HTTP, a seeded Parquet file). These tests are the proof of behaviour; they do not import service packages. Unit tests exist only for pure logic (`money`, `venue/sim`, indicator math, playbook logic). Per `docs/development/04-coding-principles.md`, do not add tests that lock internal call order or private types.
 
-**Infra.** `infra/terraform` provisions the VPC, the Aurora PostgreSQL Serverless v2 cluster, S3, SSM and IAM. The same code runs against Floci locally (`task infra:local`) and real AWS in CI only (`task infra:prod` refuses without `CI=true` and credentials). Aurora on Floci is the control-plane DB for local dev.
+**Infra.** `infra/terraform` provisions the VPC, the Aurora PostgreSQL Serverless v2 cluster, the frontend ECS Fargate service (ECR image, public subnets), S3, SSM and IAM. The same code runs against Floci locally (`task infra:local`) and real AWS in CI only (`task infra:prod` refuses without `CI=true` and credentials). Aurora on Floci is the control-plane DB for local dev.
 
 ## Conventions and workflow
 

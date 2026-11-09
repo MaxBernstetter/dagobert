@@ -1,4 +1,4 @@
-# Long-running stack: Floci (runs Aurora via Terraform, see infra/terraform), the orchestrator, and the web app.
+# Long-running stack: Floci and the orchestrator. Floci runs Aurora and the frontend (ECS) from Terraform, see infra/terraform.
 # Job images (ingest, technical indicators, backtest) are started by the orchestrator. They are not services here.
 # HOST_DATA_DIR and HOST_PLAYBOOKS_DIR are host paths
 # because the orchestrator talks to the host Docker socket.
@@ -17,6 +17,10 @@ services:
       # Floci starts the Aurora container itself, on this compose network, advertised as "floci".
       FLOCI_SERVICES_DOCKER_NETWORK: dagobert_default
       FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
+      # ECS tasks (the frontend) run on the compose network, so they reach the orchestrator, and are
+      # published on the host at their container port. Locally built images run without a push.
+      FLOCI_SERVICES_ECS_DOCKER_NETWORK: dagobert_default
+      FLOCI_SERVICES_ECS_PUBLISH_AWSVPC_PORTS_TO_HOST: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
@@ -64,22 +68,5 @@ services:
       - ${HOST_DATA_DIR:-./data}:/data
     depends_on:
       floci:
-        condition: service_started
-    restart: unless-stopped
-
-  # Published UI is the Vite SPA (src/frontend).
-  frontend:
-    build:
-      context: .
-      dockerfile: src/frontend/Dockerfile
-      target: prod
-    image: dagobert-spa
-    environment:
-      VITE_EXPERIMENT_API_URL: ${VITE_EXPERIMENT_API_URL:-}
-      VITE_DEV_API_PROXY: ${VITE_DEV_API_PROXY:-http://orchestrator:8090}
-    ports:
-      - "${WEB_PORT:-11001}:3000"
-    depends_on:
-      orchestrator:
         condition: service_started
     restart: unless-stopped

@@ -89,3 +89,26 @@ locals {
     IdleCost    = "near-zero"
   }
 }
+
+variable "frontend_port" {
+  description = "Port the frontend container listens on (and Floci publishes on the host)."
+  type        = number
+  default     = 3000
+}
+
+variable "frontend_image_tag" {
+  description = "Tag of the frontend image in ECR. scripts/infra-apply.sh builds and pushes it before the service is created."
+  type        = string
+  default     = "latest"
+}
+
+variable "frontend_api_url" {
+  description = "Base URL of the Experiment API the frontend proxies /api to."
+  type        = string
+  default     = ""
+}
+
+variable "frontend_desired_count" {
+  type    = number
+  default = 1
+}

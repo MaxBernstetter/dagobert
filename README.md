@@ -19,13 +19,13 @@ You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https:/
 
 ```bash
 devbox shell
-task dev          # builds the images (the first build compiles the C++ engine and is the slow step), migrates Postgres, starts the stack with compose watch
+task dev          # builds the images (the first build compiles the C++ engine and is the slow step), applies Terraform on Floci (Aurora, S3, the ECS frontend), migrates Postgres, starts the stack
 ```
 
 Open [http://localhost:11001](http://localhost:11001), create an experiment and start it. The first run downloads the candles it needs from Binance. Change the port with `WEB_PORT` in `.env` (see `env.example` for the others).
 
 - `task seed-demo-year` fills `data/` with one year of BTC and replays `ma-cross` over it. It wipes `data/`.
-- Without watch: `task build`, `task up`, then `task db:migrate` once. `task up:prod` serves the production frontend image. `task down` stops the stack and keeps `./data`.
+- `task up` skips the image builds. Frontend with hot reload: `task frontend:dev` (host, port 3000). `task down` stops the stack and keeps `./data`.
 - `EXPERIMENT_ID=<uuid> task experiment-run` runs an existing experiment from the command line.
 
 ## How it works
@@ -70,9 +70,9 @@ Run `task --list` for all of them.
 | Task | What it does |
 | --- | --- |
 | `task build` | Build the job images and the compose images. |
-| `task up` | Start the stack with the dev frontend. Runs `docker compose up`. |
-| `task dev` | Build the job and compose images, apply the Postgres migrations, then `up` with compose watch. |
-| `task up:prod` | Start the stack without the override (production frontend). |
+| `task up` | Apply Terraform on Floci (Aurora, S3, the frontend on ECS), migrate, then `docker compose up` (Floci and the orchestrator). |
+| `task dev` | Build the job and compose images, then `task up`. |
+| `task frontend:dev` | Vite dev server with hot reload on the host, proxying `/api` to the orchestrator. |
 | `task up:build` | Build everything, then start the stack. |
 | `task down` | Stop the stack. `./data` is kept. |
 | `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |

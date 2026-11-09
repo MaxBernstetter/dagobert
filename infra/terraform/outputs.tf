@@ -37,3 +37,11 @@ output "experiment_sfn_arn" {
 output "experiment_worker_arn" {
   value = var.enable_experiment_lambda ? aws_lambda_function.experiment_worker[0].arn : ""
 }
+
+output "frontend_repository_url" {
+  value = aws_ecr_repository.frontend.repository_url
+}
+
+output "frontend_cluster" {
+  value = aws_ecs_cluster.main.name
+}

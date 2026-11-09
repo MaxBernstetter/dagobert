@@ -53,7 +53,7 @@ Render with **react-markdown**, **remark-gfm**, **remark-math**, **rehype-katex*
 | `/wiki/playbooks/position-sizing` | Position Sizing section. Rendered from `src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md` (`kind: method`). |
 | `/wiki/strategy-kpi/[slug]` | Strategy KPI README |
 
-The dev frontend container mounts `src/calculation-technical-indicator` and `src/calculation-signal` (`compose.override.yaml`) so the globs resolve.
+The frontend image build copies `src/calculation-technical-indicator` and `src/calculation-signal` (`src/frontend/Dockerfile`), and `task frontend:dev` runs from the repo checkout, so the globs resolve in both.
 
 ## Quality bar
 

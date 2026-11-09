@@ -74,7 +74,7 @@ tasks:
       - docker build -f docker/backtest/Dockerfile -t dagobert-backtest .
 
   build:stack:
-    desc: Build compose images (orchestrator + production frontend)
+    desc: Build compose images (the orchestrator; the frontend image is built by task infra:local)
     cmds:
       - docker compose build
 
@@ -85,43 +85,36 @@ tasks:
       - task: build:stack
 
   up:
-    desc: Start Floci (with Aurora), the orchestrator, and the web app (run task build once for job images)
+    desc: Start Floci (Aurora and the ECS frontend via Terraform) and the orchestrator (run task build once for job images)
     cmds:
       - mkdir -p data/parquet
       - task: db:migrate
       - docker compose up
 
   up:build:
-    desc: Build everything, then start the stack (production frontend)
+    desc: Build everything, then start the stack
     cmds:
       - mkdir -p data/parquet
       - task: build
       - task: db:migrate
       - docker compose up
 
-  up:prod:
-    desc: Stack without compose.override.yaml (production build in frontend image)
-    env:
-      COMPOSE_FILE: compose.yaml
-    cmds:
-      - mkdir -p data/parquet
-      - docker compose build frontend
-      - task: db:migrate
-      - docker compose up
-
   dev:
-    desc: Same as task up but builds the job and compose images, migrates the database, and runs compose file watch (sync/rebuild rules)
+    desc: Same as task up but builds the job and compose images first
     cmds:
       - mkdir -p data/parquet
       - task: build:jobs
       - task: build:stack
       - task: db:migrate
-      - docker compose up --watch
+      - docker compose up
 
-  frontend:deps:
-    desc: Sync package-lock into the frontend container node_modules volume (after new npm deps)
+  frontend:dev:
+    desc: Vite dev server with hot reload on the host (port 3000), proxying /api to the orchestrator
+    dir: src/frontend
+    env:
+      VITE_DEV_API_PROXY: http://127.0.0.1:{{.ORCHESTRATOR_PORT | default "11090"}}
     cmds:
-      - docker compose exec -T frontend npm ci
+      - npm run dev
 
   down:
     desc: Stop the stack. Leaves ./data in place
