@@ -1,17 +1,16 @@
 package backtest
 
 import (
-	"database/sql"
-	"net/url"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
-
 	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
+	"github.com/MaxBernstetter/dagobert/src/internal/ingestledger"
 	"github.com/MaxBernstetter/dagobert/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/shared/pgtest"
 )
 
 func TestCheckRawCoverageUnavailableReady(t *testing.T) {
@@ -93,38 +92,17 @@ func writeHourParquet(t *testing.T, path string, opens []int64) {
 	}
 }
 
-func writeUnavailable(t *testing.T, dataDir, provider, base, quote string, opens []int64) {
+// writeUnavailable records confirmed-empty hours in a scratch ledger and points DATABASE_URL at it.
+func writeUnavailable(t *testing.T, _ string, provider, base, quote string, opens []int64) {
 	t.Helper()
-	path := filepath.Join(dataDir, "ingest.sqlite")
-	abs, err := filepath.Abs(path)
+	dbURL := pgtest.ScratchDB(t)
+	t.Setenv("DATABASE_URL", dbURL)
+	l, err := ingestledger.Open(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "_pragma=busy_timeout(5000)"}
-	db, err := sql.Open("sqlite", u.String())
-	if err != nil {
+	defer l.Close()
+	if err := l.MarkUnavailable(context.Background(), provider, base, quote, opens, "binance_empty", time.Now().UnixMilli()); err != nil {
 		t.Fatal(err)
-	}
-	defer db.Close()
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS unavailable (
-		provider TEXT NOT NULL,
-		base TEXT NOT NULL,
-		quote TEXT NOT NULL,
-		open_time INTEGER NOT NULL,
-		reason TEXT NOT NULL DEFAULT '',
-		confirmed_at INTEGER NOT NULL,
-		PRIMARY KEY (provider, base, quote, open_time)
-	)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	now := time.Now().UnixMilli()
-	for _, ot := range opens {
-		if _, err := db.Exec(
-			`INSERT INTO unavailable(provider, base, quote, open_time, reason, confirmed_at) VALUES (?, ?, ?, ?, ?, ?)`,
-			provider, base, quote, ot, "binance_empty", now,
-		); err != nil {
-			t.Fatal(err)
-		}
 	}
 }

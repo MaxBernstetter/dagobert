@@ -1,9 +1,9 @@
 # db
 
-Postgres schema for the control plane: experiments, instances, period stats, performance, and the connector state (`provider`, `provider_pair`; secrets stay in files). Fills, orders, journals and trade outcomes are Parquet files in each instance workspace, not tables. Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
+Postgres schema for the control plane: experiments, instances, period stats, performance, the ingest ledger (`ingest_stored`, `ingest_unavailable`) and the connector state (`provider`, `provider_pair`; secrets stay in files). Fills, orders, journals and trade outcomes are Parquet files in each instance workspace, not tables. Managed with Atlas; queries compiled with sqlc. Not used for the Parquet lake or the per-job SQLite files.
 
 ## Layout
-- `schema/`: the desired state as Atlas HCL (`*.pg.hcl`), grouped `experiment/`, `activity/` and `connector/`; `atlas.hcl` defines the `local` env.
+- `schema/`: the desired state as Atlas HCL (`*.pg.hcl`), grouped `experiment/`, `activity/`, `connector/` and `ingest/`; `atlas.hcl` defines the `local` env.
 - `migrations/`: generated, timestamped SQL plus `atlas.sum`. Never edit by hand; `atlas.sum` is a checksum.
 - `sqlc/`: `queries/*.sql`, `schema.sql` and `sqlc.yaml`; output goes to `src/experimentapi/experimentdb`.
 

@@ -59,6 +59,13 @@ tasks:
     cmds:
       - go run ./src/cmd/migrate-candles {{.DATA_DIR | default "./data"}}
 
+  data:migrate-ingest-ledger:
+    desc: Copy DATA_DIR/ingest.sqlite (default ./data) into the Postgres ingest ledger; idempotent
+    env:
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=require&search_path=public" (.DATABASE_PORT | default "7001"))}}'
+    cmds:
+      - go run ./src/cmd/migrate-ingest-ledger {{.DATA_DIR | default "./data"}}
+
   build:jobs:
     desc: Build the data job images (ingest, technical indicators) and the backtest image
     cmds:

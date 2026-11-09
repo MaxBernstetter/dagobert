@@ -2,20 +2,17 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/MaxBernstetter/dagobert/src/internal/ingestledger"
 )
 
 const (
@@ -151,29 +148,17 @@ func ingestFrom(provider, base, quote string, barOpen int64) int64 {
 }
 
 func latestStored(provider, base, quote string) (int64, bool) {
-	path := filepath.Join(env("LIVE_DIR", "/data"), "ingest.sqlite")
-	if _, err := os.Stat(path); err != nil {
-		return 0, false
-	}
-	abs, err := filepath.Abs(path)
+	ctx := context.Background()
+	l, err := ingestledger.Open(ctx)
 	if err != nil {
 		return 0, false
 	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "_pragma=busy_timeout(5000)"}
-	db, err := sql.Open("sqlite", u.String()+"&mode=ro")
+	defer l.Close()
+	latest, ok, err := l.LatestStored(ctx, provider, base, quote)
 	if err != nil {
 		return 0, false
 	}
-	defer db.Close()
-	var latest sql.NullInt64
-	err = db.QueryRow(
-		`SELECT MAX(open_time) FROM stored WHERE provider = ? AND base = ? AND quote = ?`,
-		provider, base, quote,
-	).Scan(&latest)
-	if err != nil || !latest.Valid {
-		return 0, false
-	}
-	return latest.Int64, true
+	return latest, ok
 }
 
 func env(key, fallback string) string {

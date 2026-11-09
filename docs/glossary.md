@@ -22,5 +22,5 @@ Alphabetical. Each entry names where to look in the code.
 - **sizing (heat, unit risk, maxUnits)**: position sizing from a stop distance. `unitRiskPct` is the share of equity lost if the stop hits, `heatPct` caps total open risk, `maxUnits` caps pyramided buys. `src/calculation-signal/internal/sizing/sizing.go`, [position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md).
 - **shard**: a slice of instances of one symbol and playbook sent to one C++ `--sweep` process, at most `EXPERIMENT_CPP_SHARD_MAX` (default 500). `src/backtest/cpp_engine.go`.
 - **sweep**: one C++ strategy run over many configurations at once (`--sweep`, protobuf `SweepRequest` in, `RunReport` out). `src/backtest/cpp_sweep.go`.
-- **unavailable hours**: exchange hours confirmed missing, recorded as `unavailable` in `ingest.sqlite` instead of invented candles; they do not block an experiment. `src/ingest/internal/job/run.go`, `src/backtest/coverage.go`.
+- **unavailable hours**: exchange hours confirmed missing, recorded in the `ingest_unavailable` table instead of invented candles; they do not block an experiment. `src/ingest/internal/job/run.go`, `src/backtest/coverage.go`.
 - **workspace**: the per-instance directory holding its paper wallet, `report.json` and the Parquet files (fills, orders, journals, trade outcomes). See instance.

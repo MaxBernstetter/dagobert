@@ -88,7 +88,7 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 | Create | `handleCreateStudy` -> `createStudy` (`src/experimentapi/create.go`) | settings + MANUAL list or GRID axes (`specsFromGrid`, max 20 000 valid combos) | `experiment` row `materializing`, then `experiment_instance` rows, status `draft` | up to 250 instances (`syncMaterialize`) in the request, more via `materializeAsync`; error -> experiment `failed` |
 | Run request | `handleRunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | 409 if running; orchestrator ignores the hook call if another job runs (single-flight) |
 | Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
-| Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, `ingest.sqlite` | progress stages 1-3; workspaces, paper wallet; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
+| Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; workspaces, paper wallet; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
 | Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | `report.json` and Parquet files per instance; Postgres period stats, status, timing, metrics | Parquet write error fails the instance (its files are removed); batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
 | Finalize | `RunExperimentFinalize` | instance statuses, `trade_outcomes.parquet` | `experiment_performance` (Postgres), final status, then the prepare cache (`.cache`) is removed | zero completed -> `failed`; any failed -> `partial`; else `completed`. Re-finalizing a finished experiment is not supported (the cache is gone); a new run re-prepares it |
@@ -100,7 +100,7 @@ Where state lives:
 | State | Location |
 |---|---|
 | Experiment, instances, metrics, period stats, performance | Postgres (`db/sqlc/schema.sql`: `experiment`, `experiment_instance`, `experiment_instance_period_stat`, `experiment_performance`, `experiment_period_stat`, `experiment_outcome_stat`) |
-| Candles | `data/parquet/provider=.../` (read-only here), gaps in `ingest.sqlite` `unavailable` |
+| Candles | `data/parquet/provider=.../` (read-only here), gaps in the `ingest_unavailable` table |
 | Indicator window per symbol | `data/experiments/<experiment_id>/.cache` (handoff files from prepare to simulate and finalize), removed at the end of finalize |
 | Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet, `report.json`, `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` |
 | Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
