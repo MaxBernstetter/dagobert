@@ -5,13 +5,12 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -94,20 +93,16 @@ func (s *Server) handleDeleteExperiment(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	removeExperimentFiles(id)
+	removeExperimentFiles(r.Context(), id)
 	writeProto(w, http.StatusOK, &v1.OkResponse{Ok: true})
 }
 
-// removeExperimentFiles deletes the experiment's directory under DATA_DIR (its instance workspaces and result shards).
+// removeExperimentFiles deletes everything of the experiment under DATA_DIR or, with LAKE_BACKEND=s3,
+// under the bucket prefix experiments/<id>/ (its prepare cache and result shards).
 // Best effort: the experiment is already gone from Postgres, so a failure is logged, not returned.
-func removeExperimentFiles(id uuid.UUID) {
-	root := strings.TrimSpace(os.Getenv("DATA_DIR"))
-	if root == "" {
-		root = "/data"
-	}
-	dir := filepath.Join(root, "experiments", id.String())
-	if err := os.RemoveAll(dir); err != nil {
-		log.Printf("experiment %s: remove %s: %v", id, dir, err)
+func removeExperimentFiles(ctx context.Context, id uuid.UUID) {
+	if err := workspace.DeletePrefix(ctx, dataDir(), "experiments/"+id.String()); err != nil {
+		log.Printf("experiment %s: remove files: %v", id, err)
 	}
 }
 

@@ -15,7 +15,6 @@ import (
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
-	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
@@ -219,14 +218,9 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 					fail(inst, err)
 					continue
 				}
-				wallet, err := paper.LoadWallet(store.ExperimentWorkspaceDir(dataDir, inst))
-				if err != nil {
-					fail(inst, fmt.Errorf("paper wallet: %w", err))
-					continue
-				}
 				batch = append(batch, signalrunner.KPIJob{
 					Key: inst.ID, Playbook: inst.PlaybookKey, Symbol: sh.sym, FromMs: meta.From, ToMs: meta.To,
-					StartCash: startCash, Coins: wallet.Coins, Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
+					StartCash: startCash, Coins: experimentWalletCoins(settings, sh.sym), Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
 					Actions: actions, Bars: bars, Run: run,
 				})
 				if len(batch) >= cppKPIBatch {

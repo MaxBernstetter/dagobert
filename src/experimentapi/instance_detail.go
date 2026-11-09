@@ -1,12 +1,12 @@
 package experimentapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
@@ -43,26 +43,30 @@ func (s *Server) instanceForRequest(w http.ResponseWriter, r *http.Request) (exp
 	return inst, true
 }
 
-// instanceShard is the shard directory of the instance under DATA_DIR. The error satisfies
-// errors.Is(err, fs.ErrNotExist) when the instance has no shard.
+// dataDir is the workspace key root (DATA_DIR); shard keys are relative to it.
+func dataDir() string {
+	if d := strings.TrimSpace(os.Getenv("DATA_DIR")); d != "" {
+		return d
+	}
+	return "/data"
+}
+
+// instanceShard is the shard key of the instance. The error satisfies errors.Is(err, fs.ErrNotExist)
+// when the instance has no shard.
 func instanceShard(inst experimentdb.ExperimentInstance) (string, error) {
 	if inst.ShardKey == "" {
 		return "", fs.ErrNotExist
 	}
-	root := strings.TrimSpace(os.Getenv("DATA_DIR"))
-	if root == "" {
-		root = "/data"
-	}
-	return filepath.Join(root, inst.ShardKey), nil
+	return inst.ShardKey, nil
 }
 
 // readInstanceReport is the report JSON of the instance as stored in its shard.
-func readInstanceReport(inst experimentdb.ExperimentInstance) ([]byte, error) {
+func readInstanceReport(ctx context.Context, inst experimentdb.ExperimentInstance) ([]byte, error) {
 	dir, err := instanceShard(inst)
 	if err != nil {
 		return nil, err
 	}
-	return instanceparquet.ReadReport(dir, inst.ID.String())
+	return instanceparquet.ReadReport(ctx, dataDir(), dir, inst.ID.String())
 }
 
 // handleInstanceReport serves GET .../instances/{instanceId}/report: the report JSON as stored in the shard.
@@ -71,7 +75,7 @@ func (s *Server) handleInstanceReport(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	raw, err := readInstanceReport(inst)
+	raw, err := readInstanceReport(r.Context(), inst)
 	if errors.Is(err, fs.ErrNotExist) {
 		writeError(w, http.StatusNotFound, "report not found")
 		return
@@ -129,9 +133,9 @@ type detailStats struct {
 	YearlyReturns  []json.RawMessage `json:"yearlyReturns"`
 }
 
-func readDetailReport(inst experimentdb.ExperimentInstance) (detailReport, error) {
+func readDetailReport(ctx context.Context, inst experimentdb.ExperimentInstance) (detailReport, error) {
 	var report detailReport
-	raw, err := readInstanceReport(inst)
+	raw, err := readInstanceReport(ctx, inst)
 	if err != nil {
 		return report, err
 	}
@@ -193,7 +197,7 @@ func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	report, err := readDetailReport(inst)
+	report, err := readDetailReport(r.Context(), inst)
 	if errors.Is(err, fs.ErrNotExist) || (err == nil && report.KPIs == nil) {
 		writeError(w, http.StatusNotFound, "kpis not found")
 		return
@@ -345,7 +349,7 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 	ws, err := instanceShard(inst)
 	var orders []instanceparquet.Order
 	if err == nil {
-		orders, err = instanceparquet.ReadOrders(ws, inst.ID.String())
+		orders, err = instanceparquet.ReadOrders(r.Context(), dataDir(), ws, inst.ID.String())
 	}
 	if errors.Is(err, fs.ErrNotExist) {
 		writeJSON(w, http.StatusOK, resp)
@@ -356,7 +360,7 @@ func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	resp.Rows = activityRowsFromOrders(orders)
-	journals, err := instanceparquet.ReadJournals(ws, inst.ID.String())
+	journals, err := instanceparquet.ReadJournals(r.Context(), dataDir(), ws, inst.ID.String())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

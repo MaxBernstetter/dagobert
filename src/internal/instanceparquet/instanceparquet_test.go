@@ -1,6 +1,7 @@
 package instanceparquet
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/parquet-go/parquet-go"
 )
+
+var ctx = context.Background()
 
 func strp(s string) *string   { return &s }
 func f32p(f float32) *float32 { return &f }
@@ -58,7 +61,7 @@ func TestRoundTripMultiInstanceShard(t *testing.T) {
 	dir := writeTestShard(t)
 	want := testShard()
 
-	fills, err := ReadFills(dir, "inst-a")
+	fills, err := ReadFills(ctx, dir, "", "inst-a")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,22 +70,22 @@ func TestRoundTripMultiInstanceShard(t *testing.T) {
 	if !reflect.DeepEqual(fills, wantFills) {
 		t.Fatalf("fills: got %+v want %+v", fills, wantFills)
 	}
-	orders, err := ReadOrders(dir, "inst-a")
+	orders, err := ReadOrders(ctx, dir, "", "inst-a")
 	if err != nil || !reflect.DeepEqual(orders, want[0].Orders) {
 		t.Fatalf("orders: %+v err=%v", orders, err)
 	}
 	if orders[1].Decision != nil || orders[1].RetCode != nil {
 		t.Fatalf("optional fields must stay nil: %+v", orders[1])
 	}
-	journals, err := ReadJournals(dir, "inst-a")
+	journals, err := ReadJournals(ctx, dir, "", "inst-a")
 	if err != nil || !reflect.DeepEqual(journals, want[0].Journals) {
 		t.Fatalf("journals: %+v err=%v", journals, err)
 	}
-	outcomes, err := ReadTradeOutcomes(dir, "inst-a")
+	outcomes, err := ReadTradeOutcomes(ctx, dir, "", "inst-a")
 	if err != nil || !reflect.DeepEqual(outcomes, want[0].Outcomes) {
 		t.Fatalf("outcomes: %+v err=%v", outcomes, err)
 	}
-	periods, err := ReadPeriodStats(dir, "inst-a")
+	periods, err := ReadPeriodStats(ctx, dir, "", "inst-a")
 	if err != nil || !reflect.DeepEqual(periods, want[0].Periods) {
 		t.Fatalf("periods: %+v err=%v", periods, err)
 	}
@@ -90,16 +93,16 @@ func TestRoundTripMultiInstanceShard(t *testing.T) {
 
 func TestReadReturnsOnlyTheRequestedInstance(t *testing.T) {
 	dir := writeTestShard(t)
-	orders, err := ReadOrders(dir, "inst-b")
+	orders, err := ReadOrders(ctx, dir, "", "inst-b")
 	if err != nil || len(orders) != 1 || orders[0].OrderLinkID != "b1" {
 		t.Fatalf("inst-b orders: %+v err=%v", orders, err)
 	}
-	fills, err := ReadFills(dir, "inst-b")
+	fills, err := ReadFills(ctx, dir, "", "inst-b")
 	if err != nil || len(fills) != 1 || fills[0].TsMs != 7 {
 		t.Fatalf("inst-b fills: %+v err=%v", fills, err)
 	}
 	for id, want := range map[string]string{"inst-a": `{"version":1,"run":{}}`, "inst-b": `{"version":1,"run":{"b":true}}`, "inst-c": `{"empty":true}`} {
-		got, err := ReadReport(dir, id)
+		got, err := ReadReport(ctx, dir, "", id)
 		if err != nil || string(got) != want {
 			t.Fatalf("report %s: %q err=%v", id, got, err)
 		}
@@ -108,14 +111,14 @@ func TestReadReturnsOnlyTheRequestedInstance(t *testing.T) {
 
 func TestMissingInstanceAndMissingFileAreEmptyAndNotExist(t *testing.T) {
 	dir := writeTestShard(t)
-	rows, err := ReadOrders(dir, "inst-unknown")
+	rows, err := ReadOrders(ctx, dir, "", "inst-unknown")
 	if !errors.Is(err, fs.ErrNotExist) || rows == nil || len(rows) != 0 {
 		t.Fatalf("unknown instance: rows=%#v err=%v", rows, err)
 	}
-	if _, err := ReadReport(dir, "inst-unknown"); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := ReadReport(ctx, dir, "", "inst-unknown"); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("unknown report: %v", err)
 	}
-	rows, err = ReadOrders(filepath.Join(dir, "nope"), "inst-a")
+	rows, err = ReadOrders(ctx, dir, "nope", "inst-a")
 	if !errors.Is(err, fs.ErrNotExist) || rows == nil || len(rows) != 0 {
 		t.Fatalf("missing file: rows=%#v err=%v", rows, err)
 	}
@@ -130,10 +133,10 @@ func TestInstanceWithoutRowsHasNoRowGroup(t *testing.T) {
 			t.Fatalf("%s: empty instance must have no row group", name)
 		}
 	}
-	if _, err := ReadFills(dir, "inst-c"); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := ReadFills(ctx, dir, "", "inst-c"); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("empty instance fills: %v", err)
 	}
-	if _, err := ReadReport(dir, "inst-c"); err != nil {
+	if _, err := ReadReport(ctx, dir, "", "inst-c"); err != nil {
 		t.Fatalf("empty instance report: %v", err)
 	}
 }
@@ -143,7 +146,7 @@ func TestWriteShardWithNoRowsStillWritesReadableFiles(t *testing.T) {
 	if err := WriteShard(dir, "exp-1", []InstanceData{{InstanceID: "x", ReportJSON: []byte("{}")}}); err != nil {
 		t.Fatal(err)
 	}
-	if rows, err := ReadFills(dir, "x"); !errors.Is(err, fs.ErrNotExist) || len(rows) != 0 {
+	if rows, err := ReadFills(ctx, dir, "", "x"); !errors.Is(err, fs.ErrNotExist) || len(rows) != 0 {
 		t.Fatalf("rows=%#v err=%v", rows, err)
 	}
 }
@@ -206,7 +209,7 @@ func TestWriteShardSkipsEmptySideFills(t *testing.T) {
 	if err := WriteShard(dir, "e", in); err != nil {
 		t.Fatal(err)
 	}
-	got, err := ReadFills(dir, "x")
+	got, err := ReadFills(ctx, dir, "", "x")
 	if err != nil || len(got) != 1 || got[0].TsMs != 2 || got[0].Side != "sell" {
 		t.Fatalf("fills: %+v err=%v", got, err)
 	}
@@ -221,7 +224,7 @@ func TestWriteReplacesAtomicallyWithoutTempFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got, err := ReadOrders(dir, "x")
+	got, err := ReadOrders(ctx, dir, "", "x")
 	if err != nil || len(got) != 2 {
 		t.Fatalf("orders=%+v err=%v", got, err)
 	}

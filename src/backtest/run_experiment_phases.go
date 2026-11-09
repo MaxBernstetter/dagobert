@@ -1,6 +1,7 @@
 package backtest
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
@@ -119,16 +121,6 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 
 	stage(1, store.ExperimentStageLabelPrepare, 0, instTotal)
 	applyExperimentEnv(dataDir, settings)
-	for _, inst := range work {
-		ws := store.ExperimentWorkspaceDir(dataDir, inst)
-		if err := os.MkdirAll(ws, 0o755); err != nil {
-			return fail(err)
-		}
-		sym := store.InstanceSymbol(inst, settings)
-		if err := writeExperimentPaperWallet(ws, settings, sym); err != nil {
-			return fail(err)
-		}
-	}
 	stage(1, store.ExperimentStageLabelPrepare, 0, instTotal)
 
 	nowMS := time.Now().UnixMilli()
@@ -435,7 +427,7 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 // removeExperimentCache deletes the prepare cache once the experiment is final. Best effort: the
 // results are in Postgres and the Parquet files already.
 func removeExperimentCache(dataDir, experimentID string) {
-	if err := os.RemoveAll(ExperimentCacheDir(dataDir, experimentID)); err != nil {
+	if err := workspace.DeletePrefix(context.Background(), dataDir, ExperimentCacheKey(experimentID)); err != nil {
 		log.Printf("experiment %s: remove cache: %v", experimentID, err)
 	}
 }

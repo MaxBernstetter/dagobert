@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"path/filepath"
 	"sync"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
@@ -17,7 +16,7 @@ import (
 const outcomeReadWorkers = 8
 
 // LoadCompletedResults rebuilds one Result per completed instance from its row groups in the shard
-// files trade_outcomes.parquet and period_stats.parquet under dataDir/<shard_key> (an instance
+// files trade_outcomes.parquet and period_stats.parquet under <shard_key> (read through the workspace store) (an instance
 // without shard key or row group is no trades, no periods). Instances with neither are left out.
 func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDir string) ([]performance.Result, error) {
 	eid, err := parseExperimentID(experimentID)
@@ -51,13 +50,13 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDi
 			if completed[i].ShardKey == "" {
 				return
 			}
-			dir := filepath.Join(dataDir, completed[i].ShardKey)
+			dir := completed[i].ShardKey
 			id := completed[i].ID.String()
 			r := &res[i]
-			if r.trades, r.err = InstanceTrades(dir, id); r.err != nil {
+			if r.trades, r.err = InstanceTrades(ctx, dataDir, dir, id); r.err != nil {
 				return
 			}
-			r.monthly, r.yearly, r.err = PeriodCounts(dir, id)
+			r.monthly, r.yearly, r.err = PeriodCounts(ctx, dataDir, dir, id)
 		}(i)
 	}
 	wg.Wait()
@@ -77,8 +76,8 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDi
 
 // InstanceTrades reads the closed trades of one instance from its trade outcome row group. A missing
 // file or row group is no trades.
-func InstanceTrades(shardDir, instanceID string) ([]performance.ClosedTrade, error) {
-	outcomes, err := instanceparquet.ReadTradeOutcomes(shardDir, instanceID)
+func InstanceTrades(ctx context.Context, dataDir, shardKey, instanceID string) ([]performance.ClosedTrade, error) {
+	outcomes, err := instanceparquet.ReadTradeOutcomes(ctx, dataDir, shardKey, instanceID)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -98,9 +97,9 @@ func InstanceTrades(shardDir, instanceID string) ([]performance.ClosedTrade, err
 }
 
 // PeriodCounts reads the month and year buckets with at least one trade from the instance's row group
-// in shardDir/period_stats.parquet. A missing file or row group is no buckets.
-func PeriodCounts(shardDir, instanceID string) (monthly, yearly []performance.PeriodCount, err error) {
-	rows, err := instanceparquet.ReadPeriodStats(shardDir, instanceID)
+// in <shard>/period_stats.parquet. A missing file or row group is no buckets.
+func PeriodCounts(ctx context.Context, dataDir, shardKey, instanceID string) (monthly, yearly []performance.PeriodCount, err error) {
+	rows, err := instanceparquet.ReadPeriodStats(ctx, dataDir, shardKey, instanceID)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil, nil
 	}

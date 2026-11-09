@@ -2,11 +2,11 @@
 
 The UI focuses on the **Experiment Suite** (`/experiments`). Single-backtest list APIs and the Portfolio / Strategy / Data / Processing pages were removed from the frontend.
 
-The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes, period stats) are Parquet row groups in shard files, `data/experiments/<id>/shards/<shard>/` (the instance's `shard_key`); Postgres keeps the experiment, instance metrics and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). There is no indicator database: the indicator window for experiments is a per-symbol cache under `data/experiments/<id>/.cache`, deleted when the experiment is final.
+The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes, period stats) are Parquet row groups in shard files, `experiments/<id>/shards/<shard>/` (the instance's `shard_key`, relative to `DATA_DIR`); Postgres keeps the experiment, instance metrics and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). There is no indicator database: the indicator window for experiments is a per-symbol cache under `experiments/<id>/.cache`, deleted when the experiment is final. Shards and the cache live in the workspace store (`src/internal/workspace`): files under `DATA_DIR` with `LAKE_BACKEND=fs`, objects with the same keys in `LAKE_BUCKET` with `s3`; experiment delete removes the whole `experiments/<id>/` prefix.
 
 ## Experiments (multi-instance)
 
-An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). The indicator window is shared per symbol and lives in the experiment cache until finalize. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
+An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). The indicator window is shared per symbol and lives in the experiment cache until finalize.
 
 Create UI supports **Manual** instances or **GRID** search: options render as cards (≥2 per row). Enum axes are multi-select; number axes use a dual-thumb min/max range slider plus a tick field. The client posts **settings + grid axes** (or a small manual instance list); the server expands the cartesian product (invalid configs dropped, max 20 000 valid) asynchronously (`status: materializing` → `draft`). Experiment GET is a **summary only**; instances are a **paginated** child resource with SQL sort/filter on denormalized KPI columns written at sim complete. See `docs/grooming/experiment-api-scale.md`.
 
@@ -84,7 +84,7 @@ Stored with each experiment and copied into the job environment when the run sta
 
 | Setting | Env in the job | Default |
 |---|---|---|
-| Starting book | `paper_venue.json` venue quote | 100 000 USDC |
+| Starting book | the venue quote of the experiment settings (derived per symbol, no file) | 100 000 USDC |
 | Target weight | `ALLOC_TARGET_WEIGHT_PCT` | 100 % |
 | Cash reserve | `ALLOC_CASH_RESERVE_QUOTE` | 0 |
 | Minimum order | `ALLOC_MIN_ORDER_QUOTE` | 1 |

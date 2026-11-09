@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/awsenv"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 )
 
 func runStudyJob(ctx context.Context, id string, retryFailed bool) {
@@ -29,9 +29,9 @@ func runStudyJob(ctx context.Context, id string, retryFailed bool) {
 
 func runStudyJobDockerWhole(ctx context.Context, id string, retryFailed bool) {
 	code, err := runExperimentDocker(ctx, experimentDockerOpts{
-		ExperimentID:     id,
-		Phase:       "all",
-		RetryFailed: retryFailed,
+		ExperimentID: id,
+		Phase:        "all",
+		RetryFailed:  retryFailed,
 	})
 	finishStudyJob(id, code, err)
 }
@@ -56,7 +56,7 @@ func finishStudyJob(id string, code int, err error) {
 }
 
 type experimentDockerOpts struct {
-	ExperimentID      string
+	ExperimentID string
 	Phase        string
 	InstanceIDs  []string
 	RetryFailed  bool
@@ -129,10 +129,10 @@ func runStudyBatched(ctx context.Context, id string, retryFailed bool) {
 				sem <- struct{}{}
 				defer func() { <-sem }()
 				c, err := runExperimentDocker(ctx, experimentDockerOpts{
-					ExperimentID:     id,
-					Phase:       "simulate",
-					InstanceIDs: batch,
-					RetryFailed: retryFailed,
+					ExperimentID: id,
+					Phase:        "simulate",
+					InstanceIDs:  batch,
+					RetryFailed:  retryFailed,
 				})
 				mu.Lock()
 				defer mu.Unlock()
@@ -160,10 +160,10 @@ func runStudyBatched(ctx context.Context, id string, retryFailed bool) {
 }
 
 func readExperimentInstanceCache(dataDir, experimentID string) ([]string, error) {
-	path := fmt.Sprintf("%s/experiments/%s/.cache/instances.json", strings.TrimRight(dataDir, "/"), experimentID)
-	raw, err := os.ReadFile(path)
+	key := "experiments/" + experimentID + "/.cache/instances.json"
+	raw, err := workspace.ReadBytes(context.Background(), dataDir, key)
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", key, err)
 	}
 	var doc struct {
 		InstanceIDs []string `json:"instanceIds"`
@@ -200,7 +200,7 @@ func runExperimentSFNMap(ctx context.Context, experimentID, dataDir string, batc
 	}
 	input := &v1.ExperimentSFNInput{
 		ExperimentId: experimentID,
-		DataDir: dataDir,
+		DataDir:      dataDir,
 	}
 	for _, batch := range batches {
 		input.Batches = append(input.Batches, &v1.InstanceBatch{InstanceIds: batch})

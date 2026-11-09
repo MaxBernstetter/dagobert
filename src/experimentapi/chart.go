@@ -100,7 +100,7 @@ func (s *Server) handleChartSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	series = downsampleSeries(series, maxPoints)
-	points, markers := instanceChartSeries(inst, exp.InitialUsdc+exp.InitialUsdt)
+	points, markers := instanceChartSeries(r.Context(), inst, exp.InitialUsdc+exp.InitialUsdt)
 	series.Portfolio = points
 	series.Markers = markers
 	writeProtoBinary(w, http.StatusOK, series)
@@ -393,10 +393,7 @@ func buildMarketSeries(candles []chartCandle, tiByOpen map[int64]map[string]floa
 }
 
 func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toSec int64) (*v1.ChartSeries, error) {
-	dataDir := strings.TrimSpace(os.Getenv("DATA_DIR"))
-	if dataDir == "" {
-		dataDir = "/data"
-	}
+	dataDir := dataDir()
 	provider := strings.TrimSpace(exp.Provider)
 	if provider == "" {
 		provider = "binance"
@@ -427,12 +424,12 @@ func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toS
 	return series, nil
 }
 
-func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
+func instanceChartSeries(ctx context.Context, inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
 	dir, err := instanceShard(inst)
 	if err != nil {
 		return nil, nil // no shard: no portfolio, no markers
 	}
-	fills, err := instanceparquet.ReadFills(dir, inst.ID.String())
+	fills, err := instanceparquet.ReadFills(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return nil, nil // no fills file: no portfolio, no markers
 	}

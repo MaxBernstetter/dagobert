@@ -2,10 +2,8 @@ package backtest
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -14,6 +12,7 @@ import (
 	ingestrunner "github.com/MaxBernstetter/dagobert/src/ingest/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/artifacts"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
+	"github.com/MaxBernstetter/dagobert/src/internal/money"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
@@ -70,14 +69,15 @@ func paperVenueCoins(symbol string, book, initialBase float64) map[string]float6
 	return coins
 }
 
-func writeExperimentPaperWallet(ws string, s store.ExperimentSettings, symbol string) error {
+// experimentWalletCoins is the starting paper wallet of an experiment instance. It depends only on
+// the experiment settings and the instance symbol, so simulate derives it instead of reading a
+// per-instance file (3000 instances would be 3000 objects).
+func experimentWalletCoins(s store.ExperimentSettings, symbol string) map[string]float64 {
 	coins := paperVenueCoins(symbol, s.InitialUSDC+s.InitialUSDT, s.InitialBase)
-	doc := map[string]map[string]float64{"coins": coins}
-	raw, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		return err
+	for cur, amt := range coins {
+		coins[cur] = money.RoundCoin(cur, amt)
 	}
-	return os.WriteFile(filepath.Join(ws, "paper_venue.json"), raw, 0o644)
+	return coins
 }
 
 const ingestChunkMS = int64(30 * 24 * 60 * 60 * 1000)

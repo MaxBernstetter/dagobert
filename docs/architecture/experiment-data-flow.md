@@ -3,7 +3,7 @@
 How an experiment goes from a click in the browser to fills, reports and rows in the database. Settings and tolerances are in [backtesting.md](backtesting.md).
 
 - **Experiment**: one row with shared settings (range, capital, costs, provider) and N instances.
-- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its workspace (`workspace_rel_path`, `data/experiments/<experiment_id>/instances/<instance_id>/`, `store.ExperimentWorkspaceDir`) holds the paper wallet. Its results are row groups in a shard (`shard_key`, `data/experiments/<experiment_id>/shards/<shard_id>/`): one shard per persister flush, one Parquet file per datatype (`reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats`), one row group per instance, located through the footer key `trading_copilot.instances` (instance id to row group index; an instance without rows of a type has no group) (`src/internal/instanceparquet`).
+- **Instance**: one strategy config (playbook + `strategyConfig`) on one symbol. Its starting paper wallet is derived from the experiment settings and the instance symbol (`experimentWalletCoins`, simulate), not stored: it is identical for all instances of one symbol, so no per-instance file or object exists. Its results are row groups in a shard (`shard_key`, `experiments/<experiment_id>/shards/<shard_id>/` relative to `DATA_DIR`): one shard per persister flush, one Parquet file per datatype (`reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats`), one row group per instance, located through the footer key `trading_copilot.instances` (instance id to row group index; an instance without rows of a type has no group) (`src/internal/instanceparquet`).
 
 ## The picture
 
@@ -88,7 +88,7 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 | Create | `handleCreateStudy` -> `createStudy` (`src/experimentapi/create.go`) | settings + MANUAL list or GRID axes (`specsFromGrid`, max 20 000 valid combos) | `experiment` row `materializing`, then `experiment_instance` rows, status `draft` | up to 250 instances (`syncMaterialize`) in the request, more via `materializeAsync`; error -> experiment `failed` |
 | Run request | `handleRunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | 409 if running; orchestrator ignores the hook call if another job runs (single-flight) |
 | Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
-| Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; workspaces, paper wallet; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
+| Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
 | Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | one shard per flush; Postgres status, timing, metrics, `shard_key` | shard write error fails every instance of the flush (the shard directory is removed); a failed instance has no `shard_key`; batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
 | Finalize | `RunExperimentFinalize` | instance statuses, `trade_outcomes.parquet` | `experiment_performance` (Postgres), final status, then the prepare cache (`.cache`) is removed | zero completed -> `failed`; any failed -> `partial`; else `completed`. Re-finalizing a finished experiment is not supported (the cache is gone); a new run re-prepares it |
@@ -100,11 +100,11 @@ Where state lives:
 | State | Location |
 |---|---|
 | Experiment, instances, metrics, performance | Postgres (`db/sqlc/schema.sql`: `experiment`, `experiment_instance` with its aggregated metrics, `experiment_performance`, `experiment_period_stat`, `experiment_outcome_stat`). Postgres holds experiment metadata and aggregates, no rows of instance data. |
-| Instance period stats (month and year buckets) | `period_stats.parquet` in the instance workspace, next to the fill, order, journal and outcome files |
+| Instance period stats (month and year buckets) | `period_stats.parquet` in the instance shard, next to the fill, order, journal and outcome files |
 | Candles | `data/parquet/provider=.../` (read-only here), gaps in the `ingest_unavailable` table |
-| Indicator window per symbol | `data/experiments/<experiment_id>/.cache` (handoff files from prepare to simulate and finalize), removed at the end of finalize |
+| Indicator window per symbol | `experiments/<experiment_id>/.cache` in the workspace store (`prepare_meta.json`, `instances.json`, `kpi/<symbol>.json`; handoff from prepare to simulate, finalize and the orchestrator), removed at the end of finalize |
 | Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet |
-| Per flush | `data/experiments/<experiment_id>/shards/<shard_id>/`: `reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats` `.parquet`, one row group per instance |
+| Per flush | `experiments/<experiment_id>/shards/<shard_id>/` (workspace store): `reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats` `.parquet`, one row group per instance |
 | Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
 
 Indicator bars (`parquet/ti/` in the lake) are the only persisted indicator output; an experiment never writes them except as a cache of a cold computation.

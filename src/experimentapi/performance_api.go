@@ -44,11 +44,11 @@ func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentd
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil // no shard: no trades, no periods
 	}
-	closed, err := pgcatalog.InstanceTrades(dir, inst.ID.String())
+	closed, err := pgcatalog.InstanceTrades(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return err
 	}
-	monthly, yearly, err := pgcatalog.PeriodCounts(dir, inst.ID.String())
+	monthly, yearly, err := pgcatalog.PeriodCounts(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return err
 	}

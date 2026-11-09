@@ -1,6 +1,7 @@
 package backtest
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 	"github.com/google/uuid"
 )
 
@@ -149,8 +151,9 @@ func runPersister(cat *experimentRunCatalog, dataDir, experimentID string, total
 }
 
 // flush writes one shard directory with the rows of every instance of the batch (the reports are
-// built and uploaded by a pool of 8), then commits the batch with retry and bisection. A failed
-// shard write fails every instance of the batch and removes the shard directory; an instance failed
+// built and uploaded by a pool of 8) and publishes it to the workspace store (LAKE_BACKEND=s3 uploads
+// the six files and drops the local copy), then commits the batch with retry and bisection. A failed
+// shard write or upload fails every instance of the batch and removes the shard; an instance failed
 // by its report upload keeps its rows in the shard but gets no shard_key, so nothing reads them.
 func (p *persister) flush(batch []instanceResult) {
 	data := make([]instanceparquet.InstanceData, len(batch))
@@ -193,7 +196,11 @@ func (p *persister) flush(batch []instanceResult) {
 	}
 	if len(ok) > 0 {
 		dir := filepath.Join(p.dataDir, shardKey)
-		if err := instanceparquet.WriteShard(dir, p.experimentID, rows); err != nil {
+		err := instanceparquet.WriteShard(dir, p.experimentID, rows)
+		if err == nil {
+			err = workspace.PublishDir(context.Background(), p.dataDir, shardKey)
+		}
+		if err != nil {
 			if rerr := os.RemoveAll(dir); rerr != nil {
 				log.Printf("experiment %s: remove failed shard %s: %v", p.experimentID, shardKey, rerr)
 			}
