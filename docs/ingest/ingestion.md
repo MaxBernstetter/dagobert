@@ -101,6 +101,8 @@ Redirects are followed only within the same host, up to two hops.
 |---|---|
 | `BINANCE_BASE_URL` | Base URL. Defaults to `https://data-api.binance.vision` in backtest runs. |
 | `INGEST_PROVIDER` | Provider id when `-provider` is not given. |
-| `DATA_DIR` | Root of `parquet/` and `ingest.sqlite`. |
+| `DATA_DIR` | Root of `ingest.sqlite`, and of `parquet/` when `LAKE_BACKEND=fs`. |
+| `LAKE_BACKEND` | `fs` (default for the bare job) or `s3`. With `s3` the job uploads each year file to `LAKE_BUCKET` (at `AWS_ENDPOINT_URL` on Floci), keeps no local copy, and fails the run if the upload fails. Compose sets `s3`. |
+| `LAKE_BUCKET` | Bucket for `s3`. |
 
 Related: [backtesting](../architecture/backtesting.md)

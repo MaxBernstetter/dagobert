@@ -109,8 +109,7 @@ func writeCandles(dataDir, path string, rows []Candle, source shared.DataSource)
 		return err
 	}
 	ok = true
-	_ = lakeobject.PutLocalFile(context.Background(), dataDir, path)
-	return nil
+	return lakeobject.Publish(context.Background(), dataDir, path)
 }
 
 // writeTouchedYearCandles rewrites only year partitions touched by fresh rows.

@@ -132,6 +132,15 @@ tasks:
       - mkdir -p data/parquet
       - go run ./src/cmd/seed-demo-year
 
+  lake:upload:
+    desc: Copy an existing ./data/parquet lake into the Floci S3 bucket (one-off, after switching LAKE_BACKEND to s3)
+    cmds:
+      - |
+        docker run --rm --network host -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 \
+          -v "{{.HOST_DATA_DIR}}/parquet:/lake:ro" amazon/aws-cli \
+          --endpoint-url "http://127.0.0.1:{{.FLOCI_PORT | default "11566"}}" \
+          s3 sync /lake "s3://${LAKE_BUCKET:-dagobert-local-lake}/parquet"
+
   backtest-run:
     desc: Run one catalogued backtest (BACKTEST_ID=uuid, uses dagobert-backtest image)
     cmds:

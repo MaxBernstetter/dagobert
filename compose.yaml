@@ -38,7 +38,7 @@ services:
       EXPERIMENT_ARTIFACTS: ${EXPERIMENT_ARTIFACTS:-fs}
       EXPERIMENTS_TABLE: ${EXPERIMENTS_TABLE:-dagobert-local-experiments}
       EXPERIMENT_CATALOG: ${EXPERIMENT_CATALOG:-postgres}
-      LAKE_BACKEND: ${LAKE_BACKEND:-fs}
+      LAKE_BACKEND: ${LAKE_BACKEND:-s3}     # candle Parquet lives in the Floci S3 bucket; fs keeps it in ./data
       LAKE_DUAL_WRITE: ${LAKE_DUAL_WRITE:-0}
       HOST_DATA_DIR: ${HOST_DATA_DIR:-./data}
       HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:-./src/calculation-signal/playbooks}
