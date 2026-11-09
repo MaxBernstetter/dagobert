@@ -9,14 +9,19 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/bars"
 	indicatorrun "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/indicators/run"
 	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/lake"
-	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/store"
 	"github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/internal/tiparquet"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
-// BuildRangeRows computes KPI bodies for closed bars in [from, to) without writing SQLite.
-// Warm TI parquet cache is used when year partitions cover the range.
-func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row, error) {
+// BuildRangeRows computes KPI bodies for closed bars in [from, to). Warm TI parquet cache is used
+// when year partitions cover the range; a cold computation is cached best-effort (experiments do
+// not depend on the cache write).
+func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]Row, error) {
+	return buildRangeRows(dataDir, symbol, from, to, nowMS, false)
+}
+
+// buildRangeRows is BuildRangeRows; with strict, a failed cache write fails the call.
+func buildRangeRows(dataDir, symbol string, from, to, nowMS int64, strict bool) ([]Row, error) {
 	if !validPipelineSymbol(symbol) {
 		return nil, errors.New("invalid symbol")
 	}
@@ -28,7 +33,7 @@ func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row,
 	if cached, ok, err := tiparquet.LoadRange(dataDir, provider, base, quote, algo, from, to, defaultAggMS); err != nil {
 		return nil, err
 	} else if ok {
-		out := make([]store.Row, 0, len(cached))
+		out := make([]Row, 0, len(cached))
 		for _, r := range cached {
 			if r.BarOpen+defaultAggMS > nowMS {
 				continue
@@ -41,7 +46,7 @@ func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row,
 			if !ok {
 				ds = shared.DefaultDataSource()
 			}
-			out = append(out, store.Row{
+			out = append(out, Row{
 				Symbol:     symbol,
 				BarOpen:    r.BarOpen,
 				Body:       body,
@@ -64,7 +69,7 @@ func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row,
 	}
 	ordered := bars.Ordered(spec, raw.Candles)
 	window := indicatorrun.Window(spec.DurationMS)
-	rows := make([]store.Row, 0, len(ordered))
+	rows := make([]Row, 0, len(ordered))
 	tiRows := make([]tiparquet.Row, 0, len(ordered))
 	for i, agg := range ordered {
 		if agg.OpenTime < from || agg.OpenTime+spec.DurationMS > to || agg.OpenTime+spec.DurationMS > nowMS {
@@ -92,7 +97,7 @@ func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row,
 			return nil, err
 		}
 		resultsJSON, _ := json.Marshal(results)
-		rows = append(rows, store.Row{
+		rows = append(rows, Row{
 			Symbol:     symbol,
 			BarOpen:    agg.OpenTime,
 			Body:       string(encoded),
@@ -113,7 +118,9 @@ func BuildRangeRows(dataDir, symbol string, from, to, nowMS int64) ([]store.Row,
 	if len(rows) == 0 {
 		return nil, lake.ErrMissing
 	}
-	_ = tiparquet.WriteRange(dataDir, provider, base, quote, algo, tiRows)
+	if err := tiparquet.WriteRange(dataDir, provider, base, quote, algo, tiRows); err != nil && strict {
+		return nil, err
+	}
 	return rows, nil
 }
 

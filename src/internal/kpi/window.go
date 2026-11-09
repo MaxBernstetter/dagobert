@@ -1,16 +1,11 @@
 package kpi
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-
-	_ "modernc.org/sqlite"
 )
 
-// BarSnapshot is one aggregated bar from technical_indicator storage.
+// BarSnapshot is one aggregated bar from computed KPI rows.
 type BarSnapshot struct {
 	Close   float64
 	Volume  float64
@@ -47,52 +42,6 @@ func LoadWindowBodies(bodies map[int64]string) (*Window, error) {
 		return nil, ErrNotFound
 	}
 	return w, nil
-}
-
-// LoadWindow reads kpi_revision rows for symbol and bar_open in [minOpen, maxOpen].
-func LoadWindow(dataDir, symbol string, minOpen, maxOpen int64) (*Window, error) {
-	path := filepath.Join(dataDir, "technical_indicator.sqlite")
-	if _, err := os.Stat(path); err != nil {
-		return nil, err
-	}
-	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(
-		`SELECT bar_open, body FROM kpi_revision WHERE symbol = ? AND algo = 'v1' AND bar_open >= ? AND bar_open <= ? ORDER BY bar_open`,
-		symbol, minOpen, maxOpen,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	w := &Window{byOpen: make(map[int64]BarSnapshot)}
-	for rows.Next() {
-		var barOpen int64
-		var body string
-		if err := rows.Scan(&barOpen, &body); err != nil {
-			return nil, err
-		}
-		var parsed struct {
-			Close   float64  `json:"close"`
-			Volume  float64  `json:"volume"`
-			Results []Result `json:"results"`
-		}
-		if err := json.Unmarshal([]byte(body), &parsed); err != nil {
-			return nil, fmt.Errorf("parse kpi bar_open=%d: %w", barOpen, err)
-		}
-		w.byOpen[barOpen] = BarSnapshot{
-			Close:   parsed.Close,
-			Volume:  parsed.Volume,
-			Results: parsed.Results,
-			ByKey:   IndexResults(parsed.Results),
-		}
-	}
-	return w, rows.Err()
 }
 
 // Snapshot returns the bar snapshot when present.

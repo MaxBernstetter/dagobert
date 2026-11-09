@@ -12,7 +12,7 @@ const (
 	DataSourceBinance DataSource = 1
 )
 
-// String returns the persisted provider id (e.g. kpi_revision.provider).
+// String returns the persisted provider id (e.g. the lake partition `provider=`).
 func (d DataSource) String() string {
 	switch d {
 	case DataSourceBinance:

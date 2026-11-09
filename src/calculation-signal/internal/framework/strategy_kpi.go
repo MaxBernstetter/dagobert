@@ -2,9 +2,6 @@ package framework
 
 import (
 	"database/sql"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -71,53 +68,6 @@ func StrategyKPIRegistry() []StrategyKPIDef {
 		{Slug: "sortino", Title: "Sortino ratio", Label: "Sortino", Unit: "ratio", Format: "decimal"},
 		{Slug: "win-rate", Title: "Win rate", Label: "Win rate", Unit: "ratio", Format: "percent"},
 	}
-}
-
-// ComputeStrategyKPIs loads fills and bar marks from dataDir and computes KPIs for [fromMs, toMs].
-// When fromMs or toMs is zero, the range spans all available fills and marks.
-func ComputeStrategyKPIs(dataDir, playbook, symbol string, fromMs, toMs int64, startCash float64) (StrategyKPISet, error) {
-	if startCash <= 0 {
-		return StrategyKPISet{}, errors.New("start cash required")
-	}
-	fills, err := LoadStrategyKPIFills(dataDir, playbook)
-	if err != nil {
-		return StrategyKPISet{}, err
-	}
-	if len(fills) == 0 {
-		return StrategyKPISet{Playbook: playbook, Symbol: symbol, Results: nil}, nil
-	}
-
-	if fromMs <= 0 {
-		fromMs = fills[0].CandleCloseMs
-	}
-	if toMs <= 0 {
-		toMs = fills[len(fills)-1].CandleCloseMs
-	}
-	if fromMs > toMs {
-		return StrategyKPISet{}, errors.New("invalid kpi range")
-	}
-
-	bars, err := LoadStrategyKPIBars(dataDir, symbol, fromMs, toMs)
-	if err != nil {
-		return StrategyKPISet{}, err
-	}
-	if len(bars) < 2 {
-		return StrategyKPISet{Playbook: playbook, Symbol: symbol, FromMs: fromMs, ToMs: toMs, Results: nil}, nil
-	}
-
-	portfolio, bench := ReplayEquityCurves(fills, bars, startCash)
-	if len(portfolio) < 2 {
-		return StrategyKPISet{Playbook: playbook, Symbol: symbol, FromMs: fromMs, ToMs: toMs, Results: nil}, nil
-	}
-
-	results := ComputeStrategyKPIValues(portfolio, bench, fromMs, toMs)
-	return StrategyKPISet{
-		Playbook: playbook,
-		Symbol:   symbol,
-		FromMs:   fromMs,
-		ToMs:     toMs,
-		Results:  results,
-	}, nil
 }
 
 // LoadStrategyKPIFills reads fill_journal rows for a playbook.
@@ -187,65 +137,6 @@ func candleCloseFromOrderLink(link, playbook string) (int64, bool) {
 		return 0, false
 	}
 	return ms, true
-}
-
-// LoadStrategyKPIBars loads 3h bar close prices for symbol within candle-close bounds.
-func LoadStrategyKPIBars(dataDir, symbol string, fromCloseMs, toCloseMs int64) ([]StrategyKPIBar, error) {
-	path := filepath.Join(dataDir, "technical_indicator.sqlite")
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	openMin := fromCloseMs - strategyKPIBarMS
-	openMax := toCloseMs - strategyKPIBarMS
-	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(
-		`SELECT bar_open, body FROM kpi_revision WHERE symbol = ? AND algo = 'v1' AND bar_open >= ? AND bar_open <= ? ORDER BY bar_open`,
-		symbol, openMin, openMax,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []StrategyKPIBar
-	for rows.Next() {
-		var barOpen int64
-		var body string
-		if err := rows.Scan(&barOpen, &body); err != nil {
-			return nil, err
-		}
-		closeMs := barOpen + strategyKPIBarMS
-		if closeMs < fromCloseMs || closeMs > toCloseMs {
-			continue
-		}
-		closePx, err := parseBarClose(body)
-		if err != nil {
-			continue
-		}
-		out = append(out, StrategyKPIBar{CloseMs: closeMs, Close: closePx})
-	}
-	return out, rows.Err()
-}
-
-func parseBarClose(body string) (float64, error) {
-	var row struct {
-		Close float64 `json:"close"`
-	}
-	if err := json.Unmarshal([]byte(body), &row); err != nil {
-		return 0, err
-	}
-	if row.Close <= 0 || math.IsNaN(row.Close) {
-		return 0, fmt.Errorf("invalid close")
-	}
-	return row.Close, nil
 }
 
 type equityPoint struct {

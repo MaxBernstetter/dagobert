@@ -2,7 +2,7 @@
 
 The UI focuses on the **Experiment Suite** (`/experiments`). Single-backtest list APIs and the Portfolio / Strategy / Data / Processing pages were removed from the frontend.
 
-The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes) are Parquet files in the instance workspace, `data/experiments/<id>/instances/<instance>/`; Postgres keeps the experiment, instance metrics, period stats and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). Production `technical_indicator.sqlite` is never written during an experiment run; the indicator window for experiments is a per-symbol cache under `data/experiments/<id>/.cache`, deleted when the experiment is final.
+The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes, period stats) are Parquet files in the instance workspace, `data/experiments/<id>/instances/<instance>/`; Postgres keeps the experiment, instance metrics and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). There is no indicator database: the indicator window for experiments is a per-symbol cache under `data/experiments/<id>/.cache`, deleted when the experiment is final.
 
 ## Experiments (multi-instance)
 

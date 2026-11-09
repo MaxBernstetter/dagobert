@@ -3,64 +3,24 @@ package ingest
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/parquet-go/parquet-go"
+
+	"github.com/MaxBernstetter/dagobert/tests/system/internal/floci"
 )
 
-// startFloci runs Floci on a free loopback port and returns its S3 endpoint.
-func startFloci(t *testing.T) string {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close()
-	name := fmt.Sprintf("floci-ingest-test-%d", port)
-	out, err := exec.Command("docker", "run", "-d", "--rm", "--name", name,
-		"-p", fmt.Sprintf("127.0.0.1:%d:4566", port), "floci/floci:latest").CombinedOutput()
-	if err != nil {
-		t.Fatalf("start floci: %v\n%s", err, out)
-	}
-	t.Cleanup(func() { exec.Command("docker", "rm", "-f", name).Run() })
-	endpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
-	for i := 0; i < 60; i++ {
-		if resp, err := http.Get(endpoint + "/_floci/health"); err == nil {
-			resp.Body.Close()
-			return endpoint
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	t.Fatal("floci did not become healthy")
-	return ""
-}
-
 func TestCandlesAreStoredInTheS3LakeNotOnDisk(t *testing.T) {
-	endpoint := startFloci(t)
-	client := s3.New(s3.Options{
-		Region:       "us-east-1",
-		BaseEndpoint: aws.String(endpoint),
-		UsePathStyle: true,
-		Credentials:  credentials.NewStaticCredentialsProvider("test", "test", ""),
-	})
 	const bucket = "lake-test"
-	if _, err := client.CreateBucket(context.Background(), &s3.CreateBucketInput{Bucket: aws.String(bucket)}); err != nil {
-		t.Fatal(err)
-	}
+	endpoint, client := floci.Start(t, bucket)
 
 	open0 := hourFloor(1_700_000_000_000)
 	open1 := open0 + hourMS

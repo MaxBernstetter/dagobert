@@ -2,18 +2,18 @@ package process
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
-	_ "modernc.org/sqlite"
+	"github.com/parquet-go/parquet-go"
 
 	"github.com/MaxBernstetter/dagobert/src/shared"
 	"github.com/MaxBernstetter/dagobert/tests/system/internal/lakefile"
@@ -46,10 +46,12 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+const threeHours = int64(10_800_000)
+
 func TestThreeClosedHours(t *testing.T) {
 	dir := dataDir(t)
 	writeCandles(t, dir, "BTCUSDT", case1Candles())
-	stdout, stderr, code := runProcess(t, dir, 10_800_000, "BTCUSDT", "0")
+	stdout, stderr, code := runProcess(t, dir, threeHours, "BTCUSDT", "0", strconv.FormatInt(threeHours, 10))
 	if code != 0 || !hasDetail(stdout, 0) {
 		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
@@ -60,10 +62,11 @@ func TestThreeClosedHours(t *testing.T) {
 	assertBody(t, rows[0], case1Body())
 }
 
-func TestSameBarAgain(t *testing.T) {
+func TestSameRangeAgain(t *testing.T) {
 	dir := dataDir(t)
 	writeCandles(t, dir, "BTCUSDT", case1Candles())
-	stdout, stderr, code := runProcess(t, dir, 10_800_000, "BTCUSDT", "0")
+	args := []string{"BTCUSDT", "0", strconv.FormatInt(threeHours, 10)}
+	stdout, stderr, code := runProcess(t, dir, threeHours, args...)
 	if code != 0 || !hasDetail(stdout, 0) {
 		t.Fatalf("first: exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
@@ -72,16 +75,13 @@ func TestSameBarAgain(t *testing.T) {
 		t.Fatalf("kpi rows after first run: got %d want 1", len(first))
 	}
 
-	stdout, stderr, code = runProcess(t, dir, 10_800_000, "BTCUSDT", "0")
-	if code != 2 || !hasDetail(stdout, 1) {
+	stdout, stderr, code = runProcess(t, dir, threeHours, args...)
+	if code != 0 || !hasDetail(stdout, 0) {
 		t.Fatalf("second: exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 	second := readKPI(t, dir)
-	if len(second) != 1 {
-		t.Fatalf("kpi rows after second run: got %d want 1", len(second))
-	}
-	if second[0] != first[0] {
-		t.Fatalf("body changed:\nfirst  %s\nsecond %s", first[0], second[0])
+	if len(second) != 1 || second[0] != first[0] {
+		t.Fatalf("kpi rows changed:\nfirst  %v\nsecond %v", first, second)
 	}
 	assertBody(t, second[0], case1Body())
 }
@@ -89,8 +89,8 @@ func TestSameBarAgain(t *testing.T) {
 func TestStillOpen(t *testing.T) {
 	dir := dataDir(t)
 	writeCandles(t, dir, "BTCUSDT", case1Candles())
-	stdout, stderr, code := runProcess(t, dir, 10_799_999, "BTCUSDT", "0")
-	if code != 2 || !hasDetail(stdout, 20) {
+	stdout, stderr, code := runProcess(t, dir, threeHours-1, "BTCUSDT", "0", strconv.FormatInt(threeHours, 10))
+	if code != 2 || !hasDetail(stdout, 21) {
 		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 	if n := len(readKPI(t, dir)); n != 0 {
@@ -103,7 +103,7 @@ func TestMissingCandle(t *testing.T) {
 		dir := dataDir(t)
 		all := case1Candles()
 		writeCandles(t, dir, "BTCUSDT", all[:2])
-		stdout, stderr, code := runProcess(t, dir, 10_800_000, "BTCUSDT", "0")
+		stdout, stderr, code := runProcess(t, dir, threeHours, "BTCUSDT", "0", strconv.FormatInt(threeHours, 10))
 		if code != 2 || !hasDetail(stdout, 21) {
 			t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 		}
@@ -113,7 +113,7 @@ func TestMissingCandle(t *testing.T) {
 	})
 	t.Run("absent", func(t *testing.T) {
 		dir := dataDir(t)
-		stdout, stderr, code := runProcess(t, dir, 10_800_000, "BTCUSDT", "0")
+		stdout, stderr, code := runProcess(t, dir, threeHours, "BTCUSDT", "0", strconv.FormatInt(threeHours, 10))
 		if code != 2 || !hasDetail(stdout, 21) {
 			t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 		}
@@ -123,14 +123,22 @@ func TestMissingCandle(t *testing.T) {
 	})
 }
 
-func TestMissingBarOpen(t *testing.T) {
-	dir := dataDir(t)
-	stdout, stderr, code := runProcess(t, dir, 10_800_000, "BTCUSDT")
-	if code != 1 || !hasDetail(stdout, 10) {
-		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
-	}
-	if n := len(readKPI(t, dir)); n != 0 {
-		t.Fatalf("kpi rows: got %d want 0", n)
+func TestWrongArguments(t *testing.T) {
+	for name, args := range map[string][]string{
+		"symbol only":          {"BTCUSDT"},
+		"single bar (removed)": {"BTCUSDT", "0"},
+		"empty range":          {"BTCUSDT", "10800000", "10800000"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := dataDir(t)
+			stdout, stderr, code := runProcess(t, dir, threeHours, args...)
+			if code != 1 || !hasDetail(stdout, 10) {
+				t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
+			}
+			if n := len(readKPI(t, dir)); n != 0 {
+				t.Fatalf("kpi rows: got %d want 0", n)
+			}
+		})
 	}
 }
 
@@ -142,7 +150,7 @@ func TestTwoMovingAverageWindows(t *testing.T) {
 		candle{18_000_000, 140, 160, 139, 150, 6, 21_599_999},
 	)
 	writeCandles(t, dir, "BTCUSDT", rows)
-	stdout, stderr, code := runProcess(t, dir, 21_600_000, "BTCUSDT", "10800000")
+	stdout, stderr, code := runProcess(t, dir, 21_600_000, "BTCUSDT", "10800000", "21600000")
 	if code != 0 || !hasDetail(stdout, 0) {
 		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
@@ -244,13 +252,27 @@ func writeCandles(t *testing.T, dir, symbol string, rows []candle) {
 
 func runProcess(t *testing.T, dataDir string, nowMS int64, args ...string) (stdout, stderr []byte, code int) {
 	t.Helper()
+	return runProcessWith(t, dataDir, nowMS, nil, args...)
+}
+
+// runProcessWith runs the job with extra environment. A non-empty env puts the container on the host
+// network, so it reaches a Floci on a loopback port.
+func runProcessWith(t *testing.T, dataDir string, nowMS int64, env map[string]string, args ...string) (stdout, stderr []byte, code int) {
+	t.Helper()
 	dockerArgs := []string{
 		"run", "--rm",
+		"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 		"-e", "DATA_DIR=/data",
 		"-e", "NOW_MS=" + strconv.FormatInt(nowMS, 10),
 		"-v", dataDir + ":/data",
-		image,
 	}
+	if len(env) > 0 {
+		dockerArgs = append(dockerArgs, "--network", "host")
+	}
+	for k, v := range env {
+		dockerArgs = append(dockerArgs, "-e", k+"="+v)
+	}
+	dockerArgs = append(dockerArgs, image)
 	dockerArgs = append(dockerArgs, args...)
 	cmd := exec.Command("docker", dockerArgs...)
 	var outBuf, errBuf bytes.Buffer
@@ -277,41 +299,44 @@ func hasDetail(stdout []byte, n int) bool {
 	return false
 }
 
+// readKPI returns the stored indicator bars of the lake's TI cache (parquet/ti), ordered by bar open,
+// each as the JSON body the consumers read: OHLCV, times and the indicator results.
 func readKPI(t *testing.T, dir string) []string {
 	t.Helper()
-	path := filepath.Join(dir, "technical_indicator.sqlite")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	type tiRow struct {
+		BarOpen     int64   `parquet:"bar_open"`
+		Open        float64 `parquet:"open"`
+		High        float64 `parquet:"high"`
+		Low         float64 `parquet:"low"`
+		Close       float64 `parquet:"close"`
+		Volume      float64 `parquet:"volume"`
+		CloseTime   int64   `parquet:"close_time"`
+		ResultsJSON string  `parquet:"results_json"`
+	}
+	var rows []tiRow
+	root := filepath.Join(dir, "parquet", "ti")
+	_ = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(p, "bars.parquet") {
+			return nil
+		}
+		part, rerr := parquet.ReadFile[tiRow](p)
+		if rerr != nil {
+			t.Fatalf("read %s: %v", p, rerr)
+		}
+		rows = append(rows, part...)
 		return nil
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "mode=ro"}
-	db, err := sql.Open("sqlite", u.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	rows, err := db.Query(`SELECT symbol, bar_open, body FROM kpi ORDER BY symbol, bar_open`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
+	})
+	sort.Slice(rows, func(i, j int) bool { return rows[i].BarOpen < rows[j].BarOpen })
 	var bodies []string
-	for rows.Next() {
-		var symbol, body string
-		var barOpen int64
-		if err := rows.Scan(&symbol, &barOpen, &body); err != nil {
+	for _, r := range rows {
+		b, err := json.Marshal(map[string]any{
+			"open": r.Open, "high": r.High, "low": r.Low, "close": r.Close, "volume": r.Volume,
+			"open_time": r.BarOpen, "close_time": r.CloseTime, "results": json.RawMessage(r.ResultsJSON),
+		})
+		if err != nil {
 			t.Fatal(err)
 		}
-		if symbol != "BTCUSDT" {
-			t.Fatalf("symbol: got %s", symbol)
-		}
-		bodies = append(bodies, body)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+		bodies = append(bodies, string(b))
 	}
 	return bodies
 }

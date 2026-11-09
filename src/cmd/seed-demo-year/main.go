@@ -2,21 +2,19 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
-
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
-	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	ingestrunner "github.com/MaxBernstetter/dagobert/src/ingest/runner"
+	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
@@ -66,25 +64,20 @@ func main() {
 		fatal(err)
 	}
 
-	fmt.Println("technical indicators (backfill) …")
-	detail, code = tirunner.Run(
-		[]string{symbol, fmt.Sprint(from), fmt.Sprint(to)},
-		dataDir,
-		time.Now().UnixMilli(),
-		false,
-	)
-	if err := failUnlessOK("calculation-technical-indicator", code, detail); err != nil {
-		fatal(err)
-	}
-
-	closes, err := listCandleCloses(dataDir, symbol)
+	fmt.Println("technical indicators …")
+	rows, err := tirunner.BuildKPIRange(dataDir, symbol, from, to, time.Now().UnixMilli())
 	if err != nil {
-		fatal(err)
+		fatal(fmt.Errorf("calculation-technical-indicator: %w", err))
 	}
+	bodies := make(map[int64]string, len(rows))
+	closes := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		bodies[row.BarOpen] = row.Body
+		closes = append(closes, row.BarOpen+threeHoursMs)
+	}
+	sort.Slice(closes, func(i, j int) bool { return closes[i] < closes[j] })
 	fmt.Printf("pipeline: %d bars (fast replay: batched DB writes)\n", len(closes))
-	minOpen := closes[0] - threeHoursMs
-	maxOpen := closes[len(closes)-1] - threeHoursMs
-	kpiWin, err := kpi.LoadWindow(dataDir, symbol, minOpen, maxOpen)
+	kpiWin, err := kpi.LoadWindowBodies(bodies)
 	if err != nil {
 		fatal(err)
 	}
@@ -114,34 +107,6 @@ func failUnlessOK(stage string, code, detail int) error {
 		return nil
 	}
 	return fmt.Errorf("%s failed exit=%d detail=%d", stage, code, detail)
-}
-
-func listCandleCloses(dataDir, symbol string) ([]int64, error) {
-	db, err := sql.Open("sqlite", filepath.Join(dataDir, "technical_indicator.sqlite"))
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-	rows, err := db.Query(
-		`SELECT bar_open FROM kpi_revision WHERE symbol = ? AND algo = 'v1' ORDER BY bar_open`,
-		symbol,
-	)
-	if err != nil {
-		rows, err = db.Query(`SELECT bar_open FROM kpi WHERE symbol = ? ORDER BY bar_open`, symbol)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []int64
-	for rows.Next() {
-		var barOpen int64
-		if err := rows.Scan(&barOpen); err != nil {
-			return nil, err
-		}
-		out = append(out, barOpen+threeHoursMs)
-	}
-	return out, rows.Err()
 }
 
 func resetDataDir(dir string) error {

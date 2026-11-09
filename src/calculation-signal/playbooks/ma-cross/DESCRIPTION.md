@@ -18,7 +18,7 @@ price_source: binance
 
 | Input | Source |
 |-------|--------|
-| SMA this / prior bar | `technical_indicator.sqlite` |
+| SMA this / prior bar | indicator bars (`parquet/ti/`) |
 | `flat` / `long` | Prior `signal` rows for this playbook + symbol |
 
 Stored in `calculation_signal.sqlite` → `signal` (not `action`).

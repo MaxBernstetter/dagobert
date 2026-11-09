@@ -106,7 +106,7 @@ Where state lives:
 | Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet, `report.json`, `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet` |
 | Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
 
-Production `technical_indicator.sqlite` is never written by an experiment.
+Indicator bars (`parquet/ti/` in the lake) are the only persisted indicator output; an experiment never writes them except as a cache of a cold computation.
 
 ## One instance in detail
 

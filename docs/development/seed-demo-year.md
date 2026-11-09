@@ -4,7 +4,7 @@ Wipes `./data`, ingests **one year** of Binance public klines for `BTCUSDT`, bac
 
 Prefer `task up` / `task seed-demo-year` (they create `data/parquet` on the host and pass your UID/GID to the orchestrator). If older runs left root-owned files under `data/`, the seed script clears them with a one-off `docker run … alpine find /data -mindepth 1 -delete`, or run `sudo chown -R "$USER:$USER" data`.
 
-No exchange is ever called. Balances and fills use `data/paper_venue.json` and bar **close** prices from `technical_indicator.sqlite`.
+No exchange is ever called. Balances and fills use `data/paper_venue.json` and bar **close** prices from the computed indicator bars. The seed ingests through the ingest ledger, so it needs `DATABASE_URL` (Aurora on Floci after `task up`).
 
 ```bash
 task seed-demo-year
