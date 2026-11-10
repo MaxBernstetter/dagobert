@@ -127,6 +127,13 @@ resource "aws_apigatewayv2_route" "experiment_rpc" {
   target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
 }
 
+# Connect-RPC unary calls: POST /tradingcopilot.v1.BackfillService/<Method> (backfill_sfn.tf)
+resource "aws_apigatewayv2_route" "backfill_rpc" {
+  api_id    = aws_apigatewayv2_api.experiment.id
+  route_key = "POST /tradingcopilot.v1.BackfillService/{method}"
+  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.experiment.id
   name        = "$default"
