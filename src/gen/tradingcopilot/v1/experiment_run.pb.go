@@ -218,173 +218,6 @@ func (x *CancelExperimentResponse) GetExperiment() *Experiment {
 	return nil
 }
 
-// ExperimentWorkerBatch is the Lambda / simulate-batch payload.
-type ExperimentWorkerBatch struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
-	InstanceIds   []string               `protobuf:"bytes,2,rep,name=instance_ids,json=instanceIds,proto3" json:"instance_ids,omitempty"`
-	DataDir       string                 `protobuf:"bytes,3,opt,name=data_dir,json=dataDir,proto3" json:"data_dir,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ExperimentWorkerBatch) Reset() {
-	*x = ExperimentWorkerBatch{}
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ExperimentWorkerBatch) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ExperimentWorkerBatch) ProtoMessage() {}
-
-func (x *ExperimentWorkerBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ExperimentWorkerBatch.ProtoReflect.Descriptor instead.
-func (*ExperimentWorkerBatch) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_experiment_run_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ExperimentWorkerBatch) GetExperimentId() string {
-	if x != nil {
-		return x.ExperimentId
-	}
-	return ""
-}
-
-func (x *ExperimentWorkerBatch) GetInstanceIds() []string {
-	if x != nil {
-		return x.InstanceIds
-	}
-	return nil
-}
-
-func (x *ExperimentWorkerBatch) GetDataDir() string {
-	if x != nil {
-		return x.DataDir
-	}
-	return ""
-}
-
-// InstanceBatch is one Map item (many instance ids per worker).
-type InstanceBatch struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	InstanceIds   []string               `protobuf:"bytes,1,rep,name=instance_ids,json=instanceIds,proto3" json:"instance_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *InstanceBatch) Reset() {
-	*x = InstanceBatch{}
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *InstanceBatch) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*InstanceBatch) ProtoMessage() {}
-
-func (x *InstanceBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use InstanceBatch.ProtoReflect.Descriptor instead.
-func (*InstanceBatch) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_experiment_run_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *InstanceBatch) GetInstanceIds() []string {
-	if x != nil {
-		return x.InstanceIds
-	}
-	return nil
-}
-
-// ExperimentSFNInput is Step Functions Map input.
-type ExperimentSFNInput struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
-	DataDir       string                 `protobuf:"bytes,2,opt,name=data_dir,json=dataDir,proto3" json:"data_dir,omitempty"`
-	Batches       []*InstanceBatch       `protobuf:"bytes,3,rep,name=batches,proto3" json:"batches,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ExperimentSFNInput) Reset() {
-	*x = ExperimentSFNInput{}
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ExperimentSFNInput) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ExperimentSFNInput) ProtoMessage() {}
-
-func (x *ExperimentSFNInput) ProtoReflect() protoreflect.Message {
-	mi := &file_tradingcopilot_v1_experiment_run_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ExperimentSFNInput.ProtoReflect.Descriptor instead.
-func (*ExperimentSFNInput) Descriptor() ([]byte, []int) {
-	return file_tradingcopilot_v1_experiment_run_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *ExperimentSFNInput) GetExperimentId() string {
-	if x != nil {
-		return x.ExperimentId
-	}
-	return ""
-}
-
-func (x *ExperimentSFNInput) GetDataDir() string {
-	if x != nil {
-		return x.DataDir
-	}
-	return ""
-}
-
-func (x *ExperimentSFNInput) GetBatches() []*InstanceBatch {
-	if x != nil {
-		return x.Batches
-	}
-	return nil
-}
-
 var File_tradingcopilot_v1_experiment_run_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_experiment_run_proto_rawDesc = "" +
@@ -405,17 +238,7 @@ const file_tradingcopilot_v1_experiment_run_proto_rawDesc = "" +
 	"\bfinished\x18\x04 \x01(\tR\bfinished\x12=\n" +
 	"\n" +
 	"experiment\x18\x05 \x01(\v2\x1d.tradingcopilot.v1.ExperimentR\n" +
-	"experiment\"z\n" +
-	"\x15ExperimentWorkerBatch\x12#\n" +
-	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12!\n" +
-	"\finstance_ids\x18\x02 \x03(\tR\vinstanceIds\x12\x19\n" +
-	"\bdata_dir\x18\x03 \x01(\tR\adataDir\"2\n" +
-	"\rInstanceBatch\x12!\n" +
-	"\finstance_ids\x18\x01 \x03(\tR\vinstanceIds\"\x90\x01\n" +
-	"\x12ExperimentSFNInput\x12#\n" +
-	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12\x19\n" +
-	"\bdata_dir\x18\x02 \x01(\tR\adataDir\x12:\n" +
-	"\abatches\x18\x03 \x03(\v2 .tradingcopilot.v1.InstanceBatchR\abatchesB\xdf\x01\n" +
+	"experimentB\xdf\x01\n" +
 	"\x15com.tradingcopilot.v1B\x12ExperimentRunProtoP\x01ZMgithub.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1;tradingcopilotv1\xa2\x02\x03TXX\xaa\x02\x11Tradingcopilot.V1\xca\x02\x11Tradingcopilot\\V1\xe2\x02\x1dTradingcopilot\\V1\\GPBMetadata\xea\x02\x12Tradingcopilot::V1b\x06proto3"
 
 var (
@@ -430,24 +253,20 @@ func file_tradingcopilot_v1_experiment_run_proto_rawDescGZIP() []byte {
 	return file_tradingcopilot_v1_experiment_run_proto_rawDescData
 }
 
-var file_tradingcopilot_v1_experiment_run_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_tradingcopilot_v1_experiment_run_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_tradingcopilot_v1_experiment_run_proto_goTypes = []any{
 	(*RunExperimentRequest)(nil),     // 0: tradingcopilot.v1.RunExperimentRequest
 	(*RunExperimentResponse)(nil),    // 1: tradingcopilot.v1.RunExperimentResponse
 	(*CancelExperimentResponse)(nil), // 2: tradingcopilot.v1.CancelExperimentResponse
-	(*ExperimentWorkerBatch)(nil),    // 3: tradingcopilot.v1.ExperimentWorkerBatch
-	(*InstanceBatch)(nil),            // 4: tradingcopilot.v1.InstanceBatch
-	(*ExperimentSFNInput)(nil),       // 5: tradingcopilot.v1.ExperimentSFNInput
-	(*Experiment)(nil),               // 6: tradingcopilot.v1.Experiment
+	(*Experiment)(nil),               // 3: tradingcopilot.v1.Experiment
 }
 var file_tradingcopilot_v1_experiment_run_proto_depIdxs = []int32{
-	6, // 0: tradingcopilot.v1.CancelExperimentResponse.experiment:type_name -> tradingcopilot.v1.Experiment
-	4, // 1: tradingcopilot.v1.ExperimentSFNInput.batches:type_name -> tradingcopilot.v1.InstanceBatch
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: tradingcopilot.v1.CancelExperimentResponse.experiment:type_name -> tradingcopilot.v1.Experiment
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_tradingcopilot_v1_experiment_run_proto_init() }
@@ -462,7 +281,7 @@ func file_tradingcopilot_v1_experiment_run_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tradingcopilot_v1_experiment_run_proto_rawDesc), len(file_tradingcopilot_v1_experiment_run_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -102,7 +102,7 @@ Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/S
 | **1** | `task infra:local` → Floci S3/SSM (no DynamoDB tables) |
 | **2** | `task infra:seed-ssm`; `SECRETS_BACKEND=auto\|ssm` |
 | **3** | `EXPERIMENT_ARTIFACTS=s3` dual-write reports |
-| **4** | Terraform DynamoDB tables removed. `EXPERIMENT_CATALOG=sqlite\|dual\|ddb` app dual-write remains; do not invest further |
+| **4** | Terraform DynamoDB tables removed. The `EXPERIMENT_CATALOG` / `EXPERIMENTS_TABLE` dual-write and `src/internal/experimentddb` are deleted |
 | **5** | `LAKE_BACKEND` / `LAKE_DUAL_WRITE`; `src/internal/lakeobject` |
 | **6** | `EXPERIMENT_RUN_BACKEND=docker\|batched\|sfn`; phases prepare/simulate/finalize; see fan-out knobs below |
 

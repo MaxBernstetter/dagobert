@@ -24,22 +24,3 @@ message CancelExperimentResponse {
   // The experiment after the cancel.
   Experiment experiment = 5;
 }
-
-// ExperimentWorkerBatch is the Lambda / simulate-batch payload.
-message ExperimentWorkerBatch {
-  string experiment_id = 1;
-  repeated string instance_ids = 2;
-  string data_dir = 3;
-}
-
-// InstanceBatch is one Map item (many instance ids per worker).
-message InstanceBatch {
-  repeated string instance_ids = 1;
-}
-
-// ExperimentSFNInput is Step Functions Map input.
-message ExperimentSFNInput {
-  string experiment_id = 1;
-  string data_dir = 2;
-  repeated InstanceBatch batches = 3;
-}

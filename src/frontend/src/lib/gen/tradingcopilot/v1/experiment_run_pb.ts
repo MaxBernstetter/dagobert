@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tradingcopilot/v1/experiment_run.proto.
  */
 export const file_tradingcopilot_v1_experiment_run: GenFile = /*@__PURE__*/
-  fileDesc("CiZ0cmFkaW5nY29waWxvdC92MS9leHBlcmltZW50X3J1bi5wcm90bxIRdHJhZGluZ2NvcGlsb3QudjEiOAoUUnVuRXhwZXJpbWVudFJlcXVlc3QSFAoMcmV0cnlfZmFpbGVkGAEgASgIEgoKAmlkGAIgASgJIlUKFVJ1bkV4cGVyaW1lbnRSZXNwb25zZRIKCgJpZBgBIAEoCRIPCgdydW5uaW5nGAIgASgIEg0KBWVycm9yGAMgASgJEhAKCGZpbmlzaGVkGAQgASgJIosBChhDYW5jZWxFeHBlcmltZW50UmVzcG9uc2USCgoCaWQYASABKAkSDwoHcnVubmluZxgCIAEoCBINCgVlcnJvchgDIAEoCRIQCghmaW5pc2hlZBgEIAEoCRIxCgpleHBlcmltZW50GAUgASgLMh0udHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudCJWChVFeHBlcmltZW50V29ya2VyQmF0Y2gSFQoNZXhwZXJpbWVudF9pZBgBIAEoCRIUCgxpbnN0YW5jZV9pZHMYAiADKAkSEAoIZGF0YV9kaXIYAyABKAkiJQoNSW5zdGFuY2VCYXRjaBIUCgxpbnN0YW5jZV9pZHMYASADKAkicAoSRXhwZXJpbWVudFNGTklucHV0EhUKDWV4cGVyaW1lbnRfaWQYASABKAkSEAoIZGF0YV9kaXIYAiABKAkSMQoHYmF0Y2hlcxgDIAMoCzIgLnRyYWRpbmdjb3BpbG90LnYxLkluc3RhbmNlQmF0Y2hC3wEKFWNvbS50cmFkaW5nY29waWxvdC52MUISRXhwZXJpbWVudFJ1blByb3RvUAFaTWdpdGh1Yi5jb20vTWF4QmVybnN0ZXR0ZXIvZGFnb2JlcnQvc3JjL2dlbi90cmFkaW5nY29waWxvdC92MTt0cmFkaW5nY29waWxvdHYxogIDVFhYqgIRVHJhZGluZ2NvcGlsb3QuVjHKAhFUcmFkaW5nY29waWxvdFxWMeICHVRyYWRpbmdjb3BpbG90XFYxXEdQQk1ldGFkYXRh6gISVHJhZGluZ2NvcGlsb3Q6OlYxYgZwcm90bzM", [file_tradingcopilot_v1_experiment]);
+  fileDesc("CiZ0cmFkaW5nY29waWxvdC92MS9leHBlcmltZW50X3J1bi5wcm90bxIRdHJhZGluZ2NvcGlsb3QudjEiOAoUUnVuRXhwZXJpbWVudFJlcXVlc3QSFAoMcmV0cnlfZmFpbGVkGAEgASgIEgoKAmlkGAIgASgJIlUKFVJ1bkV4cGVyaW1lbnRSZXNwb25zZRIKCgJpZBgBIAEoCRIPCgdydW5uaW5nGAIgASgIEg0KBWVycm9yGAMgASgJEhAKCGZpbmlzaGVkGAQgASgJIosBChhDYW5jZWxFeHBlcmltZW50UmVzcG9uc2USCgoCaWQYASABKAkSDwoHcnVubmluZxgCIAEoCBINCgVlcnJvchgDIAEoCRIQCghmaW5pc2hlZBgEIAEoCRIxCgpleHBlcmltZW50GAUgASgLMh0udHJhZGluZ2NvcGlsb3QudjEuRXhwZXJpbWVudELfAQoVY29tLnRyYWRpbmdjb3BpbG90LnYxQhJFeHBlcmltZW50UnVuUHJvdG9QAVpNZ2l0aHViLmNvbS9NYXhCZXJuc3RldHRlci9kYWdvYmVydC9zcmMvZ2VuL3RyYWRpbmdjb3BpbG90L3YxO3RyYWRpbmdjb3BpbG90djGiAgNUWFiqAhFUcmFkaW5nY29waWxvdC5WMcoCEVRyYWRpbmdjb3BpbG90XFYx4gIdVHJhZGluZ2NvcGlsb3RcVjFcR1BCTWV0YWRhdGHqAhJUcmFkaW5nY29waWxvdDo6VjFiBnByb3RvMw", [file_tradingcopilot_v1_experiment]);
 
 /**
  * @generated from message tradingcopilot.v1.RunExperimentRequest
@@ -106,81 +106,4 @@ export type CancelExperimentResponse = Message<"tradingcopilot.v1.CancelExperime
  */
 export const CancelExperimentResponseSchema: GenMessage<CancelExperimentResponse> = /*@__PURE__*/
   messageDesc(file_tradingcopilot_v1_experiment_run, 2);
-
-/**
- * ExperimentWorkerBatch is the Lambda / simulate-batch payload.
- *
- * @generated from message tradingcopilot.v1.ExperimentWorkerBatch
- */
-export type ExperimentWorkerBatch = Message<"tradingcopilot.v1.ExperimentWorkerBatch"> & {
-  /**
-   * @generated from field: string experiment_id = 1;
-   */
-  experimentId: string;
-
-  /**
-   * @generated from field: repeated string instance_ids = 2;
-   */
-  instanceIds: string[];
-
-  /**
-   * @generated from field: string data_dir = 3;
-   */
-  dataDir: string;
-};
-
-/**
- * Describes the message tradingcopilot.v1.ExperimentWorkerBatch.
- * Use `create(ExperimentWorkerBatchSchema)` to create a new message.
- */
-export const ExperimentWorkerBatchSchema: GenMessage<ExperimentWorkerBatch> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_experiment_run, 3);
-
-/**
- * InstanceBatch is one Map item (many instance ids per worker).
- *
- * @generated from message tradingcopilot.v1.InstanceBatch
- */
-export type InstanceBatch = Message<"tradingcopilot.v1.InstanceBatch"> & {
-  /**
-   * @generated from field: repeated string instance_ids = 1;
-   */
-  instanceIds: string[];
-};
-
-/**
- * Describes the message tradingcopilot.v1.InstanceBatch.
- * Use `create(InstanceBatchSchema)` to create a new message.
- */
-export const InstanceBatchSchema: GenMessage<InstanceBatch> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_experiment_run, 4);
-
-/**
- * ExperimentSFNInput is Step Functions Map input.
- *
- * @generated from message tradingcopilot.v1.ExperimentSFNInput
- */
-export type ExperimentSFNInput = Message<"tradingcopilot.v1.ExperimentSFNInput"> & {
-  /**
-   * @generated from field: string experiment_id = 1;
-   */
-  experimentId: string;
-
-  /**
-   * @generated from field: string data_dir = 2;
-   */
-  dataDir: string;
-
-  /**
-   * @generated from field: repeated tradingcopilot.v1.InstanceBatch batches = 3;
-   */
-  batches: InstanceBatch[];
-};
-
-/**
- * Describes the message tradingcopilot.v1.ExperimentSFNInput.
- * Use `create(ExperimentSFNInputSchema)` to create a new message.
- */
-export const ExperimentSFNInputSchema: GenMessage<ExperimentSFNInput> = /*@__PURE__*/
-  messageDesc(file_tradingcopilot_v1_experiment_run, 5);
 

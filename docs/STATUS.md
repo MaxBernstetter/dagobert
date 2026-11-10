@@ -36,7 +36,6 @@ Things that were not verified when this page was written (2026-10-26):
 - The wiki pages were not opened in a browser after the Next.js removal and the move of wiki prose into markdown (the build passes).
 - `terraform fmt` / `validate` were not run on `infra/terraform` after the heavy-path stub removal (no terraform in the dev shell).
 - Experiments completed before #164 have no trade outcome files, so their trades are gone from `/kpis` and `/performance` and their activity and charts are empty. A new run rebuilds them; there is no backfill. See [experiment-data-flow](architecture/experiment-data-flow.md#known-limits).
-- `src/internal/experimentddb` has no caller since the SQLite experiment catalog was removed (#164). It is kept, not deleted.
 - Local-only: `src/frontend/node_modules` may be owned by root if it was created in a container; `npm ci` then fails. Delete it or `chown` it.
 
 ## How to pick up work

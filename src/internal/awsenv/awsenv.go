@@ -62,20 +62,6 @@ func LakeBucket() string {
 	return strings.TrimSpace(os.Getenv("LAKE_BUCKET"))
 }
 
-// StudiesTable is the DynamoDB experiments table (EXPERIMENTS_TABLE). Empty when unset.
-func StudiesTable() string {
-	return strings.TrimSpace(os.Getenv("EXPERIMENTS_TABLE"))
-}
-
-// ExperimentCatalogBackend is "postgres" when DATABASE_URL is set, otherwise "sqlite".
-// DynamoDB is not an experiment catalog backend.
-func ExperimentCatalogBackend() string {
-	if strings.TrimSpace(os.Getenv("DATABASE_URL")) != "" {
-		return "postgres"
-	}
-	return "sqlite"
-}
-
 // LakeBackend is "fs" (default) or "s3".
 func LakeBackend() string {
 	v := strings.ToLower(strings.TrimSpace(os.Getenv("LAKE_BACKEND")))
