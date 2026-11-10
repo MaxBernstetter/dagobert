@@ -1,43 +1,3 @@
-output "environment" {
-  value = var.environment
-}
-
-output "lake_bucket" {
-  value = aws_s3_bucket.lake.bucket
-}
-
-output "task_role_arn" {
-  value = aws_iam_role.task.arn
-}
-
-output "ssm_prefix" {
-  value = "/${var.project}/${var.environment}"
-}
-
-output "database_host" {
-  value = aws_rds_cluster.main.endpoint
-}
-
-output "database_port" {
-  value = aws_rds_cluster.main.port
-}
-
-output "database_url_ssm" {
-  value = aws_ssm_parameter.database_url.name
-}
-
-output "floci_hint" {
-  value = var.environment == "local" ? "export AWS_ENDPOINT_URL=${var.floci_endpoint} && eval $(floci env) 2>/dev/null || true" : "unset AWS_ENDPOINT_URL; use real AWS credentials"
-}
-
-output "experiment_sfn_arn" {
-  value = aws_sfn_state_machine.experiment_run.arn
-}
-
-output "experiment_worker_arn" {
-  value = aws_lambda_function.experiment_worker.arn
-}
-
 output "experiment_worker_repository_url" {
   value = aws_ecr_repository.experiment_worker.repository_url
 }
@@ -61,15 +21,6 @@ output "api_gateway_url" {
 
 output "experiment_api_repository_url" {
   value = aws_ecr_repository.experiment_api.repository_url
-}
-
-output "backfill_sfn_arn" {
-  description = "Step Functions state machine: ingest then indicator for one market. scripts/backfill-start.sh starts it."
-  value       = aws_sfn_state_machine.backfill.arn
-}
-
-output "jobs_cluster" {
-  value = aws_ecs_cluster.jobs.name
 }
 
 output "ingest_repository_url" {

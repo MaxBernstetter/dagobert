@@ -33,9 +33,8 @@ Secret backend (`SECRETS_BACKEND`): `secretsmanager` stores one secret per provi
 - `persist/`, `map.go`: mapping between rows and protobuf messages.
 
 ## Who mounts it
-- The API Lambda mounts it (`src/cmd/experiment-api-lambda`, with `ProviderService` and `BackfillService`) and supplies `Hooks`: `RunExperiment` and `CancelStudy` start and stop the Step Functions execution, `JobStatus` describes it (`src/internal/experimentworkflow`). A run request marks rows running and then calls the hook. `src/cmd/experiment-api` serves the same routes standalone with empty hooks.
+- The API Lambda mounts it (`src/cmd/experiment-api-lambda`, with `ProviderService` and `BackfillService`) and supplies `Hooks`: `RunExperiment` and `CancelStudy` start and stop the Step Functions execution, `JobStatus` describes it (`src/internal/experimentworkflow`). A run request marks rows running and then calls the hook.
 - The API Lambda (`src/cmd/experiment-api-lambda`) mounts both services; its secrets come from Secrets Manager (`infra/terraform/api_lambda.tf`).
-- `src/cmd/experiment-api` is a standalone server with empty hooks, so it cannot start runs.
 - `src/cmd/experiment-api-lambda` also serves `BackfillService` (`backfill.go`, validation and execution mapping in `backfill_plan.go`) when `BACKFILL_SFN_ARN` is set. It starts, describes, lists and stops executions of the backfill state machine, and reads provider state from the same Postgres pool.
 
 ## Test and run
