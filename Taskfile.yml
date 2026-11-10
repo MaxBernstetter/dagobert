@@ -73,6 +73,11 @@ tasks:
       - docker build -f docker/calculation-technical-indicator/Dockerfile -t dagobert-calculation-technical-indicator .
       - docker build -f docker/backtest/Dockerfile -t dagobert-backtest .
 
+  build:api-lambda:
+    desc: Build the Experiment API Lambda image (API Gateway HTTP API backend)
+    cmds:
+      - docker build -f docker/experiment-api/Dockerfile -t dagobert-experiment-api-lambda .
+
   build:stack:
     desc: Build compose images (the orchestrator; the frontend image is built by task infra:local)
     cmds:

@@ -103,9 +103,21 @@ variable "frontend_image_tag" {
 }
 
 variable "frontend_api_url" {
-  description = "Base URL of the Experiment API the frontend proxies /api and /tradingcopilot.v1. to."
+  description = "Base URL of the Experiment API the frontend proxies /api and /tradingcopilot.v1. to. Empty = the API Gateway URL (api_lambda.tf)."
   type        = string
   default     = ""
+}
+
+variable "api_image_tag" {
+  description = "Tag of the experiment-api image in ECR. scripts/infra-apply.sh builds and pushes it before the function is created."
+  type        = string
+  default     = "latest"
+}
+
+variable "api_cors_allow_origins" {
+  description = "CORS origins the API Gateway accepts. No auth yet, so the default is open."
+  type        = list(string)
+  default     = ["*"]
 }
 
 variable "frontend_desired_count" {

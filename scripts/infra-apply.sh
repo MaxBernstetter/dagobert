@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Terraform apply for one environment. The Terraform code is identical; only the switch differs.
-# Two phases: the ECR repository first, then the frontend image is published, then everything else.
+# Two phases: the ECR repositories first, then the images are published, then everything else.
 #   local (default): Floci. Fake credentials, every endpoint on Floci, cannot reach AWS.
 #   prod:            real AWS. Refuses unless it runs in CI with credentials present.
 set -euo pipefail
@@ -40,7 +40,8 @@ case "$ENV_NAME" in
 esac
 
 IMAGE_TAG="${FRONTEND_IMAGE_TAG:-latest}"
-TF_ARGS+=("-var=frontend_image_tag=${IMAGE_TAG}")
+API_IMAGE_TAG="${API_IMAGE_TAG:-latest}"
+TF_ARGS+=("-var=frontend_image_tag=${IMAGE_TAG}" "-var=api_image_tag=${API_IMAGE_TAG}")
 
 # tf runs Terraform from the installed binary, else from the hashicorp/terraform image.
 tf() {
@@ -55,15 +56,18 @@ tf() {
 }
 
 tf init -input=false
-tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.frontend
+tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.frontend -target=aws_ecr_repository.experiment_api
 
-# Publish the frontend image under the repository URI the task definition uses.
+# Publish the images under the repository URIs the task definition and the Lambda use.
 REPO_URL="$(tf output -raw frontend_repository_url)"
+API_REPO_URL="$(tf output -raw experiment_api_repository_url)"
 docker build -f src/frontend/Dockerfile --target prod -t "${REPO_URL}:${IMAGE_TAG}" .
+docker build -f docker/experiment-api/Dockerfile -t "${API_REPO_URL}:${API_IMAGE_TAG}" .
 if [ "$ENV_NAME" = "prod" ]; then
-  # Real ECR: log in and push. (Floci runs the locally built image by its URI, no push needed.)
+  # Real ECR: log in once (same registry for both) and push. Floci runs the locally built images by URI, no push needed.
   aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${REPO_URL%%/*}"
   docker push "${REPO_URL}:${IMAGE_TAG}"
+  docker push "${API_REPO_URL}:${API_IMAGE_TAG}"
 fi
 
 tf apply "${TF_ARGS[@]}"

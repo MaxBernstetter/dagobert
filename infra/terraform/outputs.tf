@@ -45,3 +45,11 @@ output "frontend_repository_url" {
 output "frontend_cluster" {
   value = aws_ecs_cluster.main.name
 }
+
+output "api_gateway_url" {
+  value = aws_apigatewayv2_api.experiment.api_endpoint
+}
+
+output "experiment_api_repository_url" {
+  value = aws_ecr_repository.experiment_api.repository_url
+}

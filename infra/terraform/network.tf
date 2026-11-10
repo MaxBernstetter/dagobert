@@ -24,8 +24,43 @@ resource "aws_subnet" "private" {
 
 resource "aws_security_group" "app" {
   name        = "${local.prefix}-app"
-  description = "Workloads (Lambda, ECS) that may reach the database"
+  description = "Workloads (Lambda, ECS) that may reach the database and S3"
   vpc_id      = aws_vpc.main.id
+
+  # Terraform drops the default allow-all egress, so state it: Aurora in the VPC, S3 through the gateway endpoint.
+  egress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
+  }
+}
+
+# Private route table (no routes: no NAT, no internet). Only the S3 gateway endpoint is attached.
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "${local.prefix}-private" }
+}
+
+resource "aws_route_table_association" "private" {
+  count          = length(local.azs)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+# Gateway endpoint: free, no ENI, no hourly cost. Lets VPC workloads reach S3 without NAT.
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
 }
 
 resource "aws_security_group" "database" {

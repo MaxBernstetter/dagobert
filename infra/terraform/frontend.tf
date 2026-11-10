@@ -1,6 +1,11 @@
 # The web app: the production frontend image (Vite SPA) as an ECS Fargate service.
 # scripts/infra-apply.sh creates the repository first, publishes the image, then creates the service.
 
+# Empty frontend_api_url = the Experiment API gateway (api_lambda.tf). No cycle: the API does not depend on the frontend.
+locals {
+  frontend_api_url = var.frontend_api_url != "" ? var.frontend_api_url : aws_apigatewayv2_api.experiment.api_endpoint
+}
+
 resource "aws_ecr_repository" "frontend" {
   name                 = "${local.prefix}-frontend"
   image_tag_mutability = "MUTABLE"
@@ -96,7 +101,7 @@ resource "aws_ecs_task_definition" "frontend" {
       hostPort      = var.frontend_port
       protocol      = "tcp"
     }]
-    environment = [{ name = "VITE_DEV_API_PROXY", value = var.frontend_api_url }]
+    environment = [{ name = "VITE_DEV_API_PROXY", value = local.frontend_api_url }]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
