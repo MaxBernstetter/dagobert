@@ -1278,6 +1278,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                       return (
                         <Card
                           key={opt.key}
+                          data-testid={`grid-axis-${opt.key}`}
                           size="sm"
                           className="h-full min-w-0 gap-3 py-3.5"
                         >
