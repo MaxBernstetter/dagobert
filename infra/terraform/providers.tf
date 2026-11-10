@@ -1,13 +1,10 @@
-# One switch: var.environment.
-#   local: static fake keys + every service endpoint on Floci. Nothing here can reach AWS.
-#   prod:  default credential chain, real endpoints. Blocked unless var.allow_cloud_deploy (see gate.tf).
+# One switch: var.environment. Credentials are the same on both: the AWS environment variables
+# (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION), from .env locally and the CI environment in prod.
+#   local: every service endpoint on Floci. The skip_* flags below are Floci compatibility only.
+#   prod:  real endpoints. Blocked unless var.allow_cloud_deploy (see gate.tf).
 
 provider "aws" {
   region = var.aws_region
-
-  # Floci accepts any non-empty keys; prod ignores these when using a profile/role.
-  access_key = var.environment == "local" ? "test" : null
-  secret_key = var.environment == "local" ? "test" : null
 
   skip_credentials_validation = var.environment == "local"
   skip_metadata_api_check     = var.environment == "local"

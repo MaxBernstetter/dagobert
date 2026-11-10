@@ -2,10 +2,11 @@
 # Start one backfill execution (ingest, then indicators) and wait for it to finish.
 # Usage: scripts/backfill-start.sh <local|prod> '<json input>'
 #   input: {"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}
-#   local: Floci (FLOCI_PORT, default 11566), fake credentials, never real AWS.
-#   prod:  real AWS with the default credential chain (AWS_REGION, default eu-central-1).
+#   local: Floci (FLOCI_PORT, default 11566), credentials from .env, never real AWS.
+#   prod:  real AWS, credentials and AWS_REGION from the CI environment.
 # Prints the execution output as JSON. Exit 0 when the execution SUCCEEDED, 1 otherwise.
 set -euo pipefail
+. "$(dirname "$0")/lib/require-env.sh"
 
 ENV_NAME="${1:-}"
 INPUT="${2:-}"
@@ -17,14 +18,15 @@ fi
 case "$ENV_NAME" in
   local)
     export AWS_ENDPOINT_URL="http://127.0.0.1:${FLOCI_PORT:-11566}"
-    export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
-    export AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
-    # A dev shell may hold real AWS credentials. Local must never see them.
+    require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
+    export AWS_DEFAULT_REGION="$AWS_REGION"
+    # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
     unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
     ;;
   prod)
     unset AWS_ENDPOINT_URL
-    export AWS_REGION="${AWS_REGION:-eu-central-1}"
+    require_env AWS_REGION
+    export AWS_DEFAULT_REGION="$AWS_REGION"
     ;;
   *)
     echo "Usage: $0 local|prod '<json input>'" >&2

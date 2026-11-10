@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Run the Atlas migrations as a one-off ECS Fargate task inside the VPC (Aurora is private).
 # Terraform (infra/terraform/db_migrate.tf) must already exist: `task infra:local` or scripts/infra-apply.sh prod.
-#   local (default): Floci, fake credentials, cannot reach AWS. The image is built under its ECR URI, not pushed.
+#   local (default): Floci, credentials from .env, cannot reach AWS. The image is built under its ECR URI, not pushed.
 #   prod:            real AWS, CI only. Refuses unless CI=true and AWS credentials are present; pushes the image.
 # Exit 0 only if the container exited with code 0. Anything else (task did not stop, no exit code, exit != 0) fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. scripts/lib/require-env.sh
 
 ENV_NAME="${1:-local}"
-TF_IMG="hashicorp/terraform:1.9"
 AWS_IMG="amazon/aws-cli:2.39.5"
 ROOT="$PWD"
 HOST_IDS="$(id -u):$(id -g)"
@@ -16,10 +16,11 @@ HOST_IDS="$(id -u):$(id -g)"
 case "$ENV_NAME" in
   local)
     FLOCI_ENDPOINT="http://127.0.0.1:${FLOCI_PORT:-11566}"
-    # A dev shell may hold real AWS credentials. Local must never see them.
-    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
-    export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
-    REGION=us-east-1
+    TF_NETWORK_HOST=1
+    require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
+    # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
+    unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
+    REGION="$AWS_REGION"
     ENDPOINT_ARGS=(--endpoint-url "$FLOCI_ENDPOINT")
     NET=(--network host)
     ;;
@@ -32,7 +33,8 @@ case "$ENV_NAME" in
       echo "Refusing to run migrations: no AWS credentials in the CI environment." >&2
       exit 1
     fi
-    REGION="${AWS_REGION:-eu-central-1}"
+    require_env AWS_REGION
+    REGION="$AWS_REGION"
     ENDPOINT_ARGS=()
     NET=()
     ;;
@@ -43,14 +45,10 @@ case "$ENV_NAME" in
 esac
 export AWS_DEFAULT_REGION="$REGION"
 
-# tf_output NAME: a Terraform output, from the installed binary or the hashicorp/terraform image.
-tf_output() {
-  if command -v terraform >/dev/null 2>&1; then
-    (cd "$ROOT/infra/terraform" && terraform output -raw "$1")
-  else
-    docker run --rm --user "$HOST_IDS" -e HOME=/tmp -v "$ROOT/infra/terraform:/tf" -w /tf "$TF_IMG" output -raw "$1"
-  fi
-}
+# tf_output NAME: a Terraform output of the state in the S3 backend (infra/terraform, initialised here).
+. scripts/lib/terraform.sh
+tf_init_root "$ENV_NAME"
+tf_output() { tf_in "$ROOT/infra/terraform" output -raw "$1"; }
 
 # AWS CLI: the installed binary, else the aws-cli image (stdin kept open for docker login).
 if command -v aws >/dev/null 2>&1; then

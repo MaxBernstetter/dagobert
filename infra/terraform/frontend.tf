@@ -80,7 +80,11 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   origin {
-    origin_id   = "api"
+    origin_id = "api"
+    custom_header {
+      name  = "x-origin-verify"
+      value = random_password.origin_verify.result
+    }
     domain_name = local.frontend_api_host
     # The stage is $default (api_lambda.tf). Floci serves API Gateway under its execute-api path.
     origin_path = local.is_local ? "/_aws/execute-api/${aws_apigatewayv2_api.experiment.id}/$default" : null
@@ -149,6 +153,24 @@ data "aws_iam_policy_document" "frontend_bucket" {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
       values   = [aws_cloudfront_distribution.frontend.arn]
+    }
+  }
+
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.frontend.arn, "${aws_s3_bucket.frontend.arn}/*"]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
     }
   }
 }

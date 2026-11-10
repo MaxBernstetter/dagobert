@@ -9,12 +9,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 )
 
-// Load returns an aws.Config. When AWS_ENDPOINT_URL is set (Floci), static
-// test credentials are used and the custom endpoint is applied by callers
-// via BaseEndpoint on each service client.
+// Load returns an aws.Config from the standard credential chain, so the same AWS_* environment
+// variables are read on Floci and on AWS. When AWS_ENDPOINT_URL is set, callers apply Endpoint()
+// as BaseEndpoint on each service client; no credentials are supplied here.
 func Load(ctx context.Context) (aws.Config, error) {
 	region := strings.TrimSpace(os.Getenv("AWS_REGION"))
 	if region == "" {
@@ -23,24 +22,7 @@ func Load(ctx context.Context) (aws.Config, error) {
 	if region == "" {
 		region = "us-east-1"
 	}
-
-	opts := []func(*config.LoadOptions) error{
-		config.WithRegion(region),
-	}
-	if Endpoint() != "" {
-		key := strings.TrimSpace(os.Getenv("AWS_ACCESS_KEY_ID"))
-		secret := strings.TrimSpace(os.Getenv("AWS_SECRET_ACCESS_KEY"))
-		if key == "" {
-			key = "test"
-		}
-		if secret == "" {
-			secret = "test"
-		}
-		opts = append(opts, config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(key, secret, ""),
-		))
-	}
-	return config.LoadDefaultConfig(ctx, opts...)
+	return config.LoadDefaultConfig(ctx, config.WithRegion(region))
 }
 
 // Endpoint is the Floci / LocalStack base URL, or empty for real AWS.

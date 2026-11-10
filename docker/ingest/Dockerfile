@@ -10,6 +10,7 @@ COPY src/shared ./src/shared
 COPY src/internal/awsenv ./src/internal/awsenv
 COPY src/internal/lakeobject ./src/internal/lakeobject
 COPY src/internal/ingestledger ./src/internal/ingestledger
+COPY src/internal/pgpool ./src/internal/pgpool
 COPY src/internal/candlefile ./src/internal/candlefile
 COPY src/internal/parquetmeta ./src/internal/parquetmeta
 COPY src/ingest ./src/ingest

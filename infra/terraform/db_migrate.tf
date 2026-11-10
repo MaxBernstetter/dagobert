@@ -36,9 +36,12 @@ resource "aws_iam_role_policy_attachment" "db_migrate_execution" {
 
 data "aws_iam_policy_document" "db_migrate_execution_secret" {
   statement {
-    sid       = "DatabaseUrl"
-    actions   = ["ssm:GetParameters"]
-    resources = [aws_ssm_parameter.database_url.arn]
+    sid     = "MigrationSecrets"
+    actions = ["ssm:GetParameters"]
+    resources = [
+      aws_ssm_parameter.migration_database_url.arn,
+      aws_ssm_parameter.app_database_password.arn,
+    ]
   }
 }
 
@@ -75,7 +78,8 @@ resource "aws_ecs_task_definition" "db_migrate" {
       image     = "${aws_ecr_repository.db_migrate.repository_url}:latest"
       essential = true
       secrets = [
-        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn },
+        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.migration_database_url.arn },
+        { name = "APP_DATABASE_PASSWORD", valueFrom = aws_ssm_parameter.app_database_password.arn },
       ]
       logConfiguration = {
         logDriver = "awslogs"

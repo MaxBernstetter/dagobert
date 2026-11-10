@@ -1,10 +1,14 @@
 #!/bin/sh
-# Applies db/migrations to DATABASE_URL, the same as `task db:migrate` (atlas migrate apply --env local).
-# Exit 0: migrations applied or already up to date. Non-zero: connection or migration failure.
+# Applies db/migrations to DATABASE_URL (the master user), the same as `task db:migrate`, then sets up the
+# least-privilege application role (db/roles.sql). Exit 0: migrations applied and roles granted. Non-zero: failure.
 set -eu
 
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "db-migrate: DATABASE_URL is not set" >&2
+  exit 1
+fi
+if [ -z "${APP_DATABASE_PASSWORD:-}" ]; then
+  echo "db-migrate: APP_DATABASE_PASSWORD is not set" >&2
   exit 1
 fi
 cd /db
@@ -22,3 +26,5 @@ echo "db-migrate: applying migrations"
 atlas migrate apply --env local
 echo "db-migrate: status after apply"
 atlas migrate status --env local
+echo "db-migrate: granting the application role"
+psql "$PSQL_URL" -v ON_ERROR_STOP=1 -q -v app_password="$APP_DATABASE_PASSWORD" -f /db/roles.sql

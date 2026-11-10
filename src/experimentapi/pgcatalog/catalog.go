@@ -10,6 +10,7 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/internal/pgpool"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,7 +32,7 @@ func Open(ctx context.Context) (*Catalog, error) {
 	if url == "" {
 		return nil, nil
 	}
-	pool, err := pgxpool.New(ctx, url)
+	pool, err := pgpool.Open(ctx, url)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (c *Catalog) ListWorkInstances(ctx context.Context, experimentID string, on
 		}
 		rows, err := c.q.ListInstancesByIDs(ctx, experimentdb.ListInstancesByIDsParams{
 			ExperimentID: sid,
-			Column2: ids,
+			Column2:      ids,
 		})
 		if err != nil {
 			return rec, nil, err
@@ -275,10 +276,10 @@ func (c *Catalog) MarkInstanceCompleted(ctx context.Context, experimentID, insta
 		return err
 	}
 	return c.q.UpdateInstanceCompleted(ctx, experimentdb.UpdateInstanceCompletedParams{
-		ExperimentID:       sid,
-		ID:            iid,
-		StartedAtMs:   timingInt8(timing.StartedAtMs),
-		FinishedAtMs:  timingInt8(timing.FinishedAtMs),
+		ExperimentID: sid,
+		ID:           iid,
+		StartedAtMs:  timingInt8(timing.StartedAtMs),
+		FinishedAtMs: timingInt8(timing.FinishedAtMs),
 	})
 }
 
@@ -292,7 +293,7 @@ func (c *Catalog) MarkInstanceFailed(ctx context.Context, experimentID, instance
 		return err
 	}
 	return c.q.UpdateInstanceFailed(ctx, experimentdb.UpdateInstanceFailedParams{
-		ExperimentID:      sid,
+		ExperimentID: sid,
 		ID:           iid,
 		Error:        message,
 		StartedAtMs:  timingInt8(timing.StartedAtMs),
