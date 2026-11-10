@@ -1,8 +1,9 @@
 # Backfill of one market over a time range: ingest, then the technical-indicator job.
 # Input (one execution per provider/base/quote): {"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}
 # The orchestrator passed the same values to its containers (backfill.go): to = candle close, from = open of the first bar.
-# Exit codes: 0 and 2 (already stored / nothing to do) continue; 1 or any ECS failure ends the execution as FAILED.
-# Exit 2 arrives as a States.TaskFailed error whose Cause carries the ExitCode (see local.backfill_sfn_definition).
+# Each job runs as ecs:runTask.sync. The containers have COMPOSE_OK_ON_ABORT=1 (jobs_ecs.tf), so exit 2 (already
+# stored) exits 0 and the task succeeds. Only a task that exits 1 (or any other non-zero code) fails the Task state
+# with States.TaskFailed and ends the execution FAILED.
 
 data "aws_iam_policy_document" "backfill_sfn_assume" {
   statement {
@@ -76,11 +77,9 @@ locals {
     }
   }
 
-  # Why the Catch: runTask.sync does not return a non-zero container exit to a Choice. It fails the Task state
-  # with States.TaskFailed, and the Cause is a JSON string of the task description (ExitCode per container).
-  # So exit 0 is the normal output and exit 2 ("already stored") is recovered by matching the Cause:
-  # StringMatches on "ExitCode":2 (the pattern assumes compact JSON with PascalCase keys). Any other cause
-  # (exit 1, other ECS failures, States.ALL) ends the execution FAILED. Unverified on Floci and on AWS.
+  # runTask.sync returns when the task stops. Exit 0 continues to the next state. Any failure (exit 1, a task that
+  # could not start, or States.ALL) ends the execution FAILED through the Catch. Exit 2 never reaches this layer:
+  # the container maps it to 0 (COMPOSE_OK_ON_ABORT=1).
   backfill_sfn_definition = jsonencode({
     Comment = "Backfill one market: ingest klines into the lake, then build the technical indicators"
     StartAt = "Ingest"
@@ -103,21 +102,9 @@ locals {
         ResultPath     = "$.ingest"
         TimeoutSeconds = 14400
         Catch = [
-          { ErrorEquals = ["States.TaskFailed"], ResultPath = "$.error", Next = "CheckIngestError" },
           { ErrorEquals = ["States.ALL"], ResultPath = "$.error", Next = "IngestFailed" },
         ]
         Next = "Indicator"
-      }
-      CheckIngestError = {
-        Type = "Choice"
-        Choices = [{
-          Or = [
-            { Variable = "$.error.Cause", StringMatches = "*\"ExitCode\":2,*" },
-            { Variable = "$.error.Cause", StringMatches = "*\"ExitCode\":2}*" },
-          ]
-          Next = "Indicator"
-        }]
-        Default = "IngestFailed"
       }
       Indicator = {
         Type     = "Task"
@@ -141,21 +128,9 @@ locals {
         ResultPath     = "$.indicator"
         TimeoutSeconds = 14400
         Catch = [
-          { ErrorEquals = ["States.TaskFailed"], ResultPath = "$.error", Next = "CheckIndicatorError" },
           { ErrorEquals = ["States.ALL"], ResultPath = "$.error", Next = "IndicatorFailed" },
         ]
         Next = "Done"
-      }
-      CheckIndicatorError = {
-        Type = "Choice"
-        Choices = [{
-          Or = [
-            { Variable = "$.error.Cause", StringMatches = "*\"ExitCode\":2,*" },
-            { Variable = "$.error.Cause", StringMatches = "*\"ExitCode\":2}*" },
-          ]
-          Next = "Done"
-        }]
-        Default = "IndicatorFailed"
       }
       Done = {
         Type = "Succeed"
@@ -163,12 +138,12 @@ locals {
       IngestFailed = {
         Type  = "Fail"
         Error = "IngestFailed"
-        Cause = "The ingest task failed or exited with a code other than 0 or 2"
+        Cause = "The ingest task failed: it exited with a code other than 0 or 2, or did not start. Its CloudWatch log group /ecs/${local.prefix}-ingest has the DETAIL line."
       }
       IndicatorFailed = {
         Type  = "Fail"
         Error = "IndicatorFailed"
-        Cause = "The indicator task failed or exited with a code other than 0 or 2"
+        Cause = "The indicator task failed: it exited with a code other than 0 or 2, or did not start. Its CloudWatch log group /ecs/${local.prefix}-indicator has the DETAIL line."
       }
     }
   })

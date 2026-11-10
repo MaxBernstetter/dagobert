@@ -12,6 +12,8 @@ locals {
     { name = "AWS_REGION", value = var.aws_region },
     { name = "DEPLOY_ENV", value = var.environment },
     { name = "SSM_PREFIX", value = "/${var.project}/${var.environment}" },
+    # Exit 2 = already stored, counts as done: the container exits 0 so runTask.sync continues to the next state.
+    { name = "COMPOSE_OK_ON_ABORT", value = "1" },
   ]
 }
 
