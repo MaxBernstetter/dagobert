@@ -1,5 +1,5 @@
 # Data-prep jobs as ECS Fargate tasks: ingest (Binance klines into the lake) and the technical-indicator backfill.
-# The orchestrator no longer starts them through the Docker socket for backfills; backfill_sfn.tf runs them in order.
+# backfill_sfn.tf runs them in order (one Step Functions execution per market).
 # Same images and exit-code contract as the containers (0 succeeded, 1 failed, 2 aborted = nothing to do).
 # scripts/infra-apply.sh creates the repositories first, publishes the images, then the task definitions reference them.
 

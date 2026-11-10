@@ -16,7 +16,7 @@ Host: `https://data-api.binance.vision`. It serves public market data only. The 
 |---|---|
 | Closed candles | `GET /api/v3/klines?symbol=…&interval=1h&startTime=…&limit=1000` |
 | Symbol rules | `GET /api/v3/exchangeInfo?symbol=…` |
-| Pair list (orchestrator) | `GET /api/v3/exchangeInfo` for all spot markets with status `TRADING` |
+| Pair list (`ProviderService`) | `GET /api/v3/exchangeInfo` for all spot markets with status `TRADING` |
 
 Request weight is 2 per kline call. The facade paces calls against `rate_limit`. A response of 429 or 418 is retried with backoff, and `Retry-After` is honoured when present. Repeated 429s can end in 418, so the job does not retry faster than the limit.
 
@@ -55,7 +55,7 @@ The job takes `-base` and `-quote` (for example `BTC` and `USDT`) with `-from` a
 
 The legacy `-symbol BTCUSDT` flag is still accepted and split into base and quote.
 
-The pipeline runs on `BTC/USDT`, `ETH/USDT` and `USDC/USDT`. `USDC/USDT` is needed because execution converts a USDT price into USDC with `usdc_price = usdt_close / usdcusdt_close`. The orchestrator's pair list shows every TRADING spot market, but the pipeline only processes the pairs configured for it.
+The pipeline runs on `BTC/USDT`, `ETH/USDT` and `USDC/USDT`. `USDC/USDT` is needed because execution converts a USDT price into USDC with `usdc_price = usdt_close / usdcusdt_close`. The provider pair list (`ProviderService`) shows every TRADING spot market, but the pipeline only processes the pairs configured for it.
 
 ## Process
 

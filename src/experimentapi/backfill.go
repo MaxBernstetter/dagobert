@@ -53,7 +53,7 @@ type BackfillServer struct {
 var _ tradingcopilotv1connect.BackfillServiceHandler = (*BackfillServer)(nil)
 
 // NewBackfillServer serves the backfill state machine arn. envBaseURL is the BINANCE_BASE_URL value of the
-// environment: it applies when no base URL is saved for the provider (the same precedence as the orchestrator).
+// environment: it applies when no base URL is saved for the provider (the same precedence as providerurl.EffectiveBinance).
 func NewBackfillServer(api BackfillSFN, stateMachineARN string, providers ProviderStore, envBaseURL string) *BackfillServer {
 	return &BackfillServer{sfn: api, arn: stateMachineARN, providers: providers, envBaseURL: envBaseURL, now: time.Now}
 }

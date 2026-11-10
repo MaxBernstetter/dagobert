@@ -50,7 +50,7 @@ Follow [AGENTS.md](../AGENTS.md) and [development/01-task-management.md](develop
 ## How to resume after a break
 
 1. `git pull` on `main`; `devbox shell` for Go and Task.
-2. `task build` (job and compose images; needed after pulls that touch `src/`).
-3. `task up`, then open the frontend on http://localhost:11001. `task up` does not run migrations: run `task db:migrate` once after a pull that adds files to `db/migrations/`.
+2. `task build` (job images; needed after pulls that touch `src/`).
+3. `task up` (Floci, Terraform, migrations), then `task frontend:dev` and open http://localhost:3000. Run `task up` again after a pull that adds files to `db/migrations/`.
 4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all system tests (about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
-5. Logs: `docker compose logs -f orchestrator` (job output and `DETAIL=<n>`). Data: `./data` (Parquet lake, SQLite files, `experiments/<id>/instances/<id>/` workspaces); Postgres lives in the compose volume.
+5. Logs: the Lambda log groups `/aws/lambda/<prefix>-experiment-api` and `/aws/lambda/<prefix>-experiment-worker` on Floci (job output and `DETAIL=<n>` for the ECS tasks). Data: the candle lake and experiment shards in the Floci S3 bucket, `./data` for the SQLite files; Postgres is Aurora on Floci.

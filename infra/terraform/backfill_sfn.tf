@@ -2,7 +2,7 @@
 # Input (one execution per provider/base/quote): {"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}
 # with an optional "binance_base_url": the Backfill API sends the saved provider base URL. Without it, the state
 # machine uses the SSM value (HasBaseUrl), so scripts/backfill-start.sh and executions started before it still work.
-# The orchestrator passed the same values to its containers (backfill.go): to = candle close, from = open of the first bar.
+# to = candle close, from = open of the first bar.
 # Each job runs as ecs:runTask.sync. The containers have COMPOSE_OK_ON_ABORT=1 (jobs_ecs.tf), so exit 2 (already
 # stored) exits 0 and the task succeeds. Only a task that exits 1 (or any other non-zero code) fails the Task state
 # with States.TaskFailed and ends the execution FAILED.

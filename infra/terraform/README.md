@@ -61,7 +61,7 @@ Prod Aurora is private to the VPC. Migrations run there as a one-off ECS task: `
 - Prod: S3 origin via OAC with a bucket policy for this distribution only; API origin is the API Gateway host over https.
 - The local site: `curl -H "Host: $(terraform output -raw frontend_domain)" http://127.0.0.1:11566/` (Floci routes distributions by Host). Verified on `floci/floci:2.4.0`: `/` and `/assets/*` are served, and the Connect POST works through the distribution. Not verified: SPA deep links. Floci accepts `aws_cloudfront_function` (status DEPLOYED, associated) but does not run it, so `/some/route` returns S3's `NoSuchKey` 404 locally. Prod relies on the function; use `task frontend:dev` for deep links.
 - Known gaps: no custom domain or TLS certificate, no authentication, Floci does not enforce OAC, the 6 MB API Gateway payload limit applies, and Floci does not execute CloudFront functions (SPA deep links only work in prod).
-- Local dev UI stays `task frontend:dev` (Vite on `:3000`, proxies `/api` and `/tradingcopilot.v1.` to the orchestrator). The deployed site does not route `/api/*` (the provider REST routes): the Connectors page works only in the dev server.
+- Local dev UI stays `task frontend:dev` (Vite on `:3000`). It proxies `/tradingcopilot.v1.` to the Floci API Gateway (`scripts/local-api-url.sh`, `VITE_DEV_API_PROXY` and `VITE_DEV_API_PREFIX`), the same API the deployed site calls through CloudFront.
 
 ## Experiment API gateway
 

@@ -1,5 +1,7 @@
 # Grooming: serverless experiments plane (Floci + AWS + Postgres)
 
+> Historical: this note describes the removed orchestrator and its REST routes (`/api/v1/...`). The current runtime is in [docs/architecture/local-stack.md](../architecture/local-stack.md); the APIs are Connect services in `proto/`.
+
 ## Goal
 
 Run **experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (Compose locally, **Supabase Free** in prod). Browser talks only to an **Experiment API** — never to the DB or lake directly.

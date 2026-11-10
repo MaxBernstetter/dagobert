@@ -1,6 +1,6 @@
 # backtest
 
-Runs experiments: many strategy instances over historical candles, using the playbook framework and the simulated venue. Entry point is `src/cmd/backtest` (container image `dagobert-backtest`, started by the orchestrator). Data flow: `docs/architecture/experiment-data-flow.md`; terms: `docs/glossary.md`.
+Runs experiments: many strategy instances over historical candles, using the playbook framework and the simulated venue. Entry point is `src/cmd/backtest` (container image `dagobert-backtest`, the sandbox runner; the worker Lambda `src/cmd/experiment-worker` runs the same phases on Floci and AWS). Data flow: `docs/architecture/experiment-data-flow.md`; terms: `docs/glossary.md`.
 
 ## Phases
 `ExperimentPhase()` (`experiment_phases.go`) picks one, from `EXPERIMENT_PHASE`:

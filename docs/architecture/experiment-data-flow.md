@@ -10,17 +10,17 @@ How an experiment goes from a click in the browser to fills, reports and rows in
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A as Experiment API (inside orchestrator)
+    participant A as Experiment API (Lambda)
     participant P as Postgres catalog
-    participant O as Orchestrator fan-out
-    participant W as dagobert-backtest container
+    participant O as Step Functions (experiment-run)
+    participant W as experiment-worker Lambda
     participant L as Lake and workspaces
     B->>A: CreateExperiment
     A->>P: insert experiment (materializing), instances (draft)
     A->>P: status draft
     B->>A: RunExperiment
     A->>P: experiment and instances running
-    A->>O: hook RunExperiment
+    A->>O: StartExecution (hook RunExperiment)
     O->>W: prepare
     W->>L: coverage, ingest gaps, indicator window, KPI handoff files
     O->>W: simulate (one or many batches)
@@ -86,8 +86,8 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 | Stage | Entry point | Inputs | Outputs / state | Failure and retry |
 |---|---|---|---|---|
 | Create | `CreateExperiment` -> `createStudy` (`src/experimentapi/create.go`) | settings + MANUAL list or GRID axes (`specsFromGrid`, max 20 000 valid combos) | `experiment` row `materializing`, then `experiment_instance` rows, status `draft` | up to 250 instances (`syncMaterialize`) in the request, more via `materializeAsync`; error -> experiment `failed` |
-| Run request | `RunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | `failed_precondition` if running; orchestrator ignores the hook call if another job runs (single-flight) |
-| Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
+| Run request | `RunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | `failed_precondition` if running; each run request starts its own execution; a failed start marks the experiment `failed` |
+| Fan-out | `<prefix>-experiment-run` (`experiment_workflow.tf`, `experiment_fanout.tf`) | Prepare, then a Map over batches of `EXPERIMENT_BATCH_SIZE` instances (at most `experiment_map_max_concurrency` at once), then Finalize | `experiment-worker` Lambda (`src/cmd/experiment-worker`), one invocation per phase or batch | retry and catch per state (`experiment_worker_retry`, `experiment_worker_catch`); `JobStatus` reports a failed execution |
 | Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
 | Persist | `runPersister` (`persist_pipeline.go`) | `instanceResult` queue | one shard per flush; Postgres status, timing, metrics, `shard_key` | shard write error fails every instance of the flush (the shard directory is removed); a failed instance has no `shard_key`; batch retried 3x (backoff), then bisected to single instances; last resort `failed` with `persist: ...` |
@@ -102,10 +102,10 @@ Where state lives:
 | Experiment, instances, metrics, performance | Postgres (`db/sqlc/schema.sql`: `experiment`, `experiment_instance` with its aggregated metrics, `experiment_performance`, `experiment_period_stat`, `experiment_outcome_stat`). Postgres holds experiment metadata and aggregates, no rows of instance data. |
 | Instance period stats (month and year buckets) | `period_stats.parquet` in the instance shard, next to the fill, order, journal and outcome files |
 | Candles | `data/parquet/provider=.../` (read-only here), gaps in the `ingest_unavailable` table |
-| Indicator window per symbol | `experiments/<experiment_id>/.cache` in the workspace store (`prepare_meta.json`, `instances.json`, `kpi/<symbol>.json`; handoff from prepare to simulate, finalize and the orchestrator), removed at the end of finalize |
+| Indicator window per symbol | `experiments/<experiment_id>/.cache` in the workspace store (`prepare_meta.json`, `instances.json`, `kpi/<symbol>.json`; handoff from prepare to simulate and finalize), removed at the end of finalize |
 | Per instance | `data/experiments/<experiment_id>/instances/<instance_id>/`: paper wallet |
 | Per flush | `experiments/<experiment_id>/shards/<shard_id>/` (workspace store): `reports`, `fills`, `orders`, `journals`, `trade_outcomes`, `period_stats` `.parquet`, one row group per instance |
-| Running job (id, error, finished) | orchestrator memory (`experimentJob`) |
+| Running job (id, error, finished) | the Step Functions execution (`workflow.go`: `JobStatus` describes the latest one) |
 
 Indicator bars (`parquet/ti/` in the lake) are the only persisted indicator output; an experiment never writes them except as a cache of a cold computation.
 
@@ -159,18 +159,15 @@ Connect gzips a response when the client asks for it (`Accept-Encoding: gzip`). 
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API (routes are mounted only when set) |
+| `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API Lambda |
 | `EXPERIMENT_SIM_WORKERS` | CPU count | Go KPI replay workers (CPU bound) |
 | `EXPERIMENT_CPP_PROCESSES` | CPU count | fallback for the concurrent C++ `--sweep` processes when the experiment has no "Parallel processes" value (see below) |
 | `EXPERIMENT_MAX_PARALLELISM` | CPU count of the API process | the largest "Parallel processes" value create accepts; `GetExperimentLimits` returns it |
 | `EXPERIMENT_CPP_SHARD_MAX` | 500 | upper bound of instances per shard (shard = `ceil(n/processes)` capped here) |
 | `CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN` | set in the worker image (`/usr/local/bin/...`) | C++ strategy executables |
-| `EXPERIMENT_RUN_BACKEND` | `docker` | orchestrator path only: `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |
-| `EXPERIMENT_BATCH_SIZE` | 64 | instances per simulate container (batched/sfn) |
-| `EXPERIMENT_MAP_MAX_CONCURRENCY` | 8 | parallel simulate batches in the local pool |
-| `EXPERIMENT_SFN_ARN` | unset | state machine for the Map fan-out; unset uses the local pool |
+| `EXPERIMENT_BATCH_SIZE` | 64 | instances per simulate Map item (Terraform `experiment_batch_size`) |
 | `EXPERIMENT_ARTIFACTS` | `fs` | `s3` also copies each instance report JSON to S3 |
-| `EXPERIMENT_PHASE`, `EXPERIMENT_INSTANCE_IDS`, `EXPERIMENT_INSTANCE_FILE`, `EXPERIMENT_RETRY_FAILED` | set by the orchestrator | worker internals |
+| `EXPERIMENT_PHASE`, `EXPERIMENT_INSTANCE_IDS`, `EXPERIMENT_INSTANCE_FILE`, `EXPERIMENT_RETRY_FAILED` | set by the sandbox `cmd/backtest` run; the worker Lambda passes the phase in its payload | worker internals |
 
 Persistence constants (not env): batch 200 results or 250 ms, queue `min(instances, 4096)`, report writers 8, 4 concurrent commits on Postgres, 3 retries (`persist_pipeline.go`).
 
@@ -178,6 +175,6 @@ Persistence constants (not env): batch 200 results or 250 ms, queue `min(instanc
 
 - Experiments completed before the shard layout have no `shard_key` (and, before #164, no Parquet files at all). There is no fallback to the old per-instance files and no backfill: report, KPIs, activity and charts are empty for them (report and KPIs 404). Their activity and charts are empty and their trade outcomes are gone from `/kpis` and `/performance`. Re-running the experiment rebuilds them; re-finalizing without re-running does not (the prepare cache is removed at finalize). This is a deliberate behaviour change; no backfill exists.
 - Fills are not written to Postgres any more, so large runs no longer pay for a fill COPY. The Parquet files of a 3000-instance run take 232 MiB (zigzag lake) and 484 MiB (random walk) and the run takes 14.9 s and 16.9 s (medians of three); see `docs/development/05-cpp-benchmark.md`.
-- Single-flight: the orchestrator runs one backtest or experiment job at a time; the run hook silently returns if one is active, and job status is lost on orchestrator restart.
-- The legacy single-backtest path (`backtest.Run`, `BACKTEST_ID`, `POST /backtest/run`, `task backtest-run`) is still wired and untouched by this flow.
+- No single-flight: each run request starts its own Step Functions execution. Cancel stops the running executions of the experiment.
+- The legacy single-backtest path (`backtest.Run`, `BACKTEST_ID`, `task backtest-run`) is a sandbox `docker run` only. The `POST /backtest/run` route went with the orchestrator, and this flow does not use it.
 - The C++ engine supports only `ma-cross` and `signal-consensus`.

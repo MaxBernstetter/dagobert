@@ -13,7 +13,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 )
 
-// The prepare cache is the handoff from prepare to simulate and finalize, and to the orchestrator
+// The prepare cache is the handoff from prepare to simulate and finalize, and to the experiment worker
 // (instances.json). It lives in the workspace store under experiments/{id}/.cache: files under
 // DATA_DIR with LAKE_BACKEND=fs, objects in the lake bucket with s3, so the phases need no shared disk.
 

@@ -66,7 +66,6 @@ Archived (kept for history):
 
 - [src/backtest/README.md](../src/backtest/README.md): experiment and backtest engine.
 - [src/experimentapi/README.md](../src/experimentapi/README.md): Experiment API.
-- [src/orchestrator/README.md](../src/orchestrator/README.md): orchestrator and starter.
 - [src/calculation/README.md](../src/calculation/README.md): C++ calculation engine and builds.
 - [src/frontend/README.md](../src/frontend/README.md): Vite + React frontend.
 - [src/calculation-technical-indicator/internal/indicators/](../src/calculation-technical-indicator/internal/indicators/): one README per indicator package (atr, close-distance, exponential-moving-average, macd, rsi, simple-moving-average, volume-mean).

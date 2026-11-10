@@ -4,7 +4,7 @@ Vite + React + TypeScript single-page app. It talks only to the Go Experiment AP
 
 ## API
 
-`VITE_EXPERIMENT_API_URL` is the origin of the Connect client (`/tradingcopilot.v1.ExperimentService/...`) and of the REST provider routes. Leave it empty for same-origin. `npm run dev` and `vite preview` proxy `/api` and `/tradingcopilot.v1.` to `VITE_DEV_API_PROXY`, else `VITE_EXPERIMENT_API_URL`, else `http://127.0.0.1:11090` (the orchestrator, which serves the API when `DATABASE_URL` is set). See `vite.config.ts`.
+`VITE_EXPERIMENT_API_URL` is the origin of the Connect client (`/tradingcopilot.v1.ExperimentService/...`) and of ProviderService and BackfillService. Leave it empty for same-origin. `npm run dev` and `vite preview` proxy `/tradingcopilot.v1.` to `VITE_DEV_API_PROXY` (origin), else `VITE_EXPERIMENT_API_URL`, else `http://127.0.0.1:11566` (Floci). `VITE_DEV_API_PREFIX` (path prefix, for example `/_aws/execute-api/<api-id>/$default`) is prepended to the forwarded path when set. `task frontend:dev` sets both from `scripts/local-api-url.sh`, which reads the API gateway from Terraform. See `vite.config.ts`.
 
 The Experiment API client is `src/lib/experiment-api.ts` (Connect, binary protobuf; the views read protojson-shaped objects via `toJson`).
 
@@ -17,7 +17,7 @@ npm run dev      # Vite dev server on :3000; the Experiment API must be reachabl
 npm run build    # typecheck (tsc) and build to dist/; this is the check gate
 ```
 
-In Docker, `task up` (dev server, bind-mounted source) or `task dev` (with compose watch) publishes the SPA on `WEB_PORT` (default 11001). `task up:prod` serves the built `dist/` instead. The container proxies `/api` to `http://orchestrator:8090`. There is no `./data` volume. Set `VITE_EXPERIMENT_API_URL` at image build time only when the browser should call the API origin directly (the API must then allow this site's CORS).
+No task runs the Docker image: `task frontend:dev` runs the dev server on the host, and `src/frontend/Dockerfile` is kept for a container dev server with the same proxy variables. The SPA is built and uploaded by `scripts/frontend-deploy.sh`. Set `VITE_EXPERIMENT_API_URL` at image build time only when the browser should call the API origin directly (the API must then allow this site's CORS).
 
 ## Layout
 

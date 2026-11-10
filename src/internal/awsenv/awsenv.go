@@ -107,25 +107,9 @@ func SSMPrefix() string {
 	return "/dagobert/" + env
 }
 
-// ExperimentRunBackend is docker (default), batched, or sfn.
-func ExperimentRunBackend() string {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("EXPERIMENT_RUN_BACKEND")))
-	switch v {
-	case "batched", "sfn":
-		return v
-	default:
-		return "docker"
-	}
-}
-
 // StudyBatchSize is instances per simulate batch (default 64).
 func StudyBatchSize() int {
 	return intEnvDefault("EXPERIMENT_BATCH_SIZE", 64, 1)
-}
-
-// StudyMapMaxConcurrency bounds parallel simulate batches (default 8 locally; use ~200 on AWS).
-func StudyMapMaxConcurrency() int {
-	return intEnvDefault("EXPERIMENT_MAP_MAX_CONCURRENCY", 8, 1)
 }
 
 // ExperimentSFNARN is the experiment fan-out state machine ARN (optional).

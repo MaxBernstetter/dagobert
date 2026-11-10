@@ -1,6 +1,6 @@
 // Package providers holds the ingestion provider settings: the declared fields, the activation state in
-// Postgres, the secrets (SecretStore) and the setup against the exchange. The ProviderService (Connect) and
-// the orchestrator's REST routes both call it, so the logic lives once.
+// Postgres, the secrets (SecretStore) and the setup against the exchange. The ProviderService (Connect)
+// calls it, so the logic lives here and not in the handlers.
 package providers
 
 import (

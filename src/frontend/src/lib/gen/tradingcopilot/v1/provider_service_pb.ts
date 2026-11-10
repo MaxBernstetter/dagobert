@@ -395,7 +395,7 @@ export const ListProviderPairsResponseSchema: GenMessage<ListProviderPairsRespon
   messageDesc(file_tradingcopilot_v1_provider_service, 15);
 
 /**
- * ProviderService is the Connectors contract (Connect-RPC), mounted in the API Lambda and the orchestrator.
+ * ProviderService is the Connectors contract (Connect-RPC), mounted in the API Lambda.
  * Every method is a unary POST to /tradingcopilot.v1.ProviderService/<Method>. Secret values are write-only:
  * a view reports only the names of the secret keys that are set.
  *

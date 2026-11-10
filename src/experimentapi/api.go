@@ -12,11 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Hooks wire experiment run/cancel to the orchestrator (Docker / fan-out).
+// Hooks wire experiment run and cancel to the Step Functions workflow (src/internal/experimentworkflow). A nil
+// hook does nothing.
 type Hooks struct {
 	RunExperiment func(ctx context.Context, experimentID string, retryFailed bool)
 	CancelStudy   func(experimentID string)
-	// JobStatus reports the orchestrator's job for an experiment. Nil or an empty JobState when no job runs.
+	// JobStatus reports the workflow execution of an experiment. Nil or an empty JobState when none is known.
 	JobStatus func(experimentID string) JobState
 }
 
@@ -44,9 +45,6 @@ func NewServer(pool *pgxpool.Pool, hooks Hooks) *Server {
 		providers: providers.NewService(pgcatalog.NewFromPool(pool), secrets),
 	}
 }
-
-// Providers is the provider settings service of this server. The orchestrator's REST routes use it too.
-func (s *Server) Providers() *providers.Service { return s.providers }
 
 // Mount serves ExperimentService and ProviderService (Connect-RPC, protobuf or JSON over HTTP POST) on mux at
 // /tradingcopilot.v1.ExperimentService/ and /tradingcopilot.v1.ProviderService/. Connect compresses responses

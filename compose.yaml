@@ -1,7 +1,6 @@
-# Long-running stack: Floci and the orchestrator. Floci runs Aurora, the S3 lake, and the web app's bucket and CloudFront distribution from Terraform, see infra/terraform.
-# Job images (ingest, technical indicators, backtest) are started by the orchestrator. They are not services here.
-# HOST_DATA_DIR and HOST_PLAYBOOKS_DIR are host paths
-# because the orchestrator talks to the host Docker socket.
+# The local stack is Floci only: Aurora, S3, SSM, Secrets Manager, Lambda, Step Functions, ECS and CloudFront,
+# all provisioned by Terraform (infra/terraform, task infra:local). The jobs run on Floci as ECS tasks and Step
+# Functions executions; nothing runs as a compose service.
 
 name: dagobert
 
@@ -17,55 +16,10 @@ services:
       # Floci starts the Aurora container itself, on this compose network, advertised as "floci".
       FLOCI_SERVICES_DOCKER_NETWORK: dagobert_default
       FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
-      # The CloudFront distribution's origins are 127.0.0.1 (the Experiment API gateway and the S3 bucket,
+      # The CloudFront distribution's origins are 127.0.0.1 (the API Gateway and the S3 bucket,
       # both inside Floci). Floci refuses private origin hosts unless they are allowed here.
       FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS: "127.0.0.1"
+    # Floci starts the Aurora, ECS task and Lambda containers through the host Docker daemon.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
-
-  orchestrator:
-    build:
-      context: .
-      dockerfile: docker/orchestrator/Dockerfile
-    image: dagobert-orchestrator
-    environment:
-      SFN_ENDPOINT: http://floci:4566
-      AWS_ENDPOINT_URL: http://floci:4566
-      AWS_REGION: us-east-1
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      DEPLOY_ENV: ${DEPLOY_ENV:-local}
-      LAKE_BUCKET: ${LAKE_BUCKET:-dagobert-local-lake}
-      EXPERIMENT_ARTIFACTS: ${EXPERIMENT_ARTIFACTS:-fs}
-      EXPERIMENTS_TABLE: ${EXPERIMENTS_TABLE:-dagobert-local-experiments}
-      EXPERIMENT_CATALOG: ${EXPERIMENT_CATALOG:-postgres}
-      LAKE_BACKEND: ${LAKE_BACKEND:-s3}     # candle Parquet lives in the Floci S3 bucket; fs keeps it in ./data
-      LAKE_DUAL_WRITE: ${LAKE_DUAL_WRITE:-0}
-      HOST_DATA_DIR: ${HOST_DATA_DIR:-./data}
-      HOST_PLAYBOOKS_DIR: ${HOST_PLAYBOOKS_DIR:-./src/calculation-signal/playbooks}
-      HOST_UID: ${HOST_UID:-0}
-      HOST_GID: ${HOST_GID:-0}
-      BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://data-api.binance.vision}
-      EXPERIMENT_SIM_WORKERS: ${EXPERIMENT_SIM_WORKERS:-}           # KPI replay workers; empty = one per CPU
-      EXPERIMENT_CPP_PROCESSES: ${EXPERIMENT_CPP_PROCESSES:-}        # C++ sweep processes; empty = one per CPU
-      EXPERIMENT_CPP_SHARD_MAX: ${EXPERIMENT_CPP_SHARD_MAX:-500}     # max instances per C++ process
-      EXPERIMENT_MAX_PARALLELISM: ${EXPERIMENT_MAX_PARALLELISM:-}    # largest per-experiment process count; empty = this container's CPUs
-      CPP_SMA_CROSS_BIN: ${CPP_SMA_CROSS_BIN:-}
-      CPP_SIGNAL_CONSENSUS_BIN: ${CPP_SIGNAL_CONSENSUS_BIN:-}
-      EXPERIMENT_RUN_BACKEND: ${EXPERIMENT_RUN_BACKEND:-docker}
-      EXPERIMENT_BATCH_SIZE: ${EXPERIMENT_BATCH_SIZE:-64}
-      EXPERIMENT_MAP_MAX_CONCURRENCY: ${EXPERIMENT_MAP_MAX_CONCURRENCY:-8}
-      EXPERIMENT_SFN_ARN: ${EXPERIMENT_SFN_ARN:-}
-      # Aurora on Floci. Always the compose DNS name: do not inherit a host DATABASE_URL (127.0.0.1).
-      DATABASE_URL: postgres://${POSTGRES_USER:-trading}:${POSTGRES_PASSWORD:-trading}@floci:7001/${POSTGRES_DB:-trading}?sslmode=require&search_path=public
-    ports:
-      - "127.0.0.1:${ORCHESTRATOR_PORT:-11090}:8090"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOST_DATA_DIR:-./data}:/data
-    depends_on:
-      floci:
-        condition: service_started
     restart: unless-stopped

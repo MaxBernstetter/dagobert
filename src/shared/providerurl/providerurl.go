@@ -1,4 +1,4 @@
-// Package providerurl resolves the base URL an ingestion provider reads from. The orchestrator (job containers)
+// Package providerurl resolves the base URL an ingestion provider reads from. The backfill job containers
 // and the Backfill API (backfill executions) use the same precedence.
 package providerurl
 

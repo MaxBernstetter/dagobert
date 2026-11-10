@@ -11,7 +11,7 @@ application model; Postgres/Atlas columns are a 1:1 projection of those fields.
 | `proto/buf.yaml` | Module `buf.build/maxbernstetter/dagobert`, STANDARD lint, FILE breaking |
 | `proto/buf.gen.yaml` | Go → `src/gen/tradingcopilot/v1`, TS → `src/frontend/src/lib/gen/tradingcopilot/v1` |
 | `src/experimentapi/persist` | sqlc rows ↔ `v1` messages only |
-| Experiment API (`ExperimentService`, Connect-RPC) | Unary POST to `/tradingcopilot.v1.ExperimentService/<Method>`, protobuf (the SPA) or JSON (camelCase, curl). `GetChartSeries` returns a `ChartSeries`; it is a plot, not a table. Provider routes under `/api/v1/providers` stay REST. |
+| Experiment API (`ExperimentService`, Connect-RPC) | Unary POST to `/tradingcopilot.v1.ExperimentService/<Method>`, protobuf (the SPA) or JSON (camelCase, curl). `GetChartSeries` returns a `ChartSeries`; it is a plot, not a table. The REST provider routes under `/api/v1/providers` are removed; `ProviderService` is the Connect contract. |
 | Experiment worker / SFN | `ExperimentWorkerBatch` / `ExperimentSFNInput` (protojson or binary protobuf) |
 
 ## Commands
