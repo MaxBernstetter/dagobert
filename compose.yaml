@@ -19,6 +19,9 @@ services:
       # The CloudFront distribution's origins are 127.0.0.1 (the API Gateway and the S3 bucket,
       # both inside Floci). Floci refuses private origin hosts unless they are allowed here.
       FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS: "127.0.0.1"
+      # Floci keeps a Lambda container warm after an invocation (one per concurrent call) and removes it after
+      # this many idle seconds (Floci default 300). A short value keeps docker ps tidy; the next call is a cold start.
+      FLOCI_SERVICES_LAMBDA_CONTAINER_IDLE_TIMEOUT_SECONDS: "${LAMBDA_IDLE_TIMEOUT_SECONDS:-60}"
     # Floci starts the Aurora, ECS task and Lambda containers through the host Docker daemon.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

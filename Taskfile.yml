@@ -81,6 +81,15 @@ tasks:
       - mkdir -p data/parquet
       - docker compose up -d --wait floci
       - task: db:migrate
+      - task: up:url
+
+  up:url:
+    desc: Print the URL of the compiled web app (CloudFront on Floci)
+    silent: true
+    cmds:
+      - |
+        d=$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD/infra/terraform:/tf" -w /tf hashicorp/terraform:1.9 output -raw frontend_domain 2>/dev/null || true)
+        [ -n "$d" ] && echo "Web app (compiled, via CloudFront on Floci): http://${d%.net}.localhost:${FLOCI_PORT:-11566}/   (hot reload: task dev, :3000)"
 
   up:build:
     desc: Build the job images, then task up

@@ -9,7 +9,7 @@ Run from `devbox shell` (provides Go 1.24 and Task). Module: `github.com/MaxBern
 ```bash
 task build              # job images
 task build:jobs         # the job images (ingest, technical indicators, backtest)
-task up                 # starts Floci (compose); Terraform adds Aurora, S3, the Lambdas, Step Functions, ECS, CloudFront and the web app upload; then migrations
+task up                 # starts Floci (compose); Terraform adds Aurora, S3, the Lambdas, Step Functions, ECS, CloudFront and the web app upload; then migrations; prints the compiled web app URL (http://<id>.cloudfront.localhost:11566/)
 task dev                # task up, then the web app (task frontend:dev) in the foreground on :3000
 task frontend:dev       # Vite dev server with hot reload on the host (:3000)
 task down               # stop stack; ./data is kept

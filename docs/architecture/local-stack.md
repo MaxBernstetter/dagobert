@@ -6,7 +6,7 @@
 
 | Component | Where | Notes |
 |---|---|---|
-| Web app (S3 + CloudFront in Floci) | Bucket `dagobert-local-frontend`, distribution in `frontend.tf` | The production SPA (`src/frontend`), built and uploaded by `scripts/frontend-deploy.sh local`. CloudFront routes `/tradingcopilot.v1.*` to the API gateway. Served at the `frontend_domain` output through Floci's CloudFront (Host header). Floci does not run the SPA-fallback function, so deep links 404 locally. For hot reload and deep links use `task frontend:dev`. |
+| Web app (S3 + CloudFront in Floci) | Bucket `dagobert-local-frontend`, distribution in `frontend.tf` | The production SPA (`src/frontend`), built and uploaded by `scripts/frontend-deploy.sh local`. CloudFront routes `/tradingcopilot.v1.*` to the API gateway. Served through Floci's CloudFront at `http://<distribution>.cloudfront.localhost:11566/` (`*.localhost` resolves to 127.0.0.1 in browsers; Floci matches the distribution by host). `task up` prints the URL (`task up:url`). Floci does not run the SPA-fallback function, so deep links 404 locally. For hot reload and deep links use `task frontend:dev`. |
 | Aurora (in Floci) | Aurora PostgreSQL Serverless v2, created by Terraform (`task infra:local`), served by Floci on port 7001 (TLS, `sslmode=require`) | Experiment catalog, ingest ledger (`ingest_stored`, `ingest_unavailable`), connector state (`provider`, `provider_pair`). Compose services reach it as `floci:7001`, host tools as `127.0.0.1:7001`. `task data:migrate-ingest-ledger` imports an old `ingest.sqlite`. Secrets are not in Postgres. |
 | Candle lake | Floci S3 bucket `dagobert-local-lake` (`LAKE_BACKEND=s3`) | Hive-style keys `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet`. Ingest and the indicator job (`parquet/ti/`) upload and keep no local copy. `task lake:upload` moves an existing `./data/parquet` lake into the bucket once. |
 | Experiment workspace | Same bucket, `experiments/<id>/...` (`LAKE_BACKEND=s3`) | Result shards and the prepare cache. With `LAKE_BACKEND=fs` they live under `./data/experiments/` (`src/internal/workspace`). |
@@ -23,7 +23,7 @@ The job images (`dagobert-ingest`, `dagobert-calculation-technical-indicator`, `
 
 | Command | Effect |
 |---|---|
-| `task up` | Creates `data/parquet`, starts Floci (`docker compose up -d --wait floci`), then `task db:migrate`: Terraform apply on Floci, the roles the migrations revoke from, Atlas migrations, web app upload. |
+| `task up` | Creates `data/parquet`, starts Floci (`docker compose up -d --wait floci`), then `task db:migrate`: Terraform apply on Floci, the roles the migrations revoke from, Atlas migrations, web app upload; last it prints the compiled web app URL. |
 | `task up:build` | `task build` (job images), then `task up`. |
 | `task dev` | `task up`, then `task frontend:dev` in the foreground (Ctrl-C stops the web app; Floci keeps running). |
 | `task frontend:dev` | Vite dev server with hot reload on the host (port 3000). Proxies `/tradingcopilot.v1.` to the Floci API gateway: `scripts/local-api-url.sh` sets `VITE_DEV_API_PROXY` (origin) and `VITE_DEV_API_PREFIX` (`/_aws/execute-api/<api-id>/$default`). Run `task up` first. |
@@ -38,6 +38,8 @@ Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) 
 
 ## Acceptance
 
+- Floci keeps each Lambda container warm after an invocation (one per concurrent call, `floci-aws-<prefix>-experiment-api`/`-worker` in `docker ps`) and removes it after `FLOCI_SERVICES_LAMBDA_CONTAINER_IDLE_TIMEOUT_SECONDS` idle (compose sets 60, override with `LAMBDA_IDLE_TIMEOUT_SECONDS`; Floci default 300). The next call after that is a cold start.
+- Recreating the Floci container (for example after changing its compose settings) wipes all its resources: run `task up` again. If Terraform then fails with "couldn't find resource", move `infra/terraform/terraform.tfstate*` aside first.
 - `docker compose ps` shows only `floci`. Aurora is a Floci container (`docker ps`, name `floci-aws-rds-*`). It does not show the job images.
 - The web app: `curl -H "Host: $(terraform -chdir=infra/terraform output -raw frontend_domain)" http://127.0.0.1:11566/` returns the SPA `index.html` (200), and `/assets/<file>.js` returns the file. Deep links such as `/some/route` 404 on Floci because it does not run the CloudFront function.
 - `POST /tradingcopilot.v1.ExperimentService/ListExperiments` with `Content-Type: application/json`, `Connect-Protocol-Version: 1`, body `{}` through the distribution returns 200 `{}`. An unknown method path returns the Lambda's own `404 page not found` (text/plain), not HTML.
