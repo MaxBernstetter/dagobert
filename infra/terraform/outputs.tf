@@ -58,3 +58,28 @@ output "api_gateway_url" {
 output "experiment_api_repository_url" {
   value = aws_ecr_repository.experiment_api.repository_url
 }
+
+# scripts/db-migrate.sh: the migration task's cluster, task family, network and log group.
+output "db_migrate_repository_url" {
+  value = aws_ecr_repository.db_migrate.repository_url
+}
+
+output "db_migrate_cluster" {
+  value = aws_ecs_cluster.ops.name
+}
+
+output "db_migrate_task_family" {
+  value = aws_ecs_task_definition.db_migrate.family
+}
+
+output "db_migrate_subnet_ids" {
+  value = join(",", aws_subnet.private[*].id)
+}
+
+output "db_migrate_security_group_id" {
+  value = aws_security_group.app.id
+}
+
+output "db_migrate_log_group" {
+  value = aws_cloudwatch_log_group.db_migrate.name
+}

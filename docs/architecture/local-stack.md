@@ -35,6 +35,7 @@ Floci's Lambda cannot see the host Docker socket. The orchestrator is the proces
 | `task frontend:dev` | Vite dev server with hot reload on the host (port 3000), proxying `/api` and `/tradingcopilot.v1.` to the orchestrator. |
 | `task up:build` | `task build` then `task up` (job images + compose build). |
 | `task down` | Stops the stack. Does not delete `./data`. |
+| `task db:migrate:ecs` | Runs the same Atlas migrations as a one-off ECS Fargate task (`scripts/db-migrate.sh local`, image `docker/db-migrate`), the path prod uses from inside the VPC. Waits for the task and fails unless the container exits 0. Floci's ECS and exit-code reporting are not verified yet. |
 
 Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) so rebuilds reuse work when only application source changed. The SPA is not in a Docker image: `scripts/frontend-deploy.sh` builds it and uploads `dist/` to S3.
 
@@ -50,4 +51,4 @@ Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) 
 
 ## Out of scope
 
-Switching SQLite and local Parquet to Floci DynamoDB and S3. Fargate.
+Switching SQLite and local Parquet to Floci DynamoDB and S3. Fargate for the job containers (the migration task is the only Fargate task).
