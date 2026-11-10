@@ -1,4 +1,4 @@
-# Long-running stack: Floci and the orchestrator. Floci runs Aurora and the frontend (ECS) from Terraform, see infra/terraform.
+# Long-running stack: Floci and the orchestrator. Floci runs Aurora, the S3 lake, and the web app's bucket and CloudFront distribution from Terraform, see infra/terraform.
 # Job images (ingest, technical indicators, backtest) are started by the orchestrator. They are not services here.
 # HOST_DATA_DIR and HOST_PLAYBOOKS_DIR are host paths
 # because the orchestrator talks to the host Docker socket.
@@ -17,10 +17,9 @@ services:
       # Floci starts the Aurora container itself, on this compose network, advertised as "floci".
       FLOCI_SERVICES_DOCKER_NETWORK: dagobert_default
       FLOCI_SERVICES_RDS_ENDPOINT_HOST: floci
-      # ECS tasks (the frontend) run on the compose network, so they reach the orchestrator, and are
-      # published on the host at their container port. Locally built images run without a push.
-      FLOCI_SERVICES_ECS_DOCKER_NETWORK: dagobert_default
-      FLOCI_SERVICES_ECS_PUBLISH_AWSVPC_PORTS_TO_HOST: "true"
+      # The CloudFront distribution's origins are 127.0.0.1 (the Experiment API gateway and the S3 bucket,
+      # both inside Floci). Floci refuses private origin hosts unless they are allowed here.
+      FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS: "127.0.0.1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped

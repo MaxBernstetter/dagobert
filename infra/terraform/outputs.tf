@@ -38,12 +38,17 @@ output "experiment_worker_arn" {
   value = var.enable_experiment_lambda ? aws_lambda_function.experiment_worker[0].arn : ""
 }
 
-output "frontend_repository_url" {
-  value = aws_ecr_repository.frontend.repository_url
+output "frontend_bucket" {
+  value = aws_s3_bucket.frontend.bucket
 }
 
-output "frontend_cluster" {
-  value = aws_ecs_cluster.main.name
+output "frontend_distribution_id" {
+  value = aws_cloudfront_distribution.frontend.id
+}
+
+output "frontend_domain" {
+  description = "CloudFront domain. Local: send it as the Host header to the Floci port (see docs/architecture/local-stack.md)."
+  value       = aws_cloudfront_distribution.frontend.domain_name
 }
 
 output "api_gateway_url" {

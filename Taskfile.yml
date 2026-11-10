@@ -79,7 +79,7 @@ tasks:
       - docker build -f docker/experiment-api/Dockerfile -t dagobert-experiment-api-lambda .
 
   build:stack:
-    desc: Build compose images (the orchestrator; the frontend image is built by task infra:local)
+    desc: Build compose images (the orchestrator; the web app is uploaded by task infra:local)
     cmds:
       - docker compose build
 
@@ -90,7 +90,7 @@ tasks:
       - task: build:stack
 
   up:
-    desc: Start Floci (Aurora and the ECS frontend via Terraform) and the orchestrator (run task build once for job images)
+    desc: Start Floci (Aurora, S3, and the web app bucket and CloudFront via Terraform) and the orchestrator (run task build once for job images)
     cmds:
       - mkdir -p data/parquet
       - task: db:migrate
@@ -162,7 +162,7 @@ tasks:
       - scripts/infra-apply.sh {{.ENV | default "local"}}
 
   infra:local:
-    desc: Apply Terraform against Floci (VPC, Aurora, S3, SSM, IAM)
+    desc: Apply Terraform against Floci (VPC, Aurora, S3, CloudFront, SSM, IAM), then upload the web app
     cmds:
       - scripts/infra-apply.sh local
 

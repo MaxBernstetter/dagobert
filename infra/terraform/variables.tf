@@ -81,31 +81,14 @@ variable "database_max_acu" {
 }
 
 locals {
-  prefix = var.name_prefix != "" ? var.name_prefix : "${var.project}-${var.environment}"
+  is_local = var.environment == "local"
+  prefix   = var.name_prefix != "" ? var.name_prefix : "${var.project}-${var.environment}"
   tags = {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
     IdleCost    = "near-zero"
   }
-}
-
-variable "frontend_port" {
-  description = "Port the frontend container listens on (and Floci publishes on the host)."
-  type        = number
-  default     = 3000
-}
-
-variable "frontend_image_tag" {
-  description = "Tag of the frontend image in ECR. scripts/infra-apply.sh builds and pushes it before the service is created."
-  type        = string
-  default     = "latest"
-}
-
-variable "frontend_api_url" {
-  description = "Base URL of the Experiment API the frontend proxies /api and /tradingcopilot.v1. to. Empty = the API Gateway URL (api_lambda.tf)."
-  type        = string
-  default     = ""
 }
 
 variable "api_image_tag" {
@@ -118,9 +101,4 @@ variable "api_cors_allow_origins" {
   description = "CORS origins the API Gateway accepts. No auth yet, so the default is open."
   type        = list(string)
   default     = ["*"]
-}
-
-variable "frontend_desired_count" {
-  type    = number
-  default = 1
 }

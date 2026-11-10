@@ -1,128 +1,161 @@
-# The web app: the production frontend image (Vite SPA) as an ECS Fargate service.
-# scripts/infra-apply.sh creates the repository first, publishes the image, then creates the service.
+# The web app: the Vite SPA as static files in a private S3 bucket, served by CloudFront on one origin.
+#   /tradingcopilot.v1.*  -> API Gateway (api_lambda.tf), no caching, all methods
+#   everything else       -> S3 (OAC in prod), cached; a viewer-request function maps extensionless paths to /index.html
+# Same origin for the browser, so the Experiment API needs no CORS for this site.
+# scripts/frontend-deploy.sh builds the SPA and uploads dist/ after the apply.
+#
+# local (Floci): CloudFront and S3 are reached through Floci's own host and internal port (4566), over http.
+# Floci does not enforce OAC, and the S3 origin is a custom origin with the bucket as origin path.
+# No custom domain or ACM certificate yet (follow-up): the cloudfront_default_certificate is used.
 
-# Empty frontend_api_url = the Experiment API gateway (api_lambda.tf). No cycle: the API does not depend on the frontend.
 locals {
-  frontend_api_url = var.frontend_api_url != "" ? var.frontend_api_url : aws_apigatewayv2_api.experiment.api_endpoint
+  frontend_api_host = local.is_local ? "127.0.0.1" : replace(aws_apigatewayv2_api.experiment.api_endpoint, "https://", "")
+  frontend_s3_host  = local.is_local ? "127.0.0.1" : aws_s3_bucket.frontend.bucket_regional_domain_name
 }
 
-resource "aws_ecr_repository" "frontend" {
-  name                 = "${local.prefix}-frontend"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = var.environment == "local"
+resource "aws_s3_bucket" "frontend" {
+  bucket        = "${local.prefix}-frontend"
+  force_destroy = local.is_local
 
   depends_on = [terraform_data.deploy_gate]
 }
 
-resource "aws_cloudwatch_log_group" "frontend" {
-  name              = "/ecs/${local.prefix}-frontend"
-  retention_in_days = 14
+resource "aws_s3_bucket_public_access_block" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
-data "aws_iam_policy_document" "ecs_tasks_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
+resource "aws_cloudfront_origin_access_control" "frontend" {
+  name                              = "${local.prefix}-frontend"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# Paths without a file extension (/, /experiments/42) are SPA routes: serve index.html. Paths with an
+# extension (/assets/x.js, /favicon.ico) pass through; a missing file answers 403/404 from S3.
+# Floci 2.4.0 stores and associates the function but does not execute it: locally, SPA deep links are 404.
+resource "aws_cloudfront_function" "spa_fallback" {
+  name    = "${local.prefix}-spa-fallback"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-EOT
+    function handler(event) {
+      var request = event.request;
+      var last = request.uri.substring(request.uri.lastIndexOf('/') + 1);
+      if (last.indexOf('.') === -1) {
+        request.uri = '/index.html';
+      }
+      return request;
     }
-  }
+  EOT
 }
 
-# Execution role: pull the image and write logs. The task itself needs no AWS access.
-resource "aws_iam_role" "frontend_execution" {
-  name               = "${local.prefix}-frontend-execution"
-  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
-}
+resource "aws_cloudfront_distribution" "frontend" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  price_class         = "PriceClass_100"
+  comment             = "${local.prefix} web app"
 
-data "aws_iam_policy_document" "frontend_execution" {
-  statement {
-    sid       = "EcrAuth"
-    actions   = ["ecr:GetAuthorizationToken"]
-    resources = ["*"]
-  }
-  statement {
-    sid       = "EcrPull"
-    actions   = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"]
-    resources = [aws_ecr_repository.frontend.arn]
-  }
-  statement {
-    sid       = "Logs"
-    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = ["${aws_cloudwatch_log_group.frontend.arn}:*"]
-  }
-}
+  origin {
+    origin_id                = "s3"
+    domain_name              = local.frontend_s3_host
+    origin_path              = local.is_local ? "/${aws_s3_bucket.frontend.bucket}" : null
+    origin_access_control_id = local.is_local ? null : aws_cloudfront_origin_access_control.frontend.id
 
-resource "aws_iam_role_policy" "frontend_execution" {
-  name   = "${local.prefix}-frontend-execution"
-  role   = aws_iam_role.frontend_execution.id
-  policy = data.aws_iam_policy_document.frontend_execution.json
-}
-
-resource "aws_security_group" "frontend" {
-  name        = "${local.prefix}-frontend"
-  description = "Web app: HTTP from anywhere, any egress"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = var.frontend_port
-    to_port     = var.frontend_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_ecs_cluster" "main" {
-  name = local.prefix
-}
-
-resource "aws_ecs_task_definition" "frontend" {
-  family                   = "${local.prefix}-frontend"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = aws_iam_role.frontend_execution.arn
-
-  container_definitions = jsonencode([{
-    name      = "frontend"
-    image     = "${aws_ecr_repository.frontend.repository_url}:${var.frontend_image_tag}"
-    essential = true
-    command   = ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", tostring(var.frontend_port)]
-    portMappings = [{
-      containerPort = var.frontend_port
-      hostPort      = var.frontend_port
-      protocol      = "tcp"
-    }]
-    environment = [{ name = "VITE_DEV_API_PROXY", value = local.frontend_api_url }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.frontend.name
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "frontend"
+    dynamic "custom_origin_config" {
+      for_each = local.is_local ? [1] : []
+      content {
+        http_port              = 4566
+        https_port             = 443
+        origin_protocol_policy = "http-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
       }
     }
-  }])
+  }
+
+  origin {
+    origin_id   = "api"
+    domain_name = local.frontend_api_host
+    # The stage is $default (api_lambda.tf). Floci serves API Gateway under its execute-api path.
+    origin_path = local.is_local ? "/_aws/execute-api/${aws_apigatewayv2_api.experiment.id}/$default" : null
+
+    custom_origin_config {
+      http_port              = 4566
+      https_port             = 443
+      origin_protocol_policy = local.is_local ? "http-only" : "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "s3"
+    viewer_protocol_policy = local.is_local ? "allow-all" : "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    # Managed-CachingOptimized
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7f88639e58f6"
+
+    # Client-side routes (BrowserRouter) have no object in S3. Only this behavior rewrites: the API keeps
+    # its own 403/404 (Connect NotFound and PermissionDenied), so no error mapping is set on the distribution.
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_fallback.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/tradingcopilot.v1.*"
+    target_origin_id       = "api"
+    viewer_protocol_policy = local.is_local ? "allow-all" : "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+    # Managed-CachingDisabled and Managed-AllViewerExceptHostHeader: Connect calls are dynamic and
+    # the origin must see the viewer's headers, but not the CloudFront host.
+    cache_policy_id          = "4135ea2d-6df8-4a3e-a2b4-cb4efb2cab1d"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
 }
 
-resource "aws_ecs_service" "frontend" {
-  name            = "frontend"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.frontend.arn
-  desired_count   = var.frontend_desired_count
-  launch_type     = "FARGATE"
+# Only this distribution may read objects (OAC). Prod only in effect: Floci does not enforce it.
+data "aws_iam_policy_document" "frontend_bucket" {
+  statement {
+    sid       = "CloudFrontRead"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.frontend.arn}/*"]
 
-  network_configuration {
-    subnets          = aws_subnet.public[*].id
-    security_groups  = [aws_security_group.frontend.id]
-    assign_public_ip = true
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.frontend.arn]
+    }
   }
+}
+
+resource "aws_s3_bucket_policy" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+  policy = data.aws_iam_policy_document.frontend_bucket.json
+
+  depends_on = [aws_s3_bucket_public_access_block.frontend]
 }

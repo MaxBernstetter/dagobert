@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Terraform apply for one environment. The Terraform code is identical; only the switch differs.
-# Two phases: the ECR repositories first, then the images are published, then everything else.
+# Two phases: the ECR repository first, then the API image is published, then everything else.
+# The web app (SPA) is not part of Terraform: scripts/frontend-deploy.sh uploads it after the apply.
 #   local (default): Floci. Fake credentials, every endpoint on Floci, cannot reach AWS.
 #   prod:            real AWS. Refuses unless it runs in CI with credentials present.
 set -euo pipefail
@@ -16,8 +17,7 @@ case "$ENV_NAME" in
     docker compose up -d --wait floci 2>/dev/null || docker compose up -d floci
     for _ in $(seq 1 30); do curl -fsS "$FLOCI_ENDPOINT/_floci/health" >/dev/null 2>&1 && break; sleep 1; done
     TF_ARGS+=("-var=aws_region=us-east-1" "-var=floci_endpoint=${FLOCI_ENDPOINT}" "-var=database_port=7001"
-              "-var=database_master_password=${POSTGRES_PASSWORD:-trading}"
-              "-var=frontend_port=${WEB_PORT:-11001}" "-var=frontend_api_url=http://orchestrator:8090")
+              "-var=database_master_password=${POSTGRES_PASSWORD:-trading}")
     # A dev shell may hold real AWS credentials. Local must never see them.
     unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
     ;;
@@ -39,9 +39,8 @@ case "$ENV_NAME" in
     ;;
 esac
 
-IMAGE_TAG="${FRONTEND_IMAGE_TAG:-latest}"
 API_IMAGE_TAG="${API_IMAGE_TAG:-latest}"
-TF_ARGS+=("-var=frontend_image_tag=${IMAGE_TAG}" "-var=api_image_tag=${API_IMAGE_TAG}")
+TF_ARGS+=("-var=api_image_tag=${API_IMAGE_TAG}")
 
 # tf runs Terraform from the installed binary, else from the hashicorp/terraform image.
 tf() {
@@ -56,18 +55,18 @@ tf() {
 }
 
 tf init -input=false
-tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.frontend -target=aws_ecr_repository.experiment_api
+tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.experiment_api
 
 # Publish the images under the repository URIs the task definition and the Lambda use.
-REPO_URL="$(tf output -raw frontend_repository_url)"
 API_REPO_URL="$(tf output -raw experiment_api_repository_url)"
-docker build -f src/frontend/Dockerfile --target prod -t "${REPO_URL}:${IMAGE_TAG}" .
 docker build -f docker/experiment-api/Dockerfile -t "${API_REPO_URL}:${API_IMAGE_TAG}" .
 if [ "$ENV_NAME" = "prod" ]; then
-  # Real ECR: log in once (same registry for both) and push. Floci runs the locally built images by URI, no push needed.
-  aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${REPO_URL%%/*}"
-  docker push "${REPO_URL}:${IMAGE_TAG}"
+  # Real ECR: log in and push. Floci runs the locally built image by URI, no push needed.
+  aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${API_REPO_URL%%/*}"
   docker push "${API_REPO_URL}:${API_IMAGE_TAG}"
 fi
 
 tf apply "${TF_ARGS[@]}"
+
+# Build the SPA and upload it to the bucket behind CloudFront (the bucket exists after the apply).
+scripts/frontend-deploy.sh "$ENV_NAME"

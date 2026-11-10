@@ -1,5 +1,5 @@
 # VPC for the data plane. Private subnets only: no internet gateway, no NAT (idle cost stays near zero).
-# Lambda and ECS tasks join app_security_group_id to reach the database.
+# Lambda joins the app security group to reach the database.
 
 locals {
   azs = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
@@ -24,7 +24,7 @@ resource "aws_subnet" "private" {
 
 resource "aws_security_group" "app" {
   name        = "${local.prefix}-app"
-  description = "Workloads (Lambda, ECS) that may reach the database and S3"
+  description = "Workloads (Lambda) that may reach the database and S3"
   vpc_id      = aws_vpc.main.id
 
   # Terraform drops the default allow-all egress, so state it: Aurora in the VPC, S3 through the gateway endpoint.
@@ -79,34 +79,4 @@ resource "aws_security_group" "database" {
 resource "aws_db_subnet_group" "main" {
   name       = local.prefix
   subnet_ids = aws_subnet.private[*].id
-}
-
-# Public subnets: only the frontend task lives here (public IP, no NAT). Data stays in the private subnets.
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-  tags   = { Name = local.prefix }
-}
-
-resource "aws_subnet" "public" {
-  count                   = length(local.azs)
-  vpc_id                  = aws_vpc.main.id
-  availability_zone       = local.azs[count.index]
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, 100 + count.index)
-  map_public_ip_on_launch = true
-  tags                    = { Name = "${local.prefix}-public-${local.azs[count.index]}" }
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-}
-
-resource "aws_route_table_association" "public" {
-  count          = length(local.azs)
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
 }
