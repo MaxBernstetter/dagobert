@@ -1,105 +1,141 @@
 # Dagobert
 
-Dagobert is a backtesting framework for systematic crypto spot swing trading on 3-hour UTC candles. It loads public Binance klines, computes indicators, runs rule-based strategies ("playbooks") over history, and simulates the orders with trading costs. You define an experiment in a web UI (a date range, costs, and many strategy instances, by hand or as a parameter grid) and compare the results by KPI. No exchange account or API key is needed, and no order ever leaves your machine. See [docs/IDEA.md](docs/IDEA.md) for the idea behind it.
+A backtesting platform for systematic crypto spot swing trading on 3-hour UTC candles, built as a serverless AWS system that runs unchanged on a laptop.
 
-## Features
+You define an experiment in a web UI (date range, costs, and up to 20,000 strategy instances, by hand or as a parameter grid). The platform fetches public Binance klines, computes indicators, simulates every instance with trading costs and ranks the results by KPI. There is no exchange account, no API key and no live trading; fills are simulated. The idea behind it: [docs/IDEA.md](docs/IDEA.md).
 
-- **Experiments.** One date range, capital and cost model, shared by many instances. Instances are listed by hand or expanded from a parameter grid (up to 20,000). Progress, fills, equity curves and KPIs are stored and shown in the UI.
-- **Playbooks.** `ma-cross` (moving-average crossover) and `signal-consensus` (several indicator signals voted into buy, hold or sell), with optional stop-based position sizing (unit risk, heat, max units). See [src/calculation-signal/playbooks](src/calculation-signal/playbooks).
-- **Indicators.** ATR, close-distance, EMA, SMA, MACD, RSI and volume-mean, each documented in its own README under [src/calculation-technical-indicator/internal/indicators](src/calculation-technical-indicator/internal/indicators).
-- **KPIs.** Active return, CAGR, max drawdown, Sharpe, Sortino and win rate, compared with buy-and-hold over the same range.
-- **Cost model.** Spread, slippage and fee in basis points against the bar close ([docs/architecture/backtesting.md](docs/architecture/backtesting.md)).
-- **C++ engine.** Experiments run on the C++ sweep (`ma-cross` and `signal-consensus`; other playbooks fail the experiment). Go replays the sweep's actions into fills and reports with the same fill model. Each experiment sets its own "Parallel processes" (auto = one per CPU). Benchmarks: [docs/development/05-cpp-benchmark.md](docs/development/05-cpp-benchmark.md).
-- **Data lake.** Binance klines as Hive-partitioned Parquet with decimal prices. Missing exchange hours are recorded as `unavailable`, never invented. Missing history is fetched automatically when an experiment starts.
-- **Wiki.** The UI renders the indicator, playbook and KPI docs, so the docs in the repo are the docs in the app.
+## Highlights
 
-## Quickstart
+- **Serverless on AWS, one Terraform for local and prod.** API Gateway, Lambda, Step Functions, ECS Fargate, Aurora PostgreSQL Serverless v2, S3, CloudFront, SSM and Secrets Manager. Locally the same Terraform runs against Floci, an AWS emulator, so the local stack exercises the real infrastructure code and not a mock.
+- **Data lake on S3.** Hive-partitioned Parquet with fixed-scale decimal prices. Missing exchange hours are recorded as `unavailable`, never invented.
+- **Fan-out with Step Functions.** An experiment run is a state machine (prepare, a Map over instance batches, finalize) that calls one worker Lambda; a backfill is a second state machine over ECS tasks.
+- **Mixed-language compute.** A C++ engine sweeps the parameter grid in parallel; Go replays its actions into fills and reports with the same fill model the rest of the system uses.
+- **Typed contracts.** Connect-RPC over protobuf (buf lint and breaking checks in CI), Postgres schema as code (Atlas, sqlc), generated Go and TypeScript clients.
+- **Tests that prove behaviour.** System tests build each real job image and run it against faked upstreams; CI also type-checks the frontend and validates the Terraform.
 
-You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI is also needed for the migration step (it is not in the devbox shell).
-
-```bash
-devbox shell
-task dev          # starts Floci, applies Terraform (Aurora, S3, the Lambdas, Step Functions, ECS, the web app's CloudFront distribution), builds and pushes the images, uploads the web app, migrates Postgres
-```
-
-`task dev` ends by serving the web app at [http://localhost:3000](http://localhost:3000) (`task frontend:dev` alone restarts just the web app), create an experiment and start it. The first run downloads the candles it needs from Binance. The Floci-hosted site serves the start page and assets, but not deep links (Floci does not run CloudFront functions; see `docs/architecture/local-stack.md`).
-
-- `task seed-demo-year` fills `data/` with one year of BTC and replays `ma-cross` over it. It wipes `data/`.
-- `task up` starts Floci and runs the Terraform apply and the migrations again (idempotent). Frontend with hot reload: `task frontend:dev` (host, port 3000). `task down` stops Floci and keeps `./data`.
-- `EXPERIMENT_ID=<uuid> task experiment-run` runs an existing experiment from the command line.
-
-## How it works
+## Architecture
 
 ```mermaid
 flowchart LR
-  UI[Browser frontend] --> API[Experiment API<br/>Lambda behind API Gateway]
-  API --> PG[(Aurora<br/>experiment catalog)]
-  API -- start --> SFN[Step Functions<br/>experiment run]
-  SFN --> W[experiment-worker Lambda<br/>C++ sweep + Go replay]
+  U[Browser] --> CF[CloudFront]
+  CF -- static --> S3W[(S3<br/>web app)]
+  CF -- /tradingcopilot.v1.* --> APIGW[API Gateway<br/>HTTP API]
+  APIGW --> API[API Lambda<br/>Experiment, Provider,<br/>Backfill services]
+  API --> PG[(Aurora PostgreSQL<br/>catalog + ingest ledger)]
+  API --> SM[Secrets Manager<br/>connector secrets]
+  API -- StartExecution --> SFN[Step Functions<br/>experiment-run]
+  SFN -- prepare / simulate x N / finalize --> W[Worker Lambda<br/>C++ sweep + Go replay]
   W --> PG
-  W --> LAKE[(S3 lake<br/>Parquet + shards)]
-  API -- backfill --> BSFN[Step Functions<br/>backfill] --> ING[ECS tasks<br/>ingest + technical indicators]
-  ING --> LAKE
-  BIN[Binance public klines] --> ING
+  W --> LAKE[(S3 lake<br/>Parquet + result shards)]
+  API -- StartExecution --> BSFN[Step Functions<br/>backfill]
+  BSFN -- runTask.sync --> ECS[ECS Fargate<br/>ingest, then indicators]
+  ECS --> LAKE
+  BIN[Binance public klines] --> ECS
 ```
 
-- The Experiment API is a Lambda behind an API Gateway HTTP API. A run starts the Step Functions execution `<prefix>-experiment-run`; a backfill starts one per market and its ECS tasks. A job exits `0` (succeeded), `1` (failed) or `2` (already stored, nothing to do) and logs `DETAIL=<n>`.
-- An experiment run has three phases: prepare (check data, build indicators), simulate (run the instances, optionally in batches) and finalize (write KPIs).
-- The frontend talks only to the Experiment API and never reads `data/`.
+| Concern | Choice | Why |
+| --- | --- | --- |
+| API | One Lambda behind an API Gateway HTTP API serving three Connect-RPC services | Stateless, scales to zero, one deployable. Unary RPC maps cleanly onto Lambda's request/response model. |
+| Long-running work | Step Functions orchestrating a worker Lambda (experiments) and ECS Fargate tasks (backfills) | Runs outlive an HTTP request and need retries, cancellation and progress. Short, parallel simulation fits Lambda; the long, I/O-heavy download fits a container with no 15-minute limit. |
+| Fan-out | Prepare, then a Map over instance batches, then finalize | Instance counts reach 20,000. Batching bounds per-invocation time and gives natural retry units. |
+| Bulk data | Parquet on S3 (candles, indicator bars, per-instance result shards) | Append-mostly, columnar, cheap, read whole by one worker. No database holds row-heavy data. |
+| Control plane | Aurora PostgreSQL | Experiments, instances, status and the ingest ledger need transactions and queries. Row-heavy results stay out of it. |
+| Idempotency | Job exit codes `0` ok, `1` failed, `2` already stored; every job no-ops on stored work | Safe retries and re-runs. Cancellation is guarded in SQL (`status <> 'cancelled'`) so a late worker cannot revive a cancelled run. |
+| Secrets | Secrets Manager at `/<project>/<env>/providers/<id>`; database URL in SSM SecureString | Secrets never live in the repo or the database. |
+| Web app | Private S3 bucket behind CloudFront, API on the same origin | No public container and no CORS. CloudFront is the only public entry point. |
+| Local parity | Same Terraform, `environment=local` or `prod` | Differences are limited to endpoints, credentials and a few sizing flags. |
+
+Deeper reading: [docs/architecture/local-stack.md](docs/architecture/local-stack.md) (what runs where), [experiment-data-flow.md](docs/architecture/experiment-data-flow.md) (an experiment end to end), [backtesting.md](docs/architecture/backtesting.md) (engine, phases, cost model).
+
+## Quickstart (local)
+
+You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI must also be on your `PATH` for the migration step (it is not in the devbox shell).
+
+```bash
+devbox shell
+task up           # Floci, Terraform apply, image builds, web app upload, DB migrations; prints the web app URL
+```
+
+`task up` provisions the whole stack on Floci and ends by printing the URL of the compiled web app, for example `http://<id>.cloudfront.localhost:11566/`. Open it, create an experiment and start it. The first run downloads the candles it needs from Binance. The first `task up` is slow because it builds the images.
+
+For UI development use `task dev`: it runs `task up`, then Vite with hot reload at [http://localhost:3000](http://localhost:3000), proxying the API to the local gateway. Ctrl-C stops Vite and leaves Floci running.
+
+| Port | What |
+| --- | --- |
+| 11566 | Floci (every AWS endpoint, the API gateway and CloudFront) |
+| 7001 | Aurora PostgreSQL (Floci proxy) |
+| 3000 | Vite dev server (`task dev` only) |
+
+Good to know:
+
+- **Deep links.** Floci does not run CloudFront Functions, so the compiled site serves the start page and assets but 404s on deep links. Use `task dev` for those.
+- **Recreating Floci** (for example after changing `compose.yaml`) wipes all emulated resources. Run `task up` again. If Terraform then fails with "couldn't find resource", move `infra/terraform/terraform.tfstate*` aside first.
+- **Idle Lambda containers** are reaped after 60 s (`LAMBDA_IDLE_TIMEOUT_SECONDS`), so `docker ps` stays tidy; the next call is a cold start.
+- `task down` stops Floci and keeps `./data`. `task seed-demo-year` wipes `data/`, backfills one year of BTC and replays `ma-cross` over it.
+
+## Production
+
+`task infra:prod` applies the same Terraform to real AWS and refuses to run outside CI with credentials. Prod adds interface VPC endpoints and an `allow_cloud_deploy` gate. Known gaps before a real deployment, tracked rather than hidden:
+
+- No deploy workflow yet (OIDC role assumption and a pipeline that calls `scripts/infra-apply.sh prod`).
+- Terraform state is local; a remote backend (S3 with locking) is not configured.
+- The database URL reaches the Lambda as an environment variable; it should be read from SSM at start-up.
+- CloudFront Origin Access Control (private bucket) is used in prod only; Floci does not enforce it, so that path is not exercised locally.
+
+## Features
+
+- **Experiments.** One date range, capital and cost model for many instances. Progress, fills, equity curves and KPIs are stored and shown in the UI.
+- **Playbooks.** `ma-cross` (moving-average crossover) and `signal-consensus` (several indicator signals voted into buy, hold or sell), with optional stop-based position sizing. See [src/calculation-signal/playbooks](src/calculation-signal/playbooks).
+- **Indicators.** ATR, close-distance, EMA, SMA, MACD, RSI and volume-mean, each documented in its own README under [src/calculation-technical-indicator/internal/indicators](src/calculation-technical-indicator/internal/indicators).
+- **KPIs.** Active return, CAGR, max drawdown, Sharpe, Sortino and win rate, against buy-and-hold over the same range.
+- **Cost model.** Spread, slippage and fee in basis points against the bar close.
+- **C++ engine.** Per-experiment "Parallel processes" (auto = one per CPU). Benchmarks: [docs/development/05-cpp-benchmark.md](docs/development/05-cpp-benchmark.md).
+- **Wiki.** The UI renders the indicator, playbook and KPI docs, so the docs in the repo are the docs in the app.
 
 ## Repository layout
 
 | Path | What is there |
 | --- | --- |
-| `src/frontend` | Vite + React app: Experiments, Connectors, Wiki. |
-| `src/experimentapi` | The Connect-RPC Experiment, Provider and Backfill APIs (`ExperimentService`, `ProviderService`, `BackfillService`), served by the API Lambda. |
-| `src/backtest`, `src/cmd/backtest` | Experiment engine and the `dagobert-backtest` entrypoint. |
-| `src/calculation-signal` | Playbooks, the replay framework, sizing and strategy KPIs. |
-| `src/calculation-technical-indicator` | One package per indicator. |
-| `src/calculation-market-action`, `src/execution`, `src/internal/venue` | Sizing, simulated fills and the paper wallet used by every run. |
+| `infra/terraform` | VPC, Aurora, S3, CloudFront, API Gateway, Lambdas, Step Functions, ECS, IAM, SSM, Secrets Manager. |
+| `src/experimentapi`, `src/cmd/experiment-api-lambda` | The Connect-RPC services and the Lambda that serves them. |
+| `src/cmd/experiment-worker`, `src/internal/experimentworkflow` | Worker Lambda: prepare, simulate, finalize. |
+| `src/backtest`, `src/calculation` | Experiment engine (Go) and the C++ sweep. |
+| `src/calculation-signal`, `src/calculation-technical-indicator` | Playbooks, replay framework, strategy KPIs; one package per indicator. |
 | `src/ingest` | Binance klines into the Parquet lake. |
-| `src/calculation` | C++ engine (`ma-cross`, `signal-consensus`). |
-| `db`, `proto`, `infra` | Postgres schema (Atlas, sqlc), protobuf contracts, Terraform for Floci and AWS (VPC, Aurora, S3, SSM, IAM). |
-| `tests/system` | System tests: build a job image, run it against faked upstreams, check the output. |
+| `src/frontend` | Vite + React + TypeScript app: Experiments, Connectors, Wiki. |
+| `db`, `proto` | Postgres schema (Atlas, sqlc) and protobuf contracts. |
+| `tests/system` | Build a job image, run it against faked upstreams, check the output. |
 | `docs` | Architecture, contracts, status and workflow. Index: [docs/README.md](docs/README.md). |
 
-## Tasks
+## Common tasks
 
 Run `task --list` for all of them.
 
 | Task | What it does |
 | --- | --- |
+| `task up` / `task down` | Start the full stack on Floci / stop it (keeps `./data`). |
+| `task dev` | `task up`, then the web app with hot reload on :3000. |
 | `task build` | Build the job images. |
-| `task up` | Start Floci, apply Terraform on Floci (Aurora, S3, the Lambdas, Step Functions, ECS, CloudFront, the web app upload), migrate. |
-| `task dev` | `task up`, then the web app with hot reload at http://localhost:3000 (`task frontend:dev`; Ctrl-C stops it, Floci keeps running). |
-| `task frontend:dev` | Vite dev server with hot reload on the host, proxying `/tradingcopilot.v1.` to the Floci API gateway. |
-| `task up:build` | `task build`, then `task up`. |
-| `task down` | Stop Floci. `./data` is kept. |
-| `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |
-| `task seed-demo-year` | Wipe `data/`, backfill 1 year of BTC, replay `ma-cross`. |
 | `task test` | System tests for the job images. |
-| `task cpp:deps`, `cpp:build`, `cpp:test` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test. The experiment benchmark is `TestBenchPersistGrid`, see `docs/development/05-cpp-benchmark.md`. |
-| `task db:up`, `db:migrate`, `db:diff name=...`, `db:sqlc` | Postgres: start it, apply Atlas migrations, generate a migration, regenerate sqlc code. |
+| `task db:diff name=...`, `db:migrate`, `db:sqlc` | Postgres: generate a migration, apply it, regenerate sqlc code. |
 | `task proto:lint`, `proto:gen`, `proto:breaking` | Protobuf checks and code generation. |
-| `task data:migrate-candles` | Rewrite old string candle files to the decimal schema. |
+| `task cpp:deps`, `cpp:build`, `cpp:test` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test. |
+| `task infra:local` / `task infra:prod` | Terraform against Floci / real AWS (prod: CI only). |
 
 ## Tests
 
 ```bash
-task test                                                          # system tests, takes a while (CI runs everything on each PR and each merge to main)
+task test                                                          # system tests (CI runs everything on each PR, each merge to main and nightly)
 go test ./tests/system/ingest -run TestName -count=1 -timeout 20m  # one system test (image built first)
 go test ./src/internal/... ./src/shared/...                        # unit tests
 task cpp:test                                                      # C++ tests
 cd src/frontend && npx tsc --noEmit && npm run build                # frontend typecheck and build
 ```
 
-There is no browser test suite.
+System tests are the proof of behaviour; unit tests cover pure logic only. There is no browser test suite, and no CI job yet that provisions the Floci stack and tests against it.
 
 ## Where to go next
 
-- [docs/README.md](docs/README.md): index of all docs.
-- [docs/STATUS.md](docs/STATUS.md): what is done and what is next.
-- [docs/glossary.md](docs/glossary.md): terms such as experiment, instance, playbook.
-- [docs/architecture/experiment-data-flow.md](docs/architecture/experiment-data-flow.md): how an experiment runs, end to end.
-- [docs/architecture/backtesting.md](docs/architecture/backtesting.md): engines, phases, cost model.
+- [docs/README.md](docs/README.md): index of all docs. [docs/STATUS.md](docs/STATUS.md): what is done and what is next.
+- [docs/glossary.md](docs/glossary.md): experiment, instance, playbook.
 - [docs/development/](docs/development/README.md): workflow, issues, agent harness.
