@@ -193,8 +193,9 @@ export async function getChartSeries(q: ChartSeriesQuery): Promise<ChartSeries> 
   const res = await client.getChartSeries({
     experimentId: q.experimentId,
     instanceId: q.instanceId,
-    fromSec: BigInt(q.fromSec),
-    toSec: BigInt(q.toSec),
+    // int64 on the wire: a zoomed chart range is fractional seconds, so snap outwards to whole seconds.
+    fromSec: BigInt(Math.floor(q.fromSec)),
+    toSec: BigInt(Math.ceil(q.toSec)),
     maxPoints: q.maxPoints ?? 0,
   });
   return res.series!;

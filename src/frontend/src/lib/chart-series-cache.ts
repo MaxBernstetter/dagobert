@@ -43,8 +43,17 @@ export function chartColumns(msg: ChartSeries): ChartColumns {
 /** The instance a chart series belongs to. */
 export type ChartSource = Pick<ChartSeriesQuery, "experimentId" | "instanceId">;
 
+/**
+ * A zoomed chart range is fractional unix seconds, the API takes whole seconds. Snap outwards so the window
+ * still covers the view, and so nearby fractional ranges share one cache entry.
+ */
+function snapWindow(q: ChartSeriesQuery): ChartSeriesQuery {
+  return { ...q, fromSec: Math.floor(q.fromSec), toSec: Math.ceil(q.toSec) };
+}
+
 function cacheKey(q: ChartSeriesQuery): string {
-  return `${q.experimentId}|${q.instanceId}|${q.fromSec}|${q.toSec}|${q.maxPoints ?? 0}`;
+  const w = snapWindow(q);
+  return `${w.experimentId}|${w.instanceId}|${w.fromSec}|${w.toSec}|${w.maxPoints ?? 0}`;
 }
 
 export function peekChartSeries(q: ChartSeriesQuery): ChartColumns | null {
@@ -53,6 +62,7 @@ export function peekChartSeries(q: ChartSeriesQuery): ChartColumns | null {
 
 /** One in-flight request per query. Only a successful decode is stored. */
 export function loadChartSeries(q: ChartSeriesQuery): Promise<ChartColumns> {
+  q = snapWindow(q);
   const key = cacheKey(q);
   const hit = cache.get(key);
   if (hit) return Promise.resolve(hit);
