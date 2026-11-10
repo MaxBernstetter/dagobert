@@ -89,10 +89,10 @@ tasks:
       - task: up
 
   dev:
-    desc: "Same as task up. The web app runs on the host (task frontend:dev)"
+    desc: "task up, then the web app with hot reload on http://localhost:3000 (Vite on the host, proxying to the Floci API gateway)"
     cmds:
       - task: up
-      - echo "Floci is up. Start the web app with task frontend:dev (http://localhost:3000)."
+      - task: frontend:dev
 
   frontend:dev:
     desc: Vite dev server with hot reload on the host (port 3000), proxying /tradingcopilot.v1. to the Floci API Gateway (needs task infra:local)

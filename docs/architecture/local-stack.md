@@ -25,7 +25,7 @@ The job images (`dagobert-ingest`, `dagobert-calculation-technical-indicator`, `
 |---|---|
 | `task up` | Creates `data/parquet`, starts Floci (`docker compose up -d --wait floci`), then `task db:migrate`: Terraform apply on Floci, the roles the migrations revoke from, Atlas migrations, web app upload. |
 | `task up:build` | `task build` (job images), then `task up`. |
-| `task dev` | `task up`, then a reminder to run `task frontend:dev`. |
+| `task dev` | `task up`, then `task frontend:dev` in the foreground (Ctrl-C stops the web app; Floci keeps running). |
 | `task frontend:dev` | Vite dev server with hot reload on the host (port 3000). Proxies `/tradingcopilot.v1.` to the Floci API gateway: `scripts/local-api-url.sh` sets `VITE_DEV_API_PROXY` (origin) and `VITE_DEV_API_PREFIX` (`/_aws/execute-api/<api-id>/$default`). Run `task up` first. |
 | `task down` | Stops Floci. Does not delete `./data`. |
 | `task build` / `task build:jobs` | Build the job images (ingest, technical indicators, backtest). |

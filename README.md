@@ -22,7 +22,7 @@ devbox shell
 task dev          # starts Floci, applies Terraform (Aurora, S3, the Lambdas, Step Functions, ECS, the web app's CloudFront distribution), builds and pushes the images, uploads the web app, migrates Postgres
 ```
 
-Open the web app with `task frontend:dev` at [http://localhost:3000](http://localhost:3000), create an experiment and start it. The first run downloads the candles it needs from Binance. The Floci-hosted site serves the start page and assets, but not deep links (Floci does not run CloudFront functions; see `docs/architecture/local-stack.md`).
+`task dev` ends by serving the web app at [http://localhost:3000](http://localhost:3000) (`task frontend:dev` alone restarts just the web app), create an experiment and start it. The first run downloads the candles it needs from Binance. The Floci-hosted site serves the start page and assets, but not deep links (Floci does not run CloudFront functions; see `docs/architecture/local-stack.md`).
 
 - `task seed-demo-year` fills `data/` with one year of BTC and replays `ma-cross` over it. It wipes `data/`.
 - `task up` starts Floci and runs the Terraform apply and the migrations again (idempotent). Frontend with hot reload: `task frontend:dev` (host, port 3000). `task down` stops Floci and keeps `./data`.
@@ -71,7 +71,7 @@ Run `task --list` for all of them.
 | --- | --- |
 | `task build` | Build the job images. |
 | `task up` | Start Floci, apply Terraform on Floci (Aurora, S3, the Lambdas, Step Functions, ECS, CloudFront, the web app upload), migrate. |
-| `task dev` | `task up`, then start the web app with `task frontend:dev`. |
+| `task dev` | `task up`, then the web app with hot reload at http://localhost:3000 (`task frontend:dev`; Ctrl-C stops it, Floci keeps running). |
 | `task frontend:dev` | Vite dev server with hot reload on the host, proxying `/tradingcopilot.v1.` to the Floci API gateway. |
 | `task up:build` | `task build`, then `task up`. |
 | `task down` | Stop Floci. `./data` is kept. |
