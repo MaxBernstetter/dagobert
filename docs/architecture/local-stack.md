@@ -59,3 +59,7 @@ Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/job
 ## Out of scope
 
 Switching SQLite and local Parquet to Floci DynamoDB and S3. A UI for BackfillService (none yet; the Connectors page does not start backfills).
+
+## Tests against the stack
+
+`task test` (`task test:system`) runs `tests/system/...` against the running Floci and Aurora (`FLOCI_ENDPOINT`, `POSTGRES_TEST_URL`). Each test creates its own `dagobert-test-*` bucket or `exp_test_*` database and removes it afterwards; none touches the `dagobert-local-*` resources Terraform owns. `task e2e` runs the Playwright test in `tests/e2e` against the compiled web app (`task up:url`): it activates Binance, creates a `ma-cross` grid, starts it (the backfill fetches real Binance data) and checks the outcome. The CI job `e2e` in `.github/workflows/tests.yml` does `task up`, `task test:system` and `task e2e`, and uploads Docker logs and the Playwright report on failure.

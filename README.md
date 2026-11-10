@@ -125,14 +125,15 @@ Run `task --list` for all of them.
 ## Tests
 
 ```bash
-task test                                                          # system tests against the running stack (needs task up)
+task test                                                          # all system tests against the running stack (needs task up); CI: the e2e job
+task e2e                                                           # Playwright: create, run and check an experiment in the compiled app (needs task up)
 go test ./tests/system/ingest -run TestName -count=1 -timeout 20m  # one system test (image built first)
 go test ./src/internal/... ./src/shared/...                        # unit tests
 task cpp:test                                                      # C++ tests
 cd src/frontend && npx tsc --noEmit && npm run build                # frontend typecheck and build
 ```
 
-System tests are the proof of behaviour; unit tests cover pure logic only. There is no browser test suite, and no CI job yet that provisions the Floci stack and tests against it.
+System tests are the proof of behaviour; unit tests cover pure logic only. Every test that touches AWS services runs against the one Floci stack, each with its own bucket and scratch database. The CI `e2e` job provisions that stack (`task up`), runs all system tests and then the Playwright test in `tests/e2e`: it creates a `ma-cross` grid in the UI, backfills real Binance data, runs the experiment and checks the outcome (status, instance table, KPIs, fills, charts) and that a cancelled run stays cancelled.
 
 ## Where to go next
 
