@@ -38,9 +38,14 @@ func Open(ctx context.Context) (*Catalog, error) {
 	return &Catalog{q: experimentdb.New(pool), pool: pool}, nil
 }
 
-// NewFromPool wraps an existing pool, for callers that own it (the Experiment API Lambda).
+// NewFromPool wraps an existing pool, for callers that own it (the Experiment API Lambda and its backfill server).
 func NewFromPool(pool *pgxpool.Pool) *Catalog {
 	return &Catalog{q: experimentdb.New(pool), pool: pool}
+}
+
+// NewCatalog is NewFromPool under the name the provider service was written with. Both share one pool.
+func NewCatalog(pool *pgxpool.Pool) *Catalog {
+	return NewFromPool(pool)
 }
 
 func (c *Catalog) Close() {

@@ -1,4 +1,4 @@
-import { apiUrl } from "@/lib/api";
+import { listProviderPairs } from "@/lib/provider-service";
 import {
   DEFAULT_MARKET_PROVIDER,
   normalizeMarketProvider,
@@ -26,8 +26,7 @@ function normalizePairs(raw: unknown): MarketPair[] {
 }
 
 /**
- * Load markets for a ready provider from the Ingestion snapshot
- * (the stored setup snapshot via `/api/v1/providers/{id}/pairs`).
+ * Load markets for a provider: the stored setup snapshot when ready (ProviderService.ListProviderPairs).
  */
 export function loadProviderPairs(provider: string): Promise<MarketPair[]> {
   const id = normalizeMarketProvider(provider);
@@ -38,14 +37,7 @@ export function loadProviderPairs(provider: string): Promise<MarketPair[]> {
   if (existing) return existing;
 
   const pending = (async () => {
-    const res = await fetch(apiUrl(`/providers/${encodeURIComponent(id)}/pairs`), {
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      throw new Error((await res.text()) || `HTTP ${res.status}`);
-    }
-    const body = (await res.json()) as { pairs?: unknown };
-    const pairs = normalizePairs(body.pairs);
+    const pairs = normalizePairs(await listProviderPairs(id));
     memory.set(id, pairs);
     return pairs;
   })().finally(() => {

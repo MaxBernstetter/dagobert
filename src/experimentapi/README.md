@@ -13,6 +13,11 @@ curl -X POST -H 'Content-Type: application/json' -d '{"id":"<experiment-id>"}' \
 ```
 JSON uses camelCase field names, int64 as strings. Errors are Connect errors (`{"code":"not_found","message":"..."}`): a missing experiment, instance, report or KPIs is `not_found`; a malformed id or invalid create argument `invalid_argument`; delete of a running or materializing experiment, run of a running one, cancel of a non-running one and a retry without failed instances `failed_precondition`; anything else `internal`.
 
+## ProviderService
+`ProviderService` (`proto/tradingcopilot/v1/provider_service.proto`), mounted by the same `Mount` at `/tradingcopilot.v1.ProviderService/`: ListProviders, GetProvider, SaveProviderSettings (config and write-only secrets), ActivateProvider (runs the setup before it answers: the view is ready or failed), DeactivateProvider, ListProviderPairs. The logic is `providers/` (`service.go`: state, setup, pairs, base URL; `secrets.go`: the secret backends). Secret values never leave the service; a view lists only the names of the secrets that are set. The Connectors page calls it through the generated client (`src/frontend/src/lib/provider-service.ts`). The orchestrator's REST routes (`/api/v1/providers...`) are deprecated and share the same `providers.Service`.
+
+Secret backend (`SECRETS_BACKEND`): `secretsmanager` stores one secret per provider at `/<project>/<env>/providers/<id>` (`SSM_PREFIX`), a JSON object of key to value; `file` (alias `fs`) keeps `DATA_DIR/providers/secrets.json` (mode 0600). `auto` (default) picks `secretsmanager` when `AWS_ENDPOINT_URL` or `SSM_PREFIX` is set, else `file`.
+
 ## Parallel processes
 `settings.parallelism` (proto `ExperimentSettings.parallelism`, and `parallelism` on the experiment) is the number of C++ sweep processes of an experiment. Unset or 0 means auto: one per CPU of the worker. It is optional in the proto, so a response without a value leaves `parallelism` unset, as before. Create rejects a negative value or a value above the maximum with `invalid_argument` and a message that says so. The maximum is the CPU count of the API process, or `EXPERIMENT_MAX_PARALLELISM` when set. The worker reads the stored value at each run, so a retry or re-run uses the same count.
 
@@ -28,12 +33,13 @@ JSON uses camelCase field names, int64 as strings. Errors are Connect errors (`{
 - `persist/`, `map.go`: mapping between rows and protobuf messages.
 
 ## Who mounts it
-- The orchestrator mounts it in-process when `DATABASE_URL` is set (`src/orchestrator/cmd/orchestrator/backfill.go`) and supplies `Hooks`: `RunExperiment`, `CancelStudy`, `JobStatus`. A run request marks rows running and then calls the hook.
+- The orchestrator mounts it in-process when `DATABASE_URL` is set (`src/orchestrator/cmd/orchestrator/backfill.go`) and supplies `Hooks`: `RunExperiment`, `CancelStudy`, `JobStatus`. A run request marks rows running and then calls the hook. Its REST provider routes use `Server.Providers()`, the same service instance.
+- The API Lambda (`src/cmd/experiment-api-lambda`) mounts both services; its secrets come from Secrets Manager (`infra/terraform/api_lambda.tf`).
 - `src/cmd/experiment-api` is a standalone server with empty hooks, so it cannot start runs.
 - `src/cmd/experiment-api-lambda` also serves `BackfillService` (`backfill.go`, validation and execution mapping in `backfill_plan.go`) when `BACKFILL_SFN_ARN` is set. It starts, describes, lists and stops executions of the backfill state machine, and reads provider state from the same Postgres pool.
 
 ## Test and run
-`go test ./src/experimentapi/...` covers pure logic (grid, chart, metrics) and the transport (protobuf, JSON, gzip). Behaviour is proven by `tests/system/experiment`, which needs a Postgres 16 reachable at `POSTGRES_TEST_URL` (default: the compose Postgres on 9432); the tests fail, not skip, without it. Locally: `task up` (compose Postgres, migrations via `task db:migrate`).
+`go test ./src/experimentapi/...` covers pure logic (grid, chart, metrics, provider base URL, secret mapping) and the transport (protobuf, JSON, gzip). `tests/system/provider` runs ProviderService against Floci Secrets Manager and a scratch Postgres (`POSTGRES_TEST_URL`). Behaviour is proven by `tests/system/experiment`, which needs a Postgres 16 reachable at `POSTGRES_TEST_URL` (default: the compose Postgres on 9432); the tests fail, not skip, without it. Locally: `task up` (compose Postgres, migrations via `task db:migrate`).
 
 ## Before changing
 A new query goes in `db/sqlc/queries`, then `task db:sqlc`. A schema change goes through Atlas (`db/README.md`). Response shapes come from `proto/`; the frontend reads them through the generated client (`task proto:gen`). `ErrorResponse` and `OkResponse` in `experiment.proto` are unused since the REST routes went; removing them is a breaking change, left for later.

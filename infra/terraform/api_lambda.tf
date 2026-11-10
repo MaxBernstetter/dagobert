@@ -2,7 +2,14 @@
 # Same code in local (Floci) and prod. scripts/infra-apply.sh creates the repository first, publishes the
 # image (prod: pushed to ECR; local: built under its ECR URI), then creates the function and the gateway.
 # The function runs in the private subnets with the app security group (Aurora). No NAT: it reaches
-# the database and S3 (gateway endpoint in network.tf) only. SSM and other AWS APIs are not reachable.
+# the database, S3 (gateway endpoint in network.tf) and, in prod, Secrets Manager (interface endpoint in
+# db_migrate.tf) only. SSM and other AWS APIs are not reachable.
+# It also serves ProviderService (the Connectors page). Its secrets are Secrets Manager secrets named
+# /<project>/<environment>/providers/<provider-id> (src/experimentapi/providers/secrets.go).
+
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
 
 resource "aws_ecr_repository" "experiment_api" {
   name                 = "${local.prefix}-experiment-api"
@@ -55,6 +62,27 @@ data "aws_iam_policy_document" "experiment_api" {
   }
 }
 
+data "aws_iam_policy_document" "experiment_api_secrets" {
+  statement {
+    sid = "ProviderSecrets"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:PutSecretValue",
+      "secretsmanager:CreateSecret",
+      "secretsmanager:DescribeSecret",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:/${var.project}/${var.environment}/providers/*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "experiment_api_secrets" {
+  name   = "${local.prefix}-experiment-api-secrets"
+  role   = aws_iam_role.experiment_api.id
+  policy = data.aws_iam_policy_document.experiment_api_secrets.json
+}
+
 resource "aws_iam_role_policy" "experiment_api" {
   name   = "${local.prefix}-experiment-api"
   role   = aws_iam_role.experiment_api.id
@@ -85,6 +113,9 @@ resource "aws_lambda_function" "experiment_api" {
       # ECS jobs read from SSM.
       BACKFILL_SFN_ARN = aws_sfn_state_machine.backfill.arn
       BINANCE_BASE_URL = aws_ssm_parameter.binance_base_url.value
+      # Provider secrets: Secrets Manager under SSM_PREFIX (/<project>/<environment>), as the jobs use.
+      SECRETS_BACKEND = "secretsmanager"
+      SSM_PREFIX      = "/${var.project}/${var.environment}"
     }
   }
 
@@ -124,6 +155,20 @@ resource "aws_apigatewayv2_integration" "experiment" {
 resource "aws_apigatewayv2_route" "experiment_rpc" {
   api_id    = aws_apigatewayv2_api.experiment.id
   route_key = "POST /tradingcopilot.v1.ExperimentService/{method}"
+  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+}
+
+# Connect-RPC unary calls: POST /tradingcopilot.v1.ProviderService/<Method>
+resource "aws_apigatewayv2_route" "provider_rpc" {
+  api_id    = aws_apigatewayv2_api.experiment.id
+  route_key = "POST /tradingcopilot.v1.ProviderService/{method}"
+  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+}
+
+# Connect-RPC unary calls: POST /tradingcopilot.v1.BackfillService/<Method> (backfill_sfn.tf)
+resource "aws_apigatewayv2_route" "backfill_rpc" {
+  api_id    = aws_apigatewayv2_api.experiment.id
+  route_key = "POST /tradingcopilot.v1.BackfillService/{method}"
   target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
 }
 

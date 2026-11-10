@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/providers"
 )
 
 // scratchDB creates a fresh database on POSTGRES_TEST_URL with the current schema, and fails when the
@@ -93,8 +94,11 @@ type connectorFixture struct {
 	store *pgcatalog.Catalog
 }
 
-// newConnectorFixture serves the connector routes over the scratch database. The in-process pairs cache
-// is reset, so each test sees its own upstream.
+// extraFields are declared on top of the Binance fields by the tests that need them.
+var extraFields []providers.Field
+
+// newConnectorFixture serves the connector routes over the scratch database. Each fixture has its own service,
+// so its own pairs cache and its own upstream.
 func newConnectorFixture(t *testing.T, upstream string) connectorFixture {
 	t.Helper()
 	url := scratchDB(t)
@@ -104,14 +108,13 @@ func newConnectorFixture(t *testing.T, upstream string) connectorFixture {
 		t.Fatalf("open catalog: %v", err)
 	}
 	t.Cleanup(store.Close)
-	t.Setenv("DATA_DIR", t.TempDir())
+	dataDir := t.TempDir()
+	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("BINANCE_BASE_URL", upstream)
-	prevStore := connectorStore
-	connectorStore = store
-	t.Cleanup(func() { connectorStore = prevStore })
-	pairsCacheMu.Lock()
-	pairsCache = map[string]pairsCacheEntry{}
-	pairsCacheMu.Unlock()
+	prevSvc := providerSvc
+	fields := append(append([]providers.Field{}, providers.BinanceFields()...), extraFields...)
+	providerSvc = providers.NewServiceWithFields(store, providers.FileSecrets{Dir: dataDir}, fields)
+	t.Cleanup(func() { providerSvc = prevSvc })
 
 	mux := http.NewServeMux()
 	mountConnectors(mux)
@@ -165,9 +168,9 @@ func pairRows(t *testing.T, body map[string]any) []string {
 }
 
 func TestConnectorsRequireDatabase(t *testing.T) {
-	prev := connectorStore
-	connectorStore = nil
-	t.Cleanup(func() { connectorStore = prev })
+	prev := providerSvc
+	providerSvc = newProviderService(nil)
+	t.Cleanup(func() { providerSvc = prev })
 	mux := http.NewServeMux()
 	mountConnectors(mux)
 	srv := httptest.NewServer(mux)

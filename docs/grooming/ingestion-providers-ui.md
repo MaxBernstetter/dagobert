@@ -8,7 +8,7 @@ Builds on [ingest-list-assets](ingest-list-assets.md) and [ingest-provider-facad
 
 | # | Choice |
 |---|--------|
-| State | **Postgres**: activation, status, progress, non-secret config (`provider`) and the setup snapshot (`provider_pair`). Secrets stay in a file under `DATA_DIR` and are never sent to the browser |
+| State | **Postgres**: activation, status, progress, non-secret config (`provider`) and the setup snapshot (`provider_pair`). Secrets are in AWS Secrets Manager (file under `DATA_DIR` with `SECRETS_BACKEND=file`) and are never sent to the browser |
 | Activate | **Activate = setup**; provider becomes selectable in Experiments **only after setup succeeds** |
 | Feedback | Setup shows **status** (`inactive` / `setting_up` / `ready` / `failed`) and **progress** when applicable |
 | First provider | **Binance** (public; no API key required today; schema supports secret fields for later providers) |
@@ -25,7 +25,9 @@ Builds on [ingest-list-assets](ingest-list-assets.md) and [ingest-provider-facad
 ```text
 DATA_DIR/
   providers/
-    secrets.json          # mode 0600; API keys etc. — never returned by API, never in Postgres
+    secrets.json          # SECRETS_BACKEND=file only, mode 0600; never returned by API, never in Postgres
+
+Secrets Manager (default in the API Lambda and with AWS_ENDPOINT_URL or SSM_PREFIX): secret /dagobert/<env>/providers/<provider-id>, a JSON object of key to value.
 ```
 
 Postgres (`db/schema/connector`, `db/sqlc/queries/connectors.sql`, `src/experimentapi/pgcatalog/connectors.go`):
@@ -51,12 +53,17 @@ Deactivate: mark inactive; keep the snapshot and config in Postgres; remove from
 
 - Effective Binance base URL: the saved config `baseUrl` when set, else `BINANCE_BASE_URL`, else `https://data-api.binance.vision` (`effectiveBaseURL` in `provider_settings.go`). Setup, the pairs listing and the job containers (ingest, backfill, experiment runs) all use this value.
 - Saving a new base URL does not flip an activated provider. Its snapshot stays until the next activation (Refresh assets), which reads the markets from the new URL.
-- Secrets: `DATA_DIR/providers/secrets.json` (mode 0600, written atomically). Only key names come back (`secretKeysConfigured`); the values are never in any response. Postgres holds no secrets.
+- Secrets: Secrets Manager secret `/<project>/<env>/providers/<id>` (see `src/experimentapi/providers/secrets.go`), or `DATA_DIR/providers/secrets.json` (mode 0600, written atomically) with `SECRETS_BACKEND=file`. Only key names come back (`secretKeysConfigured`); the values are never in any response. Postgres holds no secrets.
+- Moving an existing `secrets.json` to Secrets Manager (once, per provider id; the JSON value is the provider's object):
+  `aws secretsmanager create-secret --name /dagobert/<env>/providers/binance --secret-string "$(jq -c '.providers.binance' DATA_DIR/providers/secrets.json)"` (use `put-secret-value --secret-id ...` if it exists). On Floci add `--endpoint-url http://127.0.0.1:11566`.
 - Nothing is copied from the old file catalog. Config saved before the move is gone from Postgres: set the base URL again if it was not the default.
 
 Upgrade caveat: the earlier file-based catalog (`DATA_DIR/providers/catalog.json`, `providers/binance/pairs.json`) is not imported. Existing installs re-activate Binance in Connectors once after the upgrade.
 
 ## API
+
+The Connectors page calls `ProviderService` (Connect, `proto/tradingcopilot/v1/provider_service.proto`). `ActivateProvider` runs the setup before it answers; the REST routes below are deprecated and answer the same data (the REST activate answers 202 and the setup runs in the background).
+
 
 | Method | Path | Role |
 |--------|------|------|

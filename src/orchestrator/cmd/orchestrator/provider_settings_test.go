@@ -8,16 +8,18 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/providers"
 )
 
 // withSecretField declares one secret field for the test and restores the provider afterwards.
 func withSecretField(t *testing.T) {
 	t.Helper()
-	prev := binanceProvider.fields
-	binanceProvider.fields = append(append([]providerField{}, prev...), providerField{
+	prev := extraFields
+	extraFields = append(append([]providers.Field{}, prev...), providers.Field{
 		Key: "apiKey", Label: "API key", Kind: "secret",
 	})
-	t.Cleanup(func() { binanceProvider.fields = prev })
+	t.Cleanup(func() { extraFields = prev })
 }
 
 func (f connectorFixture) patch(t *testing.T, path, body string) (int, string) {

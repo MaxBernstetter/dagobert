@@ -1,114 +1,33 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/MaxBernstetter/dagobert/src/ingest/provider"
-	"github.com/MaxBernstetter/dagobert/src/ingest/provider/binance"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/providers"
 )
 
-type pairsCacheEntry struct {
-	at    time.Time
-	pairs []provider.Pair
-}
-
-var (
-	pairsCacheMu sync.Mutex
-	pairsCache   = map[string]pairsCacheEntry{}
-)
-
-const pairsCacheTTL = 24 * time.Hour
-
-// handleProviderPairs serves the market snapshot stored by the provider's setup. A provider that is not
-// ready has no snapshot yet; then the markets are fetched live, as before, and nothing is stored.
+// handleProviderPairs serves the market snapshot of a ready provider, else the live markets (nothing stored).
+// Deprecated: ProviderService.ListProviderPairs serves the same data; see mountConnectors.
 func handleProviderPairs(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
 	if id == "" {
 		http.Error(w, "provider id required", http.StatusBadRequest)
 		return
 	}
-	store, ok := requireConnectorStore(w)
-	if !ok {
-		return
-	}
-	rec, found, err := store.GetProvider(r.Context(), id)
+	pairs, err := providerSvc.Pairs(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeProviderError(w, err)
 		return
 	}
-	type row struct {
-		Base  string `json:"base"`
-		Quote string `json:"quote"`
-	}
-	var out []row
-	if found && rec.Status == "ready" {
-		stored, err := store.ProviderPairs(r.Context(), id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		out = make([]row, 0, len(stored))
-		for _, p := range stored {
-			out = append(out, row{Base: p.Base, Quote: p.Quote})
-		}
-	} else {
-		pairs, err := listProviderPairs(r.Context(), id, false)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		out = make([]row, 0, len(pairs))
-		for _, p := range pairs {
-			out = append(out, row{Base: p.Base, Quote: p.Quote})
-		}
+	if pairs == nil {
+		pairs = []providers.Pair{}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=86400")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"provider": id,
-		"pairs":    out,
+		"pairs":    pairs,
 	})
-}
-
-// listProviderPairs returns the markets of a provider from its effective base URL. fresh bypasses the
-// in-memory cache (activation asks the exchange); the result is cached either way.
-func listProviderPairs(ctx context.Context, id string, fresh bool) ([]provider.Pair, error) {
-	base := providerBaseURL(ctx, id)
-	key := id + "|" + base
-	if !fresh {
-		pairsCacheMu.Lock()
-		if e, ok := pairsCache[key]; ok && time.Since(e.at) < pairsCacheTTL {
-			pairsCacheMu.Unlock()
-			return e.pairs, nil
-		}
-		pairsCacheMu.Unlock()
-	}
-
-	ad, err := openProviderAdapter(id, base)
-	if err != nil {
-		return nil, err
-	}
-	pairs, err := ad.ListPairs(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pairsCacheMu.Lock()
-	pairsCache[key] = pairsCacheEntry{at: time.Now(), pairs: pairs}
-	pairsCacheMu.Unlock()
-	return pairs, nil
-}
-
-func openProviderAdapter(id, base string) (provider.Adapter, error) {
-	switch id {
-	case "binance":
-		return binance.New(binance.Options{BaseURL: base})
-	default:
-		return nil, fmt.Errorf("unknown provider %s", id)
-	}
 }
