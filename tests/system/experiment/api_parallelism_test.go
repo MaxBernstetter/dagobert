@@ -1,36 +1,37 @@
 package experiment_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/MaxBernstetter/dagobert/src/experimentapi"
+	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
+	"github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1/tradingcopilotv1connect"
 )
 
-// createViaAPI posts a manual-list experiment with the given settings fragment and returns the status and body.
-func createViaAPI(t *testing.T, srv *httptest.Server, settings string) (int, []byte) {
+// createViaAPI creates a manual-list experiment with the given settings fragment (protojson fields).
+func createViaAPI(t *testing.T, client tradingcopilotv1connect.ExperimentServiceClient, settings string) (*v1.Experiment, error) {
 	t.Helper()
 	body := fmt.Sprintf(`{"name":"parallelism","mode":"EXPERIMENT_CREATE_MODE_MANUAL",
 	  "settings":{"provider":"binance","base":"BTC","quote":"USDT","fromMs":"0","toMs":"%d","redownloadMissing":false%s},
 	  "instances":[{"label":"sma 3/6","maCross":{"fastHr":3,"slowHr":6}}]}`, 240*hour, settings)
-	resp, err := http.Post(srv.URL+"/api/v1/experiments", "application/json", strings.NewReader(body))
-	if err != nil {
+	req := &v1.CreateExperimentRequest{}
+	if err := protojson.Unmarshal([]byte(body), req); err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	return resp.StatusCode, raw
+	resp, err := client.CreateExperiment(t.Context(), connect.NewRequest(req))
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg.Experiment, nil
 }
 
-func parallelismServer(t *testing.T) *httptest.Server {
+func parallelismClient(t *testing.T) tradingcopilotv1connect.ExperimentServiceClient {
 	t.Helper()
 	url := pgScratchDB(t)
 	pool, err := pgxpool.New(t.Context(), url)
@@ -38,66 +39,46 @@ func parallelismServer(t *testing.T) *httptest.Server {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	mux := http.NewServeMux()
-	experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{}))
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	return srv
+	return newExperimentClient(serveExperimentAPI(t, pool))
 }
 
 func TestCreateExperimentParallelism(t *testing.T) {
-	srv := parallelismServer(t)
+	client := parallelismClient(t)
 
-	// Set: persisted, returned by create and by GET.
-	code, raw := createViaAPI(t, srv, `,"parallelism":3`)
-	if code != http.StatusCreated {
-		t.Fatalf("create with parallelism 3: %d %s", code, raw)
-	}
-	var created map[string]any
-	if err := json.Unmarshal(raw, &created); err != nil {
-		t.Fatal(err)
-	}
-	if created["parallelism"] != float64(3) {
-		t.Fatalf("create response parallelism: %v", created["parallelism"])
-	}
-	id, _ := created["id"].(string)
-	resp, err := http.Get(srv.URL + "/api/v1/experiments/" + id)
+	// Set: persisted, returned by create and by get.
+	created, err := createViaAPI(t, client, `,"parallelism":3`)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("create with parallelism 3: %v", err)
 	}
-	got, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	var fetched map[string]any
-	if err := json.Unmarshal(got, &fetched); err != nil || fetched["parallelism"] != float64(3) {
-		t.Fatalf("GET parallelism: %v %s", err, got)
+	if created.GetParallelism() != 3 {
+		t.Fatalf("create response parallelism: %v", created.Parallelism)
+	}
+	got, err := client.GetExperiment(t.Context(), connect.NewRequest(&v1.GetExperimentRequest{Id: created.Id}))
+	if err != nil || got.Msg.Experiment.GetParallelism() != 3 {
+		t.Fatalf("get parallelism: %v %v", err, got)
 	}
 
-	// Unset: the key is absent, as before this field existed.
-	code, raw = createViaAPI(t, srv, "")
-	if code != http.StatusCreated {
-		t.Fatalf("create without parallelism: %d %s", code, raw)
+	// Unset: the field is absent, as before this field existed.
+	unset, err := createViaAPI(t, client, "")
+	if err != nil {
+		t.Fatalf("create without parallelism: %v", err)
 	}
-	if strings.Contains(string(raw), `"parallelism":`) {
-		t.Fatalf("unset parallelism must not appear in the response: %s", raw)
+	if unset.Parallelism != nil {
+		t.Fatalf("unset parallelism must stay unset: %v", *unset.Parallelism)
 	}
 
 	// Invalid values are rejected with a message.
-	if code, raw := createViaAPI(t, srv, `,"parallelism":-1`); code != http.StatusBadRequest || !strings.Contains(string(raw), "must be 0 (auto)") {
-		t.Fatalf("negative: %d %s", code, raw)
+	if _, err := createViaAPI(t, client, `,"parallelism":-1`); connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "must be 0 (auto)") {
+		t.Fatalf("negative: %v", err)
 	}
 	above := runtime.NumCPU() + 1
-	if code, raw := createViaAPI(t, srv, fmt.Sprintf(`,"parallelism":%d`, above)); code != http.StatusBadRequest || !strings.Contains(string(raw), "above the maximum") {
-		t.Fatalf("above the maximum: %d %s", code, raw)
+	if _, err := createViaAPI(t, client, fmt.Sprintf(`,"parallelism":%d`, above)); connect.CodeOf(err) != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "above the maximum") {
+		t.Fatalf("above the maximum: %v", err)
 	}
 
 	// The limit the create form shows.
-	resp, err = http.Get(srv.URL + "/api/v1/experiments/limits")
-	if err != nil {
-		t.Fatal(err)
-	}
-	lim, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK || string(lim) != fmt.Sprintf(`{"maxParallelism":%d}`, runtime.NumCPU()) {
-		t.Fatalf("limits: %d %s", resp.StatusCode, lim)
+	lim, err := client.GetExperimentLimits(t.Context(), connect.NewRequest(&v1.GetExperimentLimitsRequest{}))
+	if err != nil || int(lim.Msg.MaxParallelism) != runtime.NumCPU() {
+		t.Fatalf("limits: %v %v", err, lim)
 	}
 }

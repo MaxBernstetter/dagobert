@@ -103,7 +103,7 @@ variable "frontend_image_tag" {
 }
 
 variable "frontend_api_url" {
-  description = "Base URL of the Experiment API the frontend proxies /api to."
+  description = "Base URL of the Experiment API the frontend proxies /api and /tradingcopilot.v1. to."
   type        = string
   default     = ""
 }

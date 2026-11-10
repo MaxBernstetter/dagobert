@@ -30,6 +30,7 @@
 #include "google/protobuf/repeated_field.h"  // IWYU pragma: export
 #include "google/protobuf/extension_set.h"  // IWYU pragma: export
 #include "google/protobuf/unknown_field_set.h"
+#include "tradingcopilot/v1/experiment.pb.h"
 // @@protoc_insertion_point(includes)
 
 // Must be included last.
@@ -509,8 +510,24 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunExperimentRequest final : public
 
   // accessors -------------------------------------------------------
   enum : int {
+    kIdFieldNumber = 2,
     kRetryFailedFieldNumber = 1,
   };
+  // string id = 2 [json_name = "id"];
+  void clear_id() ;
+  [[nodiscard]] const ::std::string& id() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_id(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_id();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_id();
+  void set_allocated_id(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_id() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_id(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_id();
+
+  public:
   // bool retry_failed = 1 [json_name = "retryFailed"];
   void clear_retry_failed() ;
   [[nodiscard]] bool retry_failed() const;
@@ -525,8 +542,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunExperimentRequest final : public
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<0, 1,
-                          0, 0,
+      ::google::protobuf::internal::TcParseTable<1, 2,
+                          0, 49,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
       const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
@@ -554,6 +571,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RunExperimentRequest final : public
         const RunExperimentRequest& from_msg);
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr id_;
     bool retry_failed_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -1030,258 +1048,6 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentWorkerBatch final : publi
 };
 // -------------------------------------------------------------------
 
-class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CancelExperimentResponse final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:tradingcopilot.v1.CancelExperimentResponse) */ {
-  using Super_ = ::google::protobuf::Message;
-
- public:
-  inline CancelExperimentResponse() : CancelExperimentResponse(nullptr) {}
-  ~CancelExperimentResponse() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(CancelExperimentResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(CancelExperimentResponse));
-  }
-#endif
-
-  template <typename = void>
-  explicit constexpr CancelExperimentResponse(::google::protobuf::internal::ConstantInitialized,
-                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-                               class_data);
-
-  inline CancelExperimentResponse(const CancelExperimentResponse& from) : CancelExperimentResponse(nullptr, from) {}
-  inline CancelExperimentResponse(CancelExperimentResponse&& from) noexcept : CancelExperimentResponse(nullptr, ::std::move(from)) {}
-  inline CancelExperimentResponse& operator=(const CancelExperimentResponse& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline CancelExperimentResponse& operator=(CancelExperimentResponse&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
-  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
-  GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  [[nodiscard]] static const CancelExperimentResponse& default_instance() {
-    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<CancelExperimentResponse>(&CancelExperimentResponse_globals_);
-  }
-  static constexpr int kIndexInFileMessages = 2;
-  friend void swap(CancelExperimentResponse& a, CancelExperimentResponse& b) { a.Swap(&b); }
-  inline void Swap(CancelExperimentResponse* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(CancelExperimentResponse* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  [[nodiscard]] CancelExperimentResponse* PROTOBUF_NONNULL
-  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return Super_::DefaultConstruct<CancelExperimentResponse>(arena);
-  }
-  using Super_::CopyFrom;
-  void CopyFrom(const CancelExperimentResponse& from);
-  using Super_::MergeFrom;
-  void MergeFrom(const CancelExperimentResponse& from) { CancelExperimentResponse::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  [[nodiscard]] bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] ::size_t ByteSizeLong() const final;
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] int GetCachedSize() const {
-    return _impl_._cached_size_.Get();
-  }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(CancelExperimentResponse* PROTOBUF_NONNULL other);
- private:
-  static ::absl::string_view FullMessageName() { return "tradingcopilot.v1.CancelExperimentResponse"; }
-
-  explicit CancelExperimentResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  CancelExperimentResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const CancelExperimentResponse& from);
-  CancelExperimentResponse(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, CancelExperimentResponse&& from) noexcept
-      : CancelExperimentResponse(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_(
-      const MessageLite& prototype,
-      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
-
-  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kIdFieldNumber = 1,
-    kErrorFieldNumber = 3,
-    kFinishedFieldNumber = 4,
-    kRunningFieldNumber = 2,
-  };
-  // string id = 1 [json_name = "id"];
-  void clear_id() ;
-  [[nodiscard]] const ::std::string& id() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_id(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_id();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_id();
-  void set_allocated_id(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_id() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_id(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_id();
-
-  public:
-  // string error = 3 [json_name = "error"];
-  void clear_error() ;
-  [[nodiscard]] const ::std::string& error() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_error(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_error();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_error();
-  void set_allocated_error(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_error() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_error(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_error();
-
-  public:
-  // string finished = 4 [json_name = "finished"];
-  void clear_finished() ;
-  [[nodiscard]] const ::std::string& finished() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_finished(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_finished();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_finished();
-  void set_allocated_finished(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_finished() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_finished(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_finished();
-
-  public:
-  // bool running = 2 [json_name = "running"];
-  void clear_running() ;
-  [[nodiscard]] bool running() const;
-  void set_running(bool value);
-
-  private:
-  bool _internal_running() const;
-  void _internal_set_running(bool value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:tradingcopilot.v1.CancelExperimentResponse)
- private:
-  class _Internal;
-  using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<2, 4,
-                          0, 66,
-                          2>;
-  static constexpr ParseTableT_ InternalGenerateParseTable_(
-      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
-  friend class ::google::protobuf::internal::TcParser;
-  #ifndef PROTOBUF_MESSAGE_GLOBALS
-  static const ParseTableT_ _table_;
-  #endif
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  friend ::google::protobuf::internal::PrivateAccess;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
-                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const CancelExperimentResponse& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::internal::ArenaStringPtr id_;
-    ::google::protobuf::internal::ArenaStringPtr error_;
-    ::google::protobuf::internal::ArenaStringPtr finished_;
-    bool running_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_tradingcopilot_2fv1_2fexperiment_5frun_2eproto;
-};
-// -------------------------------------------------------------------
-
 class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSFNInput final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:tradingcopilot.v1.ExperimentSFNInput) */ {
   using Super_ = ::google::protobuf::Message;
@@ -1525,6 +1291,275 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSFNInput final : public :
   union { Impl_ _impl_; };
   friend struct ::TableStruct_tradingcopilot_2fv1_2fexperiment_5frun_2eproto;
 };
+// -------------------------------------------------------------------
+
+class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CancelExperimentResponse final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:tradingcopilot.v1.CancelExperimentResponse) */ {
+  using Super_ = ::google::protobuf::Message;
+
+ public:
+  inline CancelExperimentResponse() : CancelExperimentResponse(nullptr) {}
+  ~CancelExperimentResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(CancelExperimentResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(CancelExperimentResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit constexpr CancelExperimentResponse(::google::protobuf::internal::ConstantInitialized,
+                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+                               class_data);
+
+  inline CancelExperimentResponse(const CancelExperimentResponse& from) : CancelExperimentResponse(nullptr, from) {}
+  inline CancelExperimentResponse(CancelExperimentResponse&& from) noexcept : CancelExperimentResponse(nullptr, ::std::move(from)) {}
+  inline CancelExperimentResponse& operator=(const CancelExperimentResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CancelExperimentResponse& operator=(CancelExperimentResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
+  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
+  GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  [[nodiscard]] static const CancelExperimentResponse& default_instance() {
+    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<CancelExperimentResponse>(&CancelExperimentResponse_globals_);
+  }
+  static constexpr int kIndexInFileMessages = 2;
+  friend void swap(CancelExperimentResponse& a, CancelExperimentResponse& b) { a.Swap(&b); }
+  inline void Swap(CancelExperimentResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CancelExperimentResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  [[nodiscard]] CancelExperimentResponse* PROTOBUF_NONNULL
+  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return Super_::DefaultConstruct<CancelExperimentResponse>(arena);
+  }
+  using Super_::CopyFrom;
+  void CopyFrom(const CancelExperimentResponse& from);
+  using Super_::MergeFrom;
+  void MergeFrom(const CancelExperimentResponse& from) { CancelExperimentResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  [[nodiscard]] bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] ::size_t ByteSizeLong() const final;
+  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  [[nodiscard]] int GetCachedSize() const {
+    return _impl_._cached_size_.Get();
+  }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(CancelExperimentResponse* PROTOBUF_NONNULL other);
+ private:
+  static ::absl::string_view FullMessageName() { return "tradingcopilot.v1.CancelExperimentResponse"; }
+
+  explicit CancelExperimentResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  CancelExperimentResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const CancelExperimentResponse& from);
+  CancelExperimentResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, CancelExperimentResponse&& from) noexcept
+      : CancelExperimentResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_(
+      const MessageLite& prototype,
+      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
+
+  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kIdFieldNumber = 1,
+    kErrorFieldNumber = 3,
+    kFinishedFieldNumber = 4,
+    kExperimentFieldNumber = 5,
+    kRunningFieldNumber = 2,
+  };
+  // string id = 1 [json_name = "id"];
+  void clear_id() ;
+  [[nodiscard]] const ::std::string& id() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_id(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_id();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_id();
+  void set_allocated_id(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_id() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_id(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_id();
+
+  public:
+  // string error = 3 [json_name = "error"];
+  void clear_error() ;
+  [[nodiscard]] const ::std::string& error() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_error(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_error();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_error();
+  void set_allocated_error(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_error() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_error(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_error();
+
+  public:
+  // string finished = 4 [json_name = "finished"];
+  void clear_finished() ;
+  [[nodiscard]] const ::std::string& finished() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_finished(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_finished();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_finished();
+  void set_allocated_finished(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_finished() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_finished(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_finished();
+
+  public:
+  // .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
+  [[nodiscard]] bool has_experiment() const;
+  void clear_experiment() ;
+  [[nodiscard]] const ::tradingcopilot::v1::Experiment& experiment() const;
+  [[nodiscard]] ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE release_experiment();
+  ::tradingcopilot::v1::Experiment* PROTOBUF_NONNULL mutable_experiment();
+  void set_allocated_experiment(::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_experiment(::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE value);
+  ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE unsafe_arena_release_experiment();
+
+  private:
+  const ::tradingcopilot::v1::Experiment& _internal_experiment() const;
+  ::tradingcopilot::v1::Experiment* PROTOBUF_NONNULL _internal_mutable_experiment();
+
+  public:
+  // bool running = 2 [json_name = "running"];
+  void clear_running() ;
+  [[nodiscard]] bool running() const;
+  void set_running(bool value);
+
+  private:
+  bool _internal_running() const;
+  void _internal_set_running(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:tradingcopilot.v1.CancelExperimentResponse)
+ private:
+  class _Internal;
+  using ParseTableT_ =
+      ::google::protobuf::internal::TcParseTable<3, 5,
+                          1, 66,
+                          2>;
+  static constexpr ParseTableT_ InternalGenerateParseTable_(
+      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
+  friend class ::google::protobuf::internal::TcParser;
+  #ifndef PROTOBUF_MESSAGE_GLOBALS
+  static const ParseTableT_ _table_;
+  #endif
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  friend ::google::protobuf::internal::PrivateAccess;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const CancelExperimentResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr id_;
+    ::google::protobuf::internal::ArenaStringPtr error_;
+    ::google::protobuf::internal::ArenaStringPtr finished_;
+    ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE experiment_;
+    bool running_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_tradingcopilot_2fv1_2fexperiment_5frun_2eproto;
+};
 
 // ===================================================================
 
@@ -1546,7 +1581,7 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED ExperimentSFNInput final : public :
 inline void RunExperimentRequest::clear_retry_failed() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.retry_failed_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
 }
 inline bool RunExperimentRequest::retry_failed() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.RunExperimentRequest.retry_failed)
@@ -1554,7 +1589,7 @@ inline bool RunExperimentRequest::retry_failed() const {
 }
 inline void RunExperimentRequest::set_retry_failed(bool value) {
   _internal_set_retry_failed(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.RunExperimentRequest.retry_failed)
 }
 inline bool RunExperimentRequest::_internal_retry_failed() const {
@@ -1564,6 +1599,70 @@ inline bool RunExperimentRequest::_internal_retry_failed() const {
 inline void RunExperimentRequest::_internal_set_retry_failed(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.retry_failed_ = value;
+}
+
+// string id = 2 [json_name = "id"];
+inline void RunExperimentRequest::clear_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.id_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+}
+inline const ::std::string& RunExperimentRequest::id() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.RunExperimentRequest.id)
+  return _internal_id();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void RunExperimentRequest::set_id(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  _impl_.id_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:tradingcopilot.v1.RunExperimentRequest.id)
+}
+inline ::std::string* PROTOBUF_NONNULL RunExperimentRequest::mutable_id()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.RunExperimentRequest.id)
+  return _s;
+}
+inline const ::std::string& RunExperimentRequest::_internal_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.id_.Get();
+}
+inline void RunExperimentRequest::_internal_set_id(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.id_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL RunExperimentRequest::_internal_mutable_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.id_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE RunExperimentRequest::release_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tradingcopilot.v1.RunExperimentRequest.id)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000001U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  auto* released = _impl_.id_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.id_.Set("", GetArena());
+  }
+  return released;
+}
+inline void RunExperimentRequest::set_allocated_id(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  _impl_.id_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.RunExperimentRequest.id)
 }
 
 // -------------------------------------------------------------------
@@ -1858,7 +1957,7 @@ inline void CancelExperimentResponse::set_allocated_id(::std::string* PROTOBUF_N
 inline void CancelExperimentResponse::clear_running() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.running_ = false;
-  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
 }
 inline bool CancelExperimentResponse::running() const {
   // @@protoc_insertion_point(field_get:tradingcopilot.v1.CancelExperimentResponse.running)
@@ -1866,7 +1965,7 @@ inline bool CancelExperimentResponse::running() const {
 }
 inline void CancelExperimentResponse::set_running(bool value) {
   _internal_set_running(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   // @@protoc_insertion_point(field_set:tradingcopilot.v1.CancelExperimentResponse.running)
 }
 inline bool CancelExperimentResponse::_internal_running() const {
@@ -2004,6 +2103,99 @@ inline void CancelExperimentResponse::set_allocated_finished(::std::string* PROT
     _impl_.finished_.Set("", GetArena());
   }
   // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.CancelExperimentResponse.finished)
+}
+
+// .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
+inline bool CancelExperimentResponse::has_experiment() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
+  PROTOBUF_ASSUME(!value || _impl_.experiment_ != nullptr);
+  return value;
+}
+inline const ::tradingcopilot::v1::Experiment& CancelExperimentResponse::_internal_experiment() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::tradingcopilot::v1::Experiment* p = _impl_.experiment_;
+  return p != nullptr ? *p : *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<::tradingcopilot::v1::Experiment>(&::tradingcopilot::v1::Experiment_globals_);
+}
+inline const ::tradingcopilot::v1::Experiment& CancelExperimentResponse::experiment() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:tradingcopilot.v1.CancelExperimentResponse.experiment)
+  return _internal_experiment();
+}
+inline void CancelExperimentResponse::unsafe_arena_set_allocated_experiment(
+    ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.experiment_);
+  }
+  _impl_.experiment_ = reinterpret_cast<::tradingcopilot::v1::Experiment*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tradingcopilot.v1.CancelExperimentResponse.experiment)
+}
+inline ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE CancelExperimentResponse::release_experiment() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::tradingcopilot::v1::Experiment* released = _impl_.experiment_;
+  _impl_.experiment_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE CancelExperimentResponse::unsafe_arena_release_experiment() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:tradingcopilot.v1.CancelExperimentResponse.experiment)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::tradingcopilot::v1::Experiment* temp = _impl_.experiment_;
+  _impl_.experiment_ = nullptr;
+  return temp;
+}
+inline ::tradingcopilot::v1::Experiment* PROTOBUF_NONNULL CancelExperimentResponse::_internal_mutable_experiment() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.experiment_ == nullptr) {
+    auto* p = Super_::DefaultConstruct<::tradingcopilot::v1::Experiment>(GetArena());
+    _impl_.experiment_ = reinterpret_cast<::tradingcopilot::v1::Experiment*>(p);
+  }
+  return _impl_.experiment_;
+}
+inline ::tradingcopilot::v1::Experiment* PROTOBUF_NONNULL CancelExperimentResponse::mutable_experiment()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::tradingcopilot::v1::Experiment* _msg = _internal_mutable_experiment();
+  // @@protoc_insertion_point(field_mutable:tradingcopilot.v1.CancelExperimentResponse.experiment)
+  return _msg;
+}
+inline void CancelExperimentResponse::set_allocated_experiment(::tradingcopilot::v1::Experiment* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.experiment_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::Message*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+
+  _impl_.experiment_ = reinterpret_cast<::tradingcopilot::v1::Experiment*>(value);
+  // @@protoc_insertion_point(field_set_allocated:tradingcopilot.v1.CancelExperimentResponse.experiment)
 }
 
 // -------------------------------------------------------------------

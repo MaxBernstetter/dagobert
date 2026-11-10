@@ -250,7 +250,7 @@ func serveBackfill(ctx context.Context) {
 			}))
 		}
 	} else {
-		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; /api/v1/experiments routes not mounted")
+		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; ExperimentService not mounted")
 	}
 
 	mux.HandleFunc("POST /experiment/cancel", func(w http.ResponseWriter, r *http.Request) {

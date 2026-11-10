@@ -2,8 +2,11 @@ syntax = "proto3";
 
 package tradingcopilot.v1;
 
+import "tradingcopilot/v1/experiment.proto";
+
 message RunExperimentRequest {
   bool retry_failed = 1;
+  string id = 2;
 }
 
 message RunExperimentResponse {
@@ -18,6 +21,8 @@ message CancelExperimentResponse {
   bool running = 2;
   string error = 3;
   string finished = 4;
+  // The experiment after the cancel.
+  Experiment experiment = 5;
 }
 
 // ExperimentWorkerBatch is the Lambda / simulate-batch payload.

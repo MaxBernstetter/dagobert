@@ -1,0 +1,294 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+import "google/protobuf/struct.proto";
+import "tradingcopilot/v1/experiment.proto";
+import "tradingcopilot/v1/experiment_chart.proto";
+import "tradingcopilot/v1/experiment_instance.proto";
+import "tradingcopilot/v1/experiment_run.proto";
+
+// ExperimentService is the browser-to-API contract (Connect-RPC). Every method is a unary POST
+// to /tradingcopilot.v1.ExperimentService/<Method> with a protobuf or JSON body.
+service ExperimentService {
+  rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse);
+  rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse);
+  rpc CreateExperiment(CreateExperimentRequest) returns (CreateExperimentResponse);
+  rpc DeleteExperiment(DeleteExperimentRequest) returns (DeleteExperimentResponse);
+  rpc GetExperimentStatus(GetExperimentStatusRequest) returns (GetExperimentStatusResponse);
+  rpc GetExperimentProgress(GetExperimentProgressRequest) returns (GetExperimentProgressResponse);
+  rpc ListStrategies(ListStrategiesRequest) returns (ListStrategiesResponse);
+  rpc GetExperimentLimits(GetExperimentLimitsRequest) returns (GetExperimentLimitsResponse);
+  rpc GetExperimentPerformance(GetExperimentPerformanceRequest) returns (GetExperimentPerformanceResponse);
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse);
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse);
+  rpc GetChartSeries(GetChartSeriesRequest) returns (GetChartSeriesResponse);
+  rpc GetInstanceReport(GetInstanceReportRequest) returns (GetInstanceReportResponse);
+  rpc GetInstanceKpis(GetInstanceKpisRequest) returns (GetInstanceKpisResponse);
+  rpc GetInstanceActivity(GetInstanceActivityRequest) returns (GetInstanceActivityResponse);
+  rpc RunExperiment(RunExperimentRequest) returns (RunExperimentResponse);
+  rpc CancelExperiment(CancelExperimentRequest) returns (CancelExperimentResponse);
+}
+
+message ListExperimentsRequest {}
+
+message GetExperimentRequest {
+  string id = 1;
+}
+
+message GetExperimentResponse {
+  Experiment experiment = 1;
+}
+
+message CreateExperimentResponse {
+  Experiment experiment = 1;
+}
+
+message DeleteExperimentRequest {
+  string id = 1;
+}
+
+message DeleteExperimentResponse {}
+
+// GetExperimentStatusRequest pages the instances: limit defaults to 200 (at most 1000), cursor is an offset.
+message GetExperimentStatusRequest {
+  string id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+// ExperimentJob is the orchestrator's job for an experiment. Empty after an orchestrator restart.
+message ExperimentJob {
+  bool running = 1;
+  string error = 2;
+  string finished = 3;
+}
+
+// GetExperimentStatusResponse is the whole experiment in one response: progress, job state,
+// status counts, and one page of instances.
+message GetExperimentStatusResponse {
+  ExperimentProgress experiment = 1;
+  ExperimentJob job = 2;
+  int64 total = 3;
+  map<string, int64> counts = 4;
+  repeated ExperimentInstance instances = 5;
+  optional string next_cursor = 6;
+}
+
+message GetExperimentProgressRequest {
+  string id = 1;
+}
+
+message GetExperimentProgressResponse {
+  ExperimentProgress progress = 1;
+}
+
+message ListStrategiesRequest {}
+
+message ListStrategiesResponse {
+  repeated ExperimentStrategy strategies = 1;
+}
+
+// ExperimentStrategy is a playbook the experiment runner can replay, with the options the create form renders.
+message ExperimentStrategy {
+  string id = 1;
+  string label = 2;
+  string description = 3;
+  bool experiment_ready = 4;
+  repeated StrategyOption options = 5;
+}
+
+// StrategyOption is either an enum (values set) or a number (min and max set).
+message StrategyOption {
+  string key = 1;
+  string label = 2;
+  string description = 3;
+  string kind = 4;
+  string value_type = 5;
+  repeated StrategyOptionValue values = 6;
+  optional double min = 7;
+  optional double max = 8;
+  optional double step = 9;
+  string unit = 10;
+  google.protobuf.Value default = 11;
+}
+
+message StrategyOptionValue {
+  google.protobuf.Value value = 1;
+  string label = 2;
+}
+
+message GetExperimentLimitsRequest {}
+
+message GetExperimentLimitsResponse {
+  // Largest "parallel processes" value create accepts.
+  int32 max_parallelism = 1;
+}
+
+message GetExperimentPerformanceRequest {
+  string id = 1;
+}
+
+message GetExperimentPerformanceResponse {
+  KpiReport performance = 1;
+}
+
+message GetInstanceRequest {
+  string experiment_id = 1;
+  string instance_id = 2;
+}
+
+message GetInstanceResponse {
+  ExperimentInstance instance = 1;
+}
+
+// GetChartSeriesRequest asks for the candles of the window [from_sec, to_sec] (unix seconds).
+// max_points > 0 buckets the candles down to at most that many.
+message GetChartSeriesRequest {
+  string experiment_id = 1;
+  string instance_id = 2;
+  int64 from_sec = 3;
+  int64 to_sec = 4;
+  int32 max_points = 5;
+}
+
+message GetChartSeriesResponse {
+  ChartSeries series = 1;
+}
+
+message GetInstanceReportRequest {
+  string experiment_id = 1;
+  string instance_id = 2;
+}
+
+// GetInstanceReportResponse carries the report JSON as stored in the instance shard.
+message GetInstanceReportResponse {
+  google.protobuf.Struct report = 1;
+}
+
+message GetInstanceKpisRequest {
+  string experiment_id = 1;
+  string instance_id = 2;
+}
+
+message GetInstanceKpisResponse {
+  KpiReport kpis = 1;
+}
+
+// KpiReport is the KPIs, comparison and statistics of an instance or, without playbook and symbol, of an experiment.
+message KpiReport {
+  string playbook = 1;
+  string symbol = 2;
+  int64 from_ms = 3;
+  int64 to_ms = 4;
+  repeated KpiResult results = 5;
+  google.protobuf.Value comparison = 6;
+  KpiStatistics statistics = 7;
+  google.protobuf.Value run = 8;
+}
+
+message KpiResult {
+  KpiDef def = 1;
+  google.protobuf.Value value = 2;
+  google.protobuf.Value extra = 3;
+}
+
+message KpiDef {
+  string slug = 1;
+  string title = 2;
+  string label = 3;
+  string kind = 4;
+  string unit = 5;
+  string format = 6;
+}
+
+message KpiStatistics {
+  double duration_months = 1;
+  double duration_years = 2;
+  int32 months_sampled = 3;
+  int32 years_sampled = 4;
+  optional double monthly_return_avg = 5;
+  optional double monthly_return_med = 6;
+  optional double yearly_return_avg = 7;
+  optional double yearly_return_med = 8;
+  optional double trades_per_month_avg = 9;
+  optional double trades_per_month_med = 10;
+  repeated google.protobuf.Value monthly_returns = 11;
+  repeated google.protobuf.Value yearly_returns = 12;
+  optional double win_rate = 13;
+  optional double monthly_win_rate_avg = 14;
+  optional double monthly_win_rate_med = 15;
+  optional double yearly_win_rate_avg = 16;
+  optional double yearly_win_rate_med = 17;
+  OutcomeSide gain = 18;
+  OutcomeSide loss = 19;
+}
+
+message OutcomeSide {
+  OutcomeDist absolute = 1;
+  OutcomeDist percentage = 2;
+}
+
+message OutcomeDist {
+  double average = 1;
+  double p10 = 2;
+  double p25 = 3;
+  double p50 = 4;
+  double p75 = 5;
+  double p90 = 6;
+  double p95 = 7;
+}
+
+message GetInstanceActivityRequest {
+  string experiment_id = 1;
+  string instance_id = 2;
+}
+
+// GetInstanceActivityResponse is the order results and fills of an instance. An instance without orders has empty lists.
+message GetInstanceActivityResponse {
+  repeated ActivityRow rows = 1;
+  repeated JournalRow journals = 2;
+  map<string, string> playbook_titles = 3;
+  string experiment_id = 4;
+  string instance_id = 5;
+  string playbook = 6;
+  string symbol = 7;
+}
+
+// ActivityRow is one order result. Instances record orders and fills only.
+message ActivityRow {
+  string order_link_id = 1;
+  string playbook = 2;
+  string symbol = 3;
+  int64 candle_close = 4;
+  string kind = 5;
+  optional string decision = 6;
+  optional string order_id = 7;
+  optional string order_status = 8;
+  optional string venue_symbol = 9;
+  optional string side = 10;
+  optional string qty = 11;
+  optional string cum_exec_qty = 12;
+  optional string cum_exec_value = 13;
+  optional string avg_price = 14;
+  optional string market_unit = 15;
+  optional double ret_code = 16;
+  optional string ret_msg = 17;
+}
+
+message JournalRow {
+  string order_link_id = 1;
+  string venue = 2;
+  string venue_symbol = 3;
+  string side = 4;
+  string base_qty = 5;
+  string quote_qty = 6;
+  string price = 7;
+  string fee = 8;
+  string fee_currency = 9;
+  string price_source = 10;
+}
+
+message CancelExperimentRequest {
+  string id = 1;
+}

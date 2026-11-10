@@ -3,7 +3,7 @@
 Protobuf schemas shared by the Go services, the C++ engine and the frontend. Package `tradingcopilot.v1` in `proto/tradingcopilot/v1/`, module `buf.build/maxbernstetter/dagobert`.
 
 ## Files
-Experiments and API shapes: `experiment*.proto`, `provider.proto`, `strategy.proto`. C++ engine contract: `sweep.proto` (`SweepRequest` in), `run_report.proto` and `run_envelope.proto` (report out).
+Experiments and API shapes: `experiment*.proto`, `provider.proto`, `strategy.proto`. The browser-to-API contract is `experiment_service.proto` (`ExperimentService`, Connect-RPC). C++ engine contract: `sweep.proto` (`SweepRequest` in), `run_report.proto` and `run_envelope.proto` (report out).
 
 ## Tasks
 ```bash
@@ -15,8 +15,8 @@ task proto:push       # push to the Buf Schema Registry (buf registry login firs
 Run lint and breaking before changing a schema.
 
 ## Generated code (committed)
-- Go: `src/gen/` (`go_package_prefix` is set in `buf.gen.yaml`).
-- TypeScript: `src/frontend/src/lib/gen/` (`protobuf-es`).
+- Go: `src/gen/` (`go_package_prefix` is set in `buf.gen.yaml`); the Connect handler and client are in `src/gen/tradingcopilot/v1/tradingcopilotv1connect/` (plugin pinned to `buf.build/connectrpc/go:v1.19.1`, matching `connectrpc.com/connect` v1).
+- TypeScript: `src/frontend/src/lib/gen/` (`protobuf-es`, also the `ExperimentService` descriptor).
 - C++: `src/calculation/gen/cpp/`.
 
 ## Breaking-change exception

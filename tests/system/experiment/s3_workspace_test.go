@@ -3,23 +3,19 @@ package experiment_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/fs"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/tests/system/internal/floci"
 )
@@ -166,55 +162,46 @@ func TestExperimentWorkspaceOnS3(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	mux := http.NewServeMux()
-	experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{}))
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	f := apiFixture{srv: srv, pool: pool, dataDir: dataDir, rec: got, endSec: endMs / 1000, experiment: rec.ID}
+	srv := serveExperimentAPI(t, pool)
+	f := apiFixture{srv: srv, client: newExperimentClient(srv), pool: pool, dataDir: dataDir, rec: got, endSec: endMs / 1000, experiment: rec.ID}
 	for _, inst := range got.Instances {
 		if inst.Label == "traded" {
 			f.traded = inst
 		}
 	}
-	if code, body := f.get(t, f.instancePath(f.traded, "report")); code != http.StatusOK || !strings.Contains(string(body), `"kpis"`) {
-		t.Fatalf("report %d: %s", code, body)
+	if resp, err := f.report(f.traded); err != nil || resp.Msg.Report.Fields["kpis"] == nil {
+		t.Fatalf("report: %v %v", err, resp)
 	}
-	if code, body := f.get(t, f.instancePath(f.traded, "kpis")); code != http.StatusOK || !strings.Contains(string(body), `"win-rate"`) {
-		t.Fatalf("kpis %d: %s", code, body)
+	kpis, err := f.kpis(f.traded)
+	if err != nil {
+		t.Fatalf("kpis: %v", err)
 	}
-	code, body := f.get(t, f.instancePath(f.traded, "activity"))
-	if code != http.StatusOK {
-		t.Fatalf("activity %d: %s", code, body)
+	if !hasKpi(kpis.Msg.Kpis, "win-rate") {
+		t.Fatalf("kpis lack win-rate: %v", kpis.Msg.Kpis)
 	}
-	checkActivity(t, body, true)
-	code, body = f.get(t, f.instancePath(f.traded, fmt.Sprintf("chart-series?from=0&to=%d", f.endSec)))
-	if code != http.StatusOK {
-		t.Fatalf("chart-series %d", code)
-	}
-	series := &v1.ChartSeries{}
-	if err := proto.Unmarshal(body, series); err != nil {
-		t.Fatal(err)
-	}
+	checkActivity(t, f.activity(t, f.traded), true)
+	series := f.chart(t, f.traded, 0)
 	if len(series.TimeSec) == 0 || len(series.Portfolio) == 0 || len(series.Markers) == 0 {
 		t.Fatalf("chart from the bucket: candles %d portfolio %d markers %d", len(series.TimeSec), len(series.Portfolio), len(series.Markers))
 	}
-	if code, body := f.get(t, "/performance"); code != http.StatusOK || !strings.Contains(string(body), `"results":[{`) {
-		t.Fatalf("performance %d: %s", code, body)
+	perf, err := f.client.GetExperimentPerformance(t.Context(), connect.NewRequest(&v1.GetExperimentPerformanceRequest{Id: f.experiment}))
+	if err != nil || len(perf.Msg.Performance.Results) == 0 {
+		t.Fatalf("performance: %v %v", err, perf)
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, srv.URL+"/api/v1/experiments/"+rec.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("delete status %d", resp.StatusCode)
+	if _, err := f.client.DeleteExperiment(t.Context(), connect.NewRequest(&v1.DeleteExperimentRequest{Id: rec.ID})); err != nil {
+		t.Fatalf("delete: %v", err)
 	}
 	if left := bucketKeys(t, client, bucket, prefix); len(left) != 0 {
 		t.Fatalf("objects left after delete: %v", left)
 	}
+}
+
+func hasKpi(report *v1.KpiReport, slug string) bool {
+	for _, r := range report.Results {
+		if r.Def.Slug == slug {
+			return true
+		}
+	}
+	return false
 }

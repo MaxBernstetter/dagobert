@@ -3,7 +3,7 @@ import { cloneElement, isValidElement, startTransition, useCallback, useEffect, 
 import { ChevronRight, Loader2 } from "lucide-react";
 import type { PortfolioPoint, TradeMarker } from "@/lib/portfolio-series";
 import { emptyChartColumns, type ChartColumns, type ChartIndicatorMeta } from "@/lib/chart-series-types";
-import { chartMaxPoints, chartSeriesWindowUrl, loadChartSeries, peekChartSeries } from "@/lib/chart-series-cache";
+import { chartMaxPoints, loadChartSeries, peekChartSeries, type ChartSeriesQuery, type ChartSource } from "@/lib/chart-series-cache";
 import { indicatorColor } from "@/components/chart-theme";
 import { TimeChart, type ChartHandle, type LayerVisibility, type SeriesPoint, type TimeBand } from "@/components/time-chart";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,8 @@ type Props = {
   points: PortfolioPoint[];
   markers: TradeMarker[];
   height?: number;
-  /** Chart-series API URL (required for candle overlay). */
-  chartSeriesPath?: string;
+  /** The instance whose chart series to load (required for candle overlay). */
+  chartSeries?: ChartSource;
   /** Called with the marker time (unix seconds) when a buy or sell marker is clicked. */
   onMarkerSelect?: (time: number) => void;
   /** Headings and dividers only, for use inside an already bordered section. */
@@ -205,7 +205,7 @@ export function StrategyCharts({
   points,
   markers,
   height = 320,
-  chartSeriesPath,
+  chartSeries,
   onMarkerSelect,
   flat,
   fill,
@@ -217,15 +217,21 @@ export function StrategyCharts({
   // The instance's chart series for the whole window, budgeted to the viewport: buy and hold and the
   // first paint use it. A zoom or range preset loads the visible window with the same budget.
   const [budget] = useState(() => chartMaxPoints());
-  const basePath = chartSeriesPath ? chartSeriesPath.split("?")[0] ?? chartSeriesPath : undefined;
-  const fullPath = basePath ? chartSeriesWindowUrl(basePath, fromSec, toSec, budget) : undefined;
-  const instanceKey = basePath ? `${basePath}|${fromSec}|${toSec}` : "";
+  const sourceKey = chartSeries ? `${chartSeries.experimentId}|${chartSeries.instanceId}` : undefined;
+  const instanceKey = sourceKey ? `${sourceKey}|${fromSec}|${toSec}` : "";
   const [dataWindow, setDataWindow] = useState<{ from: number; to: number } | null>(null);
-  const dataPath = dataWindow && basePath ? chartSeriesWindowUrl(basePath, dataWindow.from, dataWindow.to, budget) : fullPath;
+  const fullQuery: ChartSeriesQuery | undefined = chartSeries
+    ? { ...chartSeries, fromSec, toSec, maxPoints: budget }
+    : undefined;
+  const dataQuery: ChartSeriesQuery | undefined =
+    dataWindow && chartSeries ? { ...chartSeries, fromSec: dataWindow.from, toSec: dataWindow.to, maxPoints: budget } : fullQuery;
+  // The queries are rebuilt each render; the effects depend on what identifies them.
+  const fullKey = fullQuery ? `${sourceKey}|${fromSec}|${toSec}` : undefined;
+  const dataKey = dataQuery ? `${sourceKey}|${dataQuery.fromSec}|${dataQuery.toSec}` : undefined;
 
-  const [columns, setColumns] = useState<ChartColumns>(() => (fullPath ? peekChartSeries(fullPath) : null) ?? emptyChartColumns);
-  const [fullColumns, setFullColumns] = useState<ChartColumns>(() => (fullPath ? peekChartSeries(fullPath) : null) ?? emptyChartColumns);
-  const [loading, setLoading] = useState(() => (fullPath ? peekChartSeries(fullPath) == null : false));
+  const [columns, setColumns] = useState<ChartColumns>(() => (fullQuery ? peekChartSeries(fullQuery) : null) ?? emptyChartColumns);
+  const [fullColumns, setFullColumns] = useState<ChartColumns>(() => (fullQuery ? peekChartSeries(fullQuery) : null) ?? emptyChartColumns);
+  const [loading, setLoading] = useState(() => (fullQuery ? peekChartSeries(fullQuery) == null : false));
   const [fetchError, setFetchError] = useState("");
   const [range, setRange] = useState<RangeId | null>("all");
   const [visibility, setVisibility] = useState<LayerVisibility>({
@@ -248,9 +254,9 @@ export function StrategyCharts({
 
   // Full-range series: the reference for buy and hold, so zooming does not move that line.
   useEffect(() => {
-    if (!fullPath) return;
+    if (!fullQuery) return;
     let cancelled = false;
-    loadChartSeries(fullPath)
+    loadChartSeries(fullQuery)
       .then((data) => {
         if (!cancelled) startTransition(() => setFullColumns(data));
       })
@@ -258,23 +264,24 @@ export function StrategyCharts({
     return () => {
       cancelled = true;
     };
-  }, [fullPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fullKey identifies fullQuery
+  }, [fullKey]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!dataPath) {
+    if (!dataQuery) {
       setColumns(emptyChartColumns);
       setLoading(false);
       setFetchError("");
       return;
     }
-    const cached = peekChartSeries(dataPath);
+    const cached = peekChartSeries(dataQuery);
     if (cached) {
       startTransition(() => setColumns(cached));
       setLoading(false);
     }
     setFetchError("");
-    loadChartSeries(dataPath)
+    loadChartSeries(dataQuery)
       .then((data) => {
         // Keep the previous window on screen until the new one is here: no spinner between zooms.
         if (!cancelled) startTransition(() => setColumns(data));
@@ -291,7 +298,8 @@ export function StrategyCharts({
     return () => {
       cancelled = true;
     };
-  }, [dataPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataKey identifies dataQuery
+  }, [dataKey]);
 
   const indicators = columns.indicators;
   useEffect(() => {
@@ -311,18 +319,18 @@ export function StrategyCharts({
   const priceIndicators = useMemo(() => indicators.filter((i) => !isOscillator(i)), [indicators]);
   const oscillators = useMemo(() => indicators.filter(isOscillator), [indicators]);
   const [painted, setPainted] = useState<{ path: string | undefined; ids: Set<string> }>({
-    path: chartSeriesPath,
+    path: sourceKey,
     ids: new Set(),
   });
-  const paintedIds = painted.path === chartSeriesPath ? painted.ids : new Set<string>();
+  const paintedIds = painted.path === sourceKey ? painted.ids : new Set<string>();
   const markPainted = useCallback((id: string) => {
     setPainted((prev) => {
-      const ids = prev.path === chartSeriesPath ? new Set(prev.ids) : new Set<string>();
-      if (ids.has(id) && prev.path === chartSeriesPath) return prev;
+      const ids = prev.path === sourceKey ? new Set(prev.ids) : new Set<string>();
+      if (ids.has(id) && prev.path === sourceKey) return prev;
       ids.add(id);
-      return { path: chartSeriesPath, ids };
+      return { path: sourceKey, ids };
     });
-  }, [chartSeriesPath]);
+  }, [sourceKey]);
   const expectedIds = useMemo(() => {
     const ids: string[] = [];
     if (columns.timeSec.length > 0) {
@@ -485,7 +493,7 @@ export function StrategyCharts({
     <div className={cn(fill ? "contents" : "relative space-y-3")}>
       {!revealed && <ChartSpinner fill={fill} overlay />}
       <div
-        key={chartSeriesPath ?? ""}
+        key={sourceKey ?? ""}
         aria-hidden={!revealed}
         className={cn(!revealed && "invisible", fill ? "contents" : "space-y-3")}
       >

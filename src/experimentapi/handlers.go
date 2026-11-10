@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
@@ -16,85 +16,93 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Server) handleListExperiments(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.q.ListExperiments(r.Context())
+// The ExperimentService methods map failures to Connect codes: a missing experiment or instance is
+// CodeNotFound, a malformed id or argument CodeInvalidArgument, an action the experiment's state
+// does not allow CodeFailedPrecondition, and everything else CodeInternal.
+
+func notFound(msg string) error {
+	return connect.NewError(connect.CodeNotFound, errors.New(msg))
+}
+
+func invalidArgument(msg string) error {
+	return connect.NewError(connect.CodeInvalidArgument, errors.New(msg))
+}
+
+func failedPrecondition(msg string) error {
+	return connect.NewError(connect.CodeFailedPrecondition, errors.New(msg))
+}
+
+func internal(err error) error {
+	return connect.NewError(connect.CodeInternal, err)
+}
+
+// loadExperiment parses the experiment id and loads its row.
+func (s *Server) loadExperiment(ctx context.Context, rawID string) (uuid.UUID, experimentdb.Experiment, error) {
+	id, err := parseExperimentID(rawID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return uuid.Nil, experimentdb.Experiment{}, invalidArgument("invalid id")
+	}
+	row, err := s.q.GetExperiment(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, experimentdb.Experiment{}, notFound("not found")
+	}
+	if err != nil {
+		return uuid.Nil, experimentdb.Experiment{}, internal(err)
+	}
+	return id, row, nil
+}
+
+func (s *Server) ListExperiments(ctx context.Context, _ *connect.Request[v1.ListExperimentsRequest]) (*connect.Response[v1.ListExperimentsResponse], error) {
+	rows, err := s.q.ListExperiments(ctx)
+	if err != nil {
+		return nil, internal(err)
 	}
 	out := make([]*v1.Experiment, 0, len(rows))
 	for _, row := range rows {
-		pb, _ := s.q.ListDistinctPlaybooks(r.Context(), row.ID)
-		sym, _ := s.q.ListDistinctSymbols(r.Context(), row.ID)
+		pb, _ := s.q.ListDistinctPlaybooks(ctx, row.ID)
+		sym, _ := s.q.ListDistinctSymbols(ctx, row.ID)
 		out = append(out, experimentFromRow(row, pb, sym))
 	}
-	writeProto(w, http.StatusOK, &v1.ListExperimentsResponse{Experiments: out})
+	return connect.NewResponse(&v1.ListExperimentsResponse{Experiments: out}), nil
 }
 
-func (s *Server) handleCreateStudy(w http.ResponseWriter, r *http.Request) {
-	var req v1.CreateExperimentRequest
-	if err := readProto(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
-		return
+func (s *Server) CreateExperiment(ctx context.Context, req *connect.Request[v1.CreateExperimentRequest]) (*connect.Response[v1.CreateExperimentResponse], error) {
+	msg := req.Msg
+	if strings.TrimSpace(msg.Name) == "" {
+		msg.Name = "Experiment"
 	}
-	if strings.TrimSpace(req.Name) == "" {
-		req.Name = "Experiment"
-	}
-	rec, err := s.createStudy(r.Context(), &req)
+	rec, err := s.createStudy(ctx, msg)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return nil, invalidArgument(err.Error())
 	}
-	writeProto(w, http.StatusCreated, rec)
+	return connect.NewResponse(&v1.CreateExperimentResponse{Experiment: rec}), nil
 }
 
-func (s *Server) handleGetExperiment(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) GetExperiment(ctx context.Context, req *connect.Request[v1.GetExperimentRequest]) (*connect.Response[v1.GetExperimentResponse], error) {
+	_, row, err := s.loadExperiment(ctx, req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
+		return nil, err
 	}
-	row, err := s.q.GetExperiment(r.Context(), id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeProto(w, http.StatusOK, experimentFromRow(row, nil, nil))
+	return connect.NewResponse(&v1.GetExperimentResponse{Experiment: experimentFromRow(row, nil, nil)}), nil
 }
 
-func (s *Server) handleDeleteExperiment(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) DeleteExperiment(ctx context.Context, req *connect.Request[v1.DeleteExperimentRequest]) (*connect.Response[v1.DeleteExperimentResponse], error) {
+	id, row, err := s.loadExperiment(ctx, req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	row, err := s.q.GetExperiment(r.Context(), id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 	if row.Status == "running" || row.Status == "materializing" {
 		msg := "cannot delete running experiment; cancel first"
 		if row.Status == "materializing" {
 			msg = "cannot delete while materializing; wait for draft"
 		}
-		writeError(w, http.StatusConflict, msg)
-		return
+		return nil, failedPrecondition(msg)
 	}
-	if err := s.q.DeleteExperiment(r.Context(), id); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+	if err := s.q.DeleteExperiment(ctx, id); err != nil {
+		return nil, internal(err)
 	}
-	removeExperimentFiles(r.Context(), id)
-	writeProto(w, http.StatusOK, &v1.OkResponse{Ok: true})
+	removeExperimentFiles(ctx, id)
+	return connect.NewResponse(&v1.DeleteExperimentResponse{}), nil
 }
 
 // removeExperimentFiles deletes everything of the experiment under DATA_DIR or, with LAKE_BACKEND=s3,
@@ -106,83 +114,54 @@ func removeExperimentFiles(ctx context.Context, id uuid.UUID) {
 	}
 }
 
-func (s *Server) handleStudyProgress(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) GetExperimentProgress(ctx context.Context, req *connect.Request[v1.GetExperimentProgressRequest]) (*connect.Response[v1.GetExperimentProgressResponse], error) {
+	id, row, err := s.loadExperiment(ctx, req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
+		return nil, err
 	}
-	row, err := s.q.GetExperiment(r.Context(), id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
+	failed, err := s.q.CountFailedInstances(ctx, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	failed, err := s.q.CountFailedInstances(r.Context(), id)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeProto(w, http.StatusOK, progressFromRow(row, failed))
+	return connect.NewResponse(&v1.GetExperimentProgressResponse{Progress: progressFromRow(row, failed)}), nil
 }
 
-func (s *Server) handleListInstances(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) ListInstances(ctx context.Context, req *connect.Request[v1.ListInstancesRequest]) (*connect.Response[v1.ListInstancesResponse], error) {
+	msg := req.Msg
+	id, _, err := s.loadExperiment(ctx, msg.ExperimentId)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	if _, err := s.q.GetExperiment(r.Context(), id); errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 
-	q := r.URL.Query()
-	limit := int32(50)
-	if v := q.Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			limit = int32(n)
-		}
+	limit := msg.Limit
+	if limit == 0 {
+		limit = 50
 	}
-	if limit < 1 {
-		limit = 1
-	}
-	if limit > 200 {
-		limit = 200
-	}
+	limit = min(max(limit, 1), 200)
 	offset := int32(0)
-	if c := strings.TrimSpace(q.Get("cursor")); c != "" {
-		if n, err := strconv.ParseInt(c, 10, 32); err == nil && n >= 0 {
-			offset = int32(n)
-		}
+	if n, err := strconv.ParseInt(strings.TrimSpace(msg.Cursor), 10, 32); err == nil && n >= 0 {
+		offset = int32(n)
 	}
-	status := strings.TrimSpace(q.Get("status"))
-	symbol := strings.TrimSpace(q.Get("symbol"))
-	search := strings.TrimSpace(q.Get("q"))
-	sortKey := mapInstanceSort(q.Get("sort"))
-	order := strings.ToLower(strings.TrimSpace(q.Get("order")))
+	status := strings.TrimSpace(msg.Status)
+	symbol := strings.TrimSpace(msg.Symbol)
+	search := strings.TrimSpace(msg.Q)
+	sortKey := mapInstanceSort(msg.Sort)
+	order := strings.ToLower(strings.TrimSpace(msg.Order))
 	if order != "desc" {
 		order = "asc"
 	}
 
-	total, err := s.q.CountInstancesFiltered(r.Context(), experimentdb.CountInstancesFilteredParams{
+	total, err := s.q.CountInstancesFiltered(ctx, experimentdb.CountInstancesFilteredParams{
 		ExperimentID: id,
 		Column2:      status,
 		Column3:      symbol,
 		Column4:      search,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 
-	rows, err := s.q.ListInstancesPage(r.Context(), experimentdb.ListInstancesPageParams{
+	rows, err := s.q.ListInstancesPage(ctx, experimentdb.ListInstancesPageParams{
 		ExperimentID: id,
 		Column2:      status,
 		Column3:      symbol,
@@ -193,8 +172,7 @@ func (s *Server) handleListInstances(w http.ResponseWriter, r *http.Request) {
 		Offset:       offset,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 	instances := make([]*v1.ExperimentInstance, 0, len(rows))
 	for _, row := range rows {
@@ -206,12 +184,12 @@ func (s *Server) handleListInstances(w http.ResponseWriter, r *http.Request) {
 		c := strconv.Itoa(int(nextOffset))
 		nextCursor = &c
 	}
-	writeProto(w, http.StatusOK, &v1.ListInstancesResponse{
+	return connect.NewResponse(&v1.ListInstancesResponse{
 		Instances:  instances,
 		Total:      total,
 		NextCursor: nextCursor,
 		Limit:      limit,
-	})
+	}), nil
 }
 
 func mapInstanceSort(sort string) string {
@@ -231,87 +209,53 @@ func mapInstanceSort(sort string) string {
 	}
 }
 
-func (s *Server) handleGetInstance(w http.ResponseWriter, r *http.Request) {
-	experimentID, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) GetInstance(ctx context.Context, req *connect.Request[v1.GetInstanceRequest]) (*connect.Response[v1.GetInstanceResponse], error) {
+	inst, err := s.loadInstance(ctx, req.Msg.ExperimentId, req.Msg.InstanceId)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
+		return nil, err
 	}
-	instID, err := uuid.Parse(r.PathValue("instanceId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid instance id")
-		return
-	}
-	row, err := s.q.GetInstance(r.Context(), experimentdb.GetInstanceParams{ExperimentID: experimentID, ID: instID})
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeProto(w, http.StatusOK, instanceFromRow(row))
+	return connect.NewResponse(&v1.GetInstanceResponse{Instance: instanceFromRow(inst)}), nil
 }
 
-func (s *Server) handleRunExperiment(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) RunExperiment(ctx context.Context, req *connect.Request[v1.RunExperimentRequest]) (*connect.Response[v1.RunExperimentResponse], error) {
+	id, row, err := s.loadExperiment(ctx, req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	row, err := s.q.GetExperiment(r.Context(), id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 	if row.Status == "running" {
-		writeError(w, http.StatusConflict, "already running")
-		return
+		return nil, failedPrecondition("already running")
 	}
 
-	var body v1.RunExperimentRequest
-	_ = readProto(r, &body)
-
 	now := timeNowMs()
-	if body.RetryFailed {
-		failed, err := s.q.CountFailedInstances(r.Context(), id)
+	if req.Msg.RetryFailed {
+		failed, err := s.q.CountFailedInstances(ctx, id)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return nil, internal(err)
 		}
 		if failed == 0 {
-			writeError(w, http.StatusBadRequest, "no failed instances to retry")
-			return
+			return nil, failedPrecondition("no failed instances to retry")
 		}
-		if err := s.markStudyRetryFailed(r.Context(), id, now, int32(failed)); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+		if err := s.markStudyRetryFailed(ctx, id, now, int32(failed)); err != nil {
+			return nil, internal(err)
 		}
 	} else {
-		if err := s.q.MarkExperimentRunning(r.Context(), experimentdb.MarkExperimentRunningParams{
+		if err := s.q.MarkExperimentRunning(ctx, experimentdb.MarkExperimentRunningParams{
 			ID:          id,
 			StartedAtMs: pgtype.Int8{Int64: now, Valid: true},
 		}); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return nil, internal(err)
 		}
-		if err := s.q.MarkInstancesRunning(r.Context(), id); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+		if err := s.q.MarkInstancesRunning(ctx, id); err != nil {
+			return nil, internal(err)
 		}
 	}
 
 	if s.hooks.RunExperiment != nil {
 		// The run outlives this request: its context must not be the request's, which ends with the response.
-		s.hooks.RunExperiment(context.Background(), id.String(), body.RetryFailed)
+		s.hooks.RunExperiment(context.Background(), id.String(), req.Msg.RetryFailed)
 	}
 
-	writeProto(w, http.StatusAccepted, &v1.RunExperimentResponse{Id: id.String(), Running: true})
+	return connect.NewResponse(&v1.RunExperimentResponse{Id: id.String(), Running: true}), nil
 }
 
 func (s *Server) markStudyRetryFailed(ctx context.Context, id uuid.UUID, now int64, failedCount int32) error {
@@ -333,49 +277,35 @@ func (s *Server) markStudyRetryFailed(ctx context.Context, id uuid.UUID, now int
 	return err
 }
 
-func (s *Server) handleCancelStudy(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) CancelExperiment(ctx context.Context, req *connect.Request[v1.CancelExperimentRequest]) (*connect.Response[v1.CancelExperimentResponse], error) {
+	id, row, err := s.loadExperiment(ctx, req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
-	}
-	row, err := s.q.GetExperiment(r.Context(), id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 	if row.Status != "running" {
-		writeError(w, http.StatusConflict, "experiment is not running")
-		return
+		return nil, failedPrecondition("experiment is not running")
 	}
 
 	now := timeNowMs()
-	if err := s.q.MarkExperimentCancelled(r.Context(), experimentdb.MarkExperimentCancelledParams{
+	if err := s.q.MarkExperimentCancelled(ctx, experimentdb.MarkExperimentCancelledParams{
 		ID:           id,
 		FinishedAtMs: pgtype.Int8{Int64: now, Valid: true},
 	}); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	if err := s.q.MarkRunningInstancesCancelled(r.Context(), id); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+	if err := s.q.MarkRunningInstancesCancelled(ctx, id); err != nil {
+		return nil, internal(err)
 	}
 
 	if s.hooks.CancelStudy != nil {
 		s.hooks.CancelStudy(id.String())
 	}
 
-	got, err := s.q.GetExperiment(r.Context(), id)
+	got, err := s.q.GetExperiment(ctx, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	writeProto(w, http.StatusOK, experimentFromRow(got, nil, nil))
+	return connect.NewResponse(&v1.CancelExperimentResponse{Id: id.String(), Experiment: experimentFromRow(got, nil, nil)}), nil
 }
 
 func parseExperimentID(raw string) (uuid.UUID, error) {

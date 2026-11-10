@@ -2,7 +2,6 @@ package experimentapi
 
 import (
 	"math"
-	"net/http/httptest"
 	"testing"
 
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
@@ -134,19 +133,5 @@ func TestDownsampleSeriesIdentityAndInputUnchanged(t *testing.T) {
 	downsampleSeries(in, 3)
 	if len(in.TimeSec) != before || in.Indicators[0].Value[9] != 90 {
 		t.Fatal("downsampling modified its input")
-	}
-}
-
-func TestChartMaxPointsParse(t *testing.T) {
-	cases := map[string]int{"": 0, "0": 0, "-7": 0, "2000": 2000}
-	for raw, want := range cases {
-		r := httptest.NewRequest("GET", "/x?maxPoints="+raw, nil)
-		got, err := chartMaxPoints(r)
-		if err != nil || got != want {
-			t.Fatalf("maxPoints=%q: %d %v want %d", raw, got, err, want)
-		}
-	}
-	if _, err := chartMaxPoints(httptest.NewRequest("GET", "/x?maxPoints=many", nil)); err == nil {
-		t.Fatal("non-integer maxPoints must be rejected")
 	}
 }

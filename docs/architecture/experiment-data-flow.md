@@ -15,12 +15,12 @@ sequenceDiagram
     participant O as Orchestrator fan-out
     participant W as dagobert-backtest container
     participant L as Lake and workspaces
-    B->>A: POST /api/v1/experiments
+    B->>A: CreateExperiment
     A->>P: insert experiment (materializing), instances (draft)
     A->>P: status draft
-    B->>A: POST /api/v1/experiments/{id}/run
+    B->>A: RunExperiment
     A->>P: experiment and instances running
-    A->>O: hook RunExperiment (202)
+    A->>O: hook RunExperiment
     O->>W: prepare
     W->>L: coverage, ingest gaps, indicator window, KPI handoff files
     O->>W: simulate (one or many batches)
@@ -85,8 +85,8 @@ Rules: `POST .../run` returns 409 while the experiment is `running`. `retryFaile
 
 | Stage | Entry point | Inputs | Outputs / state | Failure and retry |
 |---|---|---|---|---|
-| Create | `handleCreateStudy` -> `createStudy` (`src/experimentapi/create.go`) | settings + MANUAL list or GRID axes (`specsFromGrid`, max 20 000 valid combos) | `experiment` row `materializing`, then `experiment_instance` rows, status `draft` | up to 250 instances (`syncMaterialize`) in the request, more via `materializeAsync`; error -> experiment `failed` |
-| Run request | `handleRunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | 409 if running; orchestrator ignores the hook call if another job runs (single-flight) |
+| Create | `CreateExperiment` -> `createStudy` (`src/experimentapi/create.go`) | settings + MANUAL list or GRID axes (`specsFromGrid`, max 20 000 valid combos) | `experiment` row `materializing`, then `experiment_instance` rows, status `draft` | up to 250 instances (`syncMaterialize`) in the request, more via `materializeAsync`; error -> experiment `failed` |
+| Run request | `RunExperiment` (`handlers.go`) | experiment id, `retryFailed` | experiment and instances `running`; hook `RunExperiment` | `failed_precondition` if running; orchestrator ignores the hook call if another job runs (single-flight) |
 | Fan-out | `runStudyJob` (`src/orchestrator/cmd/orchestrator/experiment_fanout.go`) | `EXPERIMENT_RUN_BACKEND` | worker containers with `EXPERIMENT_PHASE` | any non-zero exit stops the job; job state is in memory only |
 | Prepare | `RunExperimentPrepare` (`src/backtest/run_experiment_phases.go`) | settings, Parquet lake, ingest ledger (Postgres) | progress stages 1-3; KPI handoff files (`WriteAllExperimentSymKPI`, `WriteExperimentPrepareMeta`) | symbol without coverage: `ingestExperimentRange` then re-check; still failing -> `failSymbol` fails its instances; unavailable hours do not block |
 | Simulate | `RunExperimentSimulate` | handoff files, instance ids | progress stage 4; instance results to the persister | per-instance error -> `failed` row; function only errors on setup |
@@ -128,21 +128,21 @@ No fallback: an unsupported playbook or a missing binary fails the instance with
 
 ## Progress and what the frontend polls
 
-Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`). Routes: `src/experimentapi/api.go`.
+Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`). Service: `ExperimentService`, mounted in `src/experimentapi/api.go`.
 
-| Endpoint | Shows | Used by |
+| Method | Shows | Used by |
 |---|---|---|
-| `GET /api/v1/experiments` | experiment list | list view |
-| `GET /api/v1/experiments/{id}` | summary only | detail header |
-| `GET .../{id}/progress` | status, stage (1 prepare, 2 market data, 3 indicators, 4 instance simulation), instance done/total, failed count | polled every 1500 ms while selected (`components/experiments-panel.tsx`), then the instance page reloads |
-| `GET .../{id}/instances` | paginated, SQL sort and filter on metric columns | instance table |
-| `GET .../instances/{instanceId}` | one instance row | detail |
-| `.../report`, `.../kpis`, `.../activity`, `.../chart-series?from=&to=[&maxPoints=N]` (unix s) | report, win-rate ladders, fills, chart data | instance detail |
+| `ListExperiments` | experiment list | list view |
+| `GetExperiment` | summary only | detail header |
+| `GetExperimentProgress` | status, stage (1 prepare, 2 market data, 3 indicators, 4 instance simulation), instance done/total, failed count | polled every 1500 ms while selected (`components/experiments-panel.tsx`), then the instance page reloads |
+| `ListInstances` | paginated, SQL sort and filter on metric columns | instance table |
+| `GetInstance` | one instance row | detail |
+| `GetInstanceReport`, `GetInstanceKpis`, `GetInstanceActivity`, `GetChartSeries` (`fromSec`, `toSec`, `maxPoints`) | report, win-rate ladders, fills, chart data | instance detail |
 
-Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip`). `maxPoints` on `chart-series` buckets the candles to at most N (OHLC aggregated, indicators at the bucket's last candle); portfolio and markers stay exact. The frontend sends about two candles per viewport pixel (400 to 4000), and each zoom or range preset fetches its window with the same budget. See `src/experimentapi/README.md`.
-| `GET .../{id}/performance` | experiment-level reduction | performance view |
-| `GET .../{id}/status` | aggregate status (`status.go`) | not used by `api.ts` |
-| `POST .../{id}/run`, `POST .../{id}/cancel`, `DELETE .../{id}` | actions | buttons |
+Connect gzips a response when the client asks for it (`Accept-Encoding: gzip`). `maxPoints` on `GetChartSeries` buckets the candles to at most N (OHLC aggregated, indicators at the bucket's last candle); portfolio and markers stay exact. The frontend sends about two candles per viewport pixel (400 to 4000), and each zoom or range preset fetches its window with the same budget. See `src/experimentapi/README.md`.
+| `GetExperimentPerformance` | experiment-level reduction | performance view |
+| `GetExperimentStatus` | aggregate status (`status.go`) | not used by the SPA |
+| `RunExperiment`, `CancelExperiment`, `DeleteExperiment` | actions | buttons |
 
 ## Knobs
 
@@ -151,7 +151,7 @@ Every response is gzip-coded when the client asks for it (`Accept-Encoding: gzip
 | `DATABASE_URL` | unset | Postgres catalog, required by the worker (a run fails without it) and by the Experiment API (routes are mounted only when set) |
 | `EXPERIMENT_SIM_WORKERS` | CPU count | Go KPI replay workers (CPU bound) |
 | `EXPERIMENT_CPP_PROCESSES` | CPU count | fallback for the concurrent C++ `--sweep` processes when the experiment has no "Parallel processes" value (see below) |
-| `EXPERIMENT_MAX_PARALLELISM` | CPU count of the API process | the largest "Parallel processes" value create accepts; `GET /api/v1/experiments/limits` returns it |
+| `EXPERIMENT_MAX_PARALLELISM` | CPU count of the API process | the largest "Parallel processes" value create accepts; `GetExperimentLimits` returns it |
 | `EXPERIMENT_CPP_SHARD_MAX` | 500 | upper bound of instances per shard (shard = `ceil(n/processes)` capped here) |
 | `CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN` | set in the worker image (`/usr/local/bin/...`) | C++ strategy executables |
 | `EXPERIMENT_RUN_BACKEND` | `docker` | `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |

@@ -1,25 +1,32 @@
 package experimentapi
 
-import "net/http"
+import (
+	"context"
+	"strconv"
+
+	"connectrpc.com/connect"
+	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
+	"google.golang.org/protobuf/types/known/structpb"
+)
 
 // experimentReadyStrategies lists the playbooks that accept a strategyConfig and can be replayed
 // by the experiment runner, with the options the create form renders for each. It is an allowlist:
 // add a playbook here only when the runner can validate and replay its config.
-var experimentReadyStrategies = []strategyView{
+var experimentReadyStrategies = []*v1.ExperimentStrategy{
 	{
-		ID:              "ma-cross",
+		Id:              "ma-cross",
 		Label:           "Moving-Average Cross",
 		ExperimentReady: true,
-		Options: []strategyOption{
+		Options: []*v1.StrategyOption{
 			enumOption("fastHr", "Fast window", "Shorter SMA lookback in calendar hours (must divide bar duration).", 3),
 			enumOption("slowHr", "Slow window", "Longer SMA lookback; must be greater than the fast window.", 6),
 		},
 	},
 	{
-		ID:              "signal-consensus",
+		Id:              "signal-consensus",
 		Label:           "Signal consensus",
 		ExperimentReady: true,
-		Options: []strategyOption{
+		Options: []*v1.StrategyOption{
 			numberOption("rsiBull", "RSI bull", "RSI at or above this counts as bullish momentum.", 50, 80, 1, "", 52),
 			numberOption("rsiBear", "RSI bear", "RSI at or below this counts as bearish momentum.", 20, 50, 1, "", 48),
 			numberOption("volRatioBull", "Volume bull ratio", "Bar volume / mean at or above this is bullish.", 1, 3, 0.05, "", 1.1),
@@ -31,56 +38,29 @@ var experimentReadyStrategies = []strategyView{
 	},
 }
 
-var smaHourValues = []strategyValue{
-	{Value: 3, Label: "3h"},
-	{Value: 6, Label: "6h"},
-	{Value: 12, Label: "12h"},
-	{Value: 24, Label: "24h"},
-	{Value: 48, Label: "48h"},
-}
+var smaHourValues = func() []*v1.StrategyOptionValue {
+	hours := []float64{3, 6, 12, 24, 48}
+	out := make([]*v1.StrategyOptionValue, 0, len(hours))
+	for _, h := range hours {
+		out = append(out, &v1.StrategyOptionValue{Value: structpb.NewNumberValue(h), Label: strconv.FormatFloat(h, 'f', -1, 64) + "h"})
+	}
+	return out
+}()
 
-type strategyView struct {
-	ID              string           `json:"id"`
-	Label           string           `json:"label"`
-	Description     string           `json:"description,omitempty"`
-	ExperimentReady bool             `json:"experimentReady"`
-	Options         []strategyOption `json:"options"`
-}
-
-// strategyOption is either an enum (Values set) or a number (Min and Max set).
-type strategyOption struct {
-	Key         string          `json:"key"`
-	Label       string          `json:"label"`
-	Description string          `json:"description,omitempty"`
-	Kind        string          `json:"kind"`
-	ValueType   string          `json:"valueType,omitempty"`
-	Values      []strategyValue `json:"values,omitempty"`
-	Min         *float64        `json:"min,omitempty"`
-	Max         *float64        `json:"max,omitempty"`
-	Step        *float64        `json:"step,omitempty"`
-	Unit        string          `json:"unit,omitempty"`
-	Default     any             `json:"default"`
-}
-
-type strategyValue struct {
-	Value any    `json:"value"`
-	Label string `json:"label"`
-}
-
-func enumOption(key, label, description string, def int) strategyOption {
-	return strategyOption{
+func enumOption(key, label, description string, def float64) *v1.StrategyOption {
+	return &v1.StrategyOption{
 		Key:         key,
 		Label:       label,
 		Description: description,
 		Kind:        "enum",
 		ValueType:   "number",
 		Values:      smaHourValues,
-		Default:     def,
+		Default:     structpb.NewNumberValue(def),
 	}
 }
 
-func numberOption(key, label, description string, min, max, step float64, unit string, def float64) strategyOption {
-	return strategyOption{
+func numberOption(key, label, description string, min, max, step float64, unit string, def float64) *v1.StrategyOption {
+	return &v1.StrategyOption{
 		Key:         key,
 		Label:       label,
 		Description: description,
@@ -89,10 +69,10 @@ func numberOption(key, label, description string, min, max, step float64, unit s
 		Max:         &max,
 		Step:        &step,
 		Unit:        unit,
-		Default:     def,
+		Default:     structpb.NewNumberValue(def),
 	}
 }
 
-func (s *Server) handleListStrategies(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"strategies": experimentReadyStrategies})
+func (s *Server) ListStrategies(context.Context, *connect.Request[v1.ListStrategiesRequest]) (*connect.Response[v1.ListStrategiesResponse], error) {
+	return connect.NewResponse(&v1.ListStrategiesResponse{Strategies: experimentReadyStrategies}), nil
 }

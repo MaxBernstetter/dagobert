@@ -7,12 +7,8 @@ import {
   type StrategyKpiResult,
 } from "@/lib/strategy-kpi-shared";
 import { BacktestPerformanceSummary } from "@/components/backtest-performance-summary";
+import { loadKpiSet, type KpiSource } from "@/lib/experiment-api";
 import { cn } from "@/lib/utils";
-
-type KpiSet = {
-  results: StrategyKpiResult[];
-  comparison?: StrategyKpiComparison;
-};
 
 export function StrategyKpiTags({
   playbook,
@@ -20,14 +16,14 @@ export function StrategyKpiTags({
   fromMs = 0,
   toMs = 0,
   className,
-  kpiApiUrl,
+  kpiSource,
 }: {
   playbook: string;
   symbol: string;
   fromMs?: number;
   toMs?: number;
   className?: string;
-  kpiApiUrl?: string;
+  kpiSource?: KpiSource;
 }) {
   const [results, setResults] = useState<StrategyKpiResult[] | null>(null);
   const [comparison, setComparison] = useState<StrategyKpiComparison | undefined>(undefined);
@@ -37,22 +33,14 @@ export function StrategyKpiTags({
 
     (async () => {
       try {
-        if (!kpiApiUrl) {
+        if (!kpiSource) {
           if (!cancelled) {
             setResults([]);
             setComparison(undefined);
           }
           return;
         }
-        const res = await fetch(kpiApiUrl);
-        if (!res.ok) {
-          if (!cancelled) {
-            setResults([]);
-            setComparison(undefined);
-          }
-          return;
-        }
-        const data = (await res.json()) as KpiSet;
+        const data = await loadKpiSet(kpiSource);
         if (!cancelled) {
           setResults(data.results ?? []);
           setComparison(data.comparison);
@@ -68,7 +56,8 @@ export function StrategyKpiTags({
     return () => {
       cancelled = true;
     };
-  }, [kpiApiUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the ids identify the source
+  }, [kpiSource?.experimentId, kpiSource?.instanceId]);
 
   if (results === null) {
     return (

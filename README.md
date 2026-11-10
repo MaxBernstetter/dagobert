@@ -52,7 +52,7 @@ flowchart LR
 | Path | What is there |
 | --- | --- |
 | `src/frontend` | Vite + React app: Experiments, Connectors, Wiki. |
-| `src/orchestrator`, `src/experimentapi` | Orchestrator process and the HTTP Experiment API. |
+| `src/orchestrator`, `src/experimentapi` | Orchestrator process and the Connect-RPC Experiment API (`ExperimentService`). |
 | `src/backtest`, `src/cmd/backtest` | Experiment engine and the `dagobert-backtest` entrypoint. |
 | `src/calculation-signal` | Playbooks, the replay framework, sizing and strategy KPIs. |
 | `src/calculation-technical-indicator` | One package per indicator. |

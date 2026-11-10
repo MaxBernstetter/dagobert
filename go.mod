@@ -1,10 +1,11 @@
 module github.com/MaxBernstetter/dagobert
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.4
 
 require (
+	connectrpc.com/connect v1.19.1
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2 v1.47.4
 	github.com/aws/aws-sdk-go-v2/config v1.33.9

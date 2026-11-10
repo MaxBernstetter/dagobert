@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from "react";
+import { loadKpiSet, type KpiSource } from "@/lib/experiment-api";
 import type {
   BacktestRunStatistics,
   StrategyKpiComparison,
   StrategyKpiResult,
-  StrategyKpiSet,
 } from "@/lib/strategy-kpi-shared";
 
 export type BacktestKpiSetState = {
@@ -14,14 +14,14 @@ export type BacktestKpiSetState = {
   statistics: BacktestRunStatistics | undefined;
 };
 
-export function useBacktestKpiSet(kpiApiUrl: string | undefined): BacktestKpiSetState {
-  const [loading, setLoading] = useState(Boolean(kpiApiUrl));
+export function useBacktestKpiSet(source: KpiSource | undefined): BacktestKpiSetState {
+  const [loading, setLoading] = useState(Boolean(source));
   const [results, setResults] = useState<StrategyKpiResult[]>([]);
   const [comparison, setComparison] = useState<StrategyKpiComparison | undefined>(undefined);
   const [statistics, setStatistics] = useState<BacktestRunStatistics | undefined>(undefined);
 
   useEffect(() => {
-    if (!kpiApiUrl) {
+    if (!source) {
       setLoading(false);
       setResults([]);
       setComparison(undefined);
@@ -32,17 +32,7 @@ export function useBacktestKpiSet(kpiApiUrl: string | undefined): BacktestKpiSet
     setLoading(true);
     (async () => {
       try {
-        const res = await fetch(kpiApiUrl, { cache: "no-store" });
-        if (!res.ok) {
-          if (!cancelled) {
-            setResults([]);
-            setComparison(undefined);
-            setStatistics(undefined);
-            setLoading(false);
-          }
-          return;
-        }
-        const data = (await res.json()) as StrategyKpiSet;
+        const data = await loadKpiSet(source);
         if (!cancelled) {
           setResults(data.results ?? []);
           setComparison(data.comparison);
@@ -61,7 +51,8 @@ export function useBacktestKpiSet(kpiApiUrl: string | undefined): BacktestKpiSet
     return () => {
       cancelled = true;
     };
-  }, [kpiApiUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the ids identify the source
+  }, [source?.experimentId, source?.instanceId]);
 
   return { loading, results, comparison, statistics };
 }

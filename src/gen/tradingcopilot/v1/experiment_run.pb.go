@@ -24,6 +24,7 @@ const (
 type RunExperimentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RetryFailed   bool                   `protobuf:"varint,1,opt,name=retry_failed,json=retryFailed,proto3" json:"retry_failed,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -63,6 +64,13 @@ func (x *RunExperimentRequest) GetRetryFailed() bool {
 		return x.RetryFailed
 	}
 	return false
+}
+
+func (x *RunExperimentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 type RunExperimentResponse struct {
@@ -134,11 +142,13 @@ func (x *RunExperimentResponse) GetFinished() string {
 }
 
 type CancelExperimentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Running       bool                   `protobuf:"varint,2,opt,name=running,proto3" json:"running,omitempty"`
-	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	Finished      string                 `protobuf:"bytes,4,opt,name=finished,proto3" json:"finished,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Running  bool                   `protobuf:"varint,2,opt,name=running,proto3" json:"running,omitempty"`
+	Error    string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Finished string                 `protobuf:"bytes,4,opt,name=finished,proto3" json:"finished,omitempty"`
+	// The experiment after the cancel.
+	Experiment    *Experiment `protobuf:"bytes,5,opt,name=experiment,proto3" json:"experiment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -199,6 +209,13 @@ func (x *CancelExperimentResponse) GetFinished() string {
 		return x.Finished
 	}
 	return ""
+}
+
+func (x *CancelExperimentResponse) GetExperiment() *Experiment {
+	if x != nil {
+		return x.Experiment
+	}
+	return nil
 }
 
 // ExperimentWorkerBatch is the Lambda / simulate-batch payload.
@@ -372,19 +389,23 @@ var File_tradingcopilot_v1_experiment_run_proto protoreflect.FileDescriptor
 
 const file_tradingcopilot_v1_experiment_run_proto_rawDesc = "" +
 	"\n" +
-	"&tradingcopilot/v1/experiment_run.proto\x12\x11tradingcopilot.v1\"9\n" +
+	"&tradingcopilot/v1/experiment_run.proto\x12\x11tradingcopilot.v1\x1a\"tradingcopilot/v1/experiment.proto\"I\n" +
 	"\x14RunExperimentRequest\x12!\n" +
-	"\fretry_failed\x18\x01 \x01(\bR\vretryFailed\"s\n" +
+	"\fretry_failed\x18\x01 \x01(\bR\vretryFailed\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"s\n" +
 	"\x15RunExperimentResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\arunning\x18\x02 \x01(\bR\arunning\x12\x14\n" +
 	"\x05error\x18\x03 \x01(\tR\x05error\x12\x1a\n" +
-	"\bfinished\x18\x04 \x01(\tR\bfinished\"v\n" +
+	"\bfinished\x18\x04 \x01(\tR\bfinished\"\xb5\x01\n" +
 	"\x18CancelExperimentResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\arunning\x18\x02 \x01(\bR\arunning\x12\x14\n" +
 	"\x05error\x18\x03 \x01(\tR\x05error\x12\x1a\n" +
-	"\bfinished\x18\x04 \x01(\tR\bfinished\"z\n" +
+	"\bfinished\x18\x04 \x01(\tR\bfinished\x12=\n" +
+	"\n" +
+	"experiment\x18\x05 \x01(\v2\x1d.tradingcopilot.v1.ExperimentR\n" +
+	"experiment\"z\n" +
 	"\x15ExperimentWorkerBatch\x12#\n" +
 	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\x12!\n" +
 	"\finstance_ids\x18\x02 \x03(\tR\vinstanceIds\x12\x19\n" +
@@ -417,14 +438,16 @@ var file_tradingcopilot_v1_experiment_run_proto_goTypes = []any{
 	(*ExperimentWorkerBatch)(nil),    // 3: tradingcopilot.v1.ExperimentWorkerBatch
 	(*InstanceBatch)(nil),            // 4: tradingcopilot.v1.InstanceBatch
 	(*ExperimentSFNInput)(nil),       // 5: tradingcopilot.v1.ExperimentSFNInput
+	(*Experiment)(nil),               // 6: tradingcopilot.v1.Experiment
 }
 var file_tradingcopilot_v1_experiment_run_proto_depIdxs = []int32{
-	4, // 0: tradingcopilot.v1.ExperimentSFNInput.batches:type_name -> tradingcopilot.v1.InstanceBatch
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: tradingcopilot.v1.CancelExperimentResponse.experiment:type_name -> tradingcopilot.v1.Experiment
+	4, // 1: tradingcopilot.v1.ExperimentSFNInput.batches:type_name -> tradingcopilot.v1.InstanceBatch
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_tradingcopilot_v1_experiment_run_proto_init() }
@@ -432,6 +455,7 @@ func file_tradingcopilot_v1_experiment_run_proto_init() {
 	if File_tradingcopilot_v1_experiment_run_proto != nil {
 		return
 	}
+	file_tradingcopilot_v1_experiment_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

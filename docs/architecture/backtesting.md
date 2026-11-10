@@ -10,9 +10,9 @@ An **Experiment** (catalogued as a experiment row) shares range/capital across N
 
 Create UI supports **Manual** instances or **GRID** search: options render as cards (≥2 per row). Enum axes are multi-select; number axes use a dual-thumb min/max range slider plus a tick field. The client posts **settings + grid axes** (or a small manual instance list); the server expands the cartesian product (invalid configs dropped, max 20 000 valid) asynchronously (`status: materializing` → `draft`). Experiment GET is a **summary only**; instances are a **paginated** child resource with SQL sort/filter on denormalized KPI columns written at sim complete. See `docs/grooming/experiment-api-scale.md`.
 
-**Retry failed:** `POST /api/v1/experiments/{id}/run` with `{ "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
+**Retry failed:** `RunExperiment` with `{ "id": ..., "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
 
-Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `POST /api/v1/experiments/{id}/run` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
+Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `ExperimentService.RunExperiment` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
 
 Instance artifact: the instance's row in `<shard_key>/reports.parquet` (report JSON: runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder come from the instance's row group in `trade_outcomes.parquet` (one row per sell) and the period win counts in Postgres; `GET .../kpis` and `GET .../performance` read them. Finalize rebuilds the experiment performance from the outcome files.
 
@@ -57,7 +57,7 @@ Signal/fill playbook keys use `ma-cross.yaml#<config_hash>` so variants never co
 
 Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (orchestrator `POST /backtest/run`). There is no Backtesting page in the UI and the experiment flow does not use it.
 
-Reports use experiment instance APIs under `/api/v1/experiments/{id}/instances/{instanceId}/…`.
+Reports use the instance methods of `ExperimentService` (`GetInstanceReport`, `GetInstanceKpis`, `GetInstanceActivity`, `GetChartSeries`).
 
 While `status = running`, the catalog carries staged progress: `progress_stage` / `progress_stages` (prepare, market data, indicators, instance simulation), `progress_stage_label`, and instance counters.
 
