@@ -2,6 +2,7 @@ package pgcatalog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrExperimentCancelled is returned when a phase tries to write its status to an experiment that was
+// cancelled. The cancel wins: the phase must stop and the row stays cancelled.
+var ErrExperimentCancelled = errors.New("experiment cancelled")
 
 // Catalog is the Postgres experiment catalog for backtest job phases.
 type Catalog struct {
@@ -121,13 +126,26 @@ func (c *Catalog) MarkExperimentRunning(ctx context.Context, experimentID string
 		return err
 	}
 	now := time.Now().UnixMilli()
-	if err := c.q.MarkExperimentRunning(ctx, experimentdb.MarkExperimentRunningParams{
-		ID:         sid,
-		StartedAtMs: pgtype.Int8{Int64: now, Valid: true},
-	}); err != nil {
+	tx, err := c.pool.Begin(ctx)
+	if err != nil {
 		return err
 	}
-	return c.q.MarkInstancesRunning(ctx, sid)
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op after commit
+	q := c.q.WithTx(tx)
+	n, err := q.MarkExperimentRunningUnlessCancelled(ctx, experimentdb.MarkExperimentRunningUnlessCancelledParams{
+		ID:          sid,
+		StartedAtMs: pgtype.Int8{Int64: now, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrExperimentCancelled
+	}
+	if err := q.MarkInstancesRunning(ctx, sid); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (c *Catalog) MarkExperimentRetryFailed(ctx context.Context, experimentID string) (int, error) {
@@ -143,12 +161,16 @@ func (c *Catalog) MarkExperimentRetryFailed(ctx context.Context, experimentID st
 		return 0, fmt.Errorf("no failed instances to retry")
 	}
 	now := time.Now().UnixMilli()
-	if err := c.q.MarkExperimentRetryFailed(ctx, experimentdb.MarkExperimentRetryFailedParams{
+	rows, err := c.q.MarkExperimentRetryFailed(ctx, experimentdb.MarkExperimentRetryFailedParams{
 		ID:                    sid,
 		StartedAtMs:           pgtype.Int8{Int64: now, Valid: true},
 		ProgressInstanceTotal: int32(n),
-	}); err != nil {
+	})
+	if err != nil {
 		return 0, err
+	}
+	if rows == 0 {
+		return 0, ErrExperimentCancelled
 	}
 	if err := c.q.MarkFailedInstancesRunning(ctx, sid); err != nil {
 		return 0, err
@@ -162,11 +184,18 @@ func (c *Catalog) MarkExperimentRunningKeepCompleted(ctx context.Context, experi
 		return err
 	}
 	now := time.Now().UnixMilli()
-	return c.q.MarkExperimentRunningKeep(ctx, experimentdb.MarkExperimentRunningKeepParams{
+	rows, err := c.q.MarkExperimentRunningKeep(ctx, experimentdb.MarkExperimentRunningKeepParams{
 		ID:                    sid,
 		StartedAtMs:           pgtype.Int8{Int64: now, Valid: true},
 		ProgressInstanceTotal: int32(retryTotal),
 	})
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrExperimentCancelled
+	}
+	return nil
 }
 
 func (c *Catalog) SetExperimentProgress(ctx context.Context, experimentID string, stage int, label string, instanceDone, instanceTotal int) error {

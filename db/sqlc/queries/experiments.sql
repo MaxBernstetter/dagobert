@@ -52,7 +52,8 @@ SET progress_stage = $2,
     progress_stage_label = $4,
     progress_instance_done = $5,
     progress_instance_total = $6
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
 -- name: MarkExperimentDraft :exec
 UPDATE experiment
@@ -69,7 +70,8 @@ SET status = 'failed',
     error = $2,
     finished_at_ms = $3,
     progress_stage_label = 'Failed'
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
 -- name: MarkExperimentCompleted :exec
 UPDATE experiment
@@ -79,7 +81,8 @@ SET status = 'completed',
     progress_stage = 4,
     progress_stages = 4,
     progress_stage_label = 'Instance simulation'
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
 -- name: MarkExperimentPartial :exec
 UPDATE experiment
@@ -89,9 +92,10 @@ SET status = 'partial',
     progress_stage = 4,
     progress_stages = 4,
     progress_stage_label = 'Instance simulation'
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
--- name: MarkExperimentRunningKeep :exec
+-- name: MarkExperimentRunningKeep :execrows
 UPDATE experiment
 SET status = 'running',
     started_at_ms = $2,
@@ -102,9 +106,10 @@ SET status = 'running',
     progress_stage_label = 'Preparing',
     progress_instance_done = 0,
     progress_instance_total = $3
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
--- name: MarkExperimentRetryFailed :exec
+-- name: MarkExperimentRetryFailed :execrows
 UPDATE experiment
 SET status = 'running',
     started_at_ms = $2,
@@ -115,7 +120,8 @@ SET status = 'running',
     progress_stage_label = 'Preparing',
     progress_instance_done = 0,
     progress_instance_total = $3
-WHERE id = $1;
+WHERE id = $1
+  AND status <> 'cancelled';
 
 -- name: MarkExperimentRunning :exec
 UPDATE experiment
@@ -128,6 +134,19 @@ SET status = 'running',
     progress_stage_label = 'Starting',
     progress_instance_done = 0
 WHERE id = $1;
+
+-- name: MarkExperimentRunningUnlessCancelled :execrows
+UPDATE experiment
+SET status = 'running',
+    started_at_ms = $2,
+    finished_at_ms = NULL,
+    error = '',
+    progress_stage = 1,
+    progress_stages = 4,
+    progress_stage_label = 'Starting',
+    progress_instance_done = 0
+WHERE id = $1
+  AND status <> 'cancelled';
 
 -- name: MarkExperimentCancelled :exec
 UPDATE experiment
