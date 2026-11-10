@@ -16,7 +16,7 @@ Host: `https://data-api.binance.vision`. It serves public market data only. The 
 |---|---|
 | Closed candles | `GET /api/v3/klines?symbol=…&interval=1h&startTime=…&limit=1000` |
 | Symbol rules | `GET /api/v3/exchangeInfo?symbol=…` |
-| Pair list (orchestrator) | `GET /api/v3/exchangeInfo` for all spot markets with status `TRADING` |
+| Pair list (`ProviderService`) | `GET /api/v3/exchangeInfo` for all spot markets with status `TRADING` |
 
 Request weight is 2 per kline call. The facade paces calls against `rate_limit`. A response of 429 or 418 is retried with backoff, and `Retry-After` is honoured when present. Repeated 429s can end in 418, so the job does not retry faster than the limit.
 
@@ -55,7 +55,7 @@ The job takes `-base` and `-quote` (for example `BTC` and `USDT`) with `-from` a
 
 The legacy `-symbol BTCUSDT` flag is still accepted and split into base and quote.
 
-The pipeline runs on `BTC/USDT`, `ETH/USDT` and `USDC/USDT`. `USDC/USDT` is needed because execution converts a USDT price into USDC with `usdc_price = usdt_close / usdcusdt_close`. The orchestrator's pair list shows every TRADING spot market, but the pipeline only processes the pairs configured for it.
+The pipeline runs on `BTC/USDT`, `ETH/USDT` and `USDC/USDT`. `USDC/USDT` is needed because execution converts a USDT price into USDC with `usdc_price = usdt_close / usdcusdt_close`. The provider pair list (`ProviderService`) shows every TRADING spot market, but the pipeline only processes the pairs configured for it.
 
 ## Process
 
@@ -63,7 +63,7 @@ The pipeline runs on `BTC/USDT`, `ETH/USDT` and `USDC/USDT`. `USDC/USDT` is need
 2. Fetch only the missing closed hours, page by page.
 3. Drop any row whose close time is still in the future.
 4. Write the seven stored fields to Parquet at `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`. The footer carries `trading_copilot.interval_ms` (3600000) and `trading_copilot.data_source` (`binance`).
-5. Index each stored hour in `ingest.sqlite` with primary key `(provider, base, quote, open_time)`.
+5. Index each stored hour in the Postgres table `ingest_stored` with primary key `(provider, base, quote, open_time)`.
 
 A second run with the same parameters makes no Binance call and writes no rows.
 
@@ -101,6 +101,9 @@ Redirects are followed only within the same host, up to two hops.
 |---|---|
 | `BINANCE_BASE_URL` | Base URL. Defaults to `https://data-api.binance.vision` in backtest runs. |
 | `INGEST_PROVIDER` | Provider id when `-provider` is not given. |
-| `DATA_DIR` | Root of `parquet/` and `ingest.sqlite`. |
+| `DATA_DIR` | Root of `parquet/` when `LAKE_BACKEND=fs`. |
+| `DATABASE_URL` | Postgres holding the ingest ledger (`ingest_stored`, `ingest_unavailable`). Required; the run fails (exit 1) without it. |
+| `LAKE_BACKEND` | `fs` (default for the bare job) or `s3`. With `s3` the job uploads each year file to `LAKE_BUCKET` (at `AWS_ENDPOINT_URL` on Floci), keeps no local copy, and fails the run if the upload fails. Compose sets `s3`. |
+| `LAKE_BUCKET` | Bucket for `s3`. |
 
 Related: [backtesting](../architecture/backtesting.md)

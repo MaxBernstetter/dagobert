@@ -1,5 +1,7 @@
 # Facade: list pairs per provider + currency-normalized lake
 
+> Historical: this note describes the removed orchestrator and its REST routes (`/api/v1/...`). The current runtime is in [docs/architecture/local-stack.md](../architecture/local-stack.md); the APIs are Connect services in `proto/`.
+
 ## Locked decisions
 
 | # | Choice |

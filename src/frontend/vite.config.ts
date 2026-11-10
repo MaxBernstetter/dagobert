@@ -8,7 +8,18 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, "");
-  const proxyTarget = env.VITE_DEV_API_PROXY || env.VITE_EXPERIMENT_API_URL || "http://127.0.0.1:11090";
+  // Connect services (ExperimentService, ProviderService, BackfillService) on the Floci API Gateway. scripts/local-api-url.sh
+  // sets VITE_DEV_API_PROXY (origin) and VITE_DEV_API_PREFIX (/_aws/execute-api/<id>/$default); without a prefix the path is
+  // forwarded unchanged.
+  const proxyTarget = env.VITE_DEV_API_PROXY || env.VITE_EXPERIMENT_API_URL || "http://127.0.0.1:11566";
+  const apiPrefix = (env.VITE_DEV_API_PREFIX ?? "").replace(/\/$/, "");
+  const proxy = {
+    "/tradingcopilot.v1.": {
+      target: proxyTarget,
+      changeOrigin: true,
+      ...(apiPrefix ? { rewrite: (p: string) => apiPrefix + p } : {}),
+    },
+  };
   return {
     plugins: [react(), tailwindcss()],
     publicDir: path.resolve(root, "public"),
@@ -24,16 +35,12 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 3000,
       fs: { allow: [path.resolve(root, "../..")] },
-      proxy: {
-        "/api": { target: proxyTarget, changeOrigin: true },
-      },
+      proxy,
     },
     preview: {
       host: true,
       port: 3000,
-      proxy: {
-        "/api": { target: proxyTarget, changeOrigin: true },
-      },
+      proxy,
     },
   };
 });

@@ -6,24 +6,17 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
-// writeInstanceFiles writes the Parquet files of one instance next to report.json.
-func writeInstanceFiles(experimentID string, r instanceResult) error {
-	meta := instanceparquet.Meta{
-		ExperimentID: experimentID,
-		InstanceID:   r.inst.ID,
-		PlaybookKey:  r.inst.PlaybookKey,
-		Symbol:       r.sym,
+// instanceFiles is everything one instance contributes to its shard.
+func instanceFiles(r instanceResult, reportJSON []byte) instanceparquet.InstanceData {
+	return instanceparquet.InstanceData{
+		InstanceID: r.inst.ID,
+		ReportJSON: reportJSON,
+		Fills:      fillRowsFromKPI(r.fills),
+		Orders:     r.orders,
+		Journals:   r.journals,
+		Outcomes:   tradeOutcomeParquetRows(r.report.Performance),
+		Periods:    periodStatRows(r.report, r.fills),
 	}
-	if err := instanceparquet.WriteOrders(r.ws, meta, r.orders); err != nil {
-		return err
-	}
-	if err := instanceparquet.WriteJournals(r.ws, meta, r.journals); err != nil {
-		return err
-	}
-	if err := instanceparquet.WriteFills(r.ws, meta, fillRowsFromKPI(r.fills)); err != nil {
-		return err
-	}
-	return instanceparquet.WriteTradeOutcomes(r.ws, meta, tradeOutcomeParquetRows(r.report.Performance))
 }
 
 func fillRowsFromKPI(fills []signalrunner.StrategyKPIFill) []instanceparquet.Fill {

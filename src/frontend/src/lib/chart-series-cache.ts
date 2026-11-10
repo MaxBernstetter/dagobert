@@ -1,8 +1,10 @@
-import { fromBinary } from "@bufbuild/protobuf";
+import { getChartSeries, type ChartSeriesQuery } from "@/lib/experiment-api";
+
+export type { ChartSeriesQuery };
 import type { ChartColumns } from "@/lib/chart-series-types";
 import {
   ChartPane,
-  ChartSeriesSchema,
+  type ChartSeries,
   ChartSide,
   ChartStyle,
 } from "@/lib/gen/tradingcopilot/v1/experiment_chart_pb";
@@ -14,8 +16,7 @@ function seconds(value: bigint): number {
   return Number(value);
 }
 
-export function decodeChartSeries(bytes: Uint8Array): ChartColumns {
-  const msg = fromBinary(ChartSeriesSchema, bytes);
+export function chartColumns(msg: ChartSeries): ChartColumns {
   return {
     timeSec: msg.timeSec.map(seconds),
     open: msg.open,
@@ -39,27 +40,44 @@ export function decodeChartSeries(bytes: Uint8Array): ChartColumns {
   };
 }
 
-export function peekChartSeries(url: string): ChartColumns | null {
-  return cache.get(url) ?? null;
+/** The instance a chart series belongs to. */
+export type ChartSource = Pick<ChartSeriesQuery, "experimentId" | "instanceId">;
+
+/**
+ * A zoomed chart range is fractional unix seconds, the API takes whole seconds. Snap outwards so the window
+ * still covers the view, and so nearby fractional ranges share one cache entry.
+ */
+function snapWindow(q: ChartSeriesQuery): ChartSeriesQuery {
+  return { ...q, fromSec: Math.floor(q.fromSec), toSec: Math.ceil(q.toSec) };
 }
 
-/** One in-flight request per URL. Only a successful decode is stored. */
-export function loadChartSeries(url: string): Promise<ChartColumns> {
-  const hit = cache.get(url);
+function cacheKey(q: ChartSeriesQuery): string {
+  const w = snapWindow(q);
+  return `${w.experimentId}|${w.instanceId}|${w.fromSec}|${w.toSec}|${w.maxPoints ?? 0}`;
+}
+
+export function peekChartSeries(q: ChartSeriesQuery): ChartColumns | null {
+  return cache.get(cacheKey(q)) ?? null;
+}
+
+/** One in-flight request per query. Only a successful decode is stored. */
+export function loadChartSeries(q: ChartSeriesQuery): Promise<ChartColumns> {
+  q = snapWindow(q);
+  const key = cacheKey(q);
+  const hit = cache.get(key);
   if (hit) return Promise.resolve(hit);
-  const pending = inflight.get(url);
+  const pending = inflight.get(key);
   if (pending) return pending;
-  const promise = fetch(url)
-    .then(async (res) => {
-      if (!res.ok) throw new Error(await res.text());
-      const decoded = decodeChartSeries(new Uint8Array(await res.arrayBuffer()));
-      cache.set(url, decoded);
+  const promise = getChartSeries(q)
+    .then((series) => {
+      const decoded = chartColumns(series);
+      cache.set(key, decoded);
       return decoded;
     })
     .finally(() => {
-      inflight.delete(url);
+      inflight.delete(key);
     });
-  inflight.set(url, promise);
+  inflight.set(key, promise);
   return promise;
 }
 
@@ -76,20 +94,7 @@ export function chartMaxPoints(viewportWidth: number = typeof window === "undefi
 }
 
 /** Same window the instance charts request: the run, padded by 12 hours. */
-export function chartSeriesUrl(base: string, fromMs: number, toMs: number, maxPoints?: number): string {
+export function paddedWindowSec(fromMs: number, toMs: number): { fromSec: number; toSec: number } {
   const padSec = 12 * 3600;
-  return chartSeriesWindowUrl(
-    base,
-    Math.floor(fromMs / 1000) - padSec,
-    Math.ceil(toMs / 1000) + padSec,
-    maxPoints,
-  );
-}
-
-/** The chart-series URL for an exact window in unix seconds. */
-export function chartSeriesWindowUrl(base: string, fromSec: number, toSec: number, maxPoints?: number): string {
-  const q = new URLSearchParams({ from: String(fromSec), to: String(toSec) });
-  if (maxPoints != null && maxPoints > 0) q.set("maxPoints", String(maxPoints));
-  const path = base.split("?")[0] ?? base;
-  return `${path}?${q}`;
+  return { fromSec: Math.floor(fromMs / 1000) - padSec, toSec: Math.ceil(toMs / 1000) + padSec };
 }

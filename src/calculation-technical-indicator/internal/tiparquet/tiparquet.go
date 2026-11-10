@@ -98,8 +98,7 @@ func WriteYear(dataDir, provider, base, quote, algo string, year int, rows []Row
 	if err := os.Rename(tmp, path); err != nil {
 		return err
 	}
-	_ = lakeobject.PutLocalFile(context.Background(), dataDir, path)
-	return nil
+	return lakeobject.Publish(context.Background(), dataDir, path)
 }
 
 // ReadYear loads one year partition; missing file returns nil, nil.

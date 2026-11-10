@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const deleteExperimentOutcomeStats = `-- name: DeleteExperimentOutcomeStats :exec
@@ -36,26 +35,6 @@ DELETE FROM experiment_period_stat WHERE experiment_id = $1
 
 func (q *Queries) DeleteExperimentPeriodStats(ctx context.Context, experimentID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteExperimentPeriodStats, experimentID)
-	return err
-}
-
-const deletePeriodStatsForInstance = `-- name: DeletePeriodStatsForInstance :exec
-DELETE FROM experiment_instance_period_stat
-WHERE instance_id = $1
-`
-
-func (q *Queries) DeletePeriodStatsForInstance(ctx context.Context, instanceID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deletePeriodStatsForInstance, instanceID)
-	return err
-}
-
-const deletePeriodStatsForInstances = `-- name: DeletePeriodStatsForInstances :exec
-DELETE FROM experiment_instance_period_stat
-WHERE instance_id = ANY($1::uuid[])
-`
-
-func (q *Queries) DeletePeriodStatsForInstances(ctx context.Context, dollar_1 []uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deletePeriodStatsForInstances, dollar_1)
 	return err
 }
 
@@ -139,48 +118,6 @@ func (q *Queries) InsertExperimentPeriodStat(ctx context.Context, arg InsertExpe
 	return err
 }
 
-const listCompletedPeriodStats = `-- name: ListCompletedPeriodStats :many
-SELECT p.instance_id, p.period_kind, p.period_key, p.win_count, p.trade_count
-FROM experiment_instance_period_stat p
-JOIN experiment_instance i ON i.id = p.instance_id
-WHERE i.experiment_id = $1 AND i.status = 'completed'
-ORDER BY p.instance_id, p.period_kind, p.period_key
-`
-
-type ListCompletedPeriodStatsRow struct {
-	InstanceID uuid.UUID   `json:"instance_id"`
-	PeriodKind string      `json:"period_kind"`
-	PeriodKey  string      `json:"period_key"`
-	WinCount   pgtype.Int4 `json:"win_count"`
-	TradeCount pgtype.Int4 `json:"trade_count"`
-}
-
-func (q *Queries) ListCompletedPeriodStats(ctx context.Context, experimentID uuid.UUID) ([]ListCompletedPeriodStatsRow, error) {
-	rows, err := q.db.Query(ctx, listCompletedPeriodStats, experimentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListCompletedPeriodStatsRow{}
-	for rows.Next() {
-		var i ListCompletedPeriodStatsRow
-		if err := rows.Scan(
-			&i.InstanceID,
-			&i.PeriodKind,
-			&i.PeriodKey,
-			&i.WinCount,
-			&i.TradeCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listExperimentOutcomeStats = `-- name: ListExperimentOutcomeStats :many
 SELECT experiment_id, side, unit, average, p10, p25, p50, p75, p90, p95
 FROM experiment_outcome_stat
@@ -252,40 +189,6 @@ func (q *Queries) ListExperimentPeriodStats(ctx context.Context, experimentID uu
 	return items, nil
 }
 
-const listInstancePeriodStats = `-- name: ListInstancePeriodStats :many
-SELECT instance_id, period_kind, period_key, return_pct, trade_count, win_count
-FROM experiment_instance_period_stat
-WHERE instance_id = $1
-ORDER BY period_kind, period_key
-`
-
-func (q *Queries) ListInstancePeriodStats(ctx context.Context, instanceID uuid.UUID) ([]ExperimentInstancePeriodStat, error) {
-	rows, err := q.db.Query(ctx, listInstancePeriodStats, instanceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ExperimentInstancePeriodStat{}
-	for rows.Next() {
-		var i ExperimentInstancePeriodStat
-		if err := rows.Scan(
-			&i.InstanceID,
-			&i.PeriodKind,
-			&i.PeriodKey,
-			&i.ReturnPct,
-			&i.TradeCount,
-			&i.WinCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const upsertExperimentPerformance = `-- name: UpsertExperimentPerformance :exec
 INSERT INTO experiment_performance (experiment_id, wins, losses, breakeven)
 VALUES ($1, $2, $3, $4)
@@ -308,39 +211,6 @@ func (q *Queries) UpsertExperimentPerformance(ctx context.Context, arg UpsertExp
 		arg.Wins,
 		arg.Losses,
 		arg.Breakeven,
-	)
-	return err
-}
-
-const upsertPeriodStat = `-- name: UpsertPeriodStat :exec
-INSERT INTO experiment_instance_period_stat (
-  instance_id, period_kind, period_key, return_pct, trade_count, win_count
-) VALUES (
-  $1, $2, $3, $4, $5, $6
-)
-ON CONFLICT (instance_id, period_kind, period_key) DO UPDATE SET
-  return_pct = EXCLUDED.return_pct,
-  trade_count = EXCLUDED.trade_count,
-  win_count = EXCLUDED.win_count
-`
-
-type UpsertPeriodStatParams struct {
-	InstanceID uuid.UUID     `json:"instance_id"`
-	PeriodKind string        `json:"period_kind"`
-	PeriodKey  string        `json:"period_key"`
-	ReturnPct  pgtype.Float8 `json:"return_pct"`
-	TradeCount pgtype.Int4   `json:"trade_count"`
-	WinCount   pgtype.Int4   `json:"win_count"`
-}
-
-func (q *Queries) UpsertPeriodStat(ctx context.Context, arg UpsertPeriodStatParams) error {
-	_, err := q.db.Exec(ctx, upsertPeriodStat,
-		arg.InstanceID,
-		arg.PeriodKind,
-		arg.PeriodKey,
-		arg.ReturnPct,
-		arg.TradeCount,
-		arg.WinCount,
 	)
 	return err
 }

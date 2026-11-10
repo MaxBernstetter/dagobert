@@ -3,8 +3,10 @@ package experiment_test
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -103,34 +105,55 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 		t.Fatalf("poisoned instance status %q err %v", poisonStatus, err)
 	}
 
-	// Fills and trade outcomes are files now: Postgres keeps none of them, and each instance that
-	// completed has its journal, fill and outcome files, the poisoned one has none.
+	// Fills, trade outcomes and period stats are shard files: Postgres keeps none of them. Each
+	// instance that completed has a shard_key naming a shard with all six files and its own row groups;
+	// the poisoned one has no shard_key. Instance directories hold no Parquet files and no report.json.
 	wantFills, wantOutcomes := 0, 0
-	for _, inst := range rec.Instances {
-		ws := filepath.Join(dataDir, inst.WorkspaceRelPath)
+	shards := map[string]bool{}
+	for _, inst := range loadExperimentPG(t, url, rec.ID).Instances {
+		ref := instanceRef(dataDir, inst)
 		if inst.ID == poison {
-			for _, name := range []string{"journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet"} {
-				if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
-					t.Fatalf("poisoned instance keeps %s: %v", name, err)
-				}
+			if inst.ShardKey != "" {
+				t.Fatalf("poisoned instance has shard_key %q", inst.ShardKey)
 			}
 			continue
 		}
-		wantFills += len(readJournalFile(t, ws))
-		wantOutcomes += len(readOutcomeFile(t, ws))
+		if !strings.HasPrefix(inst.ShardKey, "experiments/"+rec.ID+"/shards/") {
+			t.Fatalf("completed instance %s shard_key %q", inst.ID, inst.ShardKey)
+		}
+		if !shards[inst.ShardKey] {
+			shards[inst.ShardKey] = true
+			for _, name := range []string{"reports.parquet", "journals.parquet", "fills.parquet", "trade_outcomes.parquet", "orders.parquet", "period_stats.parquet"} {
+				if _, err := os.Stat(filepath.Join(ref.dir, name)); err != nil {
+					t.Fatalf("shard %s: %v", inst.ShardKey, err)
+				}
+			}
+		}
+		readReport(t, ref)
+		wantFills += len(readJournalFile(t, ref))
+		wantOutcomes += len(readOutcomeFile(t, ref))
 	}
-	var gotOutcomes, statInstances int
-	var fillTable, outcomeTable *string
-	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text`).Scan(&fillTable, &outcomeTable); err != nil {
+	if len(shards) == 0 || len(shards) >= n/2 {
+		t.Fatalf("%d shards for %d instances: instances of a flush must share a shard", len(shards), n)
+	}
+	err = filepath.WalkDir(filepath.Join(dataDir, "experiments", rec.ID, "instances"), func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && (strings.HasSuffix(path, ".parquet") || filepath.Base(path) == "report.json") {
+			t.Errorf("per-instance file %s", path)
+		}
+		return err
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
 	}
-	if fillTable != nil || outcomeTable != nil {
-		t.Fatalf("dropped tables still exist: fill=%v outcome=%v", fillTable, outcomeTable)
+	var gotOutcomes int
+	var fillTable, outcomeTable, statTable *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.experiment_instance_fill')::text, to_regclass('public.experiment_trade_outcome')::text, to_regclass('public.experiment_instance_period_stat')::text`).Scan(&fillTable, &outcomeTable, &statTable); err != nil {
+		t.Fatal(err)
+	}
+	if fillTable != nil || outcomeTable != nil || statTable != nil {
+		t.Fatalf("dropped tables still exist: fill=%v outcome=%v period_stat=%v", fillTable, outcomeTable, statTable)
 	}
 	if err := pool.QueryRow(ctx, `SELECT coalesce(sum(metric_wins+metric_losses+metric_breakeven),0) FROM experiment_instance WHERE status=$1`, store.StatusCompleted).Scan(&gotOutcomes); err != nil {
-		t.Fatal(err)
-	}
-	if err := pool.QueryRow(ctx, `SELECT count(DISTINCT instance_id) FROM experiment_instance_period_stat`).Scan(&statInstances); err != nil {
 		t.Fatal(err)
 	}
 	if wantFills == 0 {
@@ -138,8 +161,5 @@ func TestExperimentPostgresConcurrentBatches(t *testing.T) {
 	}
 	if gotOutcomes != wantOutcomes || wantOutcomes == 0 {
 		t.Fatalf("outcomes in metrics %d, outcome files %d", gotOutcomes, wantOutcomes)
-	}
-	if statInstances != n-1 {
-		t.Fatalf("period stats for %d instances want %d", statInstances, n-1)
 	}
 }

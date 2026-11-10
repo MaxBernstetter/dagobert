@@ -48,9 +48,9 @@ func Run(args []string, getenv func(string) string) (code, detail int) {
 		return 1, 10
 	}
 
-	st, err := openStore(cfg.DataDir)
+	st, err := openStore()
 	if err != nil {
-		log.Printf("sqlite: %v", err)
+		log.Printf("ingest ledger: %v", err)
 		return 1, 40
 	}
 	defer st.close()

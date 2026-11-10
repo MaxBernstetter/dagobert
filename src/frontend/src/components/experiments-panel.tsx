@@ -1,7 +1,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { apiUrl } from "@/lib/api";
-import { chartMaxPoints, chartSeriesUrl, loadChartSeries } from "@/lib/chart-series-cache";
+import * as experimentApi from "@/lib/experiment-api";
+import { chartMaxPoints, loadChartSeries, paddedWindowSec } from "@/lib/chart-series-cache";
 import { useViewportHeight } from "@/hooks/use-viewport-height";
 import { ActivityView } from "@/components/activity-view";
 import { BacktestDatePicker } from "@/components/backtest-date-picker";
@@ -112,18 +112,6 @@ const emptyLive: LiveState = {
   lastExit: null,
   lastFinished: null,
 };
-
-async function formatApiError(res: Response): Promise<string> {
-  const text = (await res.text()).trim();
-  if (!text) return res.statusText || `HTTP ${res.status}`;
-  try {
-    const body = JSON.parse(text) as { error?: string };
-    if (typeof body.error === "string" && body.error) return body.error;
-  } catch {
-    /* plain text */
-  }
-  return text;
-}
 
 type StrategyOptionField =
   | {
@@ -322,16 +310,13 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   }
 
   const refresh = useCallback(async () => {
-    const res = await fetch(apiUrl("/experiments"), { cache: "no-store" });
-    if (!res.ok) throw new Error(await formatApiError(res));
-    const j = await res.json();
-    const data = { experiments: ((j.experiments ?? []) as Record<string, unknown>[]).map((s) => normalizeExperiment(s)) };
-    setList(data.experiments ?? []);
-    return data.experiments ?? [];
+    const experiments = (await experimentApi.listExperiments()).map((s) => normalizeExperiment(s));
+    setList(experiments);
+    return experiments;
   }, []);
 
   useEffect(() => {
-    void refresh().catch((err) => setError(err instanceof Error ? err.message : "load failed"));
+    void refresh().catch((err) => setError(experimentApi.errorMessage(err, "load failed")));
   }, [refresh]);
 
   // Warm pairs for ready providers (stored snapshot after Ingestion activate).
@@ -351,10 +336,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await fetch(apiUrl("/experiments/strategies"), { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { strategies: ExperimentStrategy[] };
-        const ready = data.strategies ?? [];
+        const ready = (await experimentApi.listStrategies()) as unknown as ExperimentStrategy[];
         setStrategies(ready);
         const first = ready[0];
         if (first) {
@@ -375,10 +357,10 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   useEffect(() => {
     if (!createOpen) return;
     let cancelled = false;
-    fetch(apiUrl("/experiments/limits"), { cache: "no-store" })
-      .then((res) => (res.ok ? (res.json() as Promise<{ maxParallelism: number }>) : null))
-      .then((limits) => {
-        if (!cancelled && limits) setMaxParallelism(limits.maxParallelism);
+    experimentApi
+      .getMaxParallelism()
+      .then((max) => {
+        if (!cancelled) setMaxParallelism(max);
       })
       .catch(() => {});
     return () => {
@@ -436,30 +418,16 @@ export function ExperimentsPanel({ className }: { className?: string }) {
 
   const loadInstancePage = useCallback(
     async (experimentId: string) => {
-      const params = new URLSearchParams({
-        limit: String(INSTANCE_PAGE_SIZE),
-        cursor: String(instanceOffset),
-      });
       const serverSort = instanceSort ? SERVER_SORT_KEY[instanceSort] : undefined;
-      if (serverSort) {
-        params.set("sort", serverSort);
-        params.set("order", instanceOrder);
-      }
-      if (instanceQDebounced.trim()) params.set("q", instanceQDebounced.trim());
-      const res = await fetch(apiUrl(`/experiments/${experimentId}/instances?${params}`), {
-        cache: "no-store",
+      const page = await experimentApi.listInstances(experimentId, {
+        limit: INSTANCE_PAGE_SIZE,
+        cursor: instanceOffset,
+        ...(serverSort ? { sort: serverSort, order: instanceOrder } : {}),
+        q: instanceQDebounced.trim(),
       });
-      if (!res.ok) return;
-      const pageRaw = await res.json() as ExperimentInstancePage & { instances?: Record<string, unknown>[] };
-      const page: ExperimentInstancePage = {
-        ...pageRaw,
-        instances: (pageRaw.instances ?? []).map((i) =>
-          normalizeInstance(i as unknown as Record<string, unknown>),
-        ),
-        nextCursor: pageRaw.nextCursor ?? null,
-      };
-      setInstanceRows(page.instances ?? []);
-      setInstanceTotal(page.total ?? 0);
+      const instances = page.instances.map((i) => normalizeInstance(i));
+      setInstanceRows(instances);
+      setInstanceTotal(page.total);
     },
     [instanceOffset, instanceSort, instanceOrder, instanceQDebounced],
   );
@@ -483,11 +451,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
       if (inFlight) return;
       inFlight = true;
       try {
-        const res = await fetch(apiUrl(`/experiments/${experimentId}/progress`), {
-          cache: "no-store",
-        });
-        if (!res.ok) return;
-        const progress = normalizeProgress(await res.json());
+        const progress = normalizeProgress(await experimentApi.getExperimentProgress(experimentId));
         setFailedInstanceCount(progress.failedInstanceCount ?? 0);
         setSelected((prev) => {
           if (!prev || prev.id !== progress.id) return prev;
@@ -579,16 +543,14 @@ export function ExperimentsPanel({ className }: { className?: string }) {
   const showInstancePerformance =
     instanceDetailOpen && selected != null && instanceRunReady;
 
-  const kpiUrl =
+  const kpiSource =
     instanceDetailOpen && selected && instanceRunReady
-      ? apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/kpis`)
+      ? { experimentId: selected.id, instanceId: activeInstance.id }
       : undefined;
-  const kpiState = useBacktestKpiSet(kpiUrl);
-  const experimentPerfUrl =
-    selected && experimentHasResults(selected.status)
-      ? apiUrl(`/experiments/${selected.id}/performance`)
-      : undefined;
-  const experimentPerf = useBacktestKpiSet(experimentPerfUrl);
+  const kpiState = useBacktestKpiSet(kpiSource);
+  const experimentPerfSource =
+    selected && experimentHasResults(selected.status) ? { experimentId: selected.id } : undefined;
+  const experimentPerf = useBacktestKpiSet(experimentPerfSource);
 
   useEffect(() => {
     if (!instanceDetailOpen || !selected || !activeInstance || activeInstance.status !== "completed") {
@@ -601,24 +563,15 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     setReportLoading(true);
     void (async () => {
       try {
-        const res = await fetch(
-          apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/activity`),
-          { cache: "no-store" },
-        );
-        if (!res.ok) throw new Error(await formatApiError(res));
-        const data = (await res.json()) as {
-          rows: ActivityRow[];
-          journals: JournalRow[];
-          playbookTitles: Record<string, string>;
-        };
+        const data = await experimentApi.getInstanceActivity(selected.id, activeInstance.id);
         if (!cancelled) {
-          setReportRows(data.rows ?? []);
-          setReportJournals(data.journals ?? []);
-          setReportTitles(data.playbookTitles ?? {});
+          setReportRows(data.rows);
+          setReportJournals(data.journals);
+          setReportTitles(data.playbookTitles);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "activity load failed");
+          setError(experimentApi.errorMessage(err, "activity load failed"));
           setReportRows([]);
         }
       } finally {
@@ -632,14 +585,13 @@ export function ExperimentsPanel({ className }: { className?: string }) {
 
   useEffect(() => {
     if (!instanceDetailOpen || !selected || !activeInstance || activeInstance.status !== "completed") return;
-    // Same URL as the instance charts (window and budget), so the prefetch fills their cache entry.
-    const url = chartSeriesUrl(
-      apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/chart-series`),
-      selected.settings.fromMs,
-      selected.settings.toMs,
-      chartMaxPoints(),
-    );
-    void loadChartSeries(url).catch(() => {});
+    // Same query as the instance charts (window and budget), so the prefetch fills their cache entry.
+    void loadChartSeries({
+      experimentId: selected.id,
+      instanceId: activeInstance.id,
+      ...paddedWindowSec(selected.settings.fromMs, selected.settings.toMs),
+      maxPoints: chartMaxPoints(),
+    }).catch(() => {});
   }, [instanceDetailOpen, selected, activeInstance]);
 
   async function openExperiment(row: ExperimentRecord) {
@@ -655,18 +607,17 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     setFailedInstanceCount(0);
     setDetailOpen(true);
     try {
-      const [experimentRes, progressRes] = await Promise.all([
-        fetch(apiUrl(`/experiments/${row.id}`), { cache: "no-store" }),
-        fetch(apiUrl(`/experiments/${row.id}/progress`), { cache: "no-store" }),
+      const [experiment, progress] = await Promise.allSettled([
+        experimentApi.getExperiment(row.id),
+        experimentApi.getExperimentProgress(row.id),
       ]);
-      if (experimentRes.ok) {
-        const rec = normalizeExperiment(await experimentRes.json());
+      if (experiment.status === "fulfilled") {
+        const rec = normalizeExperiment(experiment.value);
         setSelected(rec);
         setInstanceTotal(rec.progressInstanceTotal || 0);
       }
-      if (progressRes.ok) {
-        const progress = normalizeProgress(await progressRes.json());
-        setFailedInstanceCount(progress.failedInstanceCount ?? 0);
+      if (progress.status === "fulfilled") {
+        setFailedInstanceCount(normalizeProgress(progress.value).failedInstanceCount ?? 0);
       }
     } catch {
       /* keep list snapshot */
@@ -683,12 +634,9 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     setReportLoading(inst.status === "completed");
     if (!selected || inst.status !== "completed") return;
     try {
-      const res = await fetch(
-        apiUrl(`/experiments/${selected.id}/instances/${inst.id}/report`),
-        { cache: "no-store" },
-      );
-      if (!res.ok) return;
-      const report = (await res.json()) as NonNullable<ExperimentInstance["instanceReport"]>;
+      const report = (await experimentApi.getInstanceReport(selected.id, inst.id)) as unknown as NonNullable<
+        ExperimentInstance["instanceReport"]
+      >;
       setActiveInstanceDetail((prev) =>
         prev && prev.id === inst.id
           ? {
@@ -828,18 +776,12 @@ export function ExperimentsPanel({ className }: { className?: string }) {
           instances,
         };
       }
-      const res = await fetch(apiUrl("/experiments"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(await formatApiError(res));
-      const rec = normalizeExperiment(await res.json());
+      const rec = normalizeExperiment(await experimentApi.createExperiment(body));
       setList((prev) => [rec, ...prev.filter((s) => s.id !== rec.id)]);
       setCreateOpen(false);
       void openExperiment(rec);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "create failed");
+      setError(experimentApi.errorMessage(err, "create failed"));
     } finally {
       setSaving(false);
     }
@@ -850,17 +792,12 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     setRunning(true);
     setError("");
     try {
-      const res = await fetch(apiUrl(`/experiments/${selected.id}/run`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ retryFailed: opts?.retryFailed === true }),
-      });
-      if (!res.ok) throw new Error(await formatApiError(res));
+      await experimentApi.runExperiment(selected.id, opts?.retryFailed === true);
       const experiments = await refresh();
       const updated = experiments.find((s) => s.id === selected.id) ?? null;
       setSelected(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "run failed");
+      setError(experimentApi.errorMessage(err, "run failed"));
     } finally {
       setRunning(false);
     }
@@ -871,13 +808,12 @@ export function ExperimentsPanel({ className }: { className?: string }) {
     setCancelling(true);
     setError("");
     try {
-      const res = await fetch(apiUrl(`/experiments/${selected.id}/cancel`), { method: "POST" });
-      if (!res.ok) throw new Error(await formatApiError(res));
+      await experimentApi.cancelExperiment(selected.id);
       const experiments = await refresh();
       const updated = experiments.find((s) => s.id === selected.id) ?? null;
       setSelected(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "cancel failed");
+      setError(experimentApi.errorMessage(err, "cancel failed"));
     } finally {
       setCancelling(false);
     }
@@ -889,24 +825,22 @@ export function ExperimentsPanel({ className }: { className?: string }) {
       setDeleteConfirmOpen(true);
       return;
     }
-    void handleDelete(false);
+    void handleDelete();
   }
 
-  async function handleDelete(cancelThenDelete: boolean) {
+  async function handleDelete() {
     if (!selected) return;
     setDeleting(true);
     setError("");
     setDeleteConfirmOpen(false);
     const id = selected.id;
     try {
-      const q = cancelThenDelete ? "?cancel=1" : "";
-      const res = await fetch(`${apiUrl(`/experiments/${id}`)}${q}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await formatApiError(res));
+      await experimentApi.deleteExperiment(id);
       await refresh();
       setSelected(null);
       setDetailOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "delete failed");
+      setError(experimentApi.errorMessage(err, "delete failed"));
       const experiments = await refresh().catch(() => [] as ExperimentRecord[]);
       setSelected(experiments.find((s) => s.id === id) ?? null);
     } finally {
@@ -1344,6 +1278,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                       return (
                         <Card
                           key={opt.key}
+                          data-testid={`grid-axis-${opt.key}`}
                           size="sm"
                           className="h-full min-w-0 gap-3 py-3.5"
                         >
@@ -1558,7 +1493,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
                     backtestId: selected.id,
                     fromMs: selected.settings.fromMs,
                     toMs: selected.settings.toMs,
-                    chartSeriesPath: apiUrl(`/experiments/${selected.id}/instances/${activeInstance.id}/chart-series`),
+                    chartSeries: { experimentId: selected.id, instanceId: activeInstance.id },
                   }}
                   chartsHold={
                     (activeInstance.instanceReport?.statistics?.monthlyReturns?.length ?? 0) === 0 &&
@@ -1762,7 +1697,7 @@ export function ExperimentsPanel({ className }: { className?: string }) {
               type="button"
               variant="destructive"
               disabled={deleting}
-              onClick={() => void handleDelete(true)}
+              onClick={() => void handleDelete()}
             >
               {deleting ? "Deleting…" : "Cancel run and delete"}
             </Button>

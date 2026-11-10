@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,14 +13,13 @@ import (
 	"strings"
 	"sync"
 
+	"connectrpc.com/connect"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/candlefile"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/shared"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/parquet-go/parquet-go"
 	"google.golang.org/protobuf/proto"
 )
@@ -54,69 +52,30 @@ var marketSeriesCache = struct {
 	m  map[string]*v1.ChartSeries
 }{m: map[string]*v1.ChartSeries{}}
 
-func (s *Server) handleChartSeries(w http.ResponseWriter, r *http.Request) {
-	experimentID, err := parseExperimentID(r.PathValue("id"))
+func (s *Server) GetChartSeries(ctx context.Context, req *connect.Request[v1.GetChartSeriesRequest]) (*connect.Response[v1.GetChartSeriesResponse], error) {
+	msg := req.Msg
+	fromSec, toSec := msg.FromSec, msg.ToSec
+	if toSec <= 0 || fromSec > toSec {
+		return nil, invalidArgument("from_sec and to_sec (unix seconds) required")
+	}
+	experimentID, exp, err := s.loadExperiment(ctx, msg.ExperimentId)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
+		return nil, err
 	}
-	instID, err := uuid.Parse(r.PathValue("instanceId"))
+	inst, err := s.loadInstance(ctx, experimentID.String(), msg.InstanceId)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid instance id")
-		return
-	}
-	fromSec, toSec, ok := chartWindow(r)
-	if !ok {
-		writeError(w, http.StatusBadRequest, "from and to (unix seconds) required")
-		return
-	}
-	exp, err := s.q.GetExperiment(r.Context(), experimentID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	inst, err := s.q.GetInstance(r.Context(), experimentdb.GetInstanceParams{ExperimentID: experimentID, ID: instID})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 
-	maxPoints, err := chartMaxPoints(r)
+	series, err := marketSeries(ctx, exp, fromSec, toSec)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return nil, internal(err)
 	}
-	series, err := marketSeries(r.Context(), exp, fromSec, toSec)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	series = downsampleSeries(series, maxPoints)
-	points, markers := instanceChartSeries(inst, exp.InitialUsdc+exp.InitialUsdt)
+	series = downsampleSeries(series, int(msg.MaxPoints))
+	points, markers := instanceChartSeries(ctx, inst, exp.InitialUsdc+exp.InitialUsdt)
 	series.Portfolio = points
 	series.Markers = markers
-	writeProtoBinary(w, http.StatusOK, series)
-}
-
-func chartWindow(r *http.Request) (fromSec, toSec int64, ok bool) {
-	q := r.URL.Query()
-	if q.Get("from") == "" || q.Get("to") == "" {
-		return 0, 0, false
-	}
-	from, err1 := strconv.ParseInt(q.Get("from"), 10, 64)
-	to, err2 := strconv.ParseInt(q.Get("to"), 10, 64)
-	if err1 != nil || err2 != nil || from > to {
-		return 0, 0, false
-	}
-	return from, to, true
+	return connect.NewResponse(&v1.GetChartSeriesResponse{Series: series}), nil
 }
 
 func loadCandleWindow(ctx context.Context, dataDir, provider, base, quote string, fromSec, toSec int64) ([]chartCandle, error) {
@@ -393,10 +352,7 @@ func buildMarketSeries(candles []chartCandle, tiByOpen map[int64]map[string]floa
 }
 
 func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toSec int64) (*v1.ChartSeries, error) {
-	dataDir := strings.TrimSpace(os.Getenv("DATA_DIR"))
-	if dataDir == "" {
-		dataDir = "/data"
-	}
+	dataDir := dataDir()
 	provider := strings.TrimSpace(exp.Provider)
 	if provider == "" {
 		provider = "binance"
@@ -427,24 +383,17 @@ func marketSeries(ctx context.Context, exp experimentdb.Experiment, fromSec, toS
 	return series, nil
 }
 
-func instanceChartSeries(inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
-	fills, err := instanceparquet.ReadFills(instanceWorkspace(inst))
+func instanceChartSeries(ctx context.Context, inst experimentdb.ExperimentInstance, startCash float64) ([]*v1.ChartPoint, []*v1.ChartMarker) {
+	dir, err := instanceShard(inst)
+	if err != nil {
+		return nil, nil // no shard: no portfolio, no markers
+	}
+	fills, err := instanceparquet.ReadFills(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return nil, nil // no fills file: no portfolio, no markers
 	}
 	cf := chartFillsFromParquet(fills)
 	return equityFromFills(cf, startCash), markersFromFills(cf)
-}
-
-func writeJSON(w http.ResponseWriter, code int, v any) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_, _ = w.Write(b)
 }
 
 // indicatorStyle is how the chart draws an indicator: MACD as a histogram, the rest as lines.
@@ -473,22 +422,6 @@ func indicatorPane(unit, typ string) string {
 		return "oscillator"
 	}
 	return "price"
-}
-
-// chartMaxPoints reads the optional maxPoints query parameter. Absent or <= 0 keeps every candle.
-func chartMaxPoints(r *http.Request) (int, error) {
-	raw := r.URL.Query().Get("maxPoints")
-	if raw == "" {
-		return 0, nil
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, fmt.Errorf("maxPoints must be an integer")
-	}
-	if n < 0 {
-		return 0, nil
-	}
-	return n, nil
 }
 
 // candleBuckets splits n consecutive candles into buckets of equal size (the last one may be smaller)

@@ -51,6 +51,7 @@ type ExperimentInstance struct {
 	ConfigHash               string        `json:"config_hash"`
 	PlaybookKey              string        `json:"playbook_key"`
 	WorkspaceRelPath         string        `json:"workspace_rel_path"`
+	ShardKey                 string        `json:"shard_key"`
 	Status                   string        `json:"status"`
 	Error                    string        `json:"error"`
 	StartedAtMs              pgtype.Int8   `json:"started_at_ms"`
@@ -86,15 +87,6 @@ type ExperimentInstance struct {
 	MetricYearlyWinRateMed   pgtype.Float4 `json:"metric_yearly_win_rate_med"`
 }
 
-type ExperimentInstancePeriodStat struct {
-	InstanceID uuid.UUID     `json:"instance_id"`
-	PeriodKind string        `json:"period_kind"`
-	PeriodKey  string        `json:"period_key"`
-	ReturnPct  pgtype.Float8 `json:"return_pct"`
-	TradeCount pgtype.Int4   `json:"trade_count"`
-	WinCount   pgtype.Int4   `json:"win_count"`
-}
-
 type ExperimentOutcomeStat struct {
 	ExperimentID uuid.UUID `json:"experiment_id"`
 	Side         int16     `json:"side"`
@@ -122,6 +114,22 @@ type ExperimentPeriodStat struct {
 	PeriodKey    string    `json:"period_key"`
 	Wins         int32     `json:"wins"`
 	Trades       int32     `json:"trades"`
+}
+
+type IngestStored struct {
+	Provider string `json:"provider"`
+	Base     string `json:"base"`
+	Quote    string `json:"quote"`
+	OpenTime int64  `json:"open_time"`
+}
+
+type IngestUnavailable struct {
+	Provider    string `json:"provider"`
+	Base        string `json:"base"`
+	Quote       string `json:"quote"`
+	OpenTime    int64  `json:"open_time"`
+	Reason      string `json:"reason"`
+	ConfirmedAt int64  `json:"confirmed_at"`
 }
 
 type Provider struct {

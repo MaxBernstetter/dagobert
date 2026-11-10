@@ -1,7 +1,6 @@
 # ---------------------------------------------------------------------------
-# $0-at-idle data plane: S3 lake + SSM (+ shared task IAM).
-# Control plane is Postgres (Compose / Supabase), not DynamoDB.
-# No NAT, ALB, RDS, Secrets Manager, or always-on compute.
+# Data plane: S3 lake + SSM (+ shared task IAM). The relational control plane is Aurora (database.tf).
+# No NAT, ALB, Secrets Manager, or always-on compute.
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "lake" {
@@ -50,7 +49,7 @@ resource "aws_ssm_parameter" "binance_base_url" {
   value = "https://data-api.binance.vision"
 }
 
-# Execution role for future Lambda / Fargate tasks (no resources attached yet).
+# Task role for Lambda and the ECS data-prep tasks (jobs_ecs.tf): S3 lake and SSM read.
 data "aws_iam_policy_document" "task_assume" {
   statement {
     actions = ["sts:AssumeRole"]

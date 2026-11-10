@@ -3,9 +3,6 @@ aws_region  = "us-east-1"
 # floci_endpoint = "http://localhost:11566"
 # experiment_batch_size = 64
 # experiment_map_max_concurrency = 200
-# enable_experiment_lambda = false
-
-# Prod control plane only. Local applies leave the organization id empty.
-# supabase_organization_id  = "org-..."
-# supabase_region           = "eu-central-1"
-# Secrets stay in the repo .env as SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD.
+# database_min_acu = 0.5
+# database_max_acu = 2
+# Prod applies only run in CI (allow_cloud_deploy), never from a dev shell.

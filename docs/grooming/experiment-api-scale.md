@@ -1,5 +1,7 @@
 # Grooming: scalable experiment / instance API
 
+> Historical: this note describes the removed orchestrator and its REST routes (`/api/v1/...`). The current runtime is in [docs/architecture/local-stack.md](../architecture/local-stack.md); the APIs are Connect services in `proto/`.
+
 ## Problem
 
 An experiment was treated as one fat document: create POSTed up to 20k instance specs; list/detail/poll dragged instance rows; the instance table fanned out HTTP/KPI reads from `report.json`. Sort/filter cannot stay near-real-time at that scale.

@@ -1,8 +1,11 @@
 package backtest
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -10,11 +13,14 @@ import (
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
+	"github.com/google/uuid"
 )
 
 // Persistence stage of the experiment simulation. Compute workers produce instanceResult values
 // and never touch a database; one persister goroutine batches them and commits each batch in a
 // single transaction. An instance is completed in the catalog only once its batch is committed.
+// Each flush writes one shard (see instanceparquet) holding the rows of all its instances.
 
 const (
 	persistBatchMax     = 200
@@ -42,12 +48,13 @@ var (
 type instanceResult struct {
 	inst     store.ExperimentInstance
 	sym      string
-	ws       string
 	report   signalrunner.InstanceReport
 	fills    []signalrunner.StrategyKPIFill
 	orders   []instanceparquet.Order
 	journals []instanceparquet.Journal
 	timing   store.InstanceRunTiming
+	// shardKey is the data-dir-relative shard directory holding the instance's rows; set by flush.
+	shardKey string
 	err      error
 }
 
@@ -64,7 +71,7 @@ func (r instanceResult) item() store.InstanceBatchItem {
 func (r instanceResult) pgItem() pgcatalog.InstanceBatchItem {
 	it := pgcatalog.InstanceBatchItem{InstanceBatchItem: r.item(), Symbol: r.sym}
 	if r.err == nil {
-		it.Stats = periodStatRows(r.report, r.fills)
+		it.ShardKey = r.shardKey
 	}
 	return it
 }
@@ -81,6 +88,7 @@ func persistBackoff(attempt int) time.Duration {
 
 type persister struct {
 	cat          *experimentRunCatalog
+	dataDir      string
 	experimentID string
 	total        int
 	mu           sync.Mutex
@@ -102,8 +110,8 @@ func (p *persister) release(n int) {
 }
 
 // runPersister drains results until the channel is closed and returns once everything is flushed.
-func runPersister(cat *experimentRunCatalog, experimentID string, total, alreadyDone int, in <-chan instanceResult) {
-	p := &persister{cat: cat, experimentID: experimentID, total: total, done: alreadyDone}
+func runPersister(cat *experimentRunCatalog, dataDir, experimentID string, total, alreadyDone int, in <-chan instanceResult) {
+	p := &persister{cat: cat, dataDir: dataDir, experimentID: experimentID, total: total, done: alreadyDone}
 	parallel := persistParallelPG
 	sem := make(chan struct{}, parallel)
 	var inflight sync.WaitGroup
@@ -142,9 +150,13 @@ func runPersister(cat *experimentRunCatalog, experimentID string, total, already
 	}
 }
 
-// flush writes report.json and the Parquet files of each instance (pool of 8), then commits the
-// batch with retry and bisection. A failed instance leaves no Parquet files behind.
+// flush writes one shard directory with the rows of every instance of the batch (the reports are
+// built and uploaded by a pool of 8) and publishes it to the workspace store (LAKE_BACKEND=s3 uploads
+// the six files and drops the local copy), then commits the batch with retry and bisection. A failed
+// shard write or upload fails every instance of the batch and removes the shard; an instance failed
+// by its report upload keeps its rows in the shard but gets no shard_key, so nothing reads them.
 func (p *persister) flush(batch []instanceResult) {
+	data := make([]instanceparquet.InstanceData, len(batch))
 	var wg sync.WaitGroup
 	jobs := make(chan int)
 	for w := 0; w < persistReportWriter; w++ {
@@ -153,28 +165,54 @@ func (p *persister) flush(batch []instanceResult) {
 			defer wg.Done()
 			for i := range jobs {
 				r := &batch[i]
-				if err := signalrunner.WriteInstanceReport(r.ws, r.report); err != nil {
-					r.err = err
-				} else if err := writeInstanceFiles(p.experimentID, *r); err != nil {
-					r.err = err
-				} else if err := uploadInstanceReport(r.inst.WorkspaceRelPath, r.ws); err != nil {
-					r.err = err
+				body, err := signalrunner.MarshalInstanceReport(r.report)
+				if err == nil {
+					err = uploadInstanceReport(r.inst.WorkspaceRelPath, body)
 				}
-				if r.err != nil {
-					removeInstanceFiles(r.ws)
+				if err != nil {
+					r.err = err
+					continue
 				}
+				data[i] = instanceFiles(*r, body)
 			}
 		}()
 	}
 	for i := range batch {
 		if batch[i].err == nil {
 			jobs <- i
-		} else {
-			removeInstanceFiles(batch[i].ws)
 		}
 	}
 	close(jobs)
 	wg.Wait()
+
+	shardKey := fmt.Sprintf("experiments/%s/shards/%s", p.experimentID, uuid.NewString())
+	var ok []int
+	var rows []instanceparquet.InstanceData
+	for i := range batch {
+		if batch[i].err == nil {
+			ok = append(ok, i)
+			rows = append(rows, data[i])
+		}
+	}
+	if len(ok) > 0 {
+		dir := filepath.Join(p.dataDir, shardKey)
+		err := instanceparquet.WriteShard(dir, p.experimentID, rows)
+		if err == nil {
+			err = workspace.PublishDir(context.Background(), p.dataDir, shardKey)
+		}
+		if err != nil {
+			if rerr := os.RemoveAll(dir); rerr != nil {
+				log.Printf("experiment %s: remove failed shard %s: %v", p.experimentID, shardKey, rerr)
+			}
+			for _, i := range ok {
+				batch[i].err = err
+			}
+		} else {
+			for _, i := range ok {
+				batch[i].shardKey = shardKey
+			}
+		}
+	}
 	p.commit(batch)
 }
 
@@ -197,7 +235,6 @@ func (p *persister) commit(batch []instanceResult) {
 	}
 	r := batch[0]
 	r.err = fmt.Errorf("persist: %w", err)
-	removeInstanceFiles(r.ws)
 	if ferr := p.cat.PersistInstanceBatch(p.experimentID, []instanceResult{r}, p.claim(1), p.total); ferr != nil {
 		log.Printf("experiment %s: instance %s could not be marked failed: %v", p.experimentID, r.inst.ID, ferr)
 	}
@@ -218,15 +255,4 @@ func (p *persister) try(batch []instanceResult) error {
 		p.release(len(batch))
 	}
 	return err
-}
-
-// removeInstanceFiles drops the Parquet files of a failed instance. An empty workspace (an instance
-// that never reached simulation) has none.
-func removeInstanceFiles(ws string) {
-	if ws == "" {
-		return
-	}
-	if err := instanceparquet.Remove(ws); err != nil {
-		log.Printf("experiment instance files in %s: remove: %v", ws, err)
-	}
 }

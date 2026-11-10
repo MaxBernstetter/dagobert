@@ -189,6 +189,9 @@ func PutLocalFile(ctx context.Context, dataDir, absPath string) error {
 	}
 	bucket := awsenv.LakeBucket()
 	if bucket == "" {
+		if awsenv.LakeBackend() == "s3" {
+			return fmt.Errorf("LAKE_BUCKET required for LAKE_BACKEND=s3")
+		}
 		return nil
 	}
 	key, err := ObjectKey(dataDir, absPath)
@@ -218,6 +221,21 @@ func PutLocalFile(ctx context.Context, dataDir, absPath string) error {
 		ContentType: aws.String("application/octet-stream"),
 	})
 	return err
+}
+
+// Publish makes a freshly written local lake file durable in the configured backend.
+// With LAKE_BACKEND=s3 the bucket is the only store: the upload must succeed, and the local
+// file is removed afterwards. With fs it uploads best-effort when dual-write is on and keeps the file.
+func Publish(ctx context.Context, dataDir, absPath string) error {
+	err := PutLocalFile(ctx, dataDir, absPath)
+	if awsenv.LakeBackend() != "s3" {
+		return nil
+	}
+	if err != nil {
+		os.Remove(absPath)
+		return fmt.Errorf("upload %s: %w", absPath, err)
+	}
+	return os.Remove(absPath)
 }
 
 // ListCandleParquetAbsPaths lists candles.parquet paths for a market (fs or s3).

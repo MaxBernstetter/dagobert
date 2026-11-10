@@ -35,12 +35,6 @@ PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
         {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto, /* tracker*/ nullptr,},
         // ::tradingcopilot::v1::CancelExperimentResponse
         {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto, /* tracker*/ nullptr,},
-        // ::tradingcopilot::v1::ExperimentWorkerBatch
-        {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto, /* tracker*/ nullptr,},
-        // ::tradingcopilot::v1::InstanceBatch
-        {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto, /* tracker*/ nullptr,},
-        // ::tradingcopilot::v1::ExperimentSFNInput
-        {&::_pbi::kDescriptorMethods, &::descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto, /* tracker*/ nullptr,},
 };
 }  // namespace
 #endif
@@ -230,11 +224,11 @@ constexpr RunExperimentRequest::ParseTableT_ RunExperimentRequest::InternalGener
     {
       PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_._has_bits_),
       0, // no _extensions_
-      1, 0,  // max_field_number, fast_idx_mask
+      2, 8,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967294,  // skipmap
+      4294967292,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      1,  // num_field_entries
+      2,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -244,18 +238,27 @@ constexpr RunExperimentRequest::ParseTableT_ RunExperimentRequest::InternalGener
       ::_pbi::TcParser::GetTable<::tradingcopilot::v1::RunExperimentRequest>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
+      // string id = 2 [json_name = "id"];
+      {::_pbi::TcParser::FastUS1,
+       {18, 0, 0,
+        PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_.id_)}},
       // bool retry_failed = 1 [json_name = "retryFailed"];
-      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(RunExperimentRequest, _impl_.retry_failed_), 0>(),
-       {8, 0, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(RunExperimentRequest, _impl_.retry_failed_), 1>(),
+       {8, 1, 0,
         PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_.retry_failed_)}},
     }}, {{
       65535, 65535
     }}, {{
       // bool retry_failed = 1 [json_name = "retryFailed"];
-      {PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_.retry_failed_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+      {PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_.retry_failed_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+      // string id = 2 [json_name = "id"];
+      {PROTOBUF_FIELD_OFFSET(RunExperimentRequest, _impl_.id_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     }},
     // no aux_entries
     {{
+      "\46\0\2\0\0\0\0\0"
+      "tradingcopilot.v1.RunExperimentRequest"
+      "id"
     }},
   };
 }
@@ -264,7 +267,10 @@ constexpr RunExperimentRequest::ParseTableT_ RunExperimentRequest::InternalGener
 inline constexpr RunExperimentRequest::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
     ::_pbi::ConstantInitialized) noexcept
-      : retry_failed_{false} {}
+      : id_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        retry_failed_{false} {}
 
 template <typename>
 constexpr RunExperimentRequest::RunExperimentRequest(::_pbi::ConstantInitialized,
@@ -282,7 +288,7 @@ inline void* PROTOBUF_NONNULL RunExperimentRequest::PlacementNew_(
   return ::new (mem) RunExperimentRequest(arena);
 }
 constexpr auto RunExperimentRequest::InternalNewImpl_() {
-  return ::google::protobuf::internal::MessageCreator::ZeroInit(sizeof(RunExperimentRequest), alignof(RunExperimentRequest));
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(RunExperimentRequest), alignof(RunExperimentRequest));
 }
 constexpr auto RunExperimentRequest::InternalGenerateClassData_(
     const MessageLite& prototype,
@@ -358,321 +364,6 @@ const ::_pbi::ClassData* RunExperimentRequest_get_class_data() {
 }
 }  // namespace
 #endif  // PROTOBUF_CUSTOM_VTABLE
-class InstanceBatch::_Internal {
- public:
-  using HasBits = decltype(::std::declval<InstanceBatch>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-      8 * PROTOBUF_FIELD_OFFSET(InstanceBatch, _impl_._has_bits_);
-};
-
-constexpr InstanceBatch::ParseTableT_ InstanceBatch::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
-  return ParseTableT_{
-    {
-      PROTOBUF_FIELD_OFFSET(InstanceBatch, _impl_._has_bits_),
-      0, // no _extensions_
-      1, 0,  // max_field_number, fast_idx_mask
-      offsetof(ParseTableT_, field_lookup_table),
-      4294967294,  // skipmap
-      offsetof(ParseTableT_, field_entries),
-      1,  // num_field_entries
-      0,  // num_aux_entries
-      offsetof(ParseTableT_, field_names),  // no aux_entries
-      class_data,
-      nullptr,  // post_loop_handler
-      ::_pbi::TcParser::MpUnknownFields,  // fallback
-      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
-      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::InstanceBatch>(),  // to_prefetch
-      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
-    }, {{
-      // repeated string instance_ids = 1 [json_name = "instanceIds"];
-      {::_pbi::TcParser::FastUR1,
-       {10, 0, 0,
-        PROTOBUF_FIELD_OFFSET(InstanceBatch, _impl_.instance_ids_)}},
-    }}, {{
-      65535, 65535
-    }}, {{
-      // repeated string instance_ids = 1 [json_name = "instanceIds"];
-      {PROTOBUF_FIELD_OFFSET(InstanceBatch, _impl_.instance_ids_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
-    }},
-    // no aux_entries
-    {{
-      "\37\14\0\0\0\0\0\0"
-      "tradingcopilot.v1.InstanceBatch"
-      "instance_ids"
-    }},
-  };
-}
-
-
-inline constexpr InstanceBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    ::_pbi::ConstantInitialized) noexcept
-      : instance_ids_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::InstanceBatch,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceBatch, _impl_.instance_ids_)>()
-         }
-     {}
-
-template <typename>
-constexpr InstanceBatch::InstanceBatch(::_pbi::ConstantInitialized,
-                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
-    : Super_(
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          class_data
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          ),
-      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
-}
-inline void* PROTOBUF_NONNULL InstanceBatch::PlacementNew_(
-    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
-  return ::new (mem) InstanceBatch(arena);
-}
-constexpr auto InstanceBatch::InternalNewImpl_() {
-  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(InstanceBatch), alignof(InstanceBatch));
-}
-constexpr auto InstanceBatch::InternalGenerateClassData_(
-    const MessageLite& prototype,
-    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
-  return ::google::protobuf::internal::ClassDataFull{
-      ::google::protobuf::internal::ClassData{
-          &prototype,
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-          &_table_.header,
-#else
-          tc_table,
-#endif
-          nullptr,  // IsInitialized
-          &InstanceBatch::MergeImpl,
-          Super_::GetNewImpl<InstanceBatch>(),
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          &InstanceBatch::SharedDtor,
-          Super_::GetClearImpl<InstanceBatch>(), &InstanceBatch::ByteSizeLong,
-              &InstanceBatch::_InternalSerialize,
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          PROTOBUF_FIELD_OFFSET(InstanceBatch, _impl_._cached_size_),
-          false,
-      },
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[4],
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-      &::_pbi::kDescriptorMethods,
-      &descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto,
-      nullptr,  // tracker
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  };
-}
-struct InstanceBatchGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
-  constexpr InstanceBatchGlobalsTypeInternal()
-      :
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-        _default(::_pbi::ConstantInitialized{},
-                 InstanceBatch_class_data_.base())
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-        MessageGlobalsBase(InstanceBatch::InternalGenerateClassData_(
-            _default, &InstanceBatch_globals_._table.header)),
-        _default(::_pbi::ConstantInitialized{}, GetClassData()),
-        _table(::_pbi::PrivateAccess::GenerateParseTable<InstanceBatch>(
-            GetClassData()))
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  {
-  }
-  ~InstanceBatchGlobalsTypeInternal() {}
-  union {
-    alignas(::_pbi::kMaxMessageAlignment) InstanceBatch _default;
-  };
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  decltype(::_pbi::PrivateAccess::GenerateParseTable<InstanceBatch>(
-      ::std::declval<const ::_pbi::ClassData*>())) _table;
-#endif
-};
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-static_assert(PROTOBUF_FIELD_OFFSET(InstanceBatchGlobalsTypeInternal, _default) ==
-              ::_pbi::MessageGlobalsBase::OffsetToDefault());
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST InstanceBatchGlobalsTypeInternal InstanceBatch_globals_
-        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-namespace {
-const ::_pbi::ClassData* InstanceBatch_get_class_data() {
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  return InstanceBatch_globals_.GetClassData();
-#else
-  return InstanceBatch_class_data_.base();
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-}
-}  // namespace
-#endif  // PROTOBUF_CUSTOM_VTABLE
-class ExperimentWorkerBatch::_Internal {
- public:
-  using HasBits = decltype(::std::declval<ExperimentWorkerBatch>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-      8 * PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_._has_bits_);
-};
-
-constexpr ExperimentWorkerBatch::ParseTableT_ ExperimentWorkerBatch::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
-  return ParseTableT_{
-    {
-      PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_._has_bits_),
-      0, // no _extensions_
-      3, 24,  // max_field_number, fast_idx_mask
-      offsetof(ParseTableT_, field_lookup_table),
-      4294967288,  // skipmap
-      offsetof(ParseTableT_, field_entries),
-      3,  // num_field_entries
-      0,  // num_aux_entries
-      offsetof(ParseTableT_, field_names),  // no aux_entries
-      class_data,
-      nullptr,  // post_loop_handler
-      ::_pbi::TcParser::MpUnknownFields,  // fallback
-      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
-      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentWorkerBatch>(),  // to_prefetch
-      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
-    }, {{
-      {::_pbi::TcParser::MiniParse, {}},
-      // string experiment_id = 1 [json_name = "experimentId"];
-      {::_pbi::TcParser::FastUS1,
-       {10, 1, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.experiment_id_)}},
-      // repeated string instance_ids = 2 [json_name = "instanceIds"];
-      {::_pbi::TcParser::FastUR1,
-       {18, 0, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.instance_ids_)}},
-      // string data_dir = 3 [json_name = "dataDir"];
-      {::_pbi::TcParser::FastUS1,
-       {26, 2, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.data_dir_)}},
-    }}, {{
-      65535, 65535
-    }}, {{
-      // string experiment_id = 1 [json_name = "experimentId"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.experiment_id_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // repeated string instance_ids = 2 [json_name = "instanceIds"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.instance_ids_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
-      // string data_dir = 3 [json_name = "dataDir"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_.data_dir_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    }},
-    // no aux_entries
-    {{
-      "\47\15\14\10\0\0\0\0"
-      "tradingcopilot.v1.ExperimentWorkerBatch"
-      "experiment_id"
-      "instance_ids"
-      "data_dir"
-    }},
-  };
-}
-
-
-inline constexpr ExperimentWorkerBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    ::_pbi::ConstantInitialized) noexcept
-      : instance_ids_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::ExperimentWorkerBatch,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.instance_ids_)>()
-         }
-        ,
-        experiment_id_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        data_dir_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()) {}
-
-template <typename>
-constexpr ExperimentWorkerBatch::ExperimentWorkerBatch(::_pbi::ConstantInitialized,
-                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
-    : Super_(
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          class_data
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          ),
-      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
-}
-inline void* PROTOBUF_NONNULL ExperimentWorkerBatch::PlacementNew_(
-    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
-  return ::new (mem) ExperimentWorkerBatch(arena);
-}
-constexpr auto ExperimentWorkerBatch::InternalNewImpl_() {
-  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(ExperimentWorkerBatch), alignof(ExperimentWorkerBatch));
-}
-constexpr auto ExperimentWorkerBatch::InternalGenerateClassData_(
-    const MessageLite& prototype,
-    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
-  return ::google::protobuf::internal::ClassDataFull{
-      ::google::protobuf::internal::ClassData{
-          &prototype,
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-          &_table_.header,
-#else
-          tc_table,
-#endif
-          nullptr,  // IsInitialized
-          &ExperimentWorkerBatch::MergeImpl,
-          Super_::GetNewImpl<ExperimentWorkerBatch>(),
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          &ExperimentWorkerBatch::SharedDtor,
-          Super_::GetClearImpl<ExperimentWorkerBatch>(), &ExperimentWorkerBatch::ByteSizeLong,
-              &ExperimentWorkerBatch::_InternalSerialize,
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatch, _impl_._cached_size_),
-          false,
-      },
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[3],
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-      &::_pbi::kDescriptorMethods,
-      &descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto,
-      nullptr,  // tracker
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  };
-}
-struct ExperimentWorkerBatchGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
-  constexpr ExperimentWorkerBatchGlobalsTypeInternal()
-      :
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-        _default(::_pbi::ConstantInitialized{},
-                 ExperimentWorkerBatch_class_data_.base())
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-        MessageGlobalsBase(ExperimentWorkerBatch::InternalGenerateClassData_(
-            _default, &ExperimentWorkerBatch_globals_._table.header)),
-        _default(::_pbi::ConstantInitialized{}, GetClassData()),
-        _table(::_pbi::PrivateAccess::GenerateParseTable<ExperimentWorkerBatch>(
-            GetClassData()))
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  {
-  }
-  ~ExperimentWorkerBatchGlobalsTypeInternal() {}
-  union {
-    alignas(::_pbi::kMaxMessageAlignment) ExperimentWorkerBatch _default;
-  };
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  decltype(::_pbi::PrivateAccess::GenerateParseTable<ExperimentWorkerBatch>(
-      ::std::declval<const ::_pbi::ClassData*>())) _table;
-#endif
-};
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-static_assert(PROTOBUF_FIELD_OFFSET(ExperimentWorkerBatchGlobalsTypeInternal, _default) ==
-              ::_pbi::MessageGlobalsBase::OffsetToDefault());
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST ExperimentWorkerBatchGlobalsTypeInternal ExperimentWorkerBatch_globals_
-        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-namespace {
-const ::_pbi::ClassData* ExperimentWorkerBatch_get_class_data() {
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  return ExperimentWorkerBatch_globals_.GetClassData();
-#else
-  return ExperimentWorkerBatch_class_data_.base();
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-}
-}  // namespace
-#endif  // PROTOBUF_CUSTOM_VTABLE
 class CancelExperimentResponse::_Internal {
  public:
   using HasBits = decltype(::std::declval<CancelExperimentResponse>()._impl_._has_bits_);
@@ -685,13 +376,13 @@ constexpr CancelExperimentResponse::ParseTableT_ CancelExperimentResponse::Inter
     {
       PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_._has_bits_),
       0, // no _extensions_
-      4, 24,  // max_field_number, fast_idx_mask
+      5, 56,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294967280,  // skipmap
+      4294967264,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      4,  // num_field_entries
-      0,  // num_aux_entries
-      offsetof(ParseTableT_, field_names),  // no aux_entries
+      5,  // num_field_entries
+      1,  // num_aux_entries
+      offsetof(ParseTableT_, aux_entries),
       class_data,
       nullptr,  // post_loop_handler
       ::_pbi::TcParser::MpUnknownFields,  // fallback
@@ -699,35 +390,50 @@ constexpr CancelExperimentResponse::ParseTableT_ CancelExperimentResponse::Inter
       ::_pbi::TcParser::GetTable<::tradingcopilot::v1::CancelExperimentResponse>(),  // to_prefetch
       #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
     }, {{
-      // string finished = 4 [json_name = "finished"];
-      {::_pbi::TcParser::FastUS1,
-       {34, 2, 0,
-        PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.finished_)}},
+      {::_pbi::TcParser::MiniParse, {}},
       // string id = 1 [json_name = "id"];
       {::_pbi::TcParser::FastUS1,
        {10, 0, 0,
         PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.id_)}},
       // bool running = 2 [json_name = "running"];
-      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(CancelExperimentResponse, _impl_.running_), 3>(),
-       {16, 3, 0,
+      {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(CancelExperimentResponse, _impl_.running_), 4>(),
+       {16, 4, 0,
         PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.running_)}},
       // string error = 3 [json_name = "error"];
       {::_pbi::TcParser::FastUS1,
        {26, 1, 0,
         PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.error_)}},
+      // string finished = 4 [json_name = "finished"];
+      {::_pbi::TcParser::FastUS1,
+       {34, 2, 0,
+        PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.finished_)}},
+      // .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
+      {::_pbi::TcParser::FastMtS1,
+       {42, 3, 0,
+        PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.experiment_)}},
+      {::_pbi::TcParser::MiniParse, {}},
+      {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
     }}, {{
       // string id = 1 [json_name = "id"];
       {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.id_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // bool running = 2 [json_name = "running"];
-      {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.running_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+      {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.running_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
       // string error = 3 [json_name = "error"];
       {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.error_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
       // string finished = 4 [json_name = "finished"];
       {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.finished_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+      // .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
+      {PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.experiment_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     }},
-    // no aux_entries
+    {{
+        #ifndef PROTOBUF_MESSAGE_GLOBALS
+        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::Experiment>()},
+        #else
+        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::Experiment_globals_},
+        #endif
+    }},
     {{
       "\52\2\0\5\10\0\0\0"
       "tradingcopilot.v1.CancelExperimentResponse"
@@ -751,6 +457,7 @@ inline constexpr CancelExperimentResponse::Impl_::Impl_(
         finished_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
+        experiment_{nullptr},
         running_{false} {}
 
 template <typename>
@@ -845,179 +552,6 @@ const ::_pbi::ClassData* CancelExperimentResponse_get_class_data() {
 }
 }  // namespace
 #endif  // PROTOBUF_CUSTOM_VTABLE
-class ExperimentSFNInput::_Internal {
- public:
-  using HasBits = decltype(::std::declval<ExperimentSFNInput>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-      8 * PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_._has_bits_);
-};
-
-constexpr ExperimentSFNInput::ParseTableT_ ExperimentSFNInput::InternalGenerateParseTable_(const ::_pbi::ClassData* class_data) {
-  return ParseTableT_{
-    {
-      PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_._has_bits_),
-      0, // no _extensions_
-      3, 24,  // max_field_number, fast_idx_mask
-      offsetof(ParseTableT_, field_lookup_table),
-      4294967288,  // skipmap
-      offsetof(ParseTableT_, field_entries),
-      3,  // num_field_entries
-      1,  // num_aux_entries
-      offsetof(ParseTableT_, aux_entries),
-      class_data,
-      nullptr,  // post_loop_handler
-      ::_pbi::TcParser::MpUnknownFields,  // fallback
-      #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
-      ::_pbi::TcParser::GetTable<::tradingcopilot::v1::ExperimentSFNInput>(),  // to_prefetch
-      #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
-    }, {{
-      {::_pbi::TcParser::MiniParse, {}},
-      // string experiment_id = 1 [json_name = "experimentId"];
-      {::_pbi::TcParser::FastUS1,
-       {10, 1, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.experiment_id_)}},
-      // string data_dir = 2 [json_name = "dataDir"];
-      {::_pbi::TcParser::FastUS1,
-       {18, 2, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.data_dir_)}},
-      // repeated .tradingcopilot.v1.InstanceBatch batches = 3 [json_name = "batches"];
-      {::_pbi::TcParser::FastMtR1,
-       {26, 0, 0,
-        PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.batches_)}},
-    }}, {{
-      65535, 65535
-    }}, {{
-      // string experiment_id = 1 [json_name = "experimentId"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.experiment_id_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // string data_dir = 2 [json_name = "dataDir"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.data_dir_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
-      // repeated .tradingcopilot.v1.InstanceBatch batches = 3 [json_name = "batches"];
-      {PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_.batches_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
-    }},
-    {{
-        #ifndef PROTOBUF_MESSAGE_GLOBALS
-        {::_pbi::TcParser::GetTable<::tradingcopilot::v1::InstanceBatch>()},
-        #else
-        {::_pbi::FieldAuxMessageGlobals(), &::tradingcopilot::v1::InstanceBatch_globals_},
-        #endif
-    }},
-    {{
-      "\44\15\10\0\0\0\0\0"
-      "tradingcopilot.v1.ExperimentSFNInput"
-      "experiment_id"
-      "data_dir"
-    }},
-  };
-}
-
-
-inline constexpr ExperimentSFNInput::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    ::_pbi::ConstantInitialized) noexcept
-      : batches_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::ExperimentSFNInput,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.batches_)>()
-         }
-        ,
-        experiment_id_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        data_dir_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()) {}
-
-template <typename>
-constexpr ExperimentSFNInput::ExperimentSFNInput(::_pbi::ConstantInitialized,
-                       const ::_pbi::ClassData* PROTOBUF_NONNULL class_data)
-    : Super_(
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          class_data
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          ),
-      _impl_(internal_visibility(), ::_pbi::ConstantInitialized()) {
-}
-inline void* PROTOBUF_NONNULL ExperimentSFNInput::PlacementNew_(
-    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
-  return ::new (mem) ExperimentSFNInput(arena);
-}
-constexpr auto ExperimentSFNInput::InternalNewImpl_() {
-  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(ExperimentSFNInput), alignof(ExperimentSFNInput));
-}
-constexpr auto ExperimentSFNInput::InternalGenerateClassData_(
-    const MessageLite& prototype,
-    const ::google::protobuf::internal::TcParseTableBase* tc_table) {
-  return ::google::protobuf::internal::ClassDataFull{
-      ::google::protobuf::internal::ClassData{
-          &prototype,
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-          &_table_.header,
-#else
-          tc_table,
-#endif
-          nullptr,  // IsInitialized
-          &ExperimentSFNInput::MergeImpl,
-          Super_::GetNewImpl<ExperimentSFNInput>(),
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          &ExperimentSFNInput::SharedDtor,
-          Super_::GetClearImpl<ExperimentSFNInput>(), &ExperimentSFNInput::ByteSizeLong,
-              &ExperimentSFNInput::_InternalSerialize,
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          PROTOBUF_FIELD_OFFSET(ExperimentSFNInput, _impl_._cached_size_),
-          false,
-      },
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-      &file_reflection_data[5],
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-      &::_pbi::kDescriptorMethods,
-      &descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto,
-      nullptr,  // tracker
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  };
-}
-struct ExperimentSFNInputGlobalsTypeInternal : ::_pbi::MessageGlobalsBase {
-  constexpr ExperimentSFNInputGlobalsTypeInternal()
-      :
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-        _default(::_pbi::ConstantInitialized{},
-                 ExperimentSFNInput_class_data_.base())
-#else   // !PROTOBUF_MESSAGE_GLOBALS
-        MessageGlobalsBase(ExperimentSFNInput::InternalGenerateClassData_(
-            _default, &ExperimentSFNInput_globals_._table.header)),
-        _default(::_pbi::ConstantInitialized{}, GetClassData()),
-        _table(::_pbi::PrivateAccess::GenerateParseTable<ExperimentSFNInput>(
-            GetClassData()))
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-  {
-  }
-  ~ExperimentSFNInputGlobalsTypeInternal() {}
-  union {
-    alignas(::_pbi::kMaxMessageAlignment) ExperimentSFNInput _default;
-  };
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  decltype(::_pbi::PrivateAccess::GenerateParseTable<ExperimentSFNInput>(
-      ::std::declval<const ::_pbi::ClassData*>())) _table;
-#endif
-};
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-static_assert(PROTOBUF_FIELD_OFFSET(ExperimentSFNInputGlobalsTypeInternal, _default) ==
-              ::_pbi::MessageGlobalsBase::OffsetToDefault());
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PROTOBUF_MESSAGE_GLOBALS_CONST ExperimentSFNInputGlobalsTypeInternal ExperimentSFNInput_globals_
-        PROTOBUF_MESSAGE_GLOBALS_SECTION(.data.rel.ro);
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-namespace {
-const ::_pbi::ClassData* ExperimentSFNInput_get_class_data() {
-#ifdef PROTOBUF_MESSAGE_GLOBALS
-  return ExperimentSFNInput_globals_.GetClassData();
-#else
-  return ExperimentSFNInput_class_data_.base();
-#endif  // PROTOBUF_MESSAGE_GLOBALS
-}
-}  // namespace
-#endif  // PROTOBUF_CUSTOM_VTABLE
 }  // namespace v1
 }  // namespace tradingcopilot
 static constexpr const ::_pb::EnumDescriptor* PROTOBUF_NONNULL* PROTOBUF_NULLABLE
@@ -1029,8 +563,10 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunExperimentRequest, _impl_._has_bits_),
-        4, // hasbit index offset
+        5, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunExperimentRequest, _impl_.retry_failed_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunExperimentRequest, _impl_.id_),
+        1,
         0,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::RunExperimentResponse, _impl_._has_bits_),
@@ -1045,95 +581,67 @@ const ::uint32_t
         2,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_._has_bits_),
-        7, // hasbit index offset
+        8, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_.id_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_.running_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_.error_),
         PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_.finished_),
+        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::CancelExperimentResponse, _impl_.experiment_),
         0,
+        4,
+        1,
+        2,
         3,
-        1,
-        2,
-        0x081, // bitmap
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_._has_bits_),
-        6, // hasbit index offset
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.experiment_id_),
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.instance_ids_),
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.data_dir_),
-        1,
-        0,
-        2,
-        0x081, // bitmap
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceBatch, _impl_._has_bits_),
-        4, // hasbit index offset
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceBatch, _impl_.instance_ids_),
-        0,
-        0x081, // bitmap
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_._has_bits_),
-        6, // hasbit index offset
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.experiment_id_),
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.data_dir_),
-        PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.batches_),
-        1,
-        2,
-        0,
 };
 
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, sizeof(::tradingcopilot::v1::RunExperimentRequest)},
-        {5, sizeof(::tradingcopilot::v1::RunExperimentResponse)},
-        {16, sizeof(::tradingcopilot::v1::CancelExperimentResponse)},
-        {27, sizeof(::tradingcopilot::v1::ExperimentWorkerBatch)},
-        {36, sizeof(::tradingcopilot::v1::InstanceBatch)},
-        {41, sizeof(::tradingcopilot::v1::ExperimentSFNInput)},
+        {7, sizeof(::tradingcopilot::v1::RunExperimentResponse)},
+        {18, sizeof(::tradingcopilot::v1::CancelExperimentResponse)},
 };
 static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
     file_message_globals[] = {
         &::tradingcopilot::v1::RunExperimentRequest_globals_,
         &::tradingcopilot::v1::RunExperimentResponse_globals_,
         &::tradingcopilot::v1::CancelExperimentResponse_globals_,
-        &::tradingcopilot::v1::ExperimentWorkerBatch_globals_,
-        &::tradingcopilot::v1::InstanceBatch_globals_,
-        &::tradingcopilot::v1::ExperimentSFNInput_globals_,
 };
 const char descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5frun_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n&tradingcopilot/v1/experiment_run.proto"
-    "\022\021tradingcopilot.v1\"9\n\024RunExperimentRequ"
-    "est\022!\n\014retry_failed\030\001 \001(\010R\013retryFailed\"s"
-    "\n\025RunExperimentResponse\022\016\n\002id\030\001 \001(\tR\002id\022"
-    "\030\n\007running\030\002 \001(\010R\007running\022\024\n\005error\030\003 \001(\t"
-    "R\005error\022\032\n\010finished\030\004 \001(\tR\010finished\"v\n\030C"
-    "ancelExperimentResponse\022\016\n\002id\030\001 \001(\tR\002id\022"
-    "\030\n\007running\030\002 \001(\010R\007running\022\024\n\005error\030\003 \001(\t"
-    "R\005error\022\032\n\010finished\030\004 \001(\tR\010finished\"z\n\025E"
-    "xperimentWorkerBatch\022#\n\rexperiment_id\030\001 "
-    "\001(\tR\014experimentId\022!\n\014instance_ids\030\002 \003(\tR"
-    "\013instanceIds\022\031\n\010data_dir\030\003 \001(\tR\007dataDir\""
-    "2\n\rInstanceBatch\022!\n\014instance_ids\030\001 \003(\tR\013"
-    "instanceIds\"\220\001\n\022ExperimentSFNInput\022#\n\rex"
-    "periment_id\030\001 \001(\tR\014experimentId\022\031\n\010data_"
-    "dir\030\002 \001(\tR\007dataDir\022:\n\007batches\030\003 \003(\0132 .tr"
-    "adingcopilot.v1.InstanceBatchR\007batchesB\337"
-    "\001\n\025com.tradingcopilot.v1B\022ExperimentRunP"
-    "rotoP\001ZMgithub.com/MaxBernstetter/dagobe"
-    "rt/src/gen/tradingcopilot/v1;tradingcopi"
-    "lotv1\242\002\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tradin"
-    "gcopilot\\V1\342\002\035Tradingcopilot\\V1\\GPBMetad"
-    "ata\352\002\022Tradingcopilot::V1b\006proto3"
+    "\022\021tradingcopilot.v1\032\"tradingcopilot/v1/e"
+    "xperiment.proto\"I\n\024RunExperimentRequest\022"
+    "!\n\014retry_failed\030\001 \001(\010R\013retryFailed\022\016\n\002id"
+    "\030\002 \001(\tR\002id\"s\n\025RunExperimentResponse\022\016\n\002i"
+    "d\030\001 \001(\tR\002id\022\030\n\007running\030\002 \001(\010R\007running\022\024\n"
+    "\005error\030\003 \001(\tR\005error\022\032\n\010finished\030\004 \001(\tR\010f"
+    "inished\"\265\001\n\030CancelExperimentResponse\022\016\n\002"
+    "id\030\001 \001(\tR\002id\022\030\n\007running\030\002 \001(\010R\007running\022\024"
+    "\n\005error\030\003 \001(\tR\005error\022\032\n\010finished\030\004 \001(\tR\010"
+    "finished\022=\n\nexperiment\030\005 \001(\0132\035.tradingco"
+    "pilot.v1.ExperimentR\nexperimentB\337\001\n\025com."
+    "tradingcopilot.v1B\022ExperimentRunProtoP\001Z"
+    "Mgithub.com/MaxBernstetter/dagobert/src/"
+    "gen/tradingcopilot/v1;tradingcopilotv1\242\002"
+    "\003TXX\252\002\021Tradingcopilot.V1\312\002\021Tradingcopilo"
+    "t\\V1\342\002\035Tradingcopilot\\V1\\GPBMetadata\352\002\022T"
+    "radingcopilot::V1b\006proto3"
+};
+static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
+    descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto_deps[1] = {
+        &::descriptor_table_tradingcopilot_2fv1_2fexperiment_2eproto,
 };
 static ::absl::once_flag descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto = {
     false,
     false,
-    912,
+    705,
     descriptor_table_protodef_tradingcopilot_2fv1_2fexperiment_5frun_2eproto,
     "tradingcopilot/v1/experiment_run.proto",
     &descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto_once,
-    nullptr,
-    0,
-    6,
+    descriptor_table_tradingcopilot_2fv1_2fexperiment_5frun_2eproto_deps,
+    1,
+    3,
     schemas,
     file_message_globals,
     TableStruct_tradingcopilot_2fv1_2fexperiment_5frun_2eproto::offsets,
@@ -1153,21 +661,35 @@ RunExperimentRequest::RunExperimentRequest(::google::protobuf::Arena* PROTOBUF_N
   SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.RunExperimentRequest)
 }
+PROTOBUF_NDEBUG_INLINE RunExperimentRequest::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    [[maybe_unused]] const ::tradingcopilot::v1::RunExperimentRequest& from_msg)
+      : _has_bits_{from._has_bits_},
+        id_(arena, from.id_) {}
+
 RunExperimentRequest::RunExperimentRequest(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const RunExperimentRequest& from)
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const RunExperimentRequest& from)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, RunExperimentRequest_get_class_data()),
+    : Super_(arena, RunExperimentRequest_get_class_data()) {
+
 #else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena),
+    : Super_(arena) {
 #endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(from._impl_) {
+  RunExperimentRequest* const _this = this;
+  (void)_this;
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  _impl_.retry_failed_ = from._impl_.retry_failed_;
+
+  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.RunExperimentRequest)
 }
 PROTOBUF_NDEBUG_INLINE RunExperimentRequest::Impl_::Impl_(
     [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
     [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-     {}
+      : id_(arena) {}
 
 inline void RunExperimentRequest::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -1184,6 +706,7 @@ inline void RunExperimentRequest::SharedDtor(MessageLite& self) {
   }
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.id_.Destroy();
   this_._impl_.~Impl_();
 }
 
@@ -1219,6 +742,10 @@ PROTOBUF_NOINLINE void RunExperimentRequest::Clear() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    this_._impl_.id_.ClearNonDefaultToEmpty();
+  }
   this_._impl_.retry_failed_ = false;
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -1244,11 +771,21 @@ PROTOBUF_NOINLINE void RunExperimentRequest::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // bool retry_failed = 1 [json_name = "retryFailed"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
     if (this_._internal_retry_failed() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
           1, this_._internal_retry_failed(), target);
+    }
+  }
+
+  // string id = 2 [json_name = "id"];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (!this_._internal_id().empty()) {
+      const ::std::string& _s = this_._internal_id();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.RunExperimentRequest.id");
+      target = stream->WriteStringMaybeAliased(2, _s, target);
     }
   }
 
@@ -1273,10 +810,18 @@ PROTOBUF_NOINLINE void RunExperimentRequest::Clear() {
 
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
-   {
-    // bool retry_failed = 1 [json_name = "retryFailed"];
-    cached_has_bits = this_._impl_._has_bits_[0];
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    // string id = 2 [json_name = "id"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!this_._internal_id().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_id());
+      }
+    }
+    // bool retry_failed = 1 [json_name = "retryFailed"];
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
       if (this_._internal_retry_failed() != 0) {
         total_size += 2;
       }
@@ -1299,9 +844,20 @@ void RunExperimentRequest::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    if (from._internal_retry_failed() != 0) {
-      _this->_impl_.retry_failed_ = from._impl_.retry_failed_;
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (!from._internal_id().empty()) {
+        _this->_internal_set_id(from._internal_id());
+      } else {
+        if (_this->_impl_.id_.IsDefault()) {
+          _this->_internal_set_id("");
+        }
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (from._internal_retry_failed() != 0) {
+        _this->_impl_.retry_failed_ = from._impl_.retry_failed_;
+      }
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -1319,8 +875,11 @@ void RunExperimentRequest::CopyFrom(const RunExperimentRequest& from) {
 
 void RunExperimentRequest::InternalSwap(RunExperimentRequest* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
   using ::std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.id_, &other->_impl_.id_, arena);
   swap(_impl_.retry_failed_, other->_impl_.retry_failed_);
 }
 
@@ -1633,6 +1192,11 @@ void RunExperimentResponse::InternalSwap(RunExperimentResponse* PROTOBUF_RESTRIC
 }
 // ===================================================================
 
+void CancelExperimentResponse::clear_experiment() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.experiment_ != nullptr) _impl_.experiment_->Clear();
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+}
 CancelExperimentResponse::CancelExperimentResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
 #if defined(PROTOBUF_CUSTOM_VTABLE)
     : Super_(arena, CancelExperimentResponse_get_class_data()) {
@@ -1665,6 +1229,10 @@ CancelExperimentResponse::CancelExperimentResponse(
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.experiment_ = (CheckHasBit(cached_has_bits, 0x00000008U))
+                 ? Super_::CopyConstruct(arena, *from._impl_.experiment_)
+                 : nullptr;
   _impl_.running_ = from._impl_.running_;
 
   // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.CancelExperimentResponse)
@@ -1678,7 +1246,12 @@ PROTOBUF_NDEBUG_INLINE CancelExperimentResponse::Impl_::Impl_(
 
 inline void CancelExperimentResponse::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.running_ = {};
+  ::memset(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, experiment_),
+           0,
+           offsetof(Impl_, running_) -
+               offsetof(Impl_, experiment_) +
+               sizeof(Impl_::running_));
 }
 CancelExperimentResponse::~CancelExperimentResponse() {
   // @@protoc_insertion_point(destructor:tradingcopilot.v1.CancelExperimentResponse)
@@ -1694,6 +1267,7 @@ inline void CancelExperimentResponse::SharedDtor(MessageLite& self) {
   this_._impl_.id_.Destroy();
   this_._impl_.error_.Destroy();
   this_._impl_.finished_.Destroy();
+  delete this_._impl_.experiment_;
   this_._impl_.~Impl_();
 }
 
@@ -1730,7 +1304,7 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
   ::uint32_t cached_has_bits [[maybe_unused]] = 0;
 
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       this_._impl_.id_.ClearNonDefaultToEmpty();
     }
@@ -1739,6 +1313,10 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
     }
     if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       this_._impl_.finished_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      ABSL_DCHECK(this_._impl_.experiment_ != nullptr);
+      this_._impl_.experiment_->Clear();
     }
   }
   this_._impl_.running_ = false;
@@ -1776,7 +1354,7 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
   }
 
   // bool running = 2 [json_name = "running"];
-  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
     if (this_._internal_running() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -1804,6 +1382,13 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
     }
   }
 
+  // .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        5, *this_._impl_.experiment_, this_._impl_.experiment_->GetCachedSize(), target,
+        stream);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -1827,7 +1412,7 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
     // string id = 1 [json_name = "id"];
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_id().empty()) {
@@ -1849,8 +1434,13 @@ PROTOBUF_NOINLINE void CancelExperimentResponse::Clear() {
                                         this_._internal_finished());
       }
     }
-    // bool running = 2 [json_name = "running"];
+    // .tradingcopilot.v1.Experiment experiment = 5 [json_name = "experiment"];
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.experiment_);
+    }
+    // bool running = 2 [json_name = "running"];
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (this_._internal_running() != 0) {
         total_size += 2;
       }
@@ -1867,13 +1457,14 @@ void CancelExperimentResponse::MergeImpl(::google::protobuf::MessageLite& to_msg
   if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
     from.CheckHasBitConsistency();
   }
+  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.CancelExperimentResponse)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!from._internal_id().empty()) {
         _this->_internal_set_id(from._internal_id());
@@ -1902,6 +1493,14 @@ void CancelExperimentResponse::MergeImpl(::google::protobuf::MessageLite& to_msg
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      ABSL_DCHECK(from._impl_.experiment_ != nullptr);
+      if (_this->_impl_.experiment_ == nullptr) {
+        _this->_impl_.experiment_ = Super_::CopyConstruct(arena, *from._impl_.experiment_);
+      } else {
+        _this->_impl_.experiment_->MergeFrom(*from._impl_.experiment_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (from._internal_running() != 0) {
         _this->_impl_.running_ = from._impl_.running_;
       }
@@ -1929,802 +1528,15 @@ void CancelExperimentResponse::InternalSwap(CancelExperimentResponse* PROTOBUF_R
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.id_, &other->_impl_.id_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.error_, &other->_impl_.error_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.finished_, &other->_impl_.finished_, arena);
-  swap(_impl_.running_, other->_impl_.running_);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.running_)
+      + sizeof(CancelExperimentResponse::_impl_.running_)
+      - PROTOBUF_FIELD_OFFSET(CancelExperimentResponse, _impl_.experiment_)>(
+          reinterpret_cast<char*>(&_impl_.experiment_),
+          reinterpret_cast<char*>(&other->_impl_.experiment_));
 }
 
 ::google::protobuf::Metadata CancelExperimentResponse::GetMetadata() const {
-  return Super_::GetMetadataImpl(GetClassData()->full());
-}
-// ===================================================================
-
-ExperimentWorkerBatch::ExperimentWorkerBatch(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, ExperimentWorkerBatch_get_class_data()) {
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  SharedCtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.ExperimentWorkerBatch)
-}
-PROTOBUF_NDEBUG_INLINE ExperimentWorkerBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-    [[maybe_unused]] const ::tradingcopilot::v1::ExperimentWorkerBatch& from_msg)
-      : _has_bits_{from._has_bits_},
-        instance_ids_ {
-          visibility, ::_pbi::InternalMetadataOffset::Build<
-              ::tradingcopilot::v1::ExperimentWorkerBatch,
-              PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.instance_ids_)>()
-          , arena, from.instance_ids_
-        }
-        ,
-        experiment_id_(arena, from.experiment_id_),
-        data_dir_(arena, from.data_dir_) {}
-
-ExperimentWorkerBatch::ExperimentWorkerBatch(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
-    const ExperimentWorkerBatch& from)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, ExperimentWorkerBatch_get_class_data()) {
-
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  ExperimentWorkerBatch* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-
-  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ExperimentWorkerBatch)
-}
-PROTOBUF_NDEBUG_INLINE ExperimentWorkerBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-      : instance_ids_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::ExperimentWorkerBatch,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentWorkerBatch, _impl_.instance_ids_)>()
-         }
-        ,
-        experiment_id_(arena),
-        data_dir_(arena) {}
-
-inline void ExperimentWorkerBatch::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-}
-ExperimentWorkerBatch::~ExperimentWorkerBatch() {
-  // @@protoc_insertion_point(destructor:tradingcopilot.v1.ExperimentWorkerBatch)
-  SharedDtor(*this);
-}
-inline void ExperimentWorkerBatch::SharedDtor(MessageLite& self) {
-  ExperimentWorkerBatch& this_ = static_cast<ExperimentWorkerBatch&>(self);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
-  ABSL_DCHECK(this_.GetArena() == nullptr);
-  this_._impl_.experiment_id_.Destroy();
-  this_._impl_.data_dir_.Destroy();
-  this_._impl_.~Impl_();
-}
-
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
-    ::google::protobuf::internal::ClassDataFull ExperimentWorkerBatch_class_data_ =
-        ExperimentWorkerBatch::InternalGenerateClassData_(ExperimentWorkerBatch_globals_._default);
-
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-ExperimentWorkerBatch::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&ExperimentWorkerBatch_class_data_);
-  ::google::protobuf::internal::PrefetchToLocalCache(ExperimentWorkerBatch_class_data_.tc_table);
-  return ExperimentWorkerBatch_class_data_.base();
-}
-#else
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-ExperimentWorkerBatch::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&ExperimentWorkerBatch_globals_);
-  ::google::protobuf::internal::PrefetchToLocalCache(
-      ::google::protobuf::internal::MessageGlobalsBase::ToParseTableBase(&ExperimentWorkerBatch_globals_));
-  return ExperimentWorkerBatch_globals_.GetClassData();
-}
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const ExperimentWorkerBatch::ParseTableT_
-    ExperimentWorkerBatch::_table_ =
-        ExperimentWorkerBatch::InternalGenerateParseTable_(ExperimentWorkerBatch_class_data_.base());
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_NOINLINE void ExperimentWorkerBatch::Clear() {
-  auto& this_ [[maybe_unused]] = *this;
-  // @@protoc_insertion_point(message_clear_start:tradingcopilot.v1.ExperimentWorkerBatch)
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      _impl_.instance_ids_.Clear();
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      this_._impl_.experiment_id_.ClearNonDefaultToEmpty();
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      this_._impl_.data_dir_.ClearNonDefaultToEmpty();
-    }
-  }
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::uint8_t* PROTOBUF_NONNULL ExperimentWorkerBatch::_InternalSerialize(
-    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
-  const ExperimentWorkerBatch& this_ = static_cast<const ExperimentWorkerBatch&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::uint8_t* PROTOBUF_NONNULL ExperimentWorkerBatch::_InternalSerialize(
-    ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-  const ExperimentWorkerBatch& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  // @@protoc_insertion_point(serialize_to_array_start:tradingcopilot.v1.ExperimentWorkerBatch)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  // string experiment_id = 1 [json_name = "experimentId"];
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-    if (!this_._internal_experiment_id().empty()) {
-      const ::std::string& _s = this_._internal_experiment_id();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ExperimentWorkerBatch.experiment_id");
-      target = stream->WriteStringMaybeAliased(1, _s, target);
-    }
-  }
-
-  // repeated string instance_ids = 2 [json_name = "instanceIds"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    for (int i = 0, n = this_._internal_instance_ids_size(); i < n; ++i) {
-      const auto& s = this_._internal_instance_ids().Get(i);
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          s.data(), static_cast<int>(s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ExperimentWorkerBatch.instance_ids");
-      target = stream->WriteString(2, s, target);
-    }
-  }
-
-  // string data_dir = 3 [json_name = "dataDir"];
-  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-    if (!this_._internal_data_dir().empty()) {
-      const ::std::string& _s = this_._internal_data_dir();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ExperimentWorkerBatch.data_dir");
-      target = stream->WriteStringMaybeAliased(3, _s, target);
-    }
-  }
-
-  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:tradingcopilot.v1.ExperimentWorkerBatch)
-  return target;
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::size_t ExperimentWorkerBatch::ByteSizeLong(const MessageLite& base) {
-  const ExperimentWorkerBatch& this_ = static_cast<const ExperimentWorkerBatch&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::size_t ExperimentWorkerBatch::ByteSizeLong() const {
-  const ExperimentWorkerBatch& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  // @@protoc_insertion_point(message_byte_size_start:tradingcopilot.v1.ExperimentWorkerBatch)
-  ::size_t total_size = 0;
-
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    // repeated string instance_ids = 2 [json_name = "instanceIds"];
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      total_size +=
-          1 * ::google::protobuf::internal::FromIntSize(this_._internal_instance_ids().size());
-      for (int i = 0, n = this_._internal_instance_ids().size(); i < n; ++i) {
-        total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
-            this_._internal_instance_ids().Get(i));
-      }
-    }
-    // string experiment_id = 1 [json_name = "experimentId"];
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      if (!this_._internal_experiment_id().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                        this_._internal_experiment_id());
-      }
-    }
-    // string data_dir = 3 [json_name = "dataDir"];
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      if (!this_._internal_data_dir().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                        this_._internal_data_dir());
-      }
-    }
-  }
-  return this_.MaybeComputeUnknownFieldsSize(total_size,
-                                             &this_._impl_._cached_size_);
-}
-
-void ExperimentWorkerBatch::MergeImpl(::google::protobuf::MessageLite& to_msg,
-                      const ::google::protobuf::MessageLite& from_msg) {
-   auto* const _this = static_cast<ExperimentWorkerBatch*>(&to_msg);
-  auto& from = static_cast<const ExperimentWorkerBatch&>(from_msg);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    from.CheckHasBitConsistency();
-  }
-  ::google::protobuf::Arena* arena = _this->GetArena();
-  // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.ExperimentWorkerBatch)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      _this->_internal_mutable_instance_ids()->InternalMergeFromWithArena(
-          ::google::protobuf::MessageLite::internal_visibility(), arena,
-          from._internal_instance_ids());
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      if (!from._internal_experiment_id().empty()) {
-        _this->_internal_set_experiment_id(from._internal_experiment_id());
-      } else {
-        if (_this->_impl_.experiment_id_.IsDefault()) {
-          _this->_internal_set_experiment_id("");
-        }
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      if (!from._internal_data_dir().empty()) {
-        _this->_internal_set_data_dir(from._internal_data_dir());
-      } else {
-        if (_this->_impl_.data_dir_.IsDefault()) {
-          _this->_internal_set_data_dir("");
-        }
-      }
-    }
-  }
-  _this->_impl_._has_bits_[0] |= cached_has_bits;
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-}
-
-void ExperimentWorkerBatch::CopyFrom(const ExperimentWorkerBatch& from) {
-  // @@protoc_insertion_point(class_specific_copy_from_start:tradingcopilot.v1.ExperimentWorkerBatch)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-
-void ExperimentWorkerBatch::InternalSwap(ExperimentWorkerBatch* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
-  using ::std::swap;
-  auto* arena = GetArena();
-  ABSL_DCHECK_EQ(arena, other->GetArena());
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  _impl_.instance_ids_.InternalSwap(&other->_impl_.instance_ids_);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.experiment_id_, &other->_impl_.experiment_id_, arena);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.data_dir_, &other->_impl_.data_dir_, arena);
-}
-
-::google::protobuf::Metadata ExperimentWorkerBatch::GetMetadata() const {
-  return Super_::GetMetadataImpl(GetClassData()->full());
-}
-// ===================================================================
-
-InstanceBatch::InstanceBatch(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, InstanceBatch_get_class_data()) {
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  SharedCtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.InstanceBatch)
-}
-PROTOBUF_NDEBUG_INLINE InstanceBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-    [[maybe_unused]] const ::tradingcopilot::v1::InstanceBatch& from_msg)
-      : _has_bits_{from._has_bits_},
-        instance_ids_ {
-          visibility, ::_pbi::InternalMetadataOffset::Build<
-              ::tradingcopilot::v1::InstanceBatch,
-              PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceBatch, _impl_.instance_ids_)>()
-          , arena, from.instance_ids_
-        }
-     {}
-
-InstanceBatch::InstanceBatch(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
-    const InstanceBatch& from)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, InstanceBatch_get_class_data()) {
-
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  InstanceBatch* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-
-  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.InstanceBatch)
-}
-PROTOBUF_NDEBUG_INLINE InstanceBatch::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-      : instance_ids_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::InstanceBatch,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::InstanceBatch, _impl_.instance_ids_)>()
-         }
-     {}
-
-inline void InstanceBatch::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-}
-InstanceBatch::~InstanceBatch() {
-  // @@protoc_insertion_point(destructor:tradingcopilot.v1.InstanceBatch)
-  SharedDtor(*this);
-}
-inline void InstanceBatch::SharedDtor(MessageLite& self) {
-  InstanceBatch& this_ = static_cast<InstanceBatch&>(self);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
-  ABSL_DCHECK(this_.GetArena() == nullptr);
-  this_._impl_.~Impl_();
-}
-
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
-    ::google::protobuf::internal::ClassDataFull InstanceBatch_class_data_ =
-        InstanceBatch::InternalGenerateClassData_(InstanceBatch_globals_._default);
-
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-InstanceBatch::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&InstanceBatch_class_data_);
-  ::google::protobuf::internal::PrefetchToLocalCache(InstanceBatch_class_data_.tc_table);
-  return InstanceBatch_class_data_.base();
-}
-#else
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-InstanceBatch::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&InstanceBatch_globals_);
-  ::google::protobuf::internal::PrefetchToLocalCache(
-      ::google::protobuf::internal::MessageGlobalsBase::ToParseTableBase(&InstanceBatch_globals_));
-  return InstanceBatch_globals_.GetClassData();
-}
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const InstanceBatch::ParseTableT_
-    InstanceBatch::_table_ =
-        InstanceBatch::InternalGenerateParseTable_(InstanceBatch_class_data_.base());
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_NOINLINE void InstanceBatch::Clear() {
-  auto& this_ [[maybe_unused]] = *this;
-  // @@protoc_insertion_point(message_clear_start:tradingcopilot.v1.InstanceBatch)
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    _impl_.instance_ids_.Clear();
-  }
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::uint8_t* PROTOBUF_NONNULL InstanceBatch::_InternalSerialize(
-    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
-  const InstanceBatch& this_ = static_cast<const InstanceBatch&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::uint8_t* PROTOBUF_NONNULL InstanceBatch::_InternalSerialize(
-    ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-  const InstanceBatch& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  // @@protoc_insertion_point(serialize_to_array_start:tradingcopilot.v1.InstanceBatch)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  // repeated string instance_ids = 1 [json_name = "instanceIds"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    for (int i = 0, n = this_._internal_instance_ids_size(); i < n; ++i) {
-      const auto& s = this_._internal_instance_ids().Get(i);
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          s.data(), static_cast<int>(s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.InstanceBatch.instance_ids");
-      target = stream->WriteString(1, s, target);
-    }
-  }
-
-  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:tradingcopilot.v1.InstanceBatch)
-  return target;
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::size_t InstanceBatch::ByteSizeLong(const MessageLite& base) {
-  const InstanceBatch& this_ = static_cast<const InstanceBatch&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::size_t InstanceBatch::ByteSizeLong() const {
-  const InstanceBatch& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  // @@protoc_insertion_point(message_byte_size_start:tradingcopilot.v1.InstanceBatch)
-  ::size_t total_size = 0;
-
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
-   {
-    // repeated string instance_ids = 1 [json_name = "instanceIds"];
-    cached_has_bits = this_._impl_._has_bits_[0];
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      total_size +=
-          1 * ::google::protobuf::internal::FromIntSize(this_._internal_instance_ids().size());
-      for (int i = 0, n = this_._internal_instance_ids().size(); i < n; ++i) {
-        total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
-            this_._internal_instance_ids().Get(i));
-      }
-    }
-  }
-  return this_.MaybeComputeUnknownFieldsSize(total_size,
-                                             &this_._impl_._cached_size_);
-}
-
-void InstanceBatch::MergeImpl(::google::protobuf::MessageLite& to_msg,
-                      const ::google::protobuf::MessageLite& from_msg) {
-   auto* const _this = static_cast<InstanceBatch*>(&to_msg);
-  auto& from = static_cast<const InstanceBatch&>(from_msg);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    from.CheckHasBitConsistency();
-  }
-  ::google::protobuf::Arena* arena = _this->GetArena();
-  // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.InstanceBatch)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = from._impl_._has_bits_[0];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    _this->_internal_mutable_instance_ids()->InternalMergeFromWithArena(
-        ::google::protobuf::MessageLite::internal_visibility(), arena,
-        from._internal_instance_ids());
-  }
-  _this->_impl_._has_bits_[0] |= cached_has_bits;
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-}
-
-void InstanceBatch::CopyFrom(const InstanceBatch& from) {
-  // @@protoc_insertion_point(class_specific_copy_from_start:tradingcopilot.v1.InstanceBatch)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-
-void InstanceBatch::InternalSwap(InstanceBatch* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
-  using ::std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  _impl_.instance_ids_.InternalSwap(&other->_impl_.instance_ids_);
-}
-
-::google::protobuf::Metadata InstanceBatch::GetMetadata() const {
-  return Super_::GetMetadataImpl(GetClassData()->full());
-}
-// ===================================================================
-
-ExperimentSFNInput::ExperimentSFNInput(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, ExperimentSFNInput_get_class_data()) {
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  SharedCtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tradingcopilot.v1.ExperimentSFNInput)
-}
-PROTOBUF_NDEBUG_INLINE ExperimentSFNInput::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-    [[maybe_unused]] const ::tradingcopilot::v1::ExperimentSFNInput& from_msg)
-      : _has_bits_{from._has_bits_},
-        batches_ {
-          visibility, ::_pbi::InternalMetadataOffset::Build<
-              ::tradingcopilot::v1::ExperimentSFNInput,
-              PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.batches_)>()
-          , arena, from.batches_
-        }
-        ,
-        experiment_id_(arena, from.experiment_id_),
-        data_dir_(arena, from.data_dir_) {}
-
-ExperimentSFNInput::ExperimentSFNInput(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
-    const ExperimentSFNInput& from)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : Super_(arena, ExperimentSFNInput_get_class_data()) {
-
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : Super_(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  ExperimentSFNInput* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-
-  // @@protoc_insertion_point(copy_constructor:tradingcopilot.v1.ExperimentSFNInput)
-}
-PROTOBUF_NDEBUG_INLINE ExperimentSFNInput::Impl_::Impl_(
-    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
-    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-      : batches_ { visibility, ::_pbi::InternalMetadataOffset::Build<
-            ::tradingcopilot::v1::ExperimentSFNInput,
-            PROTOBUF_FIELD_OFFSET(::tradingcopilot::v1::ExperimentSFNInput, _impl_.batches_)>()
-         }
-        ,
-        experiment_id_(arena),
-        data_dir_(arena) {}
-
-inline void ExperimentSFNInput::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-}
-ExperimentSFNInput::~ExperimentSFNInput() {
-  // @@protoc_insertion_point(destructor:tradingcopilot.v1.ExperimentSFNInput)
-  SharedDtor(*this);
-}
-inline void ExperimentSFNInput::SharedDtor(MessageLite& self) {
-  ExperimentSFNInput& this_ = static_cast<ExperimentSFNInput&>(self);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
-  ABSL_DCHECK(this_.GetArena() == nullptr);
-  this_._impl_.experiment_id_.Destroy();
-  this_._impl_.data_dir_.Destroy();
-  this_._impl_.~Impl_();
-}
-
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
-    ::google::protobuf::internal::ClassDataFull ExperimentSFNInput_class_data_ =
-        ExperimentSFNInput::InternalGenerateClassData_(ExperimentSFNInput_globals_._default);
-
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-ExperimentSFNInput::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&ExperimentSFNInput_class_data_);
-  ::google::protobuf::internal::PrefetchToLocalCache(ExperimentSFNInput_class_data_.tc_table);
-  return ExperimentSFNInput_class_data_.base();
-}
-#else
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-ExperimentSFNInput::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&ExperimentSFNInput_globals_);
-  ::google::protobuf::internal::PrefetchToLocalCache(
-      ::google::protobuf::internal::MessageGlobalsBase::ToParseTableBase(&ExperimentSFNInput_globals_));
-  return ExperimentSFNInput_globals_.GetClassData();
-}
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_CONSTINIT
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const ExperimentSFNInput::ParseTableT_
-    ExperimentSFNInput::_table_ =
-        ExperimentSFNInput::InternalGenerateParseTable_(ExperimentSFNInput_class_data_.base());
-#endif  // !PROTOBUF_MESSAGE_GLOBALS
-PROTOBUF_NOINLINE void ExperimentSFNInput::Clear() {
-  auto& this_ [[maybe_unused]] = *this;
-  // @@protoc_insertion_point(message_clear_start:tradingcopilot.v1.ExperimentSFNInput)
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      _impl_.batches_.Clear();
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      this_._impl_.experiment_id_.ClearNonDefaultToEmpty();
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      this_._impl_.data_dir_.ClearNonDefaultToEmpty();
-    }
-  }
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::uint8_t* PROTOBUF_NONNULL ExperimentSFNInput::_InternalSerialize(
-    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
-  const ExperimentSFNInput& this_ = static_cast<const ExperimentSFNInput&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::uint8_t* PROTOBUF_NONNULL ExperimentSFNInput::_InternalSerialize(
-    ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-  const ExperimentSFNInput& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    this_.CheckHasBitConsistency();
-  }
-  // @@protoc_insertion_point(serialize_to_array_start:tradingcopilot.v1.ExperimentSFNInput)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  // string experiment_id = 1 [json_name = "experimentId"];
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-    if (!this_._internal_experiment_id().empty()) {
-      const ::std::string& _s = this_._internal_experiment_id();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ExperimentSFNInput.experiment_id");
-      target = stream->WriteStringMaybeAliased(1, _s, target);
-    }
-  }
-
-  // string data_dir = 2 [json_name = "dataDir"];
-  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-    if (!this_._internal_data_dir().empty()) {
-      const ::std::string& _s = this_._internal_data_dir();
-      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "tradingcopilot.v1.ExperimentSFNInput.data_dir");
-      target = stream->WriteStringMaybeAliased(2, _s, target);
-    }
-  }
-
-  // repeated .tradingcopilot.v1.InstanceBatch batches = 3 [json_name = "batches"];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    for (unsigned i = 0, n = static_cast<unsigned>(
-                             this_._internal_batches_size());
-         i < n; i++) {
-      const auto& repfield = this_._internal_batches().Get(i);
-      target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-          3, repfield, repfield.GetCachedSize(), target,
-          stream);
-    }
-  }
-
-  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:tradingcopilot.v1.ExperimentSFNInput)
-  return target;
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::size_t ExperimentSFNInput::ByteSizeLong(const MessageLite& base) {
-  const ExperimentSFNInput& this_ = static_cast<const ExperimentSFNInput&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::size_t ExperimentSFNInput::ByteSizeLong() const {
-  const ExperimentSFNInput& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  // @@protoc_insertion_point(message_byte_size_start:tradingcopilot.v1.ExperimentSFNInput)
-  ::size_t total_size = 0;
-
-  ::uint32_t cached_has_bits [[maybe_unused]] = 0;
-
-  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    // repeated .tradingcopilot.v1.InstanceBatch batches = 3 [json_name = "batches"];
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      total_size += 1UL * this_._internal_batches_size();
-      for (const auto& msg : this_._internal_batches()) {
-        total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
-      }
-    }
-    // string experiment_id = 1 [json_name = "experimentId"];
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      if (!this_._internal_experiment_id().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                        this_._internal_experiment_id());
-      }
-    }
-    // string data_dir = 2 [json_name = "dataDir"];
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      if (!this_._internal_data_dir().empty()) {
-        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                        this_._internal_data_dir());
-      }
-    }
-  }
-  return this_.MaybeComputeUnknownFieldsSize(total_size,
-                                             &this_._impl_._cached_size_);
-}
-
-void ExperimentSFNInput::MergeImpl(::google::protobuf::MessageLite& to_msg,
-                      const ::google::protobuf::MessageLite& from_msg) {
-   auto* const _this = static_cast<ExperimentSFNInput*>(&to_msg);
-  auto& from = static_cast<const ExperimentSFNInput&>(from_msg);
-  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
-    from.CheckHasBitConsistency();
-  }
-  ::google::protobuf::Arena* arena = _this->GetArena();
-  // @@protoc_insertion_point(class_specific_merge_from_start:tradingcopilot.v1.ExperimentSFNInput)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
-    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-      _this->_internal_mutable_batches()->InternalMergeFromWithArena(
-          ::google::protobuf::MessageLite::internal_visibility(), arena,
-          from._internal_batches());
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
-      if (!from._internal_experiment_id().empty()) {
-        _this->_internal_set_experiment_id(from._internal_experiment_id());
-      } else {
-        if (_this->_impl_.experiment_id_.IsDefault()) {
-          _this->_internal_set_experiment_id("");
-        }
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
-      if (!from._internal_data_dir().empty()) {
-        _this->_internal_set_data_dir(from._internal_data_dir());
-      } else {
-        if (_this->_impl_.data_dir_.IsDefault()) {
-          _this->_internal_set_data_dir("");
-        }
-      }
-    }
-  }
-  _this->_impl_._has_bits_[0] |= cached_has_bits;
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-}
-
-void ExperimentSFNInput::CopyFrom(const ExperimentSFNInput& from) {
-  // @@protoc_insertion_point(class_specific_copy_from_start:tradingcopilot.v1.ExperimentSFNInput)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-
-void ExperimentSFNInput::InternalSwap(ExperimentSFNInput* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
-  using ::std::swap;
-  auto* arena = GetArena();
-  ABSL_DCHECK_EQ(arena, other->GetArena());
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  _impl_.batches_.InternalSwap(&other->_impl_.batches_);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.experiment_id_, &other->_impl_.experiment_id_, arena);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.data_dir_, &other->_impl_.data_dir_, arena);
-}
-
-::google::protobuf::Metadata ExperimentSFNInput::GetMetadata() const {
   return Super_::GetMetadataImpl(GetClassData()->full());
 }
 // @@protoc_insertion_point(namespace_scope)

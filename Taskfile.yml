@@ -4,17 +4,9 @@ dotenv: ['.env']
 
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
-  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/calculation-signal/playbooks"
 
 env:
   DOCKER_BUILDKIT: "1"
-  COMPOSE_BAKE: "true"
-  HOST_DATA_DIR: "{{.HOST_DATA_DIR}}"
-  HOST_PLAYBOOKS_DIR: "{{.HOST_PLAYBOOKS_DIR}}"
-  HOST_UID:
-    sh: id -u
-  HOST_GID:
-    sh: id -g
 
 tasks:
   cpp:deps:
@@ -59,75 +51,111 @@ tasks:
     cmds:
       - go run ./src/cmd/migrate-candles {{.DATA_DIR | default "./data"}}
 
+  data:migrate-ingest-ledger:
+    desc: Copy DATA_DIR/ingest.sqlite (default ./data) into the Postgres ingest ledger; idempotent
+    env:
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=require&search_path=public" (.DATABASE_PORT | default "7001"))}}'
+    cmds:
+      - go run ./src/cmd/migrate-ingest-ledger {{.DATA_DIR | default "./data"}}
+
   build:jobs:
-    desc: Build the data job images (ingest, technical indicators) and the backtest image
+    desc: Build the job images (ingest, technical indicators, backtest)
     cmds:
       - docker build -f docker/ingest/Dockerfile -t dagobert-ingest .
       - docker build -f docker/calculation-technical-indicator/Dockerfile -t dagobert-calculation-technical-indicator .
       - docker build -f docker/backtest/Dockerfile -t dagobert-backtest .
 
-  build:stack:
-    desc: Build compose images (orchestrator + production frontend)
+  build:api-lambda:
+    desc: Build the Experiment API Lambda image (API Gateway HTTP API backend)
     cmds:
-      - docker compose build
+      - docker build -f docker/experiment-api/Dockerfile -t dagobert-experiment-api-lambda .
 
   build:
-    desc: Build job images and the compose stack
+    desc: Build the job images (task build:jobs); the Lambda and worker images are built by task infra:local
     cmds:
       - task: build:jobs
-      - task: build:stack
 
   up:
-    desc: Start Floci, Postgres, the orchestrator, and the web app (run task build once for job images)
+    desc: Start Floci, then apply Terraform (Aurora, S3, SSM, Secrets Manager, API, web app) and the migrations
     cmds:
       - mkdir -p data/parquet
-      - docker compose up
+      - docker compose up -d --wait floci
+      - task: db:migrate
+      - task: up:url
+
+  up:url:
+    desc: Print the URL of the compiled web app (CloudFront on Floci)
+    silent: true
+    cmds:
+      - |
+        d=$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD/infra/terraform:/tf" -w /tf hashicorp/terraform:1.9 output -raw frontend_domain 2>/dev/null || true)
+        [ -n "$d" ] && echo "Web app (compiled, via CloudFront on Floci): http://${d%.net}.localhost:${FLOCI_PORT:-11566}/   (hot reload: task dev, :3000)"
+
+  e2e:
+    desc: Playwright end-to-end tests against the compiled web app on Floci (needs task up)
+    dir: tests/e2e
+    cmds:
+      - |
+        d=$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf hashicorp/terraform:1.9 output -raw frontend_domain 2>/dev/null || true)
+        if [ -z "$d" ]; then echo "e2e: compiled web app URL unavailable; run task up first" >&2; exit 1; fi
+        export E2E_BASE_URL="http://${d%.net}.localhost:${FLOCI_PORT:-11566}/"
+        if [ ! -d node_modules ]; then npm ci; fi
+        npx playwright test
 
   up:build:
-    desc: Build everything, then start the stack (production frontend)
+    desc: Build the job images, then task up
     cmds:
-      - mkdir -p data/parquet
       - task: build
-      - docker compose up
-
-  up:prod:
-    desc: Stack without compose.override.yaml (production build in frontend image)
-    env:
-      COMPOSE_FILE: compose.yaml
-    cmds:
-      - mkdir -p data/parquet
-      - docker compose build frontend
-      - docker compose up
+      - task: up
 
   dev:
-    desc: Same as task up but builds the job and compose images, migrates the database, and runs compose file watch (sync/rebuild rules)
+    desc: "task up, then the web app with hot reload on http://localhost:3000 (Vite on the host, proxying to the Floci API gateway)"
     cmds:
-      - mkdir -p data/parquet
-      - task: build:jobs
-      - task: build:stack
-      - task: db:migrate
-      - docker compose up --watch
+      - task: up
+      - task: frontend:dev
 
-  frontend:deps:
-    desc: Sync package-lock into the frontend container node_modules volume (after new npm deps)
+  frontend:dev:
+    desc: Vite dev server with hot reload on the host (port 3000), proxying /tradingcopilot.v1. to the Floci API Gateway (needs task infra:local)
+    dir: src/frontend
     cmds:
-      - docker compose exec -T frontend npm ci
+      - |
+        API="$(../../scripts/local-api-url.sh)"
+        export VITE_DEV_API_PROXY="$(printf '%s\n' "$API" | head -n1)"
+        export VITE_DEV_API_PREFIX="$(printf '%s\n' "$API" | tail -n1)"
+        npm run dev
 
   down:
-    desc: Stop the stack. Leaves ./data in place
+    desc: Stop Floci (the compose stack). Leaves ./data in place
     cmds:
       - docker compose down
 
   test:
-    desc: System-test the job images
+    desc: Run all system tests against the running stack (task up); see test:system
     cmds:
-      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/backtest ./tests/system/experiment -count=1 -timeout 20m
+      - task: test:system
+
+  test:system:
+    desc: System tests (tests/system/...) against the shared Floci and Aurora from task up; each test gets its own bucket and scratch database
+    env:
+      FLOCI_ENDPOINT: '{{.FLOCI_ENDPOINT | default (printf "http://127.0.0.1:%s" (.FLOCI_PORT | default "11566"))}}'
+      POSTGRES_TEST_URL: '{{.POSTGRES_TEST_URL | default (printf "postgres://trading:%s@127.0.0.1:%s/postgres?sslmode=require" (.POSTGRES_PASSWORD | default "trading") (.DATABASE_PORT | default "7001"))}}'
+    cmds:
+      - go test ./tests/system/... -count=1 -timeout 40m
 
   seed-demo-year:
     desc: Wipe data/, backfill 1y BTC and replay ma-cross over it with the simulated venue
     cmds:
       - mkdir -p data/parquet
       - go run ./src/cmd/seed-demo-year
+
+  lake:upload:
+    desc: Copy an existing ./data/parquet lake into the Floci S3 bucket (one-off, after switching LAKE_BACKEND to s3)
+    cmds:
+      - |
+        docker run --rm --network host -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 \
+          -v "{{.HOST_DATA_DIR}}/parquet:/lake:ro" amazon/aws-cli \
+          --endpoint-url "http://127.0.0.1:{{.FLOCI_PORT | default "11566"}}" \
+          s3 sync /lake "s3://${LAKE_BUCKET:-dagobert-local-lake}/parquet"
 
   backtest-run:
     desc: Run one catalogued backtest (BACKTEST_ID=uuid, uses dagobert-backtest image)
@@ -139,86 +167,37 @@ tasks:
     cmds:
       - docker run --rm -e DATA_DIR=/data -e EXPERIMENT_ID={{.EXPERIMENT_ID}} -e VENUE_SIMULATE=1 {{if .EXPERIMENT_SIM_WORKERS}}-e EXPERIMENT_SIM_WORKERS={{.EXPERIMENT_SIM_WORKERS}}{{end}} -e AWS_ENDPOINT_URL={{.AWS_ENDPOINT_URL | default ""}} -e LAKE_BUCKET={{.LAKE_BUCKET | default ""}} -e EXPERIMENT_ARTIFACTS={{.EXPERIMENT_ARTIFACTS | default "fs"}} -v "{{.HOST_DATA_DIR}}:/data" dagobert-backtest
 
-  infra:local:
-    desc: Step 1 — apply Terraform against Floci (S3/SSM/IAM)
+  infra:apply:
+    desc: Terraform apply. ENV=local (default, Floci) or prod (real AWS, CI only)
     cmds:
-      - docker compose up -d floci
-      - |
-        export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN:-}"
-        export TF_VAR_supabase_database_password="${SUPABASE_DB_PWD:-}"
-        TF_IMG=hashicorp/terraform:1.9
-        FLOCI_ENDPOINT="http://127.0.0.1:{{.FLOCI_PORT | default "11566"}}"
-        if command -v terraform >/dev/null 2>&1; then
-          (cd infra/terraform && terraform init -input=false && \
-            terraform apply -input=false -auto-approve \
-              -var='environment=local' -var='aws_region=us-east-1' \
-              -var="floci_endpoint=${FLOCI_ENDPOINT}")
-        else
-          docker run --rm --network host --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e TF_VAR_supabase_access_token \
-            -e TF_VAR_supabase_database_password \
-            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" init -input=false
-          docker run --rm --network host --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e TF_VAR_supabase_access_token \
-            -e TF_VAR_supabase_database_password \
-            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" apply -input=false -auto-approve \
-            -var='environment=local' -var='aws_region=us-east-1' \
-            -var="floci_endpoint=${FLOCI_ENDPOINT}"
-        fi
-      - |
-        echo "Set in .env (defaults already in compose.yaml):"
-        echo "  LAKE_BUCKET=dagobert-local-lake"
-        echo "  SSM_PREFIX=/dagobert/local"
-        echo "  EXPERIMENT_ARTIFACTS=s3   # optional step 3"
+      - scripts/infra-apply.sh {{.ENV | default "local"}}
+
+  infra:local:
+    desc: Apply Terraform against Floci (VPC, Aurora, S3, CloudFront, SSM, IAM), then upload the web app
+    cmds:
+      - scripts/infra-apply.sh local
 
   infra:prod:
-    desc: Apply Terraform for prod, including the Supabase project (.env SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD)
+    desc: Apply Terraform to real AWS. Refuses outside CI (CI=true and AWS credentials required)
     cmds:
-      - |
-        if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_DB_PWD:-}" ]; then
-          echo "Set SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PWD in .env" >&2
-          exit 1
-        fi
-        if [ -z "${SUPABASE_ORGANIZATION_ID:-}" ]; then
-          echo "Set SUPABASE_ORGANIZATION_ID in .env (dashboard org id)" >&2
-          exit 1
-        fi
-        export TF_VAR_supabase_access_token="$SUPABASE_ACCESS_TOKEN"
-        export TF_VAR_supabase_database_password="$SUPABASE_DB_PWD"
-        TF_IMG=hashicorp/terraform:1.9
-        TF_ARGS=(-input=false -auto-approve -var=environment=prod -var="supabase_organization_id=${SUPABASE_ORGANIZATION_ID}" -var="aws_region={{.AWS_REGION | default "eu-central-1"}}")
-        if command -v terraform >/dev/null 2>&1; then
-          (cd infra/terraform && terraform init -input=false && terraform apply "${TF_ARGS[@]}")
-        else
-          docker run --rm --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e TF_VAR_supabase_access_token \
-            -e TF_VAR_supabase_database_password \
-            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" init -input=false
-          docker run --rm --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e TF_VAR_supabase_access_token \
-            -e TF_VAR_supabase_database_password \
-            -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf "$TF_IMG" apply "${TF_ARGS[@]}"
-        fi
+      - scripts/infra-apply.sh prod
 
   db:up:
-    desc: Start Compose Postgres (control plane) and create the Supabase roles the migrations revoke from
+    desc: Apply Terraform on Floci (creates the Aurora cluster), then create the roles the migrations revoke from
     cmds:
-      - docker compose up -d --wait postgres
+      - task: infra:local
       - |
         for role in anon authenticated; do
-          docker compose exec -T postgres psql -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" -tAc "SELECT 1 FROM pg_roles WHERE rolname='$role'" | grep -q 1 \
-            || docker compose exec -T postgres psql -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" -c "CREATE ROLE $role NOLOGIN"
+          docker run --rm --network host -e PGPASSWORD="${POSTGRES_PASSWORD:-trading}" -e PGSSLMODE=require postgres:16-alpine \
+            psql -h 127.0.0.1 -p {{.DATABASE_PORT | default "7001"}} -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" -v ON_ERROR_STOP=1 -tAc \
+            "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='$role') THEN CREATE ROLE $role NOLOGIN; END IF; END \$\$"
         done
 
   db:diff:
     desc: Atlas — edit HCL then generate a migration (name=… optional)
     dir: db
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=require&search_path=public" (.DATABASE_PORT | default "7001"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"
@@ -306,11 +285,11 @@ tasks:
         "$BUF" push --label v0.1.0
 
   db:migrate:
-    desc: Atlas — apply migrations to DATABASE_URL (Compose Postgres)
+    desc: "Atlas — apply migrations to DATABASE_URL (default Aurora on Floci, created by Terraform)"
     dir: db
     deps: [db:up]
     env:
-      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=disable&search_path=public" (.POSTGRES_PORT | default "11432"))}}'
+      DATABASE_URL: '{{.DATABASE_URL | default (printf "postgres://trading:trading@127.0.0.1:%s/trading?sslmode=require&search_path=public" (.DATABASE_PORT | default "7001"))}}'
     cmds:
       - |
         ATLAS="{{.ATLAS | default ""}}"
@@ -320,33 +299,12 @@ tasks:
           else echo "atlas CLI not found (install Atlas OSS)" >&2; exit 1
           fi
         fi
-        # Wait until Postgres accepts connections (healthcheck may still be starting).
-        for i in $(seq 1 30); do
-          if docker compose exec -T postgres pg_isready -U trading -d trading >/dev/null 2>&1; then
-            break
-          fi
-          sleep 1
-        done
         "$ATLAS" migrate apply --env local
       - |
         echo "Applied. Revisions in schema atlas; app tables in public."
 
-  db:migrate:supabase:
-    desc: Atlas — apply db/migrations to SUPABASE_DB_URL (direct :5432 or session pooler)
-    dir: db
+  db:migrate:ecs:
+    desc: "Atlas — apply migrations as a one-off ECS task inside the VPC (Floci; prod runs scripts/db-migrate.sh prod from CI)"
+    deps: [infra:local]
     cmds:
-      - |
-        if [ -z "${SUPABASE_DB_URL:-}" ]; then
-          echo "SUPABASE_DB_URL is unset. Set it to the Supabase Postgres URL (direct port 5432, or the session pooler on 5432 for IPv4). Do not use the transaction pooler (6543)." >&2
-          exit 1
-        fi
-        ATLAS="{{.ATLAS | default ""}}"
-        if [ -z "$ATLAS" ]; then
-          if command -v atlas >/dev/null 2>&1; then ATLAS=atlas
-          elif [ -x "$HOME/.local/bin/atlas" ]; then ATLAS="$HOME/.local/bin/atlas"
-          else echo "atlas CLI not found (install Atlas OSS)" >&2; exit 1
-          fi
-        fi
-        "$ATLAS" migrate apply --env supabase
-      - |
-        echo "Applied to Supabase. Revisions in schema atlas; app tables in public (anon/authenticated revoked)."
+      - scripts/db-migrate.sh local

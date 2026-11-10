@@ -344,6 +344,7 @@ SET status = 'completed',
     progress_stages = 4,
     progress_stage_label = 'Instance simulation'
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type MarkExperimentCompletedParams struct {
@@ -383,6 +384,7 @@ SET status = 'failed',
     finished_at_ms = $3,
     progress_stage_label = 'Failed'
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type MarkExperimentFailedParams struct {
@@ -405,6 +407,7 @@ SET status = 'partial',
     progress_stages = 4,
     progress_stage_label = 'Instance simulation'
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type MarkExperimentPartialParams struct {
@@ -418,7 +421,7 @@ func (q *Queries) MarkExperimentPartial(ctx context.Context, arg MarkExperimentP
 	return err
 }
 
-const markExperimentRetryFailed = `-- name: MarkExperimentRetryFailed :exec
+const markExperimentRetryFailed = `-- name: MarkExperimentRetryFailed :execrows
 UPDATE experiment
 SET status = 'running',
     started_at_ms = $2,
@@ -430,6 +433,7 @@ SET status = 'running',
     progress_instance_done = 0,
     progress_instance_total = $3
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type MarkExperimentRetryFailedParams struct {
@@ -438,9 +442,12 @@ type MarkExperimentRetryFailedParams struct {
 	ProgressInstanceTotal int32       `json:"progress_instance_total"`
 }
 
-func (q *Queries) MarkExperimentRetryFailed(ctx context.Context, arg MarkExperimentRetryFailedParams) error {
-	_, err := q.db.Exec(ctx, markExperimentRetryFailed, arg.ID, arg.StartedAtMs, arg.ProgressInstanceTotal)
-	return err
+func (q *Queries) MarkExperimentRetryFailed(ctx context.Context, arg MarkExperimentRetryFailedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markExperimentRetryFailed, arg.ID, arg.StartedAtMs, arg.ProgressInstanceTotal)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const markExperimentRunning = `-- name: MarkExperimentRunning :exec
@@ -466,7 +473,7 @@ func (q *Queries) MarkExperimentRunning(ctx context.Context, arg MarkExperimentR
 	return err
 }
 
-const markExperimentRunningKeep = `-- name: MarkExperimentRunningKeep :exec
+const markExperimentRunningKeep = `-- name: MarkExperimentRunningKeep :execrows
 UPDATE experiment
 SET status = 'running',
     started_at_ms = $2,
@@ -478,6 +485,7 @@ SET status = 'running',
     progress_instance_done = 0,
     progress_instance_total = $3
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type MarkExperimentRunningKeepParams struct {
@@ -486,9 +494,39 @@ type MarkExperimentRunningKeepParams struct {
 	ProgressInstanceTotal int32       `json:"progress_instance_total"`
 }
 
-func (q *Queries) MarkExperimentRunningKeep(ctx context.Context, arg MarkExperimentRunningKeepParams) error {
-	_, err := q.db.Exec(ctx, markExperimentRunningKeep, arg.ID, arg.StartedAtMs, arg.ProgressInstanceTotal)
-	return err
+func (q *Queries) MarkExperimentRunningKeep(ctx context.Context, arg MarkExperimentRunningKeepParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markExperimentRunningKeep, arg.ID, arg.StartedAtMs, arg.ProgressInstanceTotal)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markExperimentRunningUnlessCancelled = `-- name: MarkExperimentRunningUnlessCancelled :execrows
+UPDATE experiment
+SET status = 'running',
+    started_at_ms = $2,
+    finished_at_ms = NULL,
+    error = '',
+    progress_stage = 1,
+    progress_stages = 4,
+    progress_stage_label = 'Starting',
+    progress_instance_done = 0
+WHERE id = $1
+  AND status <> 'cancelled'
+`
+
+type MarkExperimentRunningUnlessCancelledParams struct {
+	ID          uuid.UUID   `json:"id"`
+	StartedAtMs pgtype.Int8 `json:"started_at_ms"`
+}
+
+func (q *Queries) MarkExperimentRunningUnlessCancelled(ctx context.Context, arg MarkExperimentRunningUnlessCancelledParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markExperimentRunningUnlessCancelled, arg.ID, arg.StartedAtMs)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateExperimentProgress = `-- name: UpdateExperimentProgress :exec
@@ -499,6 +537,7 @@ SET progress_stage = $2,
     progress_instance_done = $5,
     progress_instance_total = $6
 WHERE id = $1
+  AND status <> 'cancelled'
 `
 
 type UpdateExperimentProgressParams struct {

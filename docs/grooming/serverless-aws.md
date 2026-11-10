@@ -1,5 +1,7 @@
 # Grooming: serverless experiments plane (Floci + AWS + Postgres)
 
+> Historical: this note describes the removed orchestrator and its REST routes (`/api/v1/...`). The current runtime is in [docs/architecture/local-stack.md](../architecture/local-stack.md); the APIs are Connect services in `proto/`.
+
 ## Goal
 
 Run **experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (Compose locally, **Supabase Free** in prod). Browser talks only to an **Experiment API** — never to the DB or lake directly.
@@ -84,7 +86,7 @@ Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/S
 | **9** | Hard | sqlc + Go Experiment API (`/v1/experiments*`) | ✅ |
 | **10** | Hard | Jobs write Postgres stats/actions; UI drops `report.json` | ✅ |
 | **11** | Medium | Chart API → parquet (S3/Floci) | implemented |
-| **12** | Medium | Supabase Free + same migrations + revoke anon | implemented |
+| **12** | Medium | ~~Supabase Free~~ superseded: Aurora PostgreSQL Serverless v2 via Terraform, same migrations | Aurora on Floci done; prod migrations need an in-VPC job |
 | **13** | Hard | Vite SPA → API only (drop Next BFF) | implemented |
 | **14** | Hard | Fan-out workers write Postgres (finish step 6) | ✅ implemented |
 
@@ -100,7 +102,7 @@ Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/S
 | **1** | `task infra:local` → Floci S3/SSM (no DynamoDB tables) |
 | **2** | `task infra:seed-ssm`; `SECRETS_BACKEND=auto\|ssm` |
 | **3** | `EXPERIMENT_ARTIFACTS=s3` dual-write reports |
-| **4** | Terraform DynamoDB tables removed. `EXPERIMENT_CATALOG=sqlite\|dual\|ddb` app dual-write remains; do not invest further |
+| **4** | Terraform DynamoDB tables removed. The `EXPERIMENT_CATALOG` / `EXPERIMENTS_TABLE` dual-write and `src/internal/experimentddb` are deleted |
 | **5** | `LAKE_BACKEND` / `LAKE_DUAL_WRITE`; `src/internal/lakeobject` |
 | **6** | `EXPERIMENT_RUN_BACKEND=docker\|batched\|sfn`; phases prepare/simulate/finalize; see fan-out knobs below |
 

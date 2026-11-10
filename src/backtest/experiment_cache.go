@@ -1,32 +1,38 @@
 package backtest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest/store"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
+	"github.com/MaxBernstetter/dagobert/src/internal/workspace"
 )
 
-// ExperimentCacheDir is experiments/{id}/.cache under DATA_DIR.
-func ExperimentCacheDir(dataDir, experimentID string) string {
-	return filepath.Join(dataDir, "experiments", experimentID, ".cache")
+// The prepare cache is the handoff from prepare to simulate and finalize, and to the experiment worker
+// (instances.json). It lives in the workspace store under experiments/{id}/.cache: files under
+// DATA_DIR with LAKE_BACKEND=fs, objects in the lake bucket with s3, so the phases need no shared disk.
+
+// ExperimentCacheKey is the workspace key prefix of the experiment's prepare cache.
+func ExperimentCacheKey(experimentID string) string {
+	return "experiments/" + experimentID + "/.cache"
 }
 
+const kpiCacheDir = "kpi"
+
 type experimentPrepareMeta struct {
-	ExperimentID       string                `json:"experimentId"`
-	From          int64                 `json:"fromMs"`
-	To            int64                 `json:"toMs"`
-	NowMS         int64                 `json:"nowMs"`
-	FailedSymbols map[string]string     `json:"failedSymbols"`
-	Settings      store.ExperimentSettings   `json:"settings"`
-	InstanceIDs   []string              `json:"instanceIds"`
-	InstTotal     int                   `json:"instTotal"`
+	ExperimentID  string                   `json:"experimentId"`
+	From          int64                    `json:"fromMs"`
+	To            int64                    `json:"toMs"`
+	NowMS         int64                    `json:"nowMs"`
+	FailedSymbols map[string]string        `json:"failedSymbols"`
+	Settings      store.ExperimentSettings `json:"settings"`
+	InstanceIDs   []string                 `json:"instanceIds"`
+	InstTotal     int                      `json:"instTotal"`
 }
 
 type experimentSymKPI struct {
@@ -36,9 +42,9 @@ type experimentSymKPI struct {
 }
 
 type cachedKPIFile struct {
-	Symbol string          `json:"symbol"`
-	Closes []int64         `json:"closes"`
-	Rows   []cachedKPIRow  `json:"rows"`
+	Symbol string         `json:"symbol"`
+	Closes []int64        `json:"closes"`
+	Rows   []cachedKPIRow `json:"rows"`
 }
 
 type cachedKPIRow struct {
@@ -48,27 +54,23 @@ type cachedKPIRow struct {
 }
 
 func WriteExperimentPrepareMeta(dataDir, experimentID string, meta experimentPrepareMeta) error {
-	dir := ExperimentCacheDir(dataDir, experimentID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
+	ctx := context.Background()
 	raw, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(dir, "prepare_meta.json"), raw, 0o644); err != nil {
+	if err := workspace.WriteBytes(ctx, dataDir, ExperimentCacheKey(experimentID)+"/prepare_meta.json", raw); err != nil {
 		return err
 	}
 	instRaw, err := json.MarshalIndent(map[string][]string{"instanceIds": meta.InstanceIDs}, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "instances.json"), instRaw, 0o644)
+	return workspace.WriteBytes(ctx, dataDir, ExperimentCacheKey(experimentID)+"/instances.json", instRaw)
 }
 
 func ReadExperimentPrepareMeta(dataDir, experimentID string) (experimentPrepareMeta, error) {
-	path := filepath.Join(ExperimentCacheDir(dataDir, experimentID), "prepare_meta.json")
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadBytes(context.Background(), dataDir, ExperimentCacheKey(experimentID)+"/prepare_meta.json")
 	if err != nil {
 		return experimentPrepareMeta{}, fmt.Errorf("read prepare cache: %w", err)
 	}
@@ -80,8 +82,7 @@ func ReadExperimentPrepareMeta(dataDir, experimentID string) (experimentPrepareM
 }
 
 func ReadExperimentInstanceList(dataDir, experimentID string) ([]string, error) {
-	path := filepath.Join(ExperimentCacheDir(dataDir, experimentID), "instances.json")
-	raw, err := os.ReadFile(path)
+	raw, err := workspace.ReadBytes(context.Background(), dataDir, ExperimentCacheKey(experimentID)+"/instances.json")
 	if err != nil {
 		return nil, fmt.Errorf("read instances cache: %w", err)
 	}
@@ -95,10 +96,6 @@ func ReadExperimentInstanceList(dataDir, experimentID string) ([]string, error) 
 }
 
 func WriteExperimentSymKPI(dataDir, experimentID, symbol string, bundle experimentSymKPI) error {
-	dir := filepath.Join(ExperimentCacheDir(dataDir, experimentID), "kpi")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
 	rows := make([]cachedKPIRow, len(bundle.rows))
 	for i, r := range bundle.rows {
 		rows[i] = cachedKPIRow{Symbol: r.Symbol, BarOpen: r.BarOpen, Body: r.Body}
@@ -109,22 +106,26 @@ func WriteExperimentSymKPI(dataDir, experimentID, symbol string, bundle experime
 		return err
 	}
 	safe := strings.ReplaceAll(symbol, "/", "_")
-	return os.WriteFile(filepath.Join(dir, safe+".json"), raw, 0o644)
+	return workspace.WriteBytes(context.Background(), dataDir, ExperimentCacheKey(experimentID)+"/"+kpiCacheDir+"/"+safe+".json", raw)
 }
 
 func LoadExperimentSymKPI(dataDir, experimentID string) (map[string]experimentSymKPI, error) {
-	dir := filepath.Join(ExperimentCacheDir(dataDir, experimentID), "kpi")
-	entries, err := os.ReadDir(dir)
+	ctx := context.Background()
+	prefix := ExperimentCacheKey(experimentID) + "/" + kpiCacheDir
+	names, err := workspace.List(ctx, dataDir, prefix)
 	if err != nil {
-		return nil, fmt.Errorf("read kpi cache dir: %w", err)
+		return nil, fmt.Errorf("list kpi cache: %w", err)
+	}
+	if len(names) == 0 {
+		return nil, fmt.Errorf("kpi cache %s is empty", prefix)
 	}
 	aggMS := signalstore.AggregationDurationMS()
 	out := make(map[string]experimentSymKPI)
-	for _, ent := range entries {
-		if ent.IsDir() || !strings.HasSuffix(ent.Name(), ".json") {
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".json") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, ent.Name()))
+		raw, err := workspace.ReadBytes(ctx, dataDir, prefix+"/"+name)
 		if err != nil {
 			return nil, err
 		}

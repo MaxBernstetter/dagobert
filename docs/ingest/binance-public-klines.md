@@ -76,7 +76,7 @@ A row checked live: `BTCUSDT` `1h`, open time `1792508400000`, close `82409.4300
 
 One run takes `From`, `To`, `Symbol`, and optional `-provider` (default `binance`, or `INGEST_PROVIDER`). `From` is inclusive and `To` is exclusive, both open times in milliseconds UTC. `Symbol` is one of `BTCUSDT`, `ETHUSDT`, or `USDCUSDT`.
 
-The ingest **facade** owns the hour grid, sqlite index, lake writes, and HTTP fetch mechanics (`src/ingest/internal/fetchclient`). The **Binance adapter** (`src/ingest/provider/binance`) only builds one kline page request and maps the response. See [ingest-provider-facade](../grooming/ingest-provider-facade.md) and [ingest-fetch-facade-refactor](../grooming/ingest-fetch-facade-refactor.md).
+The ingest **facade** owns the hour grid, ingest ledger (Postgres), lake writes, and HTTP fetch mechanics (`src/ingest/internal/fetchclient`). The **Binance adapter** (`src/ingest/provider/binance`) only builds one kline page request and maps the response. See [ingest-provider-facade](../grooming/ingest-provider-facade.md) and [ingest-fetch-facade-refactor](../grooming/ingest-fetch-facade-refactor.md).
 
 The run lists open times already stored for that provider+symbol inside the range and fetches only the gaps. A second run with the same parameters makes no Binance call and writes no rows.
 
@@ -99,7 +99,7 @@ Shared across providers: `max_retries`, `backoff_factor`, `retry_wait`, `max_ret
 1. Start with `From`, `To`, `Symbol`, and provider (default `binance`).
 2. Skip every open time in that range that is already stored or marked unavailable for that provider.
 3. Fetch the missing closed `1h` klines. Drop a row whose close time is still in the future.
-4. Write the seven stored fields to Hive-style Parquet (columns as in [Candle file format](#candle-file-format)): `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.schema_version` (`2`), `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in `ingest.sqlite` with PK `(provider, base, quote, open_time)`.
+4. Write the seven stored fields to Hive-style Parquet (columns as in [Candle file format](#candle-file-format)): `parquet/provider={id}/base={BASE}/quote={QUOTE}/year={YYYY}/candles.parquet`, with footer key–value metadata `trading_copilot.schema_version` (`2`), `trading_copilot.interval_ms` (here `3600000` for `1h`) and `trading_copilot.data_source` (`binance`, see `src/internal/parquetmeta` and `src/shared/datasource.go`). Index rows in the Postgres table `ingest_stored` with PK `(provider, base, quote, open_time)`.
 5. Do not compute indicators. Do not call any other exchange.
 
 `USDCUSDT` is ingested because the execution service converts a USDT close into USDC with `usdc_price = usdt_close / usdcusdt_close`.

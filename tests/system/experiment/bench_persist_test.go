@@ -81,7 +81,7 @@ func logExperimentFiles(t *testing.T, root string) {
 			return err
 		}
 		name := d.Name()
-		if strings.HasSuffix(name, ".json") && name != "report.json" {
+		if strings.HasSuffix(name, ".json") {
 			name = "*.json"
 		}
 		tl := byName[name]

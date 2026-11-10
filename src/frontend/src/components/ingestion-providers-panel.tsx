@@ -1,5 +1,4 @@
 
-import { apiUrl } from "@/lib/api";
 import Link from "@/components/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -11,6 +10,12 @@ import {
 } from "@/lib/catalog-status";
 import type { ProviderPublicView } from "@/lib/provider-catalog-types";
 import { invalidateProviderPairs } from "@/lib/provider-pairs";
+import {
+  activateProvider,
+  deactivateProvider,
+  listProviders,
+  saveProviderSettings,
+} from "@/lib/provider-service";
 import { cn } from "@/lib/utils";
 
 function statusLabel(status: string): string {
@@ -77,13 +82,9 @@ export function IngestionProvidersPanel({ className }: { className?: string }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const res = await fetch(apiUrl("/providers"), { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error((await res.text()) || `HTTP ${res.status}`);
-    }
-    const body = (await res.json()) as { providers: ProviderPublicView[] };
-    setProviders(body.providers ?? []);
-    return body.providers ?? [];
+    const list = await listProviders();
+    setProviders(list);
+    return list;
   }, []);
 
   useEffect(() => {
@@ -143,14 +144,7 @@ export function IngestionProvidersPanel({ className }: { className?: string }) {
         const value = secretsDraft[field.key];
         if (value != null && value !== "") secrets[field.key] = value;
       }
-      const res = await fetch(apiUrl(`/providers/${encodeURIComponent(selected.id)}`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: configDraft, secrets }),
-      });
-      if (!res.ok) {
-        throw new Error((await res.text()) || `HTTP ${res.status}`);
-      }
+      await saveProviderSettings(selected.id, configDraft, secrets);
       await refresh();
       setSecretsDraft({});
     } catch (err) {
@@ -171,17 +165,7 @@ export function IngestionProvidersPanel({ className }: { className?: string }) {
         const value = secretsDraft[field.key];
         if (value != null && value !== "") secrets[field.key] = value;
       }
-      const res = await fetch(
-        apiUrl(`/providers/${encodeURIComponent(selected.id)}/activate`),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ config: configDraft, secrets }),
-        },
-      );
-      if (!res.ok) {
-        throw new Error((await res.text()) || `HTTP ${res.status}`);
-      }
+      await activateProvider(selected.id);
       await refresh();
       invalidateProviderPairs(selected.id);
       setSecretsDraft({});
@@ -197,13 +181,7 @@ export function IngestionProvidersPanel({ className }: { className?: string }) {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(
-        apiUrl(`/providers/${encodeURIComponent(selected.id)}/deactivate`),
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        throw new Error((await res.text()) || `HTTP ${res.status}`);
-      }
+      await deactivateProvider(selected.id);
       await refresh();
       invalidateProviderPairs(selected.id);
     } catch (err) {

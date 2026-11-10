@@ -14,7 +14,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 - `CPP_*_BIN` is read only by the experiment engine (`src/backtest/cpp_engine.go`).
 - Leftover naming: simulated rows still carry `venue: bybit` and the `VENUE_SIMULATE` flag; instrument USDC venue mappings in `src/internal/instruments` are unchanged.
 - The trader overview UI was dropped (milestone M6 closed as not planned).
-- Production deployment is not evidenced as running. The repo has Terraform for AWS and a Supabase project (`infra/terraform`, `task infra:prod`, `task db:migrate:supabase`), but `docs/grooming/serverless-aws.md` says a live Supabase apply still waits on a project URL, and nothing in the repo records an applied prod stack. Treat prod as prepared, not confirmed.
+- Production deployment is not evidenced as running. The repo has Terraform for AWS (`infra/terraform`: VPC, Aurora PostgreSQL Serverless v2, S3, SSM, IAM; `task infra:prod` runs in CI only). Nothing records an applied prod stack, and prod migrations need a job inside the VPC that does not exist yet. Treat prod as prepared, not confirmed.
 
 ## Measured performance
 
@@ -23,7 +23,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## Next steps, in priority order
 
 1. Measure the browser load of the instance detail page (`/activity`, `/chart-series`) on a 3000-instance experiment ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). The run and file numbers are in [05-cpp-benchmark](development/05-cpp-benchmark.md).
-3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake), 12 (Supabase, needs a real project URL) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done.
+3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 (Supabase) is superseded by Aurora: the relational database is the first piece migrated to the serverless stack (VPC, API Gateway, C++ Lambda and ECS frontend follow).
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 
@@ -36,7 +36,6 @@ Things that were not verified when this page was written (2026-10-26):
 - The wiki pages were not opened in a browser after the Next.js removal and the move of wiki prose into markdown (the build passes).
 - `terraform fmt` / `validate` were not run on `infra/terraform` after the heavy-path stub removal (no terraform in the dev shell).
 - Experiments completed before #164 have no trade outcome files, so their trades are gone from `/kpis` and `/performance` and their activity and charts are empty. A new run rebuilds them; there is no backfill. See [experiment-data-flow](architecture/experiment-data-flow.md#known-limits).
-- `src/internal/experimentddb` has no caller since the SQLite experiment catalog was removed (#164). It is kept, not deleted.
 - Local-only: `src/frontend/node_modules` may be owned by root if it was created in a container; `npm ci` then fails. Delete it or `chown` it.
 
 ## How to pick up work
@@ -50,7 +49,7 @@ Follow [AGENTS.md](../AGENTS.md) and [development/01-task-management.md](develop
 ## How to resume after a break
 
 1. `git pull` on `main`; `devbox shell` for Go and Task.
-2. `task build` (job and compose images; needed after pulls that touch `src/`).
-3. `task up`, then open the frontend on http://localhost:11001. `task up` does not run migrations: run `task db:migrate` once after a pull that adds files to `db/migrations/`.
-4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all system tests (about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
-5. Logs: `docker compose logs -f orchestrator` (job output and `DETAIL=<n>`). Data: `./data` (Parquet lake, SQLite files, `experiments/<id>/instances/<id>/` workspaces); Postgres lives in the compose volume.
+2. `task build` (job images; needed after pulls that touch `src/`).
+3. `task up` (Floci, Terraform, migrations), then `task frontend:dev` and open http://localhost:3000. Run `task up` again after a pull that adds files to `db/migrations/`.
+4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all system tests against the running stack from `task up` (needs it up; about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
+5. Logs: the Lambda log groups `/aws/lambda/<prefix>-experiment-api` and `/aws/lambda/<prefix>-experiment-worker` on Floci (job output and `DETAIL=<n>` for the ECS tasks). Data: the candle lake and experiment shards in the Floci S3 bucket, `./data` for the SQLite files; Postgres is Aurora on Floci.

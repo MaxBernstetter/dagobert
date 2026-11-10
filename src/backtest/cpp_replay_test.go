@@ -14,7 +14,6 @@ import (
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
-	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 )
 
@@ -87,14 +86,6 @@ func runCppLake(t *testing.T, bin, playbook string, lakeArgs, configs []string) 
 
 	out := make([]cppRun, 0, len(configs))
 	for i, cfg := range configs {
-		ws := t.TempDir()
-		if err := writeExperimentPaperWallet(ws, settings, "BTCUSDT"); err != nil {
-			t.Fatal(err)
-		}
-		wallet, err := paper.LoadWallet(ws)
-		if err != nil {
-			t.Fatal(err)
-		}
 		actions, err := ReplayActions(reports[i], aggMS)
 		if err != nil {
 			t.Fatal(err)
@@ -105,7 +96,7 @@ func runCppLake(t *testing.T, bin, playbook string, lakeArgs, configs []string) 
 		}
 		run.res = signalrunner.ReplayKPI(signalrunner.KPIJob{
 			Key: cfg, Playbook: playbook, Symbol: "BTCUSDT", FromMs: from, ToMs: to, StartCash: startCash,
-			Coins: wallet.Coins, Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
+			Coins: experimentWalletCoins(settings, "BTCUSDT"), Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
 			Actions: actions, Bars: replayBars,
 		})
 		if run.res.Err != nil {

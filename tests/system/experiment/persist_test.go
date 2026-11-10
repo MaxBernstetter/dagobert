@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -90,9 +89,7 @@ func TestExperimentPersistsAllInstances(t *testing.T) {
 		if inst.StartedAt == nil || inst.FinishedAt == nil {
 			t.Fatalf("instance %s missing timing", inst.Label)
 		}
-		if _, err := os.Stat(filepath.Join(instanceDir(dataDir, inst), "report.json")); err != nil {
-			t.Fatalf("instance %s report.json: %v", inst.Label, err)
-		}
+		readReport(t, instanceRef(dataDir, inst))
 	}
 }
 
@@ -127,6 +124,13 @@ func TestExperimentPersistenceFailureIsRetryable(t *testing.T) {
 		}
 		if poison[inst.ID] && !strings.HasPrefix(inst.Error, "persist:") {
 			t.Fatalf("failed instance error %q want persist: prefix", inst.Error)
+		}
+		// A failed instance has no shard_key, so none of its rows is reachable; a completed one has it.
+		if poison[inst.ID] != (inst.ShardKey == "") {
+			t.Fatalf("instance %s status %q shard_key %q", inst.ID, inst.Status, inst.ShardKey)
+		}
+		if !poison[inst.ID] {
+			readReport(t, instanceRef(dataDir, inst))
 		}
 	}
 

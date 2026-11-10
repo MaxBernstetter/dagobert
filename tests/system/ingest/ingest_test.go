@@ -2,26 +2,25 @@ package ingest
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/parquet-go/parquet-go"
-	_ "modernc.org/sqlite"
 
 	"github.com/MaxBernstetter/dagobert/src/shared"
+	"github.com/MaxBernstetter/dagobert/src/shared/pgtest"
 )
 
 const image = "dagobert-ingest:test"
@@ -212,40 +211,11 @@ func TestEmptyKlineMarksUnavailable(t *testing.T) {
 
 func assertUnavailable(t *testing.T, dir, symbol string, want []int64) {
 	t.Helper()
-	path := filepath.Join(dir, "ingest.sqlite")
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "mode=ro"}
-	db, err := sql.Open("sqlite", u.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
 	base, quote, ok := shared.SplitPipelineSymbol(symbol)
 	if !ok {
 		t.Fatalf("symbol %q", symbol)
 	}
-	rows, err := db.Query(
-		`SELECT open_time FROM unavailable WHERE provider = ? AND base = ? AND quote = ? ORDER BY open_time`,
-		"binance", base, quote,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var got []int64
-	for rows.Next() {
-		var ts int64
-		if err := rows.Scan(&ts); err != nil {
-			t.Fatal(err)
-		}
-		got = append(got, ts)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
+	got := pgtest.Opens(t, dbFor(t, dir), "ingest_unavailable", base, quote)
 	if len(got) != len(want) {
 		t.Fatalf("unavailable keys: got %v want %v", got, want)
 	}
@@ -344,12 +314,26 @@ func writeJSON(t *testing.T, w http.ResponseWriter, v any) {
 	}
 }
 
+// ledgers maps a test's data dir to its scratch Postgres database (the ingest ledger).
+var ledgers sync.Map
+
+func dbFor(t *testing.T, dataDir string) string {
+	t.Helper()
+	if v, ok := ledgers.Load(dataDir); ok {
+		return v.(string)
+	}
+	u := pgtest.ScratchDB(t)
+	ledgers.Store(dataDir, u)
+	return u
+}
+
 func runIngest(t *testing.T, dataDir, base string, env map[string]string, from, to int64, symbol string) (stdout, stderr []byte, code int) {
 	t.Helper()
 	args := []string{
 		"run", "--rm", "--network", "host",
 		"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 		"-e", "DATA_DIR=/data",
+		"-e", "DATABASE_URL=" + dbFor(t, dataDir),
 		"-e", "BINANCE_BASE_URL=" + base,
 		"-v", dataDir + ":/data",
 	}
@@ -425,40 +409,11 @@ func assertCandle(t *testing.T, got candle, open int64, o, h, l, c, vol string) 
 
 func assertStored(t *testing.T, dir, symbol string, want []int64) {
 	t.Helper()
-	path := filepath.Join(dir, "ingest.sqlite")
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "mode=ro"}
-	db, err := sql.Open("sqlite", u.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
 	base, quote, ok := shared.SplitPipelineSymbol(symbol)
 	if !ok {
 		t.Fatalf("symbol %q", symbol)
 	}
-	rows, err := db.Query(
-		`SELECT open_time FROM stored WHERE provider = ? AND base = ? AND quote = ? ORDER BY open_time`,
-		"binance", base, quote,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var got []int64
-	for rows.Next() {
-		var ts int64
-		if err := rows.Scan(&ts); err != nil {
-			t.Fatal(err)
-		}
-		got = append(got, ts)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
+	got := pgtest.Opens(t, dbFor(t, dir), "ingest_stored", base, quote)
 	if len(got) != len(want) {
 		t.Fatalf("stored keys: got %v want %v", got, want)
 	}

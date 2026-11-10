@@ -15,7 +15,6 @@ import (
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
 	tirunner "github.com/MaxBernstetter/dagobert/src/calculation-technical-indicator/runner"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
-	"github.com/MaxBernstetter/dagobert/src/internal/venue/paper"
 	"github.com/MaxBernstetter/dagobert/src/internal/venue/sim"
 	"github.com/MaxBernstetter/dagobert/src/shared"
 )
@@ -92,7 +91,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 	aggMS := signalstore.AggregationDurationMS()
 	startCash := settings.InitialUSDC + settings.InitialUSDT
 	fail := func(inst store.ExperimentInstance, err error) {
-		queue <- instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), err: err}
+		queue <- instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), err: err}
 	}
 
 	// Group by (symbol, playbook), then shard. Unsupported playbooks fail their instances.
@@ -146,7 +145,7 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 		for batch := range results {
 			for _, r := range batch {
 				inst := byKey[r.Key]
-				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), ws: store.ExperimentWorkspaceDir(dataDir, inst), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
+				res := instanceResult{inst: inst, sym: store.InstanceSymbol(inst, settings), report: r.Report, fills: r.Fills, orders: r.Orders, journals: r.Journals, err: r.Err}
 				if r.Err == nil {
 					res.timing = store.InstanceRunTiming{StartedAtMs: r.Report.Run.StartedAtMs, FinishedAtMs: r.Report.Run.FinishedAtMs}
 				}
@@ -219,14 +218,9 @@ func cppSimulate(dataDir string, meta experimentPrepareMeta, bySymbol map[string
 					fail(inst, err)
 					continue
 				}
-				wallet, err := paper.LoadWallet(store.ExperimentWorkspaceDir(dataDir, inst))
-				if err != nil {
-					fail(inst, fmt.Errorf("paper wallet: %w", err))
-					continue
-				}
 				batch = append(batch, signalrunner.KPIJob{
 					Key: inst.ID, Playbook: inst.PlaybookKey, Symbol: sh.sym, FromMs: meta.From, ToMs: meta.To,
-					StartCash: startCash, Coins: wallet.Coins, Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
+					StartCash: startCash, Coins: experimentWalletCoins(settings, sh.sym), Costs: sim.FromEnv(), Policy: marketrunner.PolicyFromEnv(),
 					Actions: actions, Bars: bars, Run: run,
 				})
 				if len(batch) >= cppKPIBatch {

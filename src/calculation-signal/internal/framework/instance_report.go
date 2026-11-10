@@ -2,22 +2,18 @@ package framework
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 )
 
-const InstanceReportFileName = "report.json"
-
-// InstanceReport is the filesystem artifact for one experiment instance sim.
+// InstanceReport is the report of one experiment instance sim, stored as JSON in reports.parquet.
 type InstanceReport struct {
 	Version    int                `json:"version"`
 	Run        RunReport          `json:"run"`
 	KPIs       InstanceReportKPIs `json:"kpis"`
 	Statistics RunStatistics      `json:"statistics"`
 	// Performance is the in-memory win-rate result for the catalog write.
-	// It is not part of report.json; Postgres is the source for these metrics.
+	// It is not part of the report JSON; Postgres is the source for these metrics.
 	Performance performance.Result `json:"-"`
 }
 
@@ -31,31 +27,13 @@ type InstanceReportKPIs struct {
 	Comparison *StrategyKPIComparison `json:"comparison,omitempty"`
 }
 
-// WriteInstanceReport writes report.json under workspaceDir.
-func WriteInstanceReport(workspaceDir string, report InstanceReport) error {
+// MarshalInstanceReport is the JSON of an instance report, as stored in reports.parquet and served
+// by the report endpoint.
+func MarshalInstanceReport(report InstanceReport) ([]byte, error) {
 	if report.Version == 0 {
 		report.Version = 1
 	}
-	body, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(workspaceDir, InstanceReportFileName)
-	return os.WriteFile(path, body, 0o644)
-}
-
-// ReadInstanceReport loads report.json when present.
-func ReadInstanceReport(workspaceDir string) (InstanceReport, error) {
-	path := filepath.Join(workspaceDir, InstanceReportFileName)
-	body, err := os.ReadFile(path)
-	if err != nil {
-		return InstanceReport{}, err
-	}
-	var report InstanceReport
-	if err := json.Unmarshal(body, &report); err != nil {
-		return InstanceReport{}, err
-	}
-	return report, nil
+	return json.MarshalIndent(report, "", "  ")
 }
 
 // BuildInstanceReportFromSim assembles KPIs + statistics after a slim/full sim.

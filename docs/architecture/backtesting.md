@@ -2,19 +2,19 @@
 
 The UI focuses on the **Experiment Suite** (`/experiments`). Single-backtest list APIs and the Portfolio / Strategy / Data / Processing pages were removed from the frontend.
 
-The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes) are Parquet files in the instance workspace, `data/experiments/<id>/instances/<instance>/`; Postgres keeps the experiment, instance metrics, period stats and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). Production `technical_indicator.sqlite` is never written during an experiment run; the indicator window for experiments is a per-symbol cache under `data/experiments/<id>/.cache`, deleted when the experiment is final.
+The experiment catalog is Postgres and `DATABASE_URL` is required: a run without it fails before it touches an instance. Per-instance rows (fills, orders, journals, trade outcomes, period stats) are Parquet row groups in shard files, `experiments/<id>/shards/<shard>/` (the instance's `shard_key`, relative to `DATA_DIR`); Postgres keeps the experiment, instance metrics and performance. The legacy single backtest still uses `data/backtests.sqlite` (table `backtest`). There is no indicator database: the indicator window for experiments is a per-symbol cache under `experiments/<id>/.cache`, deleted when the experiment is final. Shards and the cache live in the workspace store (`src/internal/workspace`): files under `DATA_DIR` with `LAKE_BACKEND=fs`, objects with the same keys in `LAKE_BUCKET` with `s3`; experiment delete removes the whole `experiments/<id>/` prefix.
 
 ## Experiments (multi-instance)
 
-An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). The indicator window is shared per symbol and lives in the experiment cache until finalize. Instance workspaces are under `data/experiments/<experiment_id>/instances/<instance_id>/`.
+An **Experiment** (catalogued as a experiment row) shares range/capital across N **instances** (playbook `ma-cross` or `signal-consensus` with its `strategyConfig`, plus per-instance `symbol`). The indicator window is shared per symbol and lives in the experiment cache until finalize.
 
 Create UI supports **Manual** instances or **GRID** search: options render as cards (≥2 per row). Enum axes are multi-select; number axes use a dual-thumb min/max range slider plus a tick field. The client posts **settings + grid axes** (or a small manual instance list); the server expands the cartesian product (invalid configs dropped, max 20 000 valid) asynchronously (`status: materializing` → `draft`). Experiment GET is a **summary only**; instances are a **paginated** child resource with SQL sort/filter on denormalized KPI columns written at sim complete. See `docs/grooming/experiment-api-scale.md`.
 
-**Retry failed:** `POST /api/v1/experiments/{id}/run` with `{ "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
+**Retry failed:** `RunExperiment` with `{ "id": ..., "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
 
-Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `POST /api/v1/experiments/{id}/run` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
+Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: `ExperimentService.RunExperiment` (the Experiment API Lambda) starts the Step Functions execution `<prefix>-experiment-run`. The worker Lambda runs the phases `prepare`, `simulate` (a Map over batches of `EXPERIMENT_BATCH_SIZE` instances, at most `experiment_map_max_concurrency` at once) and `finalize`. The same code runs in the `dagobert-backtest` sandbox image, where `EXPERIMENT_PHASE=all` runs all three phases in one process.
 
-Instance artifact: `data/experiments/<experiment_id>/instances/<instance_id>/report.json` (runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder come from the instance `trade_outcomes.parquet` (one row per sell) and the period win counts in Postgres; `GET .../kpis` and `GET .../performance` read them. Finalize rebuilds the experiment performance from the outcome files.
+Instance artifact: the instance's row in `<shard_key>/reports.parquet` (report JSON: runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder come from the instance's row group in `trade_outcomes.parquet` (one row per sell) and the period win counts in Postgres; `GET .../kpis` and `GET .../performance` read them. Finalize rebuilds the experiment performance from the outcome files.
 
 
 ### Simulation stages and persistence
@@ -23,8 +23,8 @@ The simulate phase is a three-stage pipeline. Database writes never run on the c
 
 1. **Compute** (`EXPERIMENT_SIM_WORKERS` goroutines, one per CPU by default): replay the C++ actions with `ReplayKPI`. The fills, orders and journal rows come from the simulated fill model; the report (KPIs, statistics, period series) is built in memory. The result (`instanceResult`: instance, report, fills, orders, journals, timing, error) goes to a queue. Compute workers touch no database and no mutex.
 2. **Queue**: a bounded channel with capacity `min(instances, 4096)` (about 10 KB per result). The send only blocks when more than 4096 results wait for persistence.
-3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, writes `report.json` and the instance Parquet files (`fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet`, `src/internal/instanceparquet`; atomic, one row group each) and the S3 copy of `report.json`, with a pool of 8. A failed instance removes its Parquet files. Then it commits the batch in **one transaction**:
-   - Postgres (`pgcatalog.PersistInstanceBatch`): `DELETE ... WHERE instance_id = ANY($1)` on period stats, `COPY` of the period stats, one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently (separate connections; progress uses `GREATEST`).
+3. **Persistence** (one goroutine, `persist_pipeline.go`): collects up to 200 results or 250 ms, whichever comes first, builds and uploads the report JSON (S3 copy when enabled) with a pool of 8 and writes one shard per flush (`reports.parquet`, `fills.parquet`, `orders.parquet`, `journals.parquet`, `trade_outcomes.parquet`, `period_stats.parquet`, `src/internal/instanceparquet`; atomic per file, one row group per instance). A failed shard write fails the whole flush and removes the shard; retries and bisection reuse the shard. Then it commits the batch in **one transaction**:
+   - Postgres (`pgcatalog.PersistInstanceBatch`): one `UPDATE experiment_instance ... FROM unnest(...)` setting status, timing and metric columns together, and the progress counter. Up to 4 batches commit concurrently (separate connections; progress uses `GREATEST`).
 
 Compute and KPI errors reach the database only as `failed` rows in these batches.
 
@@ -47,7 +47,7 @@ For the C++ path (#130) the strategy outcome is a list of sized actions. `src/ca
 
 ### Sparse lake (exchange holes)
 
-Ingest does **not** synthesize candles. When Binance returns no closed kline for a requested hour, that open time is recorded in `ingest.sqlite` table `unavailable` (detail **32** if nothing was written; detail **30** is transport/retry failure only). Coverage `Ready` allows unavailable hours; only **retryable** missing hours block a experiment/backtest.
+Ingest does **not** synthesize candles. When Binance returns no closed kline for a requested hour, that open time is recorded in the Postgres table `ingest_unavailable` (detail **32** if nothing was written; detail **30** is transport/retry failure only). Coverage `Ready` allows unavailable hours; only **retryable** missing hours block a experiment/backtest.
 
 TI aggregation already omits incomplete 3h buckets when any source 1h is missing, so the sim timeline skips those bars. Strategies only `Evaluate` bars that exist; position/state persists across gaps unless the strategy acts. `framework.Context` exposes `GapFromPrevious` / `PreviousBarOpen` for strategies that care (ma-cross ignores them and holds implicitly).
 
@@ -55,9 +55,9 @@ Signal/fill playbook keys use `ma-cross.yaml#<config_hash>` so variants never co
 
 ## CLI single backtest (optional)
 
-Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (orchestrator `POST /backtest/run`). There is no Backtesting page in the UI and the experiment flow does not use it.
+Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (a plain `docker run`, no API route). There is no Backtesting page in the UI and the experiment flow does not use it.
 
-Reports use experiment instance APIs under `/api/v1/experiments/{id}/instances/{instanceId}/…`.
+Reports use the instance methods of `ExperimentService` (`GetInstanceReport`, `GetInstanceKpis`, `GetInstanceActivity`, `GetChartSeries`).
 
 While `status = running`, the catalog carries staged progress: `progress_stage` / `progress_stages` (prepare, market data, indicators, instance simulation), `progress_stage_label`, and instance counters.
 
@@ -74,7 +74,7 @@ Retry, progress and outputs are described above. The Performance view compares t
 1. Start the stack (`task up`) and build the job images once (`task build:jobs`, includes `dagobert-backtest`).
 2. Open **Experiments** in the UI, create an experiment, then **Run experiment**. Or from the CLI: `task experiment-run EXPERIMENT_ID=<uuid>`.
 
-After backend changes, rebuild the orchestrator (`docker compose build orchestrator && docker compose up -d orchestrator`) so job containers start with the right Docker flags (the job writes `data/backtests.sqlite`). The playbook registry is compiled into the job image, so after adding or changing a playbook run `docker build -f docker/backtest/Dockerfile -t dagobert-backtest .`.
+After backend changes, run `task infra:local` (it rebuilds and pushes the API and worker images that the Lambdas run). The playbook registry is compiled into the worker image and the sandbox job image, so after adding or changing a playbook run `task infra:local` and `task build:jobs`.
 
 **Market data.** Every run fills gaps in `data/parquet` for the chosen range (missing hours only). **Force re-download** replaces existing candles in that range; a forced full-year refresh can sit on the market-data stage for a long time. Target runtime is about one minute for one year of 3-hour bars when Parquet is warm. For a demo history use `task seed-demo-year` ([seed-demo-year](../development/seed-demo-year.md)).
 
@@ -84,7 +84,7 @@ Stored with each experiment and copied into the job environment when the run sta
 
 | Setting | Env in the job | Default |
 |---|---|---|
-| Starting book | `paper_venue.json` venue quote | 100 000 USDC |
+| Starting book | the venue quote of the experiment settings (derived per symbol, no file) | 100 000 USDC |
 | Target weight | `ALLOC_TARGET_WEIGHT_PCT` | 100 % |
 | Cash reserve | `ALLOC_CASH_RESERVE_QUOTE` | 0 |
 | Minimum order | `ALLOC_MIN_ORDER_QUOTE` | 1 |

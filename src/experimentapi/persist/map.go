@@ -131,30 +131,6 @@ func SettingsFromExperiment(s *v1.Experiment) *v1.ExperimentSettings {
 	}
 }
 
-// ApplySettings copies settings fields onto a Experiment message.
-func ApplySettings(dst *v1.Experiment, settings *v1.ExperimentSettings) {
-	if dst == nil || settings == nil {
-		return
-	}
-	dst.Provider = settings.Provider
-	dst.Base = settings.Base
-	dst.Quote = settings.Quote
-	dst.FromMs = settings.FromMs
-	dst.ToMs = settings.ToMs
-	dst.InitialUsdc = settings.InitialUsdc
-	dst.InitialUsdt = settings.InitialUsdt
-	dst.InitialBase = settings.InitialBase
-	dst.TargetWeightPct = settings.TargetWeightPct
-	dst.CashReserveQuote = settings.CashReserveQuote
-	dst.MinOrderQuote = settings.MinOrderQuote
-	dst.RedownloadMissing = settings.RedownloadMissing
-	dst.Algo = settings.Algo
-	dst.SpreadBps = settings.SpreadBps
-	dst.SlippageBps = settings.SlippageBps
-	dst.FeeBps = settings.FeeBps
-	dst.Parallelism = settings.Parallelism
-}
-
 // ProgressFromDB maps experiment progress.
 func ProgressFromDB(s experimentdb.Experiment, failedCount int64) *v1.ExperimentProgress {
 	return &v1.ExperimentProgress{
@@ -261,15 +237,4 @@ func InstanceFromDB(i experimentdb.ExperimentInstance) *v1.ExperimentInstance {
 		}
 	}
 	return out
-}
-
-// PeriodStatFromDB maps experiment_instance_period_stat.
-func PeriodStatFromDB(p experimentdb.ExperimentInstancePeriodStat) *v1.ExperimentInstancePeriodStat {
-	return &v1.ExperimentInstancePeriodStat{
-		InstanceId: p.InstanceID.String(),
-		PeriodKind: p.PeriodKind,
-		PeriodKey:  p.PeriodKey,
-		ReturnPct:  optFloat64(p.ReturnPct),
-		TradeCount: optInt32(p.TradeCount),
-	}
 }

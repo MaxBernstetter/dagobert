@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 export function ExperimentStatusBadge({ record }: { record: ExperimentRecord }) {
   return (
     <Badge
+      data-testid="experiment-status"
       variant={catalogStatusBadgeVariant(record.status)}
       className={cn(catalogStatusBadgeClass(record.status))}
     >

@@ -2,32 +2,20 @@ package experimentapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
+	"io/fs"
 
+	"connectrpc.com/connect"
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
+	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type outcomeDist struct {
-	Average float64 `json:"average"`
-	P10     float64 `json:"p10"`
-	P25     float64 `json:"p25"`
-	P50     float64 `json:"p50"`
-	P75     float64 `json:"p75"`
-	P90     float64 `json:"p90"`
-	P95     float64 `json:"p95"`
-}
-
-type outcomeSide struct {
-	Absolute   *outcomeDist `json:"absolute,omitempty"`
-	Percentage *outcomeDist `json:"percentage,omitempty"`
-}
-
-func winRateDef() kpisDef {
-	return kpisDef{
+func winRateDef() *v1.KpiDef {
+	return &v1.KpiDef{
 		Slug:   "win-rate",
 		Title:  "Win rate",
 		Label:  "Win rate",
@@ -37,30 +25,18 @@ func winRateDef() kpisDef {
 	}
 }
 
-func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentdb.ExperimentInstance, resp *kpisResponse) error {
-	closed, err := instanceTradeOutcomes(inst)
+func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentdb.ExperimentInstance, resp *v1.KpiReport) error {
+	dir, err := instanceShard(inst)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil // no shard: no trades, no periods
+	}
+	closed, err := pgcatalog.InstanceTrades(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return err
 	}
-	periods, err := s.q.ListInstancePeriodStats(ctx, inst.ID)
+	monthly, yearly, err := pgcatalog.PeriodCounts(ctx, dataDir(), dir, inst.ID.String())
 	if err != nil {
 		return err
-	}
-	var monthly, yearly []performance.PeriodCount
-	for _, p := range periods {
-		if !p.WinCount.Valid || !p.TradeCount.Valid || p.TradeCount.Int32 <= 0 {
-			continue
-		}
-		bucket := performance.PeriodCount{Period: p.PeriodKey, Trades: int(p.TradeCount.Int32)}
-		if p.WinCount.Valid {
-			bucket.Wins = int(p.WinCount.Int32)
-		}
-		switch p.PeriodKind {
-		case "year":
-			yearly = append(yearly, bucket)
-		case "month":
-			monthly = append(monthly, bucket)
-		}
 	}
 	result := performance.Assemble(closed, monthly, yearly)
 	if result.ClosedTrades() == 0 {
@@ -68,24 +44,20 @@ func (s *Server) attachInstancePerformance(ctx context.Context, inst experimentd
 	}
 	kept := resp.Results[:0]
 	for _, row := range resp.Results {
-		if row.Def.Slug == "win-rate" {
+		if row.Def.GetSlug() == "win-rate" {
 			continue
 		}
 		kept = append(kept, row)
 	}
 	resp.Results = kept
 	if result.WinRate != nil {
-		raw, err := json.Marshal(*result.WinRate)
-		if err != nil {
-			return err
-		}
-		resp.Results = append(resp.Results, kpisResult{Def: winRateDef(), Value: raw})
+		resp.Results = append(resp.Results, &v1.KpiResult{Def: winRateDef(), Value: structpb.NewNumberValue(*result.WinRate)})
 	}
-	applyPerformanceStats(&resp.Statistics, result)
+	applyPerformanceStats(resp.Statistics, result)
 	return nil
 }
 
-func applyPerformanceStats(stats *kpisStatistics, result performance.Result) {
+func applyPerformanceStats(stats *v1.KpiStatistics, result performance.Result) {
 	stats.WinRate = result.WinRate
 	if result.MonthlyWinRate != nil {
 		stats.MonthlyWinRateAvg = &result.MonthlyWinRate.Average
@@ -99,22 +71,22 @@ func applyPerformanceStats(stats *kpisStatistics, result performance.Result) {
 	stats.Loss = sideFrom(result.Loss)
 }
 
-func sideFrom(side *performance.SideStats) *outcomeSide {
+func sideFrom(side *performance.SideStats) *v1.OutcomeSide {
 	if side == nil {
 		return nil
 	}
-	out := &outcomeSide{Absolute: distFrom(side.Absolute), Percentage: distFrom(side.Percentage)}
+	out := &v1.OutcomeSide{Absolute: distFrom(side.Absolute), Percentage: distFrom(side.Percentage)}
 	if out.Absolute == nil && out.Percentage == nil {
 		return nil
 	}
 	return out
 }
 
-func distFrom(d *performance.Distribution) *outcomeDist {
+func distFrom(d *performance.Distribution) *v1.OutcomeDist {
 	if d == nil {
 		return nil
 	}
-	return &outcomeDist{
+	return &v1.OutcomeDist{
 		Average: d.Average,
 		P10:     d.P10,
 		P25:     d.P25,
@@ -125,31 +97,26 @@ func distFrom(d *performance.Distribution) *outcomeDist {
 	}
 }
 
-// handleExperimentPerformance serves the stored experiment reduction.
-func (s *Server) handleExperimentPerformance(w http.ResponseWriter, r *http.Request) {
-	id, err := parseExperimentID(r.PathValue("id"))
+// GetExperimentPerformance serves the stored experiment reduction.
+func (s *Server) GetExperimentPerformance(ctx context.Context, req *connect.Request[v1.GetExperimentPerformanceRequest]) (*connect.Response[v1.GetExperimentPerformanceResponse], error) {
+	id, err := parseExperimentID(req.Msg.Id)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return
+		return nil, invalidArgument("invalid id")
 	}
-	row, err := s.q.GetExperimentPerformance(r.Context(), id)
+	row, err := s.q.GetExperimentPerformance(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "performance not found")
-		return
+		return nil, notFound("performance not found")
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	periods, err := s.q.ListExperimentPeriodStats(r.Context(), id)
+	periods, err := s.q.ListExperimentPeriodStats(ctx, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	outcomes, err := s.q.ListExperimentOutcomeStats(r.Context(), id)
+	outcomes, err := s.q.ListExperimentOutcomeStats(ctx, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 	var monthly, yearly []performance.PeriodCount
 	for _, p := range periods {
@@ -160,7 +127,7 @@ func (s *Server) handleExperimentPerformance(w http.ResponseWriter, r *http.Requ
 			monthly = append(monthly, bucket)
 		}
 	}
-	stats := kpisStatistics{}
+	stats := &v1.KpiStatistics{}
 	if row.WinRate.Valid {
 		rate := float64(row.WinRate.Float32)
 		stats.WinRate = &rate
@@ -174,24 +141,18 @@ func (s *Server) handleExperimentPerformance(w http.ResponseWriter, r *http.Requ
 		stats.YearlyWinRateMed = &rates.Median
 	}
 	stats.Gain, stats.Loss = sidesFromRows(outcomes)
-	var results []kpisResult
+	var results []*v1.KpiResult
 	if stats.WinRate != nil {
-		raw, err := json.Marshal(*stats.WinRate)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		results = []kpisResult{{Def: winRateDef(), Value: raw}}
+		results = []*v1.KpiResult{{Def: winRateDef(), Value: structpb.NewNumberValue(*stats.WinRate)}}
 	}
-	writeJSON(w, http.StatusOK, kpisResponse{
-		Results:    results,
-		Statistics: stats,
-	})
+	return connect.NewResponse(&v1.GetExperimentPerformanceResponse{
+		Performance: &v1.KpiReport{Results: results, Statistics: stats},
+	}), nil
 }
 
-func sidesFromRows(rows []experimentdb.ExperimentOutcomeStat) (gain, loss *outcomeSide) {
+func sidesFromRows(rows []experimentdb.ExperimentOutcomeStat) (gain, loss *v1.OutcomeSide) {
 	for _, row := range rows {
-		dist := &outcomeDist{
+		dist := &v1.OutcomeDist{
 			Average: float64(row.Average),
 			P10:     float64(row.P10),
 			P25:     float64(row.P25),
@@ -200,15 +161,15 @@ func sidesFromRows(rows []experimentdb.ExperimentOutcomeStat) (gain, loss *outco
 			P90:     float64(row.P90),
 			P95:     float64(row.P95),
 		}
-		var side *outcomeSide
+		var side *v1.OutcomeSide
 		if row.Side == performance.SideGain {
 			if gain == nil {
-				gain = &outcomeSide{}
+				gain = &v1.OutcomeSide{}
 			}
 			side = gain
 		} else {
 			if loss == nil {
-				loss = &outcomeSide{}
+				loss = &v1.OutcomeSide{}
 			}
 			side = loss
 		}

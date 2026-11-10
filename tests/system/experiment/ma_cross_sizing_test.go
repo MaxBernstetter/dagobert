@@ -9,7 +9,7 @@ import (
 )
 
 // runMACross runs one ma-cross instance over the oscillating fixture and returns its workspace.
-func runMACross(t *testing.T, cfg string) (string, error) {
+func runMACross(t *testing.T, cfg string) (instRef, error) {
 	t.Helper()
 	dataDir := tempDataDir(t)
 	seedLiveMarker(t, dataDir)
@@ -26,7 +26,7 @@ func runMACross(t *testing.T, cfg string) (string, error) {
 		{Label: "sized", Playbook: "ma-cross", Config: json.RawMessage(cfg)},
 	})
 	if err != nil {
-		return "", err
+		return instRef{}, err
 	}
 	t.Setenv("DATA_DIR", dataDir)
 	t.Setenv("DATABASE_URL", url)
@@ -38,7 +38,7 @@ func runMACross(t *testing.T, cfg string) (string, error) {
 	if got.Status != store.StatusCompleted {
 		t.Fatalf("status %q error %q", got.Status, got.Error)
 	}
-	return instanceDir(dataDir, got.Instances[0]), nil
+	return instanceRef(dataDir, got.Instances[0]), nil
 }
 
 func TestMACrossSizingBuysLessThanAllIn(t *testing.T) {

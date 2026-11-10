@@ -12,6 +12,7 @@ import { FilterableTable, type FilterableColumnDef } from "@/components/filterab
 import { StrategyCharts } from "@/components/strategy-charts";
 import { BacktestDetailSection } from "@/components/backtest-detail-section";
 import { Badge } from "@/components/ui/badge";
+import type { ChartSource } from "@/lib/chart-series-cache";
 import { StrategyKpiTags } from "@/components/strategy-kpi-tags";
 import type { ActivityRow, JournalRow, LiveState } from "@/types/read";
 import { portfolioSeriesForPlaybook, tradeMarkersFromActivity } from "@/lib/portfolio-series";
@@ -186,8 +187,8 @@ type ReportApiScope = {
   backtestId: string;
   fromMs: number;
   toMs: number;
-  /** Experiment/instance chart-series API path (query params appended). */
-  chartSeriesPath: string;
+  /** The experiment instance whose chart series the charts load. */
+  chartSeries: ChartSource;
 };
 
 function StrategyRepeaterItem({
@@ -334,15 +335,6 @@ function StrategyRepeaterItem({
     }
     return chartTimeRange(deferredRows, points, markers);
   }, [reportApi, deferredRows, points, markers]);
-  const chartSeriesPath = useMemo(() => {
-    if (!reportApi || !timeRange) return undefined;
-    const q = new URLSearchParams({
-      from: String(timeRange.fromSec),
-      to: String(timeRange.toSec),
-    });
-    const base = reportApi.chartSeriesPath.split("?")[0] ?? reportApi.chartSeriesPath;
-    return `${base}?${q}`;
-  }, [reportApi, timeRange]);
 
   useEffect(() => {
     if (!actionOpen) return;
@@ -443,7 +435,7 @@ function StrategyRepeaterItem({
                 toSec={timeRange.toSec}
                 points={points}
                 markers={markers}
-                chartSeriesPath={chartSeriesPath}
+                chartSeries={reportApi?.chartSeries}
                 height={plotHeight}
                 extra={chartsExtra}
                 hold={chartsHold}
@@ -513,7 +505,6 @@ function StrategyRepeaterItem({
                 toSec={timeRange.toSec}
                 points={points}
                 markers={markers}
-                chartSeriesPath={chartSeriesPath}
               />
             </CardContent>
           </Card>

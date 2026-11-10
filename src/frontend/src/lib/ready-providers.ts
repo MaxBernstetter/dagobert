@@ -1,14 +1,12 @@
-import { apiUrl } from "@/lib/api";
+import { listProviders } from "@/lib/provider-service";
 
 export type ReadyProvider = { id: string; label: string };
 
-// The orchestrator has no "ready" route. The provider list carries a status per provider,
+// The service has no "ready" call. The provider list carries a status per provider,
 // and a provider is usable for experiments once its status is "ready".
 export async function fetchReadyProviders(): Promise<ReadyProvider[]> {
-  const res = await fetch(apiUrl("/providers"), { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error((await res.text()) || `HTTP ${res.status}`);
-  }
-  const body = (await res.json()) as { providers?: (ReadyProvider & { status: string })[] };
-  return (body.providers ?? []).filter((p) => p.status === "ready");
+  const providers = await listProviders();
+  return providers
+    .filter((p) => p.status === "ready")
+    .map((p) => ({ id: p.id, label: p.label }));
 }

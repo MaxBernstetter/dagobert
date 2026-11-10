@@ -37,6 +37,11 @@ table "experiment_instance" {
     type = text
     default = ""
   }
+  column "shard_key" {
+    null = false
+    type = text
+    default = ""
+  }
   column "status" {
     null = false
     type = text

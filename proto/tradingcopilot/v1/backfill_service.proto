@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// BackfillService starts and watches backfills (Connect-RPC). One backfill is one Step Functions execution
+// per market: ingest the klines, then build the technical indicators (backfill_sfn.tf). Every method is a
+// unary POST to /tradingcopilot.v1.BackfillService/<Method>.
+service BackfillService {
+  rpc StartBackfill(StartBackfillRequest) returns (StartBackfillResponse);
+  rpc GetBackfillStatus(GetBackfillStatusRequest) returns (GetBackfillStatusResponse);
+  rpc ListBackfills(ListBackfillsRequest) returns (ListBackfillsResponse);
+  rpc CancelBackfill(CancelBackfillRequest) returns (CancelBackfillResponse);
+}
+
+// StartBackfillRequest backfills the markets of one provider over the window [from_ms, to_ms) (unix milliseconds).
+// to_ms is clamped to now and rounded down to the hour. symbols empty means BTCUSDT and ETHUSDT.
+message StartBackfillRequest {
+  string provider = 1;
+  repeated string symbols = 2;
+  int64 from_ms = 3;
+  int64 to_ms = 4;
+}
+
+// StartBackfillResponse lists one execution per market, in request order.
+message StartBackfillResponse {
+  repeated BackfillExecution executions = 1;
+}
+
+message BackfillExecution {
+  string symbol = 1;
+  string execution_arn = 2;
+  string name = 3;
+}
+
+message GetBackfillStatusRequest {
+  string execution_arn = 1;
+}
+
+message GetBackfillStatusResponse {
+  BackfillRun backfill = 1;
+}
+
+// BackfillRun is one execution. status is RUNNING, SUCCEEDED, FAILED or ABORTED (TIMED_OUT reports as FAILED).
+// error carries the Step Functions cause and is set by GetBackfillStatus only.
+message BackfillRun {
+  string execution_arn = 1;
+  string name = 2;
+  string status = 3;
+  string started = 4;
+  string stopped = 5;
+  string error = 6;
+}
+
+// ListBackfillsRequest lists the newest executions of the backfill state machine. limit defaults to 20 (at most 100).
+message ListBackfillsRequest {
+  int32 limit = 1;
+}
+
+message ListBackfillsResponse {
+  repeated BackfillRun backfills = 1;
+}
+
+message CancelBackfillRequest {
+  string execution_arn = 1;
+}
+
+message CancelBackfillResponse {}

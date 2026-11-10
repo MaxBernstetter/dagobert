@@ -161,11 +161,6 @@ func InstanceSymbol(inst ExperimentInstance, settings ExperimentSettings) string
 	return settings.PipelineSymbol()
 }
 
-// ExperimentWorkspaceDir resolves absolute path for an instance workspace.
-func ExperimentWorkspaceDir(dataDir string, inst ExperimentInstance) string {
-	return filepath.Join(dataDir, inst.WorkspaceRelPath)
-}
-
 // StudyDir resolves absolute experiment root under dataDir.
 func StudyDir(dataDir, experimentID string) string {
 	return filepath.Join(dataDir, "experiments", experimentID)

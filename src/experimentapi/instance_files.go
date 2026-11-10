@@ -1,33 +1,29 @@
 package experimentapi
 
 import (
-	"errors"
-	"io/fs"
 	"sort"
 	"strings"
 
-	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
-// The instance Parquet files (orders, journals, fills, trade outcomes) are read straight from the
-// instance workspace. A missing file is a valid empty result for orders and journals; callers
+// The instance row groups of the shard Parquet files (orders, journals, fills) are read straight from
+// the instance's shard directory. A missing file is a valid empty result for orders and journals; callers
 // check errors.Is(err, fs.ErrNotExist) to decide between the Parquet and the legacy SQLite source.
 
 // activityRowsFromOrders maps order rows to the activity rows the UI renders, newest candle first.
-func activityRowsFromOrders(orders []instanceparquet.Order) []activityRow {
-	rows := make([]activityRow, 0, len(orders))
+func activityRowsFromOrders(orders []instanceparquet.Order) []*v1.ActivityRow {
+	rows := make([]*v1.ActivityRow, 0, len(orders))
 	for _, o := range orders {
-		row := activityRow{
-			OrderLinkID:  o.OrderLinkID,
+		row := &v1.ActivityRow{
+			OrderLinkId:  o.OrderLinkID,
 			Playbook:     o.Playbook,
 			Symbol:       o.Symbol,
 			CandleClose:  o.CandleClose,
 			Kind:         o.Kind,
 			Decision:     o.Decision,
-			OrderID:      o.OrderID,
+			OrderId:      o.OrderID,
 			OrderStatus:  o.OrderStatus,
 			VenueSymbol:  optionalString(o.VenueSymbol),
 			Side:         o.Side,
@@ -48,7 +44,7 @@ func activityRowsFromOrders(orders []instanceparquet.Order) []activityRow {
 	return rows
 }
 
-// optionalString returns a pointer to s, or nil when s is empty (the JSON side omits it).
+// optionalString returns a pointer to s, or nil when s is empty (the wire side omits it).
 func optionalString(s string) *string {
 	if s == "" {
 		return nil
@@ -57,11 +53,11 @@ func optionalString(s string) *string {
 }
 
 // journalRowsFromParquet maps journal rows to the wire shape, in simulation order.
-func journalRowsFromParquet(journals []instanceparquet.Journal) []journalRow {
-	out := make([]journalRow, 0, len(journals))
+func journalRowsFromParquet(journals []instanceparquet.Journal) []*v1.JournalRow {
+	out := make([]*v1.JournalRow, 0, len(journals))
 	for _, j := range journals {
-		out = append(out, journalRow{
-			OrderLinkID: j.OrderLinkID,
+		out = append(out, &v1.JournalRow{
+			OrderLinkId: j.OrderLinkID,
 			Venue:       j.Venue,
 			VenueSymbol: j.VenueSymbol,
 			Side:        j.Side,
@@ -78,14 +74,14 @@ func journalRowsFromParquet(journals []instanceparquet.Journal) []journalRow {
 
 // journalsFromFillOrders derives the journal rows from the filled orders, for an instance without a
 // journal file. It is the same derivation the SQLite fallback used.
-func journalsFromFillOrders(orders []instanceparquet.Order) []journalRow {
-	out := []journalRow{}
+func journalsFromFillOrders(orders []instanceparquet.Order) []*v1.JournalRow {
+	out := []*v1.JournalRow{}
 	for _, o := range orders {
 		if o.Kind != "fill" {
 			continue
 		}
-		out = append(out, journalRow{
-			OrderLinkID: o.OrderLinkID,
+		out = append(out, &v1.JournalRow{
+			OrderLinkId: o.OrderLinkID,
 			Venue:       "bybit",
 			VenueSymbol: o.VenueSymbol,
 			Side:        derefString(o.Side),
@@ -122,33 +118,6 @@ func chartFillsFromParquet(fills []instanceparquet.Fill) []chartFill {
 		out = append(out, chartFill{closeMs: f.TsMs, side: f.Side, base: f.BaseQty, quote: f.QuoteQty, price: f.Price})
 	}
 	return out
-}
-
-// instanceTradeOutcomes returns the closed trades of an instance from trade_outcomes.parquet. A
-// missing file is no trades.
-func instanceTradeOutcomes(inst experimentdb.ExperimentInstance) ([]performance.ClosedTrade, error) {
-	outcomes, err := instanceparquet.ReadTradeOutcomes(instanceWorkspace(inst))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return closedTrades(outcomes), nil
-}
-
-// closedTrades maps trade outcome rows to the performance input.
-func closedTrades(outcomes []instanceparquet.TradeOutcome) []performance.ClosedTrade {
-	closed := make([]performance.ClosedTrade, 0, len(outcomes))
-	for _, tr := range outcomes {
-		ct := performance.ClosedTrade{Quote: float64(tr.Quote), Side: int(tr.Side)}
-		if tr.Percent != nil {
-			pct := float64(*tr.Percent)
-			ct.Percent = &pct
-		}
-		closed = append(closed, ct)
-	}
-	return closed
 }
 
 // equityFromFills is the mark-to-market curve: a start point one second before the first fill, then

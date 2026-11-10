@@ -6,24 +6,24 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
 	signalrunner "github.com/MaxBernstetter/dagobert/src/calculation-signal/runner"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
+	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 )
 
-// periodStatRows projects a report onto the experiment_instance_period_stat rows.
-func periodStatRows(report signalrunner.InstanceReport, fills []signalrunner.StrategyKPIFill) []pgcatalog.PeriodStatRow {
+// periodStatRows projects a report onto the rows of period_stats.parquet.
+func periodStatRows(report signalrunner.InstanceReport, fills []signalrunner.StrategyKPIFill) []instanceparquet.PeriodStat {
 	return periodStatsFromReport(report.Statistics, fills, report.Performance)
 }
 
-func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunner.StrategyKPIFill, perf performance.Result) []pgcatalog.PeriodStatRow {
+func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunner.StrategyKPIFill, perf performance.Result) []instanceparquet.PeriodStat {
 	monthTrades := monthlySellCounts(fills)
 	monthPerf := periodIndex(perf.Monthly)
 	yearPerf := periodIndex(perf.Yearly)
-	var out []pgcatalog.PeriodStatRow
+	var out []instanceparquet.PeriodStat
 	seenMonth := map[string]bool{}
 	for _, p := range stats.MonthlyReturns {
 		seenMonth[p.Period] = true
 		ret := p.Return
-		row := pgcatalog.PeriodStatRow{
+		row := instanceparquet.PeriodStat{
 			Kind:      "month",
 			Key:       p.Period,
 			ReturnPct: &ret,
@@ -46,7 +46,7 @@ func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunne
 		}
 		trades := int32(bucket.Trades)
 		wins := int32(bucket.Wins)
-		out = append(out, pgcatalog.PeriodStatRow{
+		out = append(out, instanceparquet.PeriodStat{
 			Kind:       "month",
 			Key:        bucket.Period,
 			TradeCount: &trades,
@@ -57,7 +57,7 @@ func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunne
 	for _, p := range stats.YearlyReturns {
 		seenYear[p.Period] = true
 		ret := p.Return
-		row := pgcatalog.PeriodStatRow{
+		row := instanceparquet.PeriodStat{
 			Kind:      "year",
 			Key:       p.Period,
 			ReturnPct: &ret,
@@ -76,7 +76,7 @@ func periodStatsFromReport(stats signalrunner.RunStatistics, fills []signalrunne
 		}
 		trades := int32(bucket.Trades)
 		wins := int32(bucket.Wins)
-		out = append(out, pgcatalog.PeriodStatRow{
+		out = append(out, instanceparquet.PeriodStat{
 			Kind:       "year",
 			Key:        bucket.Period,
 			TradeCount: &trades,

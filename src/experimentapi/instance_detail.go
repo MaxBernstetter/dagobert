@@ -1,73 +1,89 @@
 package experimentapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
-	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
+	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
 	"github.com/MaxBernstetter/dagobert/src/internal/instanceparquet"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// The instance detail endpoints read the instance workspace written by the backtest job:
-// report.json (KPIs and statistics) and the Parquet files of the instance (orders, fills, journals).
+// The instance detail methods read the shard written by the backtest job: the instance's report
+// (KPIs and statistics) and its row groups in the shard Parquet files (orders, fills, journals).
+// An instance without shard_key (not completed) reads like a missing file.
 
-// instanceForRequest loads the instance named in the path and checks that it belongs to the experiment.
-func (s *Server) instanceForRequest(w http.ResponseWriter, r *http.Request) (experimentdb.ExperimentInstance, bool) {
-	experimentID, err := parseExperimentID(r.PathValue("id"))
+// loadInstance loads the instance and checks that it belongs to the experiment.
+func (s *Server) loadInstance(ctx context.Context, rawExperimentID, rawInstanceID string) (experimentdb.ExperimentInstance, error) {
+	experimentID, err := parseExperimentID(rawExperimentID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id")
-		return experimentdb.ExperimentInstance{}, false
+		return experimentdb.ExperimentInstance{}, invalidArgument("invalid id")
 	}
-	instID, err := uuid.Parse(r.PathValue("instanceId"))
+	instID, err := uuid.Parse(rawInstanceID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid instance id")
-		return experimentdb.ExperimentInstance{}, false
+		return experimentdb.ExperimentInstance{}, invalidArgument("invalid instance id")
 	}
-	inst, err := s.q.GetInstance(r.Context(), experimentdb.GetInstanceParams{ExperimentID: experimentID, ID: instID})
+	inst, err := s.q.GetInstance(ctx, experimentdb.GetInstanceParams{ExperimentID: experimentID, ID: instID})
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "not found")
-		return experimentdb.ExperimentInstance{}, false
+		return experimentdb.ExperimentInstance{}, notFound("not found")
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return experimentdb.ExperimentInstance{}, false
+		return experimentdb.ExperimentInstance{}, internal(err)
 	}
-	return inst, true
+	return inst, nil
 }
 
-// instanceWorkspace is the directory of one instance under DATA_DIR.
-func instanceWorkspace(inst experimentdb.ExperimentInstance) string {
-	root := strings.TrimSpace(os.Getenv("DATA_DIR"))
-	if root == "" {
-		root = "/data"
+// dataDir is the workspace key root (DATA_DIR); shard keys are relative to it.
+func dataDir() string {
+	if d := strings.TrimSpace(os.Getenv("DATA_DIR")); d != "" {
+		return d
 	}
-	return filepath.Join(root, inst.WorkspaceRelPath)
+	return "/data"
 }
 
-// handleInstanceReport serves GET .../instances/{instanceId}/report: the report.json file as written.
-func (s *Server) handleInstanceReport(w http.ResponseWriter, r *http.Request) {
-	inst, ok := s.instanceForRequest(w, r)
-	if !ok {
-		return
+// instanceShard is the shard key of the instance. The error satisfies errors.Is(err, fs.ErrNotExist)
+// when the instance has no shard.
+func instanceShard(inst experimentdb.ExperimentInstance) (string, error) {
+	if inst.ShardKey == "" {
+		return "", fs.ErrNotExist
 	}
-	raw, err := os.ReadFile(filepath.Join(instanceWorkspace(inst), "report.json"))
+	return inst.ShardKey, nil
+}
+
+// readInstanceReport is the report JSON of the instance as stored in its shard.
+func readInstanceReport(ctx context.Context, inst experimentdb.ExperimentInstance) ([]byte, error) {
+	dir, err := instanceShard(inst)
+	if err != nil {
+		return nil, err
+	}
+	return instanceparquet.ReadReport(ctx, dataDir(), dir, inst.ID.String())
+}
+
+func (s *Server) GetInstanceReport(ctx context.Context, req *connect.Request[v1.GetInstanceReportRequest]) (*connect.Response[v1.GetInstanceReportResponse], error) {
+	inst, err := s.loadInstance(ctx, req.Msg.ExperimentId, req.Msg.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := readInstanceReport(ctx, inst)
 	if errors.Is(err, fs.ErrNotExist) {
-		writeError(w, http.StatusNotFound, "report not found")
-		return
+		return nil, notFound("report not found")
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(raw)
+	report := &structpb.Struct{}
+	if err := report.UnmarshalJSON(raw); err != nil {
+		return nil, internal(err)
+	}
+	return connect.NewResponse(&v1.GetInstanceReportResponse{Report: report}), nil
 }
 
 type detailReport struct {
@@ -115,9 +131,9 @@ type detailStats struct {
 	YearlyReturns  []json.RawMessage `json:"yearlyReturns"`
 }
 
-func readDetailReport(inst experimentdb.ExperimentInstance) (detailReport, error) {
+func readDetailReport(ctx context.Context, inst experimentdb.ExperimentInstance) (detailReport, error) {
 	var report detailReport
-	raw, err := os.ReadFile(filepath.Join(instanceWorkspace(inst), "report.json"))
+	raw, err := readInstanceReport(ctx, inst)
 	if err != nil {
 		return report, err
 	}
@@ -125,77 +141,34 @@ func readDetailReport(inst experimentdb.ExperimentInstance) (detailReport, error
 	return report, err
 }
 
-type kpisResponse struct {
-	Playbook   string          `json:"playbook"`
-	Symbol     string          `json:"symbol"`
-	FromMs     int64           `json:"fromMs"`
-	ToMs       int64           `json:"toMs"`
-	Results    []kpisResult    `json:"results"`
-	Comparison json.RawMessage `json:"comparison"`
-	Statistics kpisStatistics  `json:"statistics"`
-	Run        json.RawMessage `json:"run"`
-}
-
-type kpisResult struct {
-	Def   kpisDef         `json:"def"`
-	Value json.RawMessage `json:"value"`
-	Extra json.RawMessage `json:"extra,omitempty"`
-}
-
-type kpisDef struct {
-	Slug   string `json:"slug"`
-	Title  string `json:"title"`
-	Label  string `json:"label"`
-	Kind   string `json:"kind"`
-	Unit   string `json:"unit,omitempty"`
-	Format string `json:"format"`
-}
-
-type kpisStatistics struct {
-	DurationMonths    float64           `json:"durationMonths"`
-	DurationYears     float64           `json:"durationYears"`
-	MonthsSampled     int               `json:"monthsSampled"`
-	YearsSampled      int               `json:"yearsSampled"`
-	MonthlyReturnAvg  *float64          `json:"monthlyReturnAvg"`
-	MonthlyReturnMed  *float64          `json:"monthlyReturnMed"`
-	YearlyReturnAvg   *float64          `json:"yearlyReturnAvg"`
-	YearlyReturnMed   *float64          `json:"yearlyReturnMed"`
-	TradesPerMonthAvg *float64          `json:"tradesPerMonthAvg"`
-	TradesPerMonthMed *float64          `json:"tradesPerMonthMed"`
-	MonthlyReturns    []json.RawMessage `json:"monthlyReturns"`
-	YearlyReturns     []json.RawMessage `json:"yearlyReturns"`
-	WinRate           *float64          `json:"winRate,omitempty"`
-	MonthlyWinRateAvg *float64          `json:"monthlyWinRateAvg,omitempty"`
-	MonthlyWinRateMed *float64          `json:"monthlyWinRateMed,omitempty"`
-	YearlyWinRateAvg  *float64          `json:"yearlyWinRateAvg,omitempty"`
-	YearlyWinRateMed  *float64          `json:"yearlyWinRateMed,omitempty"`
-	Gain              *outcomeSide      `json:"gain,omitempty"`
-	Loss              *outcomeSide      `json:"loss,omitempty"`
-}
-
-// handleInstanceKPIs serves GET .../instances/{instanceId}/kpis: KPIs, comparison, and statistics from report.json.
-func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
-	inst, ok := s.instanceForRequest(w, r)
-	if !ok {
-		return
+func (s *Server) GetInstanceKpis(ctx context.Context, req *connect.Request[v1.GetInstanceKpisRequest]) (*connect.Response[v1.GetInstanceKpisResponse], error) {
+	inst, err := s.loadInstance(ctx, req.Msg.ExperimentId, req.Msg.InstanceId)
+	if err != nil {
+		return nil, err
 	}
-	report, err := readDetailReport(inst)
+	report, err := readDetailReport(ctx, inst)
 	if errors.Is(err, fs.ErrNotExist) || (err == nil && report.KPIs == nil) {
-		writeError(w, http.StatusNotFound, "kpis not found")
-		return
+		return nil, notFound("kpis not found")
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 	stats := report.Statistics
 	if stats == nil {
 		stats = &detailStats{}
 	}
-	results := make([]kpisResult, 0, len(report.KPIs.Results))
+	results := make([]*v1.KpiResult, 0, len(report.KPIs.Results))
 	for _, res := range report.KPIs.Results {
-		results = append(results, kpisResult{
-			Def: kpisDef{
+		value, err := jsonValue(res.Value)
+		if err != nil {
+			return nil, internal(err)
+		}
+		extra, err := jsonValue(res.Extra)
+		if err != nil {
+			return nil, internal(err)
+		}
+		results = append(results, &v1.KpiResult{
+			Def: &v1.KpiDef{
 				Slug:   res.Def.Slug,
 				Title:  defaultString(res.Def.Title, res.Def.Slug),
 				Label:  defaultString(res.Def.Label, res.Def.Slug),
@@ -203,38 +176,77 @@ func (s *Server) handleInstanceKPIs(w http.ResponseWriter, r *http.Request) {
 				Unit:   res.Def.Unit,
 				Format: defaultString(res.Def.Format, "decimal"),
 			},
-			Value: res.Value,
-			Extra: res.Extra,
+			Value: value,
+			Extra: extra,
 		})
 	}
-	resp := kpisResponse{
+	comparison, err := jsonValue(report.KPIs.Comparison)
+	if err != nil {
+		return nil, internal(err)
+	}
+	run, err := jsonValue(report.Run)
+	if err != nil {
+		return nil, internal(err)
+	}
+	monthly, err := jsonValues(stats.MonthlyReturns)
+	if err != nil {
+		return nil, internal(err)
+	}
+	yearly, err := jsonValues(stats.YearlyReturns)
+	if err != nil {
+		return nil, internal(err)
+	}
+	resp := &v1.KpiReport{
 		Playbook:   report.KPIs.Playbook,
 		Symbol:     report.KPIs.Symbol,
 		FromMs:     report.KPIs.FromMs,
 		ToMs:       report.KPIs.ToMs,
 		Results:    results,
-		Comparison: report.KPIs.Comparison,
-		Statistics: kpisStatistics{
+		Comparison: comparison,
+		Statistics: &v1.KpiStatistics{
 			DurationMonths:    stats.DurationMonths,
 			DurationYears:     stats.DurationYears,
-			MonthsSampled:     len(stats.MonthlyReturns),
-			YearsSampled:      len(stats.YearlyReturns),
+			MonthsSampled:     int32(len(stats.MonthlyReturns)),
+			YearsSampled:      int32(len(stats.YearlyReturns)),
 			MonthlyReturnAvg:  averageOf(stats.MonthlyReturn, false),
 			MonthlyReturnMed:  averageOf(stats.MonthlyReturn, true),
 			YearlyReturnAvg:   averageOf(stats.YearlyReturn, false),
 			YearlyReturnMed:   averageOf(stats.YearlyReturn, true),
 			TradesPerMonthAvg: averageOf(stats.TradesPerMonth, false),
 			TradesPerMonthMed: averageOf(stats.TradesPerMonth, true),
-			MonthlyReturns:    nonNilRaw(stats.MonthlyReturns),
-			YearlyReturns:     nonNilRaw(stats.YearlyReturns),
+			MonthlyReturns:    monthly,
+			YearlyReturns:     yearly,
 		},
-		Run: report.Run,
+		Run: run,
 	}
-	if err := s.attachInstancePerformance(r.Context(), inst, &resp); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+	if err := s.attachInstancePerformance(ctx, inst, resp); err != nil {
+		return nil, internal(err)
 	}
-	writeJSON(w, http.StatusOK, resp)
+	return connect.NewResponse(&v1.GetInstanceKpisResponse{Kpis: resp}), nil
+}
+
+// jsonValue converts stored JSON to a protobuf Value; an absent value stays nil.
+func jsonValue(raw json.RawMessage) (*structpb.Value, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	v := &structpb.Value{}
+	if err := v.UnmarshalJSON(raw); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func jsonValues(raws []json.RawMessage) ([]*structpb.Value, error) {
+	out := make([]*structpb.Value, 0, len(raws))
+	for _, raw := range raws {
+		v, err := jsonValue(raw)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, nil
 }
 
 func defaultString(v, fallback string) string {
@@ -254,98 +266,38 @@ func averageOf(a *detailAverages, median bool) *float64 {
 	return a.Average
 }
 
-func nonNilRaw(v []json.RawMessage) []json.RawMessage {
-	if v == nil {
-		return []json.RawMessage{}
+// GetInstanceActivity returns the order results and fills from the instance's shard row groups.
+// An instance without orders has no activity (empty lists).
+func (s *Server) GetInstanceActivity(ctx context.Context, req *connect.Request[v1.GetInstanceActivityRequest]) (*connect.Response[v1.GetInstanceActivityResponse], error) {
+	inst, err := s.loadInstance(ctx, req.Msg.ExperimentId, req.Msg.InstanceId)
+	if err != nil {
+		return nil, err
 	}
-	return v
-}
-
-// activityRow mirrors the activity row the Experiment UI renders. Signal and action fields stay null:
-// experiment instances record orders and fills only.
-type activityRow struct {
-	OrderLinkID    string   `json:"orderLinkId"`
-	Playbook       string   `json:"playbook"`
-	Symbol         string   `json:"symbol"`
-	CandleClose    int64    `json:"candleClose"`
-	Kind           string   `json:"kind"`
-	SignalDecision *string  `json:"signalDecision"`
-	SignalRule     *string  `json:"signalRule"`
-	Decision       *string  `json:"decision"`
-	Rule           *string  `json:"rule"`
-	Size           *float64 `json:"size"`
-	Exit           any      `json:"exit"`
-	WrittenAt      *string  `json:"writtenAt"`
-	OrderID        *string  `json:"orderId"`
-	OrderStatus    *string  `json:"orderStatus"`
-	VenueSymbol    *string  `json:"venueSymbol"`
-	Side           *string  `json:"side"`
-	Qty            *string  `json:"qty"`
-	CumExecQty     *string  `json:"cumExecQty"`
-	CumExecValue   *string  `json:"cumExecValue"`
-	AvgPrice       *string  `json:"avgPrice"`
-	MarketUnit     *string  `json:"marketUnit"`
-	RetCode        *float64 `json:"retCode"`
-	RetMsg         *string  `json:"retMsg"`
-}
-
-type journalRow struct {
-	OrderLinkID string `json:"orderLinkId"`
-	Venue       string `json:"venue"`
-	VenueSymbol string `json:"venueSymbol"`
-	Side        string `json:"side"`
-	BaseQty     string `json:"baseQty"`
-	QuoteQty    string `json:"quoteQty"`
-	Price       string `json:"price"`
-	Fee         string `json:"fee"`
-	FeeCurrency string `json:"feeCurrency"`
-	PriceSource string `json:"priceSource"`
-}
-
-type activityResponse struct {
-	Rows           []activityRow     `json:"rows"`
-	Journals       []journalRow      `json:"journals"`
-	PlaybookTitles map[string]string `json:"playbookTitles"`
-	ExperimentID   string            `json:"experimentId"`
-	InstanceID     string            `json:"instanceId"`
-	Playbook       string            `json:"playbook"`
-	Symbol         string            `json:"symbol"`
-}
-
-// handleInstanceActivity serves GET .../instances/{instanceId}/activity: order results and fills from the
-// instance Parquet files. An instance without orders.parquet has no activity (empty arrays).
-func (s *Server) handleInstanceActivity(w http.ResponseWriter, r *http.Request) {
-	inst, ok := s.instanceForRequest(w, r)
-	if !ok {
-		return
-	}
-	resp := activityResponse{
-		Rows:           []activityRow{},
-		Journals:       []journalRow{},
+	resp := &v1.GetInstanceActivityResponse{
 		PlaybookTitles: map[string]string{inst.PlaybookKey: inst.Label},
-		ExperimentID:   inst.ExperimentID.String(),
-		InstanceID:     inst.ID.String(),
+		ExperimentId:   inst.ExperimentID.String(),
+		InstanceId:     inst.ID.String(),
 		Playbook:       inst.PlaybookKey,
 		Symbol:         inst.Symbol,
 	}
-	ws := instanceWorkspace(inst)
-	orders, err := instanceparquet.ReadOrders(ws)
+	ws, err := instanceShard(inst)
+	var orders []instanceparquet.Order
+	if err == nil {
+		orders, err = instanceparquet.ReadOrders(ctx, dataDir(), ws, inst.ID.String())
+	}
 	if errors.Is(err, fs.ErrNotExist) {
-		writeJSON(w, http.StatusOK, resp)
-		return
+		return connect.NewResponse(resp), nil
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 	resp.Rows = activityRowsFromOrders(orders)
-	journals, err := instanceparquet.ReadJournals(ws)
+	journals, err := instanceparquet.ReadJournals(ctx, dataDir(), ws, inst.ID.String())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, internal(err)
 	}
 	if resp.Journals = journalRowsFromParquet(journals); len(resp.Journals) == 0 {
 		resp.Journals = journalsFromFillOrders(orders)
 	}
-	writeJSON(w, http.StatusOK, resp)
+	return connect.NewResponse(resp), nil
 }

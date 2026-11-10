@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"path/filepath"
 	"sync"
 
 	"github.com/MaxBernstetter/dagobert/src/calculation-performance"
@@ -13,12 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// outcomeReadWorkers bounds the concurrent reads of the per-instance trade outcome files.
+// outcomeReadWorkers bounds the concurrent reads of the per-instance trade outcome row groups.
 const outcomeReadWorkers = 8
 
-// LoadCompletedResults rebuilds one Result per completed instance. Trade outcomes come from each
-// instance's trade_outcomes.parquet under dataDir (a missing file is no trades); period stats come
-// from Postgres. Instances with neither trades nor period stats are left out.
+// LoadCompletedResults rebuilds one Result per completed instance from its row groups in the shard
+// files trade_outcomes.parquet and period_stats.parquet under <shard_key> (read through the workspace store) (an instance
+// without shard key or row group is no trades, no periods). Instances with neither are left out.
 func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDir string) ([]performance.Result, error) {
 	eid, err := parseExperimentID(experimentID)
 	if err != nil {
@@ -28,42 +27,18 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDi
 	if err != nil {
 		return nil, err
 	}
-	periods, err := c.q.ListCompletedPeriodStats(ctx, eid)
-	if err != nil {
-		return nil, err
-	}
-	type acc struct {
-		monthly []performance.PeriodCount
-		yearly  []performance.PeriodCount
-	}
-	periodsByInst := map[string]*acc{}
-	for _, p := range periods {
-		if !p.WinCount.Valid || !p.TradeCount.Valid || p.TradeCount.Int32 <= 0 {
-			continue
-		}
-		key := p.InstanceID.String()
-		row := periodsByInst[key]
-		if row == nil {
-			row = &acc{}
-			periodsByInst[key] = row
-		}
-		bucket := performance.PeriodCount{Period: p.PeriodKey, Trades: int(p.TradeCount.Int32), Wins: int(p.WinCount.Int32)}
-		switch p.PeriodKind {
-		case "year":
-			row.yearly = append(row.yearly, bucket)
-		default:
-			row.monthly = append(row.monthly, bucket)
-		}
-	}
-
 	completed := make([]experimentdb.ExperimentInstance, 0, len(insts))
 	for _, inst := range insts {
 		if inst.Status == "completed" {
 			completed = append(completed, inst)
 		}
 	}
-	trades := make([][]performance.ClosedTrade, len(completed))
-	errs := make([]error, len(completed))
+	type loaded struct {
+		trades          []performance.ClosedTrade
+		monthly, yearly []performance.PeriodCount
+		err             error
+	}
+	res := make([]loaded, len(completed))
 	sem := make(chan struct{}, outcomeReadWorkers)
 	var wg sync.WaitGroup
 	for i := range completed {
@@ -72,32 +47,37 @@ func (c *Catalog) LoadCompletedResults(ctx context.Context, experimentID, dataDi
 		go func(i int) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			trades[i], errs[i] = instanceTrades(completed[i], dataDir)
+			if completed[i].ShardKey == "" {
+				return
+			}
+			dir := completed[i].ShardKey
+			id := completed[i].ID.String()
+			r := &res[i]
+			if r.trades, r.err = InstanceTrades(ctx, dataDir, dir, id); r.err != nil {
+				return
+			}
+			r.monthly, r.yearly, r.err = PeriodCounts(ctx, dataDir, dir, id)
 		}(i)
 	}
 	wg.Wait()
 
 	out := make([]performance.Result, 0, len(completed))
-	for i, inst := range completed {
-		if errs[i] != nil {
-			return nil, errs[i]
+	for _, r := range res {
+		if r.err != nil {
+			return nil, r.err
 		}
-		row := periodsByInst[inst.ID.String()]
-		if len(trades[i]) == 0 && row == nil {
+		if len(r.trades) == 0 && len(r.monthly) == 0 && len(r.yearly) == 0 {
 			continue
 		}
-		var monthly, yearly []performance.PeriodCount
-		if row != nil {
-			monthly, yearly = row.monthly, row.yearly
-		}
-		out = append(out, performance.Assemble(trades[i], monthly, yearly))
+		out = append(out, performance.Assemble(r.trades, r.monthly, r.yearly))
 	}
 	return out, nil
 }
 
-// instanceTrades reads the closed trades of one instance from its trade outcome file.
-func instanceTrades(inst experimentdb.ExperimentInstance, dataDir string) ([]performance.ClosedTrade, error) {
-	outcomes, err := instanceparquet.ReadTradeOutcomes(filepath.Join(dataDir, inst.WorkspaceRelPath))
+// InstanceTrades reads the closed trades of one instance from its trade outcome row group. A missing
+// file or row group is no trades.
+func InstanceTrades(ctx context.Context, dataDir, shardKey, instanceID string) ([]performance.ClosedTrade, error) {
+	outcomes, err := instanceparquet.ReadTradeOutcomes(ctx, dataDir, shardKey, instanceID)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -114,6 +94,30 @@ func instanceTrades(inst experimentdb.ExperimentInstance, dataDir string) ([]per
 		closed = append(closed, ct)
 	}
 	return closed, nil
+}
+
+// PeriodCounts reads the month and year buckets with at least one trade from the instance's row group
+// in <shard>/period_stats.parquet. A missing file or row group is no buckets.
+func PeriodCounts(ctx context.Context, dataDir, shardKey, instanceID string) (monthly, yearly []performance.PeriodCount, err error) {
+	rows, err := instanceparquet.ReadPeriodStats(ctx, dataDir, shardKey, instanceID)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, p := range rows {
+		if p.WinCount == nil || p.TradeCount == nil || *p.TradeCount <= 0 {
+			continue
+		}
+		bucket := performance.PeriodCount{Period: p.Key, Trades: int(*p.TradeCount), Wins: int(*p.WinCount)}
+		if p.Kind == "year" {
+			yearly = append(yearly, bucket)
+		} else {
+			monthly = append(monthly, bucket)
+		}
+	}
+	return monthly, yearly, nil
 }
 
 // ReplaceExperimentPerformance writes the experiment reduction. An empty result deletes it.

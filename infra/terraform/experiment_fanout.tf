@@ -1,110 +1,87 @@
-# Step 6 — experiment instance fan-out (SFN Inline Map + experiment-worker Lambda).
+# Experiment run workflow: tunables and the Step Functions definition (Prepare -> Map(Simulate) -> Finalize).
+# The resources are in experiment_workflow.tf.
 
 variable "experiment_batch_size" {
-  type    = number
-  default = 64
+  description = "Instances per simulate batch (EXPERIMENT_BATCH_SIZE in the worker)."
+  type        = number
+  default     = 64
 }
 
 variable "experiment_map_max_concurrency" {
-  type    = number
-  default = 200
+  description = "Simulate batches running in parallel in the Map state."
+  type        = number
+  default     = 200
 }
 
-variable "enable_experiment_lambda" {
-  description = "Create experiment-worker Lambda (requires experiment_worker_zip_path)"
-  type        = bool
-  default     = false
-}
-
-variable "experiment_worker_zip_path" {
-  description = "Path to experiment-worker bootstrap zip (go build -o bootstrap …)"
+variable "experiment_worker_image_tag" {
+  description = "Tag of the experiment-worker image in ECR. scripts/infra-apply.sh builds and pushes it before the function is created."
   type        = string
-  default     = ""
+  default     = "latest"
 }
 
-data "aws_iam_policy_document" "experiment_sfn_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["states.amazonaws.com"]
-    }
-  }
+variable "experiment_worker_memory_mb" {
+  type    = number
+  default = 3008
 }
 
-resource "aws_iam_role" "experiment_sfn" {
-  name               = "${local.prefix}-sfn-experiment"
-  assume_role_policy = data.aws_iam_policy_document.experiment_sfn_assume.json
-}
-
-data "aws_iam_policy_document" "experiment_sfn" {
-  statement {
-    sid = "InvokeExperimentWorker"
-    actions = [
-      "lambda:InvokeFunction",
-    ]
-    resources = var.enable_experiment_lambda ? [aws_lambda_function.experiment_worker[0].arn] : ["*"]
-  }
-
-  statement {
-    sid = "Logs"
-    actions = [
-      "logs:CreateLogDelivery",
-      "logs:GetLogDelivery",
-      "logs:UpdateLogDelivery",
-      "logs:DeleteLogDelivery",
-      "logs:ListLogDeliveries",
-      "logs:PutResourcePolicy",
-      "logs:DescribeResourcePolicies",
-      "logs:DescribeLogGroups",
-    ]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role_policy" "experiment_sfn" {
-  name   = "${local.prefix}-sfn-experiment"
-  role   = aws_iam_role.experiment_sfn.id
-  policy = data.aws_iam_policy_document.experiment_sfn.json
-}
-
-resource "aws_iam_role_policy_attachment" "experiment_worker_logs" {
-  count      = var.enable_experiment_lambda ? 1 : 0
-  role       = aws_iam_role.task.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_lambda_function" "experiment_worker" {
-  count = var.enable_experiment_lambda ? 1 : 0
-
-  function_name = "${local.prefix}-experiment-worker"
-  role          = aws_iam_role.task.arn
-  handler       = "bootstrap"
-  runtime       = "provided.al2023"
-  filename      = var.experiment_worker_zip_path
-  timeout       = 900
-  memory_size   = 1024
-
-  environment {
-    variables = {
-      VENUE_SIMULATE     = "1"
-      # Experiment catalog is Postgres. DynamoDB is not required for this worker.
-      EXPERIMENT_CATALOG = "postgres"
-      DATABASE_URL       = var.experiment_database_url
-    }
-  }
+variable "experiment_worker_ephemeral_mb" {
+  description = "/tmp size of the worker (512 to 10240 MB)."
+  type        = number
+  default     = 2048
 }
 
 locals {
-  experiment_worker_arn = var.enable_experiment_lambda ? aws_lambda_function.experiment_worker[0].arn : "arn:aws:lambda:${var.aws_region}:000000000000:function:experiment-worker-placeholder"
+  # Every Lambda task invokes the worker with a Payload; the Retry covers Lambda service faults only.
+  experiment_worker_retry = [{
+    ErrorEquals = [
+      "Lambda.ServiceException",
+      "Lambda.AWSLambdaException",
+      "Lambda.SdkClientException",
+      "Lambda.TooManyRequestsException",
+    ]
+    IntervalSeconds = 2
+    MaxAttempts     = 3
+    BackoffRate     = 2
+  }]
+
+  experiment_worker_catch = [{
+    ErrorEquals = ["States.ALL"]
+    Next        = "MarkFailed"
+    ResultPath  = "$.error"
+  }]
+
   experiment_sfn_definition = jsonencode({
-    Comment = "Experiment simulate batches via experiment-worker Lambda"
-    StartAt = "MapBatches"
+    Comment        = "Experiment run: prepare, simulate batches in a Map, finalize. Any failure marks the experiment failed."
+    StartAt        = "Prepare"
+    TimeoutSeconds = 86400
     States = {
-      MapBatches = {
+      Prepare = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::lambda:invoke"
+        Parameters = {
+          FunctionName = aws_lambda_function.experiment_worker.arn
+          Payload = {
+            phase             = "prepare"
+            "experiment_id.$" = "$.experiment_id"
+            "retry_failed.$"  = "$.retry_failed"
+          }
+        }
+        ResultSelector = { "batches.$" = "$.Payload.batches" }
+        ResultPath     = "$.prepared"
+        Retry          = local.experiment_worker_retry
+        Catch          = local.experiment_worker_catch
+        Next           = "Simulate"
+      }
+      Simulate = {
         Type           = "Map"
-        ItemsPath      = "$.batches"
+        ItemsPath      = "$.prepared.batches"
         MaxConcurrency = var.experiment_map_max_concurrency
+        ItemSelector = {
+          phase             = "simulate"
+          "experiment_id.$" = "$.experiment_id"
+          "instance_ids.$"  = "$$.Map.Item.Value"
+        }
+        ResultPath = null
         Iterator = {
           StartAt = "SimulateBatch"
           States = {
@@ -112,26 +89,52 @@ locals {
               Type     = "Task"
               Resource = "arn:aws:states:::lambda:invoke"
               Parameters = {
-                FunctionName = local.experiment_worker_arn
-                Payload = {
-                  "experimentId.$"     = "$$.Execution.Input.experimentId"
-                  "instanceIds.$" = "$"
-                  "dataDir.$"     = "$$.Execution.Input.dataDir"
-                }
+                FunctionName = aws_lambda_function.experiment_worker.arn
+                "Payload.$"  = "$"
               }
-              End = true
+              ResultPath = null
+              Retry      = local.experiment_worker_retry
+              End        = true
             }
           }
         }
-        End = true
+        Catch = local.experiment_worker_catch
+        Next  = "Finalize"
+      }
+      Finalize = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::lambda:invoke"
+        Parameters = {
+          FunctionName = aws_lambda_function.experiment_worker.arn
+          Payload = {
+            phase             = "finalize"
+            "experiment_id.$" = "$.experiment_id"
+          }
+        }
+        ResultPath = null
+        Retry      = local.experiment_worker_retry
+        Catch      = local.experiment_worker_catch
+        End        = true
+      }
+      MarkFailed = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::lambda:invoke"
+        Parameters = {
+          FunctionName = aws_lambda_function.experiment_worker.arn
+          Payload = {
+            phase             = "fail"
+            "experiment_id.$" = "$.experiment_id"
+            "error.$"         = "$.error.Cause"
+          }
+        }
+        ResultPath = null
+        Next       = "Failed"
+      }
+      Failed = {
+        Type  = "Fail"
+        Error = "ExperimentFailed"
+        Cause = "An experiment phase failed; the experiment is marked failed."
       }
     }
   })
-}
-
-resource "aws_sfn_state_machine" "experiment_run" {
-  name     = "${local.prefix}-experiment-run"
-  role_arn = aws_iam_role.experiment_sfn.arn
-
-  definition = local.experiment_sfn_definition
 }

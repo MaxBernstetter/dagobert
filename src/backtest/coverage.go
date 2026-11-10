@@ -2,17 +2,15 @@ package backtest
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	"math"
-	"net/url"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/parquet-go/parquet-go"
 	_ "modernc.org/sqlite"
 
+	"github.com/MaxBernstetter/dagobert/src/internal/ingestledger"
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/lakeobject"
 	"github.com/MaxBernstetter/dagobert/src/shared"
@@ -178,72 +176,16 @@ func parquetOpenTimes(dataDir, path string) (map[int64]struct{}, error) {
 }
 
 func listUnavailableHours(dataDir, provider, base, quote string, fromMs, toMs int64) ([]int64, error) {
-	path := filepath.Join(dataDir, "ingest.sqlite")
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: "_pragma=busy_timeout(5000)"}
-	db, err := sql.Open("sqlite", u.String()+"&mode=ro")
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	hasBase, err := columnExists(db, "unavailable", "base")
-	if err != nil {
-		return nil, err
-	}
-	var rows *sql.Rows
-	if hasBase {
-		rows, err = db.Query(
-			`SELECT open_time FROM unavailable WHERE provider = ? AND base = ? AND quote = ? AND open_time >= ? AND open_time < ? ORDER BY open_time`,
-			provider, base, quote, fromMs, toMs,
-		)
-	} else {
-		// Pre-cutover DB: ignore (operators wipe).
-		return nil, nil
+	ctx := context.Background()
+	l, err := ingestledger.Open(ctx)
+	if errors.Is(err, ingestledger.ErrNoDatabase) {
+		return nil, nil // no ledger configured: no hour is known to be unavailable
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []int64
-	for rows.Next() {
-		var t int64
-		if err := rows.Scan(&t); err != nil {
-			return nil, err
-		}
-		out = append(out, t)
-	}
-	return out, rows.Err()
-}
-
-func columnExists(db *sql.DB, table, col string) (bool, error) {
-	rows, err := db.Query(fmt.Sprintf(`PRAGMA table_info(%s)`, table))
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt sql.NullString
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return false, err
-		}
-		if name == col {
-			return true, nil
-		}
-	}
-	return false, rows.Err()
+	defer l.Close()
+	return l.Unavailable(ctx, provider, base, quote, fromMs, toMs)
 }
 
 func formatCoverageGapSample(hours []int64, n int) string {

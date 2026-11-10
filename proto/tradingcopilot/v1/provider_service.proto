@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package tradingcopilot.v1;
+
+// ProviderService is the Connectors contract (Connect-RPC), mounted in the API Lambda.
+// Every method is a unary POST to /tradingcopilot.v1.ProviderService/<Method>. Secret values are write-only:
+// a view reports only the names of the secret keys that are set.
+service ProviderService {
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+  rpc GetProvider(GetProviderRequest) returns (GetProviderResponse);
+  rpc SaveProviderSettings(SaveProviderSettingsRequest) returns (SaveProviderSettingsResponse);
+  // ActivateProvider runs the setup (fetch the markets) before it returns: the view is ready or failed.
+  rpc ActivateProvider(ActivateProviderRequest) returns (ActivateProviderResponse);
+  rpc DeactivateProvider(DeactivateProviderRequest) returns (DeactivateProviderResponse);
+  rpc ListProviderPairs(ListProviderPairsRequest) returns (ListProviderPairsResponse);
+}
+
+message ProviderField {
+  string key = 1;
+  string label = 2;
+  string kind = 3;
+  string description = 4;
+  string placeholder = 5;
+  string default = 6;
+}
+
+message ProviderProgress {
+  string label = 1;
+  optional int32 done = 2;
+  optional int32 total = 3;
+}
+
+// ProviderView is one plugged-in provider with its stored state. secret_keys_configured lists the names of the
+// secrets that have a value; the values are never returned.
+message ProviderView {
+  string id = 1;
+  string label = 2;
+  string description = 3;
+  repeated ProviderField fields = 4;
+  bool activated = 5;
+  string status = 6;
+  string error = 7;
+  optional ProviderProgress progress = 8;
+  map<string, string> config = 9;
+  repeated string secret_keys_configured = 10;
+  int64 updated_at_ms = 11;
+}
+
+message ListProvidersRequest {}
+
+message ListProvidersResponse {
+  repeated ProviderView providers = 1;
+}
+
+message GetProviderRequest {
+  string id = 1;
+}
+
+message GetProviderResponse {
+  ProviderView provider = 1;
+}
+
+// SaveProviderSettings stores the declared config keys and secret values. Only declared keys are accepted.
+// Saving does not change the activation status.
+message SaveProviderSettingsRequest {
+  string id = 1;
+  map<string, string> config = 2;
+  map<string, string> secrets = 3;
+}
+
+message SaveProviderSettingsResponse {
+  ProviderView provider = 1;
+}
+
+message ActivateProviderRequest {
+  string id = 1;
+}
+
+message ActivateProviderResponse {
+  ProviderView provider = 1;
+}
+
+message DeactivateProviderRequest {
+  string id = 1;
+}
+
+message DeactivateProviderResponse {
+  ProviderView provider = 1;
+}
+
+message ListProviderPairsRequest {
+  string id = 1;
+}
+
+// ProviderPair is one market of a provider. The stored snapshot when the provider is ready, otherwise the markets
+// fetched live (nothing is stored).
+message ProviderPair {
+  string base = 1;
+  string quote = 2;
+}
+
+message ListProviderPairsResponse {
+  string provider = 1;
+  repeated ProviderPair pairs = 2;
+}
