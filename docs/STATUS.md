@@ -4,7 +4,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 
 ## What works today
 
-- **Scope.** Dagobert is a backtesting framework. The live and paper-trading pipeline (candle-close state machine, Bybit client, execution job, `.secrets`) was removed.
+- **Scope.** Dagobert is a backtesting framework. The live and paper-trading pipeline (candle-close state machine, exchange client, execution job, local secrets file) was removed.
 - **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. Experiments run on the C++ engine only (`ma-cross` and `signal-consensus`); each experiment sets its C++ process count (auto = one per CPU) in the create form; the Go engine and `EXPERIMENT_ENGINE` were removed (#164). The replayed output is checked by `TestSmaCrossCppReplayConsistent` and `TestConsensusCppReplayConsistent`.
 - **Decimal candles.** Parquet candles use fixed-scale decimals; the reader also accepts the old string schema (`task data:migrate-candles`).
 - **Position sizing.** Unit risk, heat and max units, ([position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md)).
@@ -23,7 +23,7 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## Next steps, in priority order
 
 1. Measure the browser load of the instance detail page (`/activity`, `/chart-series`) on a 3000-instance experiment ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). The run and file numbers are in [05-cpp-benchmark](development/05-cpp-benchmark.md).
-3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 (Supabase) is superseded by Aurora: the relational database is the first piece migrated to the serverless stack (VPC, API Gateway, C++ Lambda and ECS frontend follow).
+3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 is superseded: the relational database runs on Aurora instead.
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 

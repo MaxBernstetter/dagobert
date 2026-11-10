@@ -2,7 +2,7 @@
 
 ## Goal
 
-Manage the **relational control plane** (experiments, stats, actions / working memory) as code with [Atlas](https://atlasgo.io): multi-file HCL desired state, versioned SQL migrations, apply to **local Compose Postgres** and **Supabase Free**. Lake (candles / TI parquet) stays on S3/Floci — out of Atlas.
+Manage the **relational control plane** (experiments, stats, actions / working memory) as code with [Atlas](https://atlasgo.io): multi-file HCL desired state, versioned SQL migrations, apply to **Aurora PostgreSQL Serverless v2** (Floci locally, AWS in prod). Supabase was dropped, so the Supabase sections below are historical. Lake (candles / TI parquet) stays on S3/Floci — out of Atlas.
 
 Companion decisions (this track):
 
@@ -14,7 +14,7 @@ Not a migration implementation plan for existing SQLite/DDB data — schema tool
 
 ## Locked choices
 
-Canonical ladder: [`serverless-aws.md`](serverless-aws.md) (steps **7–8** done; **9** = sqlc Experiment API next).
+Canonical ladder: [`serverless-aws.md`](../serverless-aws.md) (steps **7–8** done; **9** = sqlc Experiment API next).
 
 | Item | Choice |
 |------|--------|
@@ -225,4 +225,4 @@ Use a bare `schema "public" {}` (no comment) when scoped to one schema.
 - [Atlas Supabase guide](https://atlasgo.io/guides/postgres/supabase)
 - [HCL directory structure](https://atlasgo.io/faq/hcl-directory-structure)
 - [Supabase connection methods](https://supabase.com/docs/guides/database/connecting-to-postgres)
-- Why jobs are not hosted on Supabase: Out of scope in [serverless-aws.md](serverless-aws.md); this doc is **DB schema tooling only** for the control plane.
+- Why jobs are not hosted on the database platform: Out of scope in [serverless-aws.md](../serverless-aws.md); this doc is **DB schema tooling only** for the control plane.

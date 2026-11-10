@@ -8,7 +8,7 @@ import (
 
 // Instrument is one traded series and the venue pair orders use.
 // PriceSource is the candle provider. Venue is where orders go.
-// Those are different markets today: Binance USDT klines, Bybit EU USDC spot.
+// Those are different markets today: Binance USDT klines, USDC spot pairs.
 type Instrument struct {
 	Series      string
 	Venue       string
@@ -49,7 +49,7 @@ func Resolve(series string) (Instrument, bool) {
 	}
 	return Instrument{
 		Series:      sym,
-		VenueSymbol: sym, // paper/backtest id; live Bybit pairs stay on BySeries only
+		VenueSymbol: sym, // backtest id; there is no live venue pair
 		Base:        base,
 		Quote:       quote,
 		PriceSource: shared.DataSourceBinance.String(),
