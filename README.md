@@ -2,6 +2,8 @@
 
 A backtesting platform for systematic crypto spot swing trading on 3-hour UTC candles, built as a serverless AWS system that runs unchanged on a laptop.
 
+> **AWS playground.** This project is also a playground for AWS services, and deploying it to a real account costs money even when nothing runs. Assumption: with the current prod design (six interface VPC endpoints, Aurora Serverless v2 paused when idle), idle cost is about €45 per month at US list prices. Reducing the endpoints to two is planned and brings it to about €16 per month. Frankfurt prices are not verified; check the AWS Pricing Calculator before deploying.
+
 You define an experiment in a web UI (date range, costs, and up to 20,000 strategy instances, by hand or as a parameter grid). The platform fetches public Binance klines, computes indicators, simulates every instance with trading costs and ranks the results by KPI. There is no exchange account, no API key and no live trading; fills are simulated. The idea behind it: [docs/IDEA.md](docs/IDEA.md).
 
 ## Highlights
@@ -55,6 +57,8 @@ You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https:/
 devbox shell
 task up           # Floci, Terraform apply, image builds, web app upload, DB migrations; prints the web app URL
 ```
+
+If your Floci stack predates the S3 state backend (state in an old local file, `terraform.tfstate`), reset it once: `docker compose rm -sf floci && docker compose up -d floci`, then `task up`.
 
 `task up` provisions the whole stack on Floci and ends by printing the URL of the compiled web app, for example `http://<id>.cloudfront.localhost:11566/`. Open it, create an experiment and start it. The first run downloads the candles it needs from Binance. The first `task up` is slow because it builds the images.
 

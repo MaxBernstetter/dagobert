@@ -6,13 +6,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TF_IMG="hashicorp/terraform:1.9"
-ROOT="$PWD"
-
-URL="$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$ROOT/infra/terraform:/tf" -w /tf "$TF_IMG" output -raw api_gateway_url)" || {
-  echo "cannot read api_gateway_url from Terraform (no state in this checkout, or not initialised); run task infra:local first" >&2
+URL="$(scripts/tf-output.sh api_gateway_url)"
+if [ -z "$URL" ]; then
+  echo "cannot read api_gateway_url from Terraform (stack not applied); run task infra:local first" >&2
   exit 1
-}
+fi
 
 HOST="${URL#*://}"
 HOST="${HOST%%[/:]*}"

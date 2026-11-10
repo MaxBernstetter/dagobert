@@ -88,7 +88,7 @@ tasks:
     silent: true
     cmds:
       - |
-        d=$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD/infra/terraform:/tf" -w /tf hashicorp/terraform:1.9 output -raw frontend_domain 2>/dev/null || true)
+        d=$(scripts/tf-output.sh frontend_domain)
         [ -n "$d" ] && echo "Web app (compiled, via CloudFront on Floci): http://${d%.net}.localhost:${FLOCI_PORT:-11566}/   (hot reload: task dev, :3000)"
 
   e2e:
@@ -96,7 +96,7 @@ tasks:
     dir: tests/e2e
     cmds:
       - |
-        d=$(docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "{{.ROOT_DIR}}/infra/terraform:/tf" -w /tf hashicorp/terraform:1.9 output -raw frontend_domain 2>/dev/null || true)
+        d=$(scripts/tf-output.sh frontend_domain)
         if [ -z "$d" ]; then echo "e2e: compiled web app URL unavailable; run task up first" >&2; exit 1; fi
         export E2E_BASE_URL="http://${d%.net}.localhost:${FLOCI_PORT:-11566}/"
         if [ ! -d node_modules ]; then npm ci; fi

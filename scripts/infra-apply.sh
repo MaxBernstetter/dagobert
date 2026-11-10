@@ -8,19 +8,21 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 . scripts/lib/require-env.sh
+. scripts/lib/terraform.sh
+ROOT="$PWD"
 
 ENV_NAME="${1:-local}"
-TF_IMG="hashicorp/terraform:1.9"
 TF_ARGS=(-input=false -auto-approve "-var=environment=${ENV_NAME}")
 
 case "$ENV_NAME" in
   local)
     require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
     FLOCI_ENDPOINT="http://127.0.0.1:${FLOCI_PORT:-11566}"
+    TF_NETWORK_HOST=1
     docker compose up -d --wait floci 2>/dev/null || docker compose up -d floci
     for _ in $(seq 1 30); do curl -fsS "$FLOCI_ENDPOINT/_floci/health" >/dev/null 2>&1 && break; sleep 1; done
     TF_ARGS+=("-var=aws_region=${AWS_REGION}" "-var=floci_endpoint=${FLOCI_ENDPOINT}" "-var=database_port=7001"
-              "-var=database_master_password=${POSTGRES_PASSWORD:-trading}")
+              "-var=database_master_password=${POSTGRES_PASSWORD:-trading}" "-var=database_app_password=${POSTGRES_APP_PASSWORD:-dagobert_app}")
     # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
     unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
     ;;
@@ -48,19 +50,10 @@ TF_ARGS+=("-var=api_image_tag=${API_IMAGE_TAG}")
 WORKER_IMAGE_TAG="${WORKER_IMAGE_TAG:-latest}"
 TF_ARGS+=("-var=experiment_worker_image_tag=${WORKER_IMAGE_TAG}")
 
-# tf runs Terraform from the installed binary, else from the hashicorp/terraform image.
-tf() {
-  if command -v terraform >/dev/null 2>&1; then
-    (cd infra/terraform && terraform "$@")
-  else
-    NET=(); [ "$ENV_NAME" = "local" ] && NET=(--network host)
-    docker run --rm "${NET[@]}" --user "$(id -u):$(id -g)" -e HOME=/tmp -e TF_VAR_allow_cloud_deploy \
-      -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_REGION -e AWS_ROLE_ARN -e AWS_WEB_IDENTITY_TOKEN_FILE \
-      -v "$PWD/infra/terraform:/tf" -w /tf "$TF_IMG" "$@"
-  fi
-}
+# tf: terraform in infra/terraform (state in the S3 bucket that infra/bootstrap creates).
+tf() { tf_in "$ROOT/infra/terraform" "$@"; }
 
-tf init -input=false
+tf_init_root "$ENV_NAME"
 tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.experiment_api -target=aws_ecr_repository.experiment_worker
 
 # Publish the images under the repository URIs the task definition and the Lambda use.

@@ -16,12 +16,12 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/MaxBernstetter/dagobert/src/internal/awsenv"
 	"github.com/MaxBernstetter/dagobert/src/internal/experimentworkflow"
+	"github.com/MaxBernstetter/dagobert/src/internal/pgpool"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/experimentdb"
 )
@@ -39,7 +39,7 @@ func setup() {
 		initErr = errors.New("DATABASE_URL required")
 		return
 	}
-	pool, err := pgxpool.New(context.Background(), dbURL)
+	pool, err := pgpool.Open(context.Background(), dbURL)
 	if err != nil {
 		initErr = err
 		return

@@ -6,12 +6,27 @@ resource "random_password" "database" {
   special = false
 }
 
+# Two roles. The master user owns the schema and runs the migrations (db-migrate task only). Every workload connects
+# as dagobert_app, which has DML on public and nothing else (db/roles.sql).
+resource "random_password" "app_database" {
+  length  = 32
+  special = false
+}
+
 locals {
-  database_password = var.database_master_password != "" ? var.database_master_password : random_password.database.result
-  database_url = format(
+  database_password     = var.database_master_password != "" ? var.database_master_password : random_password.database.result
+  app_database_password = var.database_app_password != "" ? var.database_app_password : random_password.app_database.result
+  master_database_url = format(
     "postgres://%s:%s@%s:%d/%s?sslmode=require&search_path=public",
     var.database_master_username,
     urlencode(local.database_password),
+    aws_rds_cluster.main.endpoint,
+    aws_rds_cluster.main.port,
+    var.database_name,
+  )
+  app_database_url = format(
+    "postgres://dagobert_app:%s@%s:%d/%s?sslmode=require&search_path=public",
+    urlencode(local.app_database_password),
     aws_rds_cluster.main.endpoint,
     aws_rds_cluster.main.port,
     var.database_name,
@@ -33,8 +48,9 @@ resource "aws_rds_cluster" "main" {
   skip_final_snapshot    = var.environment == "local"
 
   serverlessv2_scaling_configuration {
-    min_capacity = var.database_min_acu
-    max_capacity = var.database_max_acu
+    min_capacity             = var.database_min_acu
+    max_capacity             = var.database_max_acu
+    seconds_until_auto_pause = 300 # pause after 5 min without connections: compute bills 0 while paused
   }
 
   lifecycle {
@@ -50,8 +66,23 @@ resource "aws_rds_cluster_instance" "writer" {
   instance_class     = "db.serverless"
 }
 
+# DATABASE_URL: the application role. Read by the ECS jobs (ingest) and the Lambdas.
 resource "aws_ssm_parameter" "database_url" {
   name  = "/${var.project}/${var.environment}/DATABASE_URL"
   type  = "SecureString"
-  value = local.database_url
+  value = local.app_database_url
+}
+
+# MIGRATION_DATABASE_URL: the master user. Read only by the db-migrate task.
+resource "aws_ssm_parameter" "migration_database_url" {
+  name  = "/${var.project}/${var.environment}/MIGRATION_DATABASE_URL"
+  type  = "SecureString"
+  value = local.master_database_url
+}
+
+# The application role's password, for db/roles.sql (run by the db-migrate task after the migrations).
+resource "aws_ssm_parameter" "app_database_password" {
+  name  = "/${var.project}/${var.environment}/APP_DATABASE_PASSWORD"
+  type  = "SecureString"
+  value = local.app_database_password
 }

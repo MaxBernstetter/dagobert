@@ -52,13 +52,19 @@ data "aws_iam_policy_document" "experiment_api" {
     actions = [
       "s3:GetObject",
       "s3:PutObject",
-      "s3:DeleteObject",
       "s3:ListBucket",
     ]
     resources = [
       aws_s3_bucket.lake.arn,
       "${aws_s3_bucket.lake.arn}/*",
     ]
+  }
+
+  # Workspace cleanup deletes experiment shards only (src/internal/workspace). Candles are never deleted.
+  statement {
+    sid       = "ExperimentWorkspaceDelete"
+    actions   = ["s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.lake.arn}/experiments/*"]
   }
 }
 
@@ -104,7 +110,7 @@ resource "aws_lambda_function" "experiment_api" {
 
   environment {
     variables = {
-      DATABASE_URL = local.database_url
+      DATABASE_URL = local.app_database_url
       LAKE_BUCKET  = aws_s3_bucket.lake.bucket
       LAKE_BACKEND = "s3"
       # Run, Cancel and progress go through this state machine (experiment_workflow.tf).
@@ -130,17 +136,6 @@ resource "aws_apigatewayv2_api" "experiment" {
   name          = "${local.prefix}-experiment-api"
   protocol_type = "HTTP"
 
-  cors_configuration {
-    allow_origins = var.api_cors_allow_origins
-    allow_methods = ["POST", "OPTIONS"]
-    allow_headers = [
-      "content-type",
-      "connect-protocol-version",
-      "connect-timeout-ms",
-      "accept-encoding",
-      "authorization",
-    ]
-  }
 }
 
 resource "aws_apigatewayv2_integration" "experiment" {
@@ -153,23 +148,29 @@ resource "aws_apigatewayv2_integration" "experiment" {
 
 # Connect-RPC unary calls: POST /tradingcopilot.v1.ExperimentService/<Method>
 resource "aws_apigatewayv2_route" "experiment_rpc" {
-  api_id    = aws_apigatewayv2_api.experiment.id
-  route_key = "POST /tradingcopilot.v1.ExperimentService/{method}"
-  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+  api_id             = aws_apigatewayv2_api.experiment.id
+  route_key          = "POST /tradingcopilot.v1.ExperimentService/{method}"
+  authorization_type = "CUSTOM"
+  authorizer_id      = aws_apigatewayv2_authorizer.origin_verify.id
+  target             = "integrations/${aws_apigatewayv2_integration.experiment.id}"
 }
 
 # Connect-RPC unary calls: POST /tradingcopilot.v1.ProviderService/<Method>
 resource "aws_apigatewayv2_route" "provider_rpc" {
-  api_id    = aws_apigatewayv2_api.experiment.id
-  route_key = "POST /tradingcopilot.v1.ProviderService/{method}"
-  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+  api_id             = aws_apigatewayv2_api.experiment.id
+  route_key          = "POST /tradingcopilot.v1.ProviderService/{method}"
+  authorization_type = "CUSTOM"
+  authorizer_id      = aws_apigatewayv2_authorizer.origin_verify.id
+  target             = "integrations/${aws_apigatewayv2_integration.experiment.id}"
 }
 
 # Connect-RPC unary calls: POST /tradingcopilot.v1.BackfillService/<Method> (backfill_sfn.tf)
 resource "aws_apigatewayv2_route" "backfill_rpc" {
-  api_id    = aws_apigatewayv2_api.experiment.id
-  route_key = "POST /tradingcopilot.v1.BackfillService/{method}"
-  target    = "integrations/${aws_apigatewayv2_integration.experiment.id}"
+  api_id             = aws_apigatewayv2_api.experiment.id
+  route_key          = "POST /tradingcopilot.v1.BackfillService/{method}"
+  authorization_type = "CUSTOM"
+  authorizer_id      = aws_apigatewayv2_authorizer.origin_verify.id
+  target             = "integrations/${aws_apigatewayv2_integration.experiment.id}"
 }
 
 resource "aws_apigatewayv2_stage" "default" {
@@ -184,4 +185,80 @@ resource "aws_lambda_permission" "experiment_api_gateway" {
   function_name = aws_lambda_function.experiment_api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.experiment.execution_arn}/*/*"
+}
+
+# CloudFront is the only caller. It sends this secret in x-origin-verify (frontend.tf origin "api"); the authorizer
+# rejects any request without it. The secret lives in Terraform state (remote, encrypted) and in the authorizer's env.
+resource "random_password" "origin_verify" {
+  length  = 40
+  special = false
+}
+
+data "archive_file" "origin_authorizer" {
+  type        = "zip"
+  source_file = "${path.module}/authorizer/index.py"
+  output_path = "${path.module}/authorizer/.build/origin-authorizer.zip"
+}
+
+data "aws_iam_policy_document" "origin_authorizer_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "origin_authorizer" {
+  name               = "${local.prefix}-origin-authorizer"
+  assume_role_policy = data.aws_iam_policy_document.origin_authorizer_assume.json
+}
+
+resource "aws_iam_role_policy" "origin_authorizer_logs" {
+  name = "${local.prefix}-origin-authorizer-logs"
+  role = aws_iam_role.origin_authorizer.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_lambda_function" "origin_authorizer" {
+  function_name    = "${local.prefix}-origin-authorizer"
+  role             = aws_iam_role.origin_authorizer.arn
+  runtime          = "python3.12"
+  handler          = "index.handler"
+  filename         = data.archive_file.origin_authorizer.output_path
+  source_code_hash = data.archive_file.origin_authorizer.output_base64sha256
+  timeout          = 3
+
+  environment {
+    variables = {
+      ORIGIN_VERIFY = random_password.origin_verify.result
+    }
+  }
+}
+
+resource "aws_apigatewayv2_authorizer" "origin_verify" {
+  api_id                            = aws_apigatewayv2_api.experiment.id
+  authorizer_type                   = "REQUEST"
+  authorizer_uri                    = aws_lambda_function.origin_authorizer.invoke_arn
+  authorizer_payload_format_version = "2.0"
+  enable_simple_responses           = true
+  authorizer_result_ttl_in_seconds  = 0
+  identity_sources                  = ["$request.header.x-origin-verify"]
+  name                              = "origin-verify"
+}
+
+resource "aws_lambda_permission" "origin_authorizer_gateway" {
+  statement_id  = "AllowApiGatewayAuthorizer"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.origin_authorizer.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.experiment.execution_arn}/authorizers/${aws_apigatewayv2_authorizer.origin_verify.id}"
 }

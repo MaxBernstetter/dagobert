@@ -34,11 +34,16 @@ resource "aws_iam_role_policy" "experiment_worker" {
     Statement = [{
       Sid    = "S3Lake"
       Effect = "Allow"
-      Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+      Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
       Resource = [
         aws_s3_bucket.lake.arn,
         "${aws_s3_bucket.lake.arn}/*",
       ]
+      }, {
+      Sid      = "ExperimentWorkspaceDelete"
+      Effect   = "Allow"
+      Action   = ["s3:DeleteObject"]
+      Resource = ["${aws_s3_bucket.lake.arn}/experiments/*"]
     }]
   })
 }
@@ -62,7 +67,7 @@ resource "aws_lambda_function" "experiment_worker" {
 
   environment {
     variables = {
-      DATABASE_URL          = local.database_url
+      DATABASE_URL          = local.app_database_url
       LAKE_BUCKET           = aws_s3_bucket.lake.bucket
       LAKE_BACKEND          = "s3"
       DATA_DIR              = "/tmp"
