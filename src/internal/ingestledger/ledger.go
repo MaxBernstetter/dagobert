@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MaxBernstetter/dagobert/src/internal/pgpool"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -27,12 +28,8 @@ func Open(ctx context.Context) (*Ledger, error) {
 	if url == "" {
 		return nil, ErrNoDatabase
 	}
-	pool, err := pgxpool.New(ctx, url)
+	pool, err := pgpool.Open(ctx, url)
 	if err != nil {
-		return nil, err
-	}
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
 		return nil, fmt.Errorf("ingestledger: %w", err)
 	}
 	return &Ledger{pool: pool}, nil

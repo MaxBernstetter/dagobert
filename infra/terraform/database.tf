@@ -48,8 +48,9 @@ resource "aws_rds_cluster" "main" {
   skip_final_snapshot    = var.environment == "local"
 
   serverlessv2_scaling_configuration {
-    min_capacity = var.database_min_acu
-    max_capacity = var.database_max_acu
+    min_capacity             = var.database_min_acu
+    max_capacity             = var.database_max_acu
+    seconds_until_auto_pause = 300 # pause after 5 min without connections: compute bills 0 while paused
   }
 
   lifecycle {

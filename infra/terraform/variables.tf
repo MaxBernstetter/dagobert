@@ -72,7 +72,7 @@ variable "database_engine_version" {
 
 variable "database_min_acu" {
   type    = number
-  default = 0.5
+  default = 0
 }
 
 variable "database_max_acu" {
