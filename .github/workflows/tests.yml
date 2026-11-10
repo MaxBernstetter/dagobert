@@ -17,6 +17,11 @@ concurrency:
 
 env:
   CI: "true"
+  # The same names as .env locally and the prod GitHub environment. Floci accepts these dummy keys.
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  POSTGRES_PASSWORD: trading
 
 jobs:
   go:

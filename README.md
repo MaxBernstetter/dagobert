@@ -43,13 +43,13 @@ flowchart LR
 | Idempotency | Job exit codes `0` ok, `1` failed, `2` already stored; every job no-ops on stored work | Safe retries and re-runs. Cancellation is guarded in SQL (`status <> 'cancelled'`) so a late worker cannot revive a cancelled run. |
 | Secrets | Secrets Manager at `/<project>/<env>/providers/<id>`; database URL in SSM SecureString | Secrets never live in the repo or the database. |
 | Web app | Private S3 bucket behind CloudFront, API on the same origin | No public container and no CORS. CloudFront is the only public entry point. |
-| Local parity | Same Terraform, `environment=local` or `prod` | Differences are limited to endpoints, credentials and a few sizing flags. |
+| Local parity | Same Terraform, `environment=local` or `prod` | Differences are limited to endpoints and a few sizing flags. Credentials come from the same `AWS_*` variables on both. |
 
 Deeper reading: [docs/architecture/local-stack.md](docs/architecture/local-stack.md) (what runs where), [experiment-data-flow.md](docs/architecture/experiment-data-flow.md) (an experiment end to end), [backtesting.md](docs/architecture/backtesting.md) (engine, phases, cost model).
 
 ## Quickstart (local)
 
-You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI must also be on your `PATH` for the migration step (it is not in the devbox shell).
+You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https://atlasgo.io) CLI must also be on your `PATH` for the migration step (it is not in the devbox shell). Copy `env.example` to `.env` first: it sets the `AWS_*` variables (dummy values for Floci), and the scripts fail without them.
 
 ```bash
 devbox shell

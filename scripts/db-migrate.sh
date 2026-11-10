@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Run the Atlas migrations as a one-off ECS Fargate task inside the VPC (Aurora is private).
 # Terraform (infra/terraform/db_migrate.tf) must already exist: `task infra:local` or scripts/infra-apply.sh prod.
-#   local (default): Floci, fake credentials, cannot reach AWS. The image is built under its ECR URI, not pushed.
+#   local (default): Floci, credentials from .env, cannot reach AWS. The image is built under its ECR URI, not pushed.
 #   prod:            real AWS, CI only. Refuses unless CI=true and AWS credentials are present; pushes the image.
 # Exit 0 only if the container exited with code 0. Anything else (task did not stop, no exit code, exit != 0) fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. scripts/lib/require-env.sh
 
 ENV_NAME="${1:-local}"
 TF_IMG="hashicorp/terraform:1.9"
@@ -16,10 +17,10 @@ HOST_IDS="$(id -u):$(id -g)"
 case "$ENV_NAME" in
   local)
     FLOCI_ENDPOINT="http://127.0.0.1:${FLOCI_PORT:-11566}"
-    # A dev shell may hold real AWS credentials. Local must never see them.
-    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
-    export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
-    REGION=us-east-1
+    require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
+    # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
+    unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
+    REGION="$AWS_REGION"
     ENDPOINT_ARGS=(--endpoint-url "$FLOCI_ENDPOINT")
     NET=(--network host)
     ;;
@@ -32,7 +33,8 @@ case "$ENV_NAME" in
       echo "Refusing to run migrations: no AWS credentials in the CI environment." >&2
       exit 1
     fi
-    REGION="${AWS_REGION:-eu-central-1}"
+    require_env AWS_REGION
+    REGION="$AWS_REGION"
     ENDPOINT_ARGS=()
     NET=()
     ;;

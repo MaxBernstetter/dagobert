@@ -4,8 +4,8 @@ One root, one code path. `var.environment` is the only switch:
 
 | `environment` | Target | Credentials | Guard |
 |---|---|---|---|
-| `local` (default) | Floci on `:11566` | fixed fake keys, every service endpoint on Floci | cannot reach AWS |
-| `prod` | real AWS | default credential chain | refused unless `allow_cloud_deploy=true` |
+| `local` (default) | Floci on `:11566` | `AWS_*` variables from `.env` (dummy values), every service endpoint on Floci | cannot reach AWS |
+| `prod` | real AWS | `AWS_*` variables from the CI environment (same names) | refused unless `allow_cloud_deploy=true` |
 
 ## What it creates
 

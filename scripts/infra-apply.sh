@@ -2,10 +2,12 @@
 # Terraform apply for one environment. The Terraform code is identical; only the switch differs.
 # Two phases: the ECR repository first, then the API image is published, then everything else.
 # The web app (SPA) is not part of Terraform: scripts/frontend-deploy.sh uploads it after the apply.
-#   local (default): Floci. Fake credentials, every endpoint on Floci, cannot reach AWS.
+#   local (default): Floci. Credentials from .env (dummy values), every endpoint on Floci, cannot reach AWS.
 #   prod:            real AWS. Refuses unless it runs in CI with credentials present.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+. scripts/lib/require-env.sh
 
 ENV_NAME="${1:-local}"
 TF_IMG="hashicorp/terraform:1.9"
@@ -13,13 +15,14 @@ TF_ARGS=(-input=false -auto-approve "-var=environment=${ENV_NAME}")
 
 case "$ENV_NAME" in
   local)
+    require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
     FLOCI_ENDPOINT="http://127.0.0.1:${FLOCI_PORT:-11566}"
     docker compose up -d --wait floci 2>/dev/null || docker compose up -d floci
     for _ in $(seq 1 30); do curl -fsS "$FLOCI_ENDPOINT/_floci/health" >/dev/null 2>&1 && break; sleep 1; done
-    TF_ARGS+=("-var=aws_region=us-east-1" "-var=floci_endpoint=${FLOCI_ENDPOINT}" "-var=database_port=7001"
+    TF_ARGS+=("-var=aws_region=${AWS_REGION}" "-var=floci_endpoint=${FLOCI_ENDPOINT}" "-var=database_port=7001"
               "-var=database_master_password=${POSTGRES_PASSWORD:-trading}")
-    # A dev shell may hold real AWS credentials. Local must never see them.
-    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
+    # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
+    unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
     ;;
   prod)
     if [ "${CI:-}" != "true" ]; then
@@ -31,7 +34,8 @@ case "$ENV_NAME" in
       exit 1
     fi
     export TF_VAR_allow_cloud_deploy=true
-    TF_ARGS+=("-var=aws_region=${AWS_REGION:-eu-central-1}")
+    require_env AWS_REGION
+    TF_ARGS+=("-var=aws_region=${AWS_REGION}")
     ;;
   *)
     echo "Usage: $0 local|prod" >&2
@@ -64,7 +68,7 @@ API_REPO_URL="$(tf output -raw experiment_api_repository_url)"
 docker build -f docker/experiment-api/Dockerfile -t "${API_REPO_URL}:${API_IMAGE_TAG}" .
 if [ "$ENV_NAME" = "prod" ]; then
   # Real ECR: log in and push. Floci runs the locally built image by URI, no push needed.
-  aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${API_REPO_URL%%/*}"
+  aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${API_REPO_URL%%/*}"
   docker push "${API_REPO_URL}:${API_IMAGE_TAG}"
 fi
 
@@ -78,7 +82,7 @@ docker build -f docker/ingest/Dockerfile -t "${INGEST_REPO_URL}:${JOB_IMAGE_TAG}
 docker build -f docker/calculation-technical-indicator/Dockerfile -t "${INDICATOR_REPO_URL}:${JOB_IMAGE_TAG}" .
 if [ "$ENV_NAME" = "prod" ]; then
   for repo in "$INGEST_REPO_URL" "$INDICATOR_REPO_URL"; do
-    aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${repo%%/*}"
+    aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${repo%%/*}"
     docker push "${repo}:${JOB_IMAGE_TAG}"
   done
 fi
