@@ -331,7 +331,7 @@ func (x *GetExperimentStatusRequest) GetCursor() string {
 	return ""
 }
 
-// ExperimentJob is the orchestrator's job for an experiment. Empty after an orchestrator restart.
+// ExperimentJob is the workflow execution of an experiment (Step Functions). Empty when none is known.
 type ExperimentJob struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Running       bool                   `protobuf:"varint,1,opt,name=running,proto3" json:"running,omitempty"`

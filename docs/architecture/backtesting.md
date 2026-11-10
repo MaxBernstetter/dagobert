@@ -12,7 +12,7 @@ Create UI supports **Manual** instances or **GRID** search: options render as ca
 
 **Retry failed:** `RunExperiment` with `{ "id": ..., "retryFailed": true }` sets `EXPERIMENT_RETRY_FAILED=1` so only previously failed instances are re-simulated; completed instances and their workspaces are left untouched.
 
-Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: the Experiment API is mounted inside the orchestrator (needs `DATABASE_URL`); `ExperimentService.RunExperiment` calls the `RunExperiment` hook, which starts `runStudyJob`. That runs the `dagobert-backtest` image as one container (`EXPERIMENT_PHASE=all`, default backend `docker`) or as three phases `prepare`, `simulate` (in batches of `EXPERIMENT_BATCH_SIZE`, local pool or Step Functions Map) and `finalize` (`EXPERIMENT_RUN_BACKEND=batched|sfn`).
+Run flow (sequence, phases, stages, state machines, knobs): [experiment-data-flow.md](experiment-data-flow.md). In short: `ExperimentService.RunExperiment` (the Experiment API Lambda) starts the Step Functions execution `<prefix>-experiment-run`. The worker Lambda runs the phases `prepare`, `simulate` (a Map over batches of `EXPERIMENT_BATCH_SIZE` instances, at most `experiment_map_max_concurrency` at once) and `finalize`. The same code runs in the `dagobert-backtest` sandbox image, where `EXPERIMENT_PHASE=all` runs all three phases in one process.
 
 Instance artifact: the instance's row in `<shard_key>/reports.parquet` (report JSON: runtime metrics, StrategyKPIs, nested monthly/yearly return stats + series). Catalog keeps `started_at` / `finished_at` plus **list-projection metric columns** (`metric_sharpe`, `metric_cagr`, …) for the instance table — full report is loaded on demand via `GET .../instances/{id}/report`. Win rate, its month and year rates, and the gain and loss ladder come from the instance's row group in `trade_outcomes.parquet` (one row per sell) and the period win counts in Postgres; `GET .../kpis` and `GET .../performance` read them. Finalize rebuilds the experiment performance from the outcome files.
 
@@ -55,7 +55,7 @@ Signal/fill playbook keys use `ma-cross.yaml#<config_hash>` so variants never co
 
 ## CLI single backtest (optional)
 
-Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (orchestrator `POST /backtest/run`). There is no Backtesting page in the UI and the experiment flow does not use it.
+Legacy: `task backtest-run BACKTEST_ID=…` still runs the job image with `BACKTEST_ID` (a plain `docker run`, no API route). There is no Backtesting page in the UI and the experiment flow does not use it.
 
 Reports use the instance methods of `ExperimentService` (`GetInstanceReport`, `GetInstanceKpis`, `GetInstanceActivity`, `GetChartSeries`).
 
@@ -74,7 +74,7 @@ Retry, progress and outputs are described above. The Performance view compares t
 1. Start the stack (`task up`) and build the job images once (`task build:jobs`, includes `dagobert-backtest`).
 2. Open **Experiments** in the UI, create an experiment, then **Run experiment**. Or from the CLI: `task experiment-run EXPERIMENT_ID=<uuid>`.
 
-After backend changes, rebuild the orchestrator (`docker compose build orchestrator && docker compose up -d orchestrator`) so job containers start with the right Docker flags (the job writes `data/backtests.sqlite`). The playbook registry is compiled into the job image, so after adding or changing a playbook run `docker build -f docker/backtest/Dockerfile -t dagobert-backtest .`.
+After backend changes, run `task infra:local` (it rebuilds and pushes the API and worker images that the Lambdas run). The playbook registry is compiled into the worker image and the sandbox job image, so after adding or changing a playbook run `task infra:local` and `task build:jobs`.
 
 **Market data.** Every run fills gaps in `data/parquet` for the chosen range (missing hours only). **Force re-download** replaces existing candles in that range; a forced full-year refresh can sit on the market-data stage for a long time. Target runtime is about one minute for one year of 3-hour bars when Parquet is warm. For a demo history use `task seed-demo-year` ([seed-demo-year](../development/seed-demo-year.md)).
 

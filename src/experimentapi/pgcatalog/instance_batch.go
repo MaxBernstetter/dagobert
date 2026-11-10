@@ -130,10 +130,3 @@ func (c *Catalog) PersistInstanceBatch(ctx context.Context, experimentID string,
 	}
 	return tx.Commit(ctx)
 }
-
-func ptrAny[T any](p *T) any {
-	if p == nil {
-		return nil
-	}
-	return *p
-}

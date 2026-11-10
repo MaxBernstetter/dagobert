@@ -7,14 +7,14 @@ The Connect-RPC API behind the experiments UI, backed by Postgres. It creates ex
 
 ```bash
 curl -X POST -H 'Content-Type: application/json' -d '{}' \
-  http://127.0.0.1:11090/tradingcopilot.v1.ExperimentService/ListExperiments
+  http://127.0.0.1:11566/_aws/execute-api/<api-id>/\$default/tradingcopilot.v1.ExperimentService/ListExperiments
 curl -X POST -H 'Content-Type: application/json' -d '{"id":"<experiment-id>"}' \
-  http://127.0.0.1:11090/tradingcopilot.v1.ExperimentService/GetExperimentProgress
+  http://127.0.0.1:11566/_aws/execute-api/<api-id>/\$default/tradingcopilot.v1.ExperimentService/GetExperimentProgress
 ```
 JSON uses camelCase field names, int64 as strings. Errors are Connect errors (`{"code":"not_found","message":"..."}`): a missing experiment, instance, report or KPIs is `not_found`; a malformed id or invalid create argument `invalid_argument`; delete of a running or materializing experiment, run of a running one, cancel of a non-running one and a retry without failed instances `failed_precondition`; anything else `internal`.
 
 ## ProviderService
-`ProviderService` (`proto/tradingcopilot/v1/provider_service.proto`), mounted by the same `Mount` at `/tradingcopilot.v1.ProviderService/`: ListProviders, GetProvider, SaveProviderSettings (config and write-only secrets), ActivateProvider (runs the setup before it answers: the view is ready or failed), DeactivateProvider, ListProviderPairs. The logic is `providers/` (`service.go`: state, setup, pairs, base URL; `secrets.go`: the secret backends). Secret values never leave the service; a view lists only the names of the secrets that are set. The Connectors page calls it through the generated client (`src/frontend/src/lib/provider-service.ts`). The orchestrator's REST routes (`/api/v1/providers...`) are deprecated and share the same `providers.Service`.
+`ProviderService` (`proto/tradingcopilot/v1/provider_service.proto`), mounted by the same `Mount` at `/tradingcopilot.v1.ProviderService/`: ListProviders, GetProvider, SaveProviderSettings (config and write-only secrets), ActivateProvider (runs the setup before it answers: the view is ready or failed), DeactivateProvider, ListProviderPairs. The logic is `providers/` (`service.go`: state, setup, pairs, base URL; `secrets.go`: the secret backends). Secret values never leave the service; a view lists only the names of the secrets that are set. The Connectors page calls it through the generated client (`src/frontend/src/lib/provider-service.ts`). The REST provider routes (`/api/v1/providers...`) are removed; `providers.Service` is the only implementation.
 
 Secret backend (`SECRETS_BACKEND`): `secretsmanager` stores one secret per provider at `/<project>/<env>/providers/<id>` (`SSM_PREFIX`), a JSON object of key to value; `file` (alias `fs`) keeps `DATA_DIR/providers/secrets.json` (mode 0600). `auto` (default) picks `secretsmanager` when `AWS_ENDPOINT_URL` or `SSM_PREFIX` is set, else `file`.
 
@@ -33,13 +33,12 @@ Secret backend (`SECRETS_BACKEND`): `secretsmanager` stores one secret per provi
 - `persist/`, `map.go`: mapping between rows and protobuf messages.
 
 ## Who mounts it
-- The orchestrator mounts it in-process when `DATABASE_URL` is set (`src/orchestrator/cmd/orchestrator/backfill.go`) and supplies `Hooks`: `RunExperiment`, `CancelStudy`, `JobStatus`. A run request marks rows running and then calls the hook. Its REST provider routes use `Server.Providers()`, the same service instance.
+- The API Lambda mounts it (`src/cmd/experiment-api-lambda`, with `ProviderService` and `BackfillService`) and supplies `Hooks`: `RunExperiment` and `CancelStudy` start and stop the Step Functions execution, `JobStatus` describes it (`src/internal/experimentworkflow`). A run request marks rows running and then calls the hook.
 - The API Lambda (`src/cmd/experiment-api-lambda`) mounts both services; its secrets come from Secrets Manager (`infra/terraform/api_lambda.tf`).
-- `src/cmd/experiment-api` is a standalone server with empty hooks, so it cannot start runs.
 - `src/cmd/experiment-api-lambda` also serves `BackfillService` (`backfill.go`, validation and execution mapping in `backfill_plan.go`) when `BACKFILL_SFN_ARN` is set. It starts, describes, lists and stops executions of the backfill state machine, and reads provider state from the same Postgres pool.
 
 ## Test and run
-`go test ./src/experimentapi/...` covers pure logic (grid, chart, metrics, provider base URL, secret mapping) and the transport (protobuf, JSON, gzip). `tests/system/provider` runs ProviderService against Floci Secrets Manager and a scratch Postgres (`POSTGRES_TEST_URL`). Behaviour is proven by `tests/system/experiment`, which needs a Postgres 16 reachable at `POSTGRES_TEST_URL` (default: the compose Postgres on 9432); the tests fail, not skip, without it. Locally: `task up` (compose Postgres, migrations via `task db:migrate`).
+`go test ./src/experimentapi/...` covers pure logic (grid, chart, metrics, provider base URL, secret mapping) and the transport (protobuf, JSON, gzip). `tests/system/provider` runs ProviderService against Floci Secrets Manager and a scratch Postgres (`POSTGRES_TEST_URL`). Behaviour is proven by `tests/system/experiment`, which needs a Postgres 16 reachable at `POSTGRES_TEST_URL` (no default: the test fixture still falls back to `127.0.0.1:9432`, which no compose service serves; for Aurora on Floci use `127.0.0.1:7001` with `sslmode=require`); the tests fail, not skip, without it. Locally: `task up` (Aurora on Floci, migrations via `task db:migrate`).
 
 ## Before changing
 A new query goes in `db/sqlc/queries`, then `task db:sqlc`. A schema change goes through Atlas (`db/README.md`). Response shapes come from `proto/`; the frontend reads them through the generated client (`task proto:gen`). `ErrorResponse` and `OkResponse` in `experiment.proto` are unused since the REST routes went; removing them is a breaking change, left for later.

@@ -43,11 +43,6 @@ func NewFromPool(pool *pgxpool.Pool) *Catalog {
 	return &Catalog{q: experimentdb.New(pool), pool: pool}
 }
 
-// NewCatalog is NewFromPool under the name the provider service was written with. Both share one pool.
-func NewCatalog(pool *pgxpool.Pool) *Catalog {
-	return NewFromPool(pool)
-}
-
 func (c *Catalog) Close() {
 	if c != nil && c.pool != nil {
 		c.pool.Close()

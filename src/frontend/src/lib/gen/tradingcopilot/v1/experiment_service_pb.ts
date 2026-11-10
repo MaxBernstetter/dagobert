@@ -146,7 +146,7 @@ export const GetExperimentStatusRequestSchema: GenMessage<GetExperimentStatusReq
   messageDesc(file_tradingcopilot_v1_experiment_service, 6);
 
 /**
- * ExperimentJob is the orchestrator's job for an experiment. Empty after an orchestrator restart.
+ * ExperimentJob is the workflow execution of an experiment (Step Functions). Empty when none is known.
  *
  * @generated from message tradingcopilot.v1.ExperimentJob
  */

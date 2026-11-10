@@ -4,17 +4,9 @@ dotenv: ['.env']
 
 vars:
   HOST_DATA_DIR: "{{.ROOT_DIR}}/data"
-  HOST_PLAYBOOKS_DIR: "{{.ROOT_DIR}}/src/calculation-signal/playbooks"
 
 env:
   DOCKER_BUILDKIT: "1"
-  COMPOSE_BAKE: "true"
-  HOST_DATA_DIR: "{{.HOST_DATA_DIR}}"
-  HOST_PLAYBOOKS_DIR: "{{.HOST_PLAYBOOKS_DIR}}"
-  HOST_UID:
-    sh: id -u
-  HOST_GID:
-    sh: id -g
 
 tasks:
   cpp:deps:
@@ -67,7 +59,7 @@ tasks:
       - go run ./src/cmd/migrate-ingest-ledger {{.DATA_DIR | default "./data"}}
 
   build:jobs:
-    desc: Build the data job images (ingest, technical indicators) and the backtest image
+    desc: Build the job images (ingest, technical indicators, backtest)
     cmds:
       - docker build -f docker/ingest/Dockerfile -t dagobert-ingest .
       - docker build -f docker/calculation-technical-indicator/Dockerfile -t dagobert-calculation-technical-indicator .
@@ -78,51 +70,42 @@ tasks:
     cmds:
       - docker build -f docker/experiment-api/Dockerfile -t dagobert-experiment-api-lambda .
 
-  build:stack:
-    desc: Build compose images (the orchestrator; the web app is uploaded by task infra:local)
-    cmds:
-      - docker compose build
-
   build:
-    desc: Build job images and the compose stack
+    desc: Build the job images (task build:jobs); the Lambda and worker images are built by task infra:local
     cmds:
       - task: build:jobs
-      - task: build:stack
 
   up:
-    desc: Start Floci (Aurora, S3, and the web app bucket and CloudFront via Terraform) and the orchestrator (run task build once for job images)
+    desc: Start Floci, then apply Terraform (Aurora, S3, SSM, Secrets Manager, API, web app) and the migrations
     cmds:
       - mkdir -p data/parquet
+      - docker compose up -d --wait floci
       - task: db:migrate
-      - docker compose up
 
   up:build:
-    desc: Build everything, then start the stack
+    desc: Build the job images, then task up
     cmds:
-      - mkdir -p data/parquet
       - task: build
-      - task: db:migrate
-      - docker compose up
+      - task: up
 
   dev:
-    desc: Same as task up but builds the job and compose images first
+    desc: "Same as task up. The web app runs on the host (task frontend:dev)"
     cmds:
-      - mkdir -p data/parquet
-      - task: build:jobs
-      - task: build:stack
-      - task: db:migrate
-      - docker compose up
+      - task: up
+      - echo "Floci is up. Start the web app with task frontend:dev (http://localhost:3000)."
 
   frontend:dev:
-    desc: Vite dev server with hot reload on the host (port 3000), proxying /api to the orchestrator
+    desc: Vite dev server with hot reload on the host (port 3000), proxying /tradingcopilot.v1. to the Floci API Gateway (needs task infra:local)
     dir: src/frontend
-    env:
-      VITE_DEV_API_PROXY: http://127.0.0.1:{{.ORCHESTRATOR_PORT | default "11090"}}
     cmds:
-      - npm run dev
+      - |
+        API="$(../../scripts/local-api-url.sh)"
+        export VITE_DEV_API_PROXY="$(printf '%s\n' "$API" | head -n1)"
+        export VITE_DEV_API_PREFIX="$(printf '%s\n' "$API" | tail -n1)"
+        npm run dev
 
   down:
-    desc: Stop the stack. Leaves ./data in place
+    desc: Stop Floci (the compose stack). Leaves ./data in place
     cmds:
       - docker compose down
 

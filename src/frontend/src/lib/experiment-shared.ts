@@ -29,8 +29,6 @@ export {
   RunExperimentResponseSchema,
   OkResponseSchema,
   ErrorResponseSchema,
-  ExperimentWorkerBatchSchema,
-  ExperimentSFNInputSchema,
   ExperimentCreateMode as ProtoExperimentCreateMode,
 } from "@/lib/gen/tradingcopilot/v1";
 
@@ -49,8 +47,6 @@ export type {
   RunExperimentResponse,
   OkResponse,
   ErrorResponse,
-  ExperimentWorkerBatch,
-  ExperimentSFNInput,
 } from "@/lib/gen/tradingcopilot/v1";
 
 /** REST protojson ExperimentSettings (numbers, no $typeName required). */

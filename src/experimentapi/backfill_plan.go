@@ -9,7 +9,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/shared/providerurl"
 )
 
-// BackfillProviderBinance is the only ingestion provider with backfills (the legacy POST /backfill default too).
+// BackfillProviderBinance is the only ingestion provider with backfills.
 const BackfillProviderBinance = "binance"
 
 const (
@@ -25,7 +25,7 @@ type BackfillMarket struct {
 	Quote  string
 }
 
-// backfillMarkets are the symbols the lake accepts (the same set as the legacy POST /backfill).
+// backfillMarkets are the symbols the lake accepts.
 var backfillMarkets = map[string]BackfillMarket{
 	"BTCUSDT":  {Symbol: "BTCUSDT", Base: "BTC", Quote: "USDT"},
 	"ETHUSDT":  {Symbol: "ETHUSDT", Base: "ETH", Quote: "USDT"},

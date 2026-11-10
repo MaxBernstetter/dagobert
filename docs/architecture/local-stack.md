@@ -1,57 +1,52 @@
 # Local stack
 
-`task up` leaves two compose services running, Floci and the orchestrator. Floci starts the Aurora database, the S3 buckets and the web app's CloudFront distribution from the Terraform in `infra/terraform`. It does not run anything by itself: experiments and backfills start when you ask for them.
+`task up` starts one compose service, Floci. Floci runs everything the system needs, created by the Terraform in `infra/terraform`: Aurora, the S3 buckets, SSM, Secrets Manager, the Experiment API Lambda behind an API Gateway HTTP API, the experiment worker Lambda, the Step Functions state machines, the ECS job tasks and the web app's CloudFront distribution. No process outside Floci runs the system. Experiments and backfills start when you ask for them, through the API.
 
-## What stays up
+## What runs where
 
-| Process | Role |
-|---|---|
-| Web app (S3 + CloudFront in Floci) | The production Vite SPA (`src/frontend`), built by `scripts/frontend-deploy.sh local` with the Experiment API on the same origin, uploaded to the private bucket `dagobert-local-frontend`. The CloudFront distribution (Terraform `frontend.tf`) serves the bucket and routes `/tradingcopilot.v1.*` to the Experiment API gateway. Served at the `frontend_domain` output through Floci's CloudFront (Host header). Floci does not run the SPA-fallback function, so deep links 404 locally (see Acceptance). For hot reload use `task frontend:dev`. |
-| Aurora (in Floci) | Aurora PostgreSQL Serverless v2, created by Terraform (`task infra:local`, from `infra/terraform`) and served by Floci on port 7001 (TLS, `sslmode=require`). Compose services reach it as `floci:7001`, host tools as `127.0.0.1:7001`. Catalog of experiments and instances, and the connector state (`provider`, `provider_pair`). The orchestrator mounts the Experiment API and the connector routes when `DATABASE_URL` is set. Secrets are not in Postgres. |
-| Persistence | Candles: Hive-style S3 keys `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet` (footer metadata) in the Floci bucket (`LAKE_BACKEND=s3`, the compose default; `fs` keeps them under `./data/parquet`). Ingest and the indicator job (`parquet/ti/`) upload and keep no local copy; readers download to a temp file. The ingest ledger (`ingest_stored`, `ingest_unavailable`) is in Aurora; `task data:migrate-ingest-ledger` imports an old `ingest.sqlite`. Experiment workspace data (`experiments/<experiment_id>/shards/...` result Parquet and `experiments/<experiment_id>/.cache/...` handoff files) uses the same `LAKE_BACKEND` and bucket: objects under the data-dir-relative key with `s3`, files under `./data/experiments/` with `fs` (`src/internal/workspace`). The `./data` volume holds `backtests.sqlite` (legacy single-backtest catalog) and is the key root and scratch location (`DATA_DIR` stays required). The jobs and the orchestrator mount this directory; the frontend does not. The experiment catalog and the connector state live in Postgres; the connector secrets are in Secrets Manager (`/dagobert/local/providers/<id>` on Floci; `SECRETS_BACKEND=file` keeps `DATA_DIR/providers/secrets.json`). To move an existing `./data/parquet` lake into the bucket once, run `task lake:upload`. `task up` creates `data/parquet` on the host; the orchestrator ensures that layout before each job and runs job containers as `HOST_UID`/`HOST_GID` (from `task`) so bind mounts are not left root-owned. |
-| Experiment API gateway (in Floci) | The Experiment API as a container-image Lambda (`<prefix>-experiment-api`) behind an API Gateway HTTP API, created by Terraform (`api_lambda.tf`). On AWS call the `api_gateway_url` output: `POST {url}/tradingcopilot.v1.ExperimentService/<Method>`; on Floci use `http://127.0.0.1:11566/_aws/execute-api/<api-id>/$default/...`. The CloudFront distribution in front of the web app routes to this gateway. Run, Cancel and progress go through the state machine `<prefix>-experiment-run` (`experiment_workflow.tf`) when `EXPERIMENT_SFN_ARN` is set; the Lambda does not use Docker. Also serves `ProviderService` (`POST {url}/tradingcopilot.v1.ProviderService/<Method>`, the Connectors page). Known gaps: no auth, about 6 MB payload limit, no RDS Proxy, and SSM is not reachable from the VPC Lambda (Secrets Manager is, on Floci, and in prod through an interface endpoint). The workflow is not run on Floci by this change; the orchestrator's Docker path still exists. |
-| Orchestrator | Floci on host port `FLOCI_PORT` (default 11566), and a starter process that owns the Docker socket. Also serves the Experiment API and ProviderService on `ORCHESTRATOR_PORT` (default 11090), and the deprecated REST connector routes (`/api/v1/providers`, which delegate to the same service). The connector routes need `DATABASE_URL`; the Binance base URL is the saved config, else `BINANCE_BASE_URL`, else the public default. |
+| Component | Where | Notes |
+|---|---|---|
+| Web app (S3 + CloudFront in Floci) | Bucket `dagobert-local-frontend`, distribution in `frontend.tf` | The production SPA (`src/frontend`), built and uploaded by `scripts/frontend-deploy.sh local`. CloudFront routes `/tradingcopilot.v1.*` to the API gateway. Served at the `frontend_domain` output through Floci's CloudFront (Host header). Floci does not run the SPA-fallback function, so deep links 404 locally. For hot reload and deep links use `task frontend:dev`. |
+| Aurora (in Floci) | Aurora PostgreSQL Serverless v2, created by Terraform (`task infra:local`), served by Floci on port 7001 (TLS, `sslmode=require`) | Experiment catalog, ingest ledger (`ingest_stored`, `ingest_unavailable`), connector state (`provider`, `provider_pair`). Compose services reach it as `floci:7001`, host tools as `127.0.0.1:7001`. `task data:migrate-ingest-ledger` imports an old `ingest.sqlite`. Secrets are not in Postgres. |
+| Candle lake | Floci S3 bucket `dagobert-local-lake` (`LAKE_BACKEND=s3`) | Hive-style keys `parquet/provider={id}/base={B}/quote={Q}/year={YYYY}/candles.parquet`. Ingest and the indicator job (`parquet/ti/`) upload and keep no local copy. `task lake:upload` moves an existing `./data/parquet` lake into the bucket once. |
+| Experiment workspace | Same bucket, `experiments/<id>/...` (`LAKE_BACKEND=s3`) | Result shards and the prepare cache. With `LAKE_BACKEND=fs` they live under `./data/experiments/` (`src/internal/workspace`). |
+| Secrets | Secrets Manager `/dagobert/local/providers/<id>` | Connector secrets. `SECRETS_BACKEND=file` keeps them in `DATA_DIR/providers/secrets.json`. |
+| Experiment API | API Gateway HTTP API, Lambda `<prefix>-experiment-api` (`api_lambda.tf`) | Serves `ExperimentService`, `ProviderService` and `BackfillService` (`POST {url}/tradingcopilot.v1.<Service>/<Method>`). On Floci the output host does not resolve; use `http://127.0.0.1:11566/_aws/execute-api/<api-id>/$default/...`. `scripts/local-api-url.sh` prints that origin and prefix for the dev server. |
+| Experiment run | Step Functions `<prefix>-experiment-run` (`experiment_workflow.tf`), worker Lambda `<prefix>-experiment-worker` | Run, Cancel and progress start, stop and describe the execution (`EXPERIMENT_SFN_ARN`). The worker runs the prepare, simulate and finalize phases. |
+| Backfill | Step Functions `<prefix>-backfill` (`backfill_sfn.tf`), ECS Fargate tasks (`jobs_ecs.tf`) | See [Backfill on ECS](#backfill-on-ecs). |
+| Database migrations | Atlas, from the host (`task db:migrate`) or as a one-off ECS task (`task db:migrate:ecs`) | Both apply the same `db/` migrations. |
+| Data directory | `./data` on the host | `backtests.sqlite` (legacy single-backtest catalog), `DATA_DIR` scratch, and the output of the sandbox targets (`task backtest-run`, `task experiment-run`, `task seed-demo-year`). Nothing in the Floci stack mounts it. |
 
-The job images (`dagobert-ingest`, `dagobert-calculation-technical-indicator`, `dagobert-backtest`) are runners. They appear when a backfill or an experiment needs them and exit when done.
-
-The candle lake is in Floci S3 (bucket `dagobert-local-lake`, created by Terraform). The SQLite files still persist on `./data`; experiment shards and the prepare cache are in the same bucket under `experiments/<id>/` when `LAKE_BACKEND=s3` (the compose default).
-
-## What the orchestrator does
-
-1. On startup it checks the data layout and serves the HTTP API on `ORCHESTRATOR_PORT`: the legacy `POST /backfill` (deprecated, see BackfillService), provider connectors and (with `DATABASE_URL`) the Experiment API.
-2. A backfill or an experiment tells it which image to run and which arguments to pass. It runs that image, waits until it exits and reads the code. Exit `0` and exit `2` are success; exit `1` fails.
-3. Data jobs run one at a time. Experiment fan-out is described in [experiment-data-flow.md](experiment-data-flow.md).
-
-Floci's Lambda cannot see the host Docker socket. The orchestrator is the process that runs the images, with the socket mounted.
+The job images (`dagobert-ingest`, `dagobert-calculation-technical-indicator`, `dagobert-backtest`) are runners. The ECS tasks and the worker run their own images from ECR, pushed by `scripts/infra-apply.sh`. `dagobert-backtest` runs only in the sandbox targets below.
 
 ## Commands
 
 | Command | Effect |
 |---|---|
-| `task build` | Job images plus compose images (the orchestrator). |
-| `task build:jobs` / `task build:stack` | Build only the job images or only the compose services. |
-| `task up` | `task db:migrate` (which applies Terraform on Floci first, then uploads the web app), then `docker compose up`. |
-| `task dev` | `task build:jobs`, `task build:stack`, `task db:migrate`, then `docker compose up`. `db:up` also creates the roles `anon` and `authenticated` the migrations revoke from. |
-| `task frontend:dev` | Vite dev server with hot reload on the host (port 3000), proxying `/api` and `/tradingcopilot.v1.` to the orchestrator. |
-| `task up:build` | `task build` then `task up` (job images + compose build). |
-| `task down` | Stops the stack. Does not delete `./data`. |
-| `task db:migrate:ecs` | Runs the same Atlas migrations as a one-off ECS Fargate task (`scripts/db-migrate.sh local`, image `docker/db-migrate`), the path prod uses from inside the VPC. Waits for the task and fails unless the container exits 0. Floci's ECS and exit-code reporting are not verified yet. |
+| `task up` | Creates `data/parquet`, starts Floci (`docker compose up -d --wait floci`), then `task db:migrate`: Terraform apply on Floci, the roles the migrations revoke from, Atlas migrations, web app upload. |
+| `task up:build` | `task build` (job images), then `task up`. |
+| `task dev` | `task up`, then a reminder to run `task frontend:dev`. |
+| `task frontend:dev` | Vite dev server with hot reload on the host (port 3000). Proxies `/tradingcopilot.v1.` to the Floci API gateway: `scripts/local-api-url.sh` sets `VITE_DEV_API_PROXY` (origin) and `VITE_DEV_API_PREFIX` (`/_aws/execute-api/<api-id>/$default`). Run `task up` first. |
+| `task down` | Stops Floci. Does not delete `./data`. |
+| `task build` / `task build:jobs` | Build the job images (ingest, technical indicators, backtest). |
+| `task build:api-lambda` | Build the Experiment API Lambda image locally. `scripts/infra-apply.sh` builds it again under the ECR URI. |
+| `task db:migrate:ecs` | Runs the Atlas migrations as a one-off ECS Fargate task (`scripts/db-migrate.sh local`). Waits for the task and fails unless the container exits 0. Floci's ECS and exit-code reporting are not verified yet. |
+| `task seed-demo-year` | Wipes `./data`, backfills a year of BTC in-process and replays `ma-cross` with the simulated venue. Needs `DATABASE_URL`. |
+| `task backtest-run`, `task experiment-run` | Sandbox: `docker run` of `dagobert-backtest` against `./data`, no Step Functions. |
 
-Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) so rebuilds reuse work when only application source changed. The SPA is not in a Docker image: `scripts/frontend-deploy.sh` builds it and uploads `dist/` to S3.
-
-`compose.yaml` does not list the jobs; the orchestrator starts them. `task up`, `task up:build` and `task dev` apply Terraform (creates the VPC and the Aurora cluster, idempotent) and the Atlas migrations before starting compose. The Atlas CLI is not in the devbox shell.
+Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) so rebuilds reuse work when only application source changed. The SPA is not in a Docker image: `scripts/frontend-deploy.sh` builds it and uploads `dist/` to S3. The Atlas CLI is not in the devbox shell.
 
 ## Acceptance
 
-- `docker compose ps` shows Floci and the orchestrator; Aurora is a Floci container (`docker ps`, name `floci-aws-rds-*`). It does not show the job images.
+- `docker compose ps` shows only `floci`. Aurora is a Floci container (`docker ps`, name `floci-aws-rds-*`). It does not show the job images.
 - The web app: `curl -H "Host: $(terraform -chdir=infra/terraform output -raw frontend_domain)" http://127.0.0.1:11566/` returns the SPA `index.html` (200), and `/assets/<file>.js` returns the file. Deep links such as `/some/route` 404 on Floci because it does not run the CloudFront function.
 - `POST /tradingcopilot.v1.ExperimentService/ListExperiments` with `Content-Type: application/json`, `Connect-Protocol-Version: 1`, body `{}` through the distribution returns 200 `{}`. An unknown method path returns the Lambda's own `404 page not found` (text/plain), not HTML.
 - `task frontend:dev` is the UI for deep links and hot reload.
-- A started experiment runs one `dagobert-backtest` container and ends with stored KPIs.
+- A started experiment runs the Step Functions execution `<prefix>-experiment-run` and ends with stored KPIs.
 
 ## Backfill on ECS
 
-Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/jobs_ecs.tf`), driven by the Step Functions state machine `<prefix>-backfill` (`backfill_sfn.tf`). Backfills start through `BackfillService` (`proto/tradingcopilot/v1/backfill_service.proto`), served by the Experiment API Lambda (`BACKFILL_SFN_ARN`, `src/experimentapi/backfill*.go`). It validates the request, starts one execution per market and reports status, list and cancel. The orchestrator's `POST /backfill` (Docker path) is deprecated and kept for local use. `scripts/backfill-start.sh` stays as the direct alternative.
+Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/jobs_ecs.tf`), driven by the Step Functions state machine `<prefix>-backfill` (`backfill_sfn.tf`). Backfills start through `BackfillService` (`proto/tradingcopilot/v1/backfill_service.proto`), served by the Experiment API Lambda (`BACKFILL_SFN_ARN`, `src/experimentapi/backfill*.go`). It validates the request, starts one execution per market and reports status, list and cancel.
 
 - Apply: `task infra:local` creates the repositories, builds and pushes `dagobert-local-ingest` and `dagobert-local-indicator` images under their ECR URIs, then creates the state machine.
 - Start through the API: `BackfillService/StartBackfill` with `{"provider":"binance","symbols":["BTCUSDT"],"fromMs":"1704067200000","toMs":"1704153600000"}` (Connect unary POST to `/tradingcopilot.v1.BackfillService/StartBackfill`). `GetBackfillStatus` takes the returned `executionArn`. The provider must be activated on the Connectors page first.
@@ -61,4 +56,4 @@ Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/job
 
 ## Out of scope
 
-Switching SQLite and local Parquet to Floci DynamoDB and S3. A UI for BackfillService (none yet; the Connectors page does not start backfills), and removing the orchestrator's Docker backfill path (follow-ups).
+Switching SQLite and local Parquet to Floci DynamoDB and S3. A UI for BackfillService (none yet; the Connectors page does not start backfills).

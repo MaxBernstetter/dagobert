@@ -13,10 +13,10 @@ Build the simplest thing that fully solves the problem. Complexity is added only
 
 ## Simplicity vs. the architecture
 
-The system deliberately accepts some structure (stateless job containers, an orchestrator, a shared data volume) because the requirements demand it. Within that structure, each piece should be as simple as possible:
+The system deliberately accepts some structure (stateless job containers, a workflow engine (Step Functions), a shared lake (S3)) because the requirements demand it. Within that structure, each piece should be as simple as possible:
 
 - Use the standard interfaces that exist (the exit-code contract, the Parquet layout in `src/shared/`) rather than inventing variants.
-- Use the platform (the orchestrator's fan-out and exit-code contract) rather than re-implementing scheduling or retries inside a job.
+- Use the platform (Step Functions' fan-out and the exit-code contract) rather than re-implementing scheduling or retries inside a job.
 
 ## Self-check
 

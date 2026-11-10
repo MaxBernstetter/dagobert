@@ -19,31 +19,31 @@ You need Docker and [Devbox](https://www.jetify.com/devbox). The [Atlas](https:/
 
 ```bash
 devbox shell
-task dev          # builds the images (the first build compiles the C++ engine and is the slow step), applies Terraform on Floci (Aurora, S3, the web app's CloudFront distribution), uploads the web app, migrates Postgres, starts the stack
+task dev          # starts Floci, applies Terraform (Aurora, S3, the Lambdas, Step Functions, ECS, the web app's CloudFront distribution), builds and pushes the images, uploads the web app, migrates Postgres
 ```
 
 Open the web app with `task frontend:dev` at [http://localhost:3000](http://localhost:3000), create an experiment and start it. The first run downloads the candles it needs from Binance. The Floci-hosted site serves the start page and assets, but not deep links (Floci does not run CloudFront functions; see `docs/architecture/local-stack.md`).
 
 - `task seed-demo-year` fills `data/` with one year of BTC and replays `ma-cross` over it. It wipes `data/`.
-- `task up` skips the image builds. Frontend with hot reload: `task frontend:dev` (host, port 3000). `task down` stops the stack and keeps `./data`.
+- `task up` starts Floci and runs the Terraform apply and the migrations again (idempotent). Frontend with hot reload: `task frontend:dev` (host, port 3000). `task down` stops Floci and keeps `./data`.
 - `EXPERIMENT_ID=<uuid> task experiment-run` runs an existing experiment from the command line.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-  UI[Browser frontend] --> API[Experiment API<br/>inside the orchestrator]
-  API --> PG[(Postgres<br/>experiment catalog)]
-  API --> W[dagobert-backtest container<br/>C++ sweep + Go replay]
+  UI[Browser frontend] --> API[Experiment API<br/>Lambda behind API Gateway]
+  API --> PG[(Aurora<br/>experiment catalog)]
+  API -- start --> SFN[Step Functions<br/>experiment run]
+  SFN --> W[experiment-worker Lambda<br/>C++ sweep + Go replay]
   W --> PG
-  W --> LAKE[(data/ lake:<br/>Parquet + SQLite)]
-  ORCH[Orchestrator] -. starts containers .-> W
-  ORCH -. backfill .-> ING[ingest + technical indicators]
+  W --> LAKE[(S3 lake<br/>Parquet + shards)]
+  API -- backfill --> BSFN[Step Functions<br/>backfill] --> ING[ECS tasks<br/>ingest + technical indicators]
   ING --> LAKE
   BIN[Binance public klines] --> ING
 ```
 
-- The orchestrator hosts the Experiment API (needs `DATABASE_URL`, which compose sets) and starts job containers through the Docker socket. A job exits `0` (succeeded), `1` (failed) or `2` (already stored, nothing to do) and logs `DETAIL=<n>`.
+- The Experiment API is a Lambda behind an API Gateway HTTP API. A run starts the Step Functions execution `<prefix>-experiment-run`; a backfill starts one per market and its ECS tasks. A job exits `0` (succeeded), `1` (failed) or `2` (already stored, nothing to do) and logs `DETAIL=<n>`.
 - An experiment run has three phases: prepare (check data, build indicators), simulate (run the instances, optionally in batches) and finalize (write KPIs).
 - The frontend talks only to the Experiment API and never reads `data/`.
 
@@ -52,7 +52,7 @@ flowchart LR
 | Path | What is there |
 | --- | --- |
 | `src/frontend` | Vite + React app: Experiments, Connectors, Wiki. |
-| `src/orchestrator`, `src/experimentapi` | Orchestrator process and the Connect-RPC Experiment API (`ExperimentService`). |
+| `src/experimentapi` | The Connect-RPC Experiment, Provider and Backfill APIs (`ExperimentService`, `ProviderService`, `BackfillService`), served by the API Lambda. |
 | `src/backtest`, `src/cmd/backtest` | Experiment engine and the `dagobert-backtest` entrypoint. |
 | `src/calculation-signal` | Playbooks, the replay framework, sizing and strategy KPIs. |
 | `src/calculation-technical-indicator` | One package per indicator. |
@@ -69,12 +69,12 @@ Run `task --list` for all of them.
 
 | Task | What it does |
 | --- | --- |
-| `task build` | Build the job images and the compose images. |
-| `task up` | Apply Terraform on Floci (Aurora, S3, CloudFront, the web app upload), migrate, then `docker compose up` (Floci and the orchestrator). |
-| `task dev` | Build the job and compose images, then `task up`. |
-| `task frontend:dev` | Vite dev server with hot reload on the host, proxying `/api` to the orchestrator. |
-| `task up:build` | Build everything, then start the stack. |
-| `task down` | Stop the stack. `./data` is kept. |
+| `task build` | Build the job images. |
+| `task up` | Start Floci, apply Terraform on Floci (Aurora, S3, the Lambdas, Step Functions, ECS, CloudFront, the web app upload), migrate. |
+| `task dev` | `task up`, then start the web app with `task frontend:dev`. |
+| `task frontend:dev` | Vite dev server with hot reload on the host, proxying `/tradingcopilot.v1.` to the Floci API gateway. |
+| `task up:build` | `task build`, then `task up`. |
+| `task down` | Stop Floci. `./data` is kept. |
 | `task experiment-run` | Run one experiment by `EXPERIMENT_ID` in the backtest image. |
 | `task seed-demo-year` | Wipe `data/`, backfill 1 year of BTC, replay `ma-cross`. |
 | `task test` | System tests for the job images. |

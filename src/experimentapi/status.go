@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// JobState is the orchestrator's view of the job that runs an experiment. The orchestrator keeps
-// it in memory, so it is empty after an orchestrator restart.
+// JobState is the state of the workflow execution that runs an experiment (Step Functions, reported by the
+// workflow hook). Empty when no execution is known.
 type JobState struct {
 	Running  bool
 	Error    string

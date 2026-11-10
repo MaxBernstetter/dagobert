@@ -57,7 +57,7 @@ message GetExperimentStatusRequest {
   string cursor = 3;
 }
 
-// ExperimentJob is the orchestrator's job for an experiment. Empty after an orchestrator restart.
+// ExperimentJob is the workflow execution of an experiment (Step Functions). Empty when none is known.
 message ExperimentJob {
   bool running = 1;
   string error = 2;
