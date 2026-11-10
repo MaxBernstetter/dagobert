@@ -114,13 +114,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.8
+          terraform_version: 1.10.5
       - run: terraform fmt -check -recursive
-        working-directory: infra/terraform
+        working-directory: infra
       - run: terraform init -backend=false -input=false
         working-directory: infra/terraform
       - run: terraform validate
         working-directory: infra/terraform
+      - run: terraform init -backend=false -input=false
+        working-directory: infra/bootstrap
+      - run: terraform validate
+        working-directory: infra/bootstrap
 
   # The whole stack on Floci: Terraform applies the same code as prod, then every system test and the
   # Playwright test (create an experiment in the UI, run it, check the outcome) run against it.

@@ -56,6 +56,8 @@ devbox shell
 task up           # Floci, Terraform apply, image builds, web app upload, DB migrations; prints the web app URL
 ```
 
+If your Floci stack predates the S3 state backend (state in an old local file, `terraform.tfstate`), reset it once: `docker compose rm -sf floci && docker compose up -d floci`, then `task up`.
+
 `task up` provisions the whole stack on Floci and ends by printing the URL of the compiled web app, for example `http://<id>.cloudfront.localhost:11566/`. Open it, create an experiment and start it. The first run downloads the candles it needs from Binance. The first `task up` is slow because it builds the images.
 
 For UI development use `task dev`: it runs `task up`, then Vite with hot reload at [http://localhost:3000](http://localhost:3000), proxying the API to the local gateway. Ctrl-C stops Vite and leaves Floci running.

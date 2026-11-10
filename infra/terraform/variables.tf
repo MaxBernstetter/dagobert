@@ -97,10 +97,11 @@ variable "api_image_tag" {
   default     = "latest"
 }
 
-variable "api_cors_allow_origins" {
-  description = "CORS origins the API Gateway accepts. No auth yet, so the default is open."
-  type        = list(string)
-  default     = ["*"]
+variable "database_app_password" {
+  description = "Password of the application role dagobert_app. Empty = generate one. Local sets a fixed value so task db:migrate can use it."
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "job_image_tag" {

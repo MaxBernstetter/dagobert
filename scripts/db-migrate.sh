@@ -9,7 +9,6 @@ cd "$(dirname "$0")/.."
 . scripts/lib/require-env.sh
 
 ENV_NAME="${1:-local}"
-TF_IMG="hashicorp/terraform:1.9"
 AWS_IMG="amazon/aws-cli:2.39.5"
 ROOT="$PWD"
 HOST_IDS="$(id -u):$(id -g)"
@@ -17,6 +16,7 @@ HOST_IDS="$(id -u):$(id -g)"
 case "$ENV_NAME" in
   local)
     FLOCI_ENDPOINT="http://127.0.0.1:${FLOCI_PORT:-11566}"
+    TF_NETWORK_HOST=1
     require_env AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
     # A dev shell may hold a profile or role. Local uses the keys from .env and never a real endpoint.
     unset AWS_PROFILE AWS_SESSION_TOKEN AWS_ENDPOINT_URL AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE
@@ -45,14 +45,10 @@ case "$ENV_NAME" in
 esac
 export AWS_DEFAULT_REGION="$REGION"
 
-# tf_output NAME: a Terraform output, from the installed binary or the hashicorp/terraform image.
-tf_output() {
-  if command -v terraform >/dev/null 2>&1; then
-    (cd "$ROOT/infra/terraform" && terraform output -raw "$1")
-  else
-    docker run --rm --user "$HOST_IDS" -e HOME=/tmp -v "$ROOT/infra/terraform:/tf" -w /tf "$TF_IMG" output -raw "$1"
-  fi
-}
+# tf_output NAME: a Terraform output of the state in the S3 backend (infra/terraform, initialised here).
+. scripts/lib/terraform.sh
+tf_init_root "$ENV_NAME"
+tf_output() { tf_in "$ROOT/infra/terraform" output -raw "$1"; }
 
 # AWS CLI: the installed binary, else the aws-cli image (stdin kept open for docker login).
 if command -v aws >/dev/null 2>&1; then

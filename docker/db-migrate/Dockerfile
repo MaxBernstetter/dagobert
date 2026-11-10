@@ -13,6 +13,7 @@ WORKDIR /db
 COPY db/atlas.hcl ./atlas.hcl
 COPY db/schema ./schema
 COPY db/migrations ./migrations
+COPY db/roles.sql ./roles.sql
 
 COPY docker/db-migrate/entrypoint.sh /usr/local/bin/db-migrate
 RUN chmod 0755 /usr/local/bin/db-migrate

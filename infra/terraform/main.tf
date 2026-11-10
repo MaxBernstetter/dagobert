@@ -71,7 +71,6 @@ data "aws_iam_policy_document" "task_data" {
     actions = [
       "s3:GetObject",
       "s3:PutObject",
-      "s3:DeleteObject",
       "s3:ListBucket",
     ]
     resources = [
@@ -80,14 +79,21 @@ data "aws_iam_policy_document" "task_data" {
     ]
   }
 
+  # Workspace cleanup only (src/internal/workspace). Candles are never deleted.
   statement {
-    sid = "SSMRead"
-    actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-      "ssm:GetParametersByPath",
+    sid       = "ExperimentWorkspaceDelete"
+    actions   = ["s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.lake.arn}/experiments/*"]
+  }
+
+  # Only the two parameters the jobs read. The migration and role secrets are not readable from here.
+  statement {
+    sid     = "SSMRead"
+    actions = ["ssm:GetParameter", "ssm:GetParameters"]
+    resources = [
+      aws_ssm_parameter.database_url.arn,
+      aws_ssm_parameter.binance_base_url.arn,
     ]
-    resources = ["arn:aws:ssm:${var.aws_region}:*:parameter/${var.project}/${var.environment}/*"]
   }
 }
 
