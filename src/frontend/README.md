@@ -4,9 +4,9 @@ Vite + React + TypeScript single-page app. It talks only to the Go Experiment AP
 
 ## API
 
-`VITE_EXPERIMENT_API_URL` is the origin the browser prefixes on `/api/v1/...`. Leave it empty for same-origin `/api`. `npm run dev` and `vite preview` proxy `/api` to `VITE_DEV_API_PROXY`, else `VITE_EXPERIMENT_API_URL`, else `http://127.0.0.1:11090` (the orchestrator, which serves the API when `DATABASE_URL` is set). See `vite.config.ts`.
+`VITE_EXPERIMENT_API_URL` is the origin of the Connect client (`/tradingcopilot.v1.ExperimentService/...`) and of the REST provider routes. Leave it empty for same-origin. `npm run dev` and `vite preview` proxy `/api` and `/tradingcopilot.v1.` to `VITE_DEV_API_PROXY`, else `VITE_EXPERIMENT_API_URL`, else `http://127.0.0.1:11090` (the orchestrator, which serves the API when `DATABASE_URL` is set). See `vite.config.ts`.
 
-JSON field names are camelCase (protojson). The API client is `src/api.ts`.
+The Experiment API client is `src/lib/experiment-api.ts` (Connect, binary protobuf; the views read protojson-shaped objects via `toJson`).
 
 ## Commands
 
@@ -24,7 +24,7 @@ In Docker, `task up` (dev server, bind-mounted source) or `task dev` (with compo
 Everything lives under `src/`; the `@` alias (`vite.config.ts`, `tsconfig.json`) maps to `src/`.
 
 - `main.tsx`, `App.tsx`: entry point and routes (react-router).
-- `api.ts`, `wikiCatalog.ts`, `WikiPages.tsx`, `ChartPanel.tsx`: API client, wiki catalog and pages, chart.
+- `wikiCatalog.ts`, `WikiPages.tsx`: wiki catalog and pages. The API client is `lib/experiment-api.ts`.
 - Instance charts (`components/strategy-charts.tsx`, `time-chart.tsx`) load `chart-series` with `maxPoints` from `lib/chart-series-cache.ts` (`chartMaxPoints`, `chartSeriesWindowUrl`). Zoom and range presets refetch their window with the same budget; buy and hold uses the full-range series. The data is cached by URL. Rendering speed is not covered by a test suite.
 - `components/`: UI (`components/ui/` holds the shadcn primitives; `link.tsx` wraps the router link).
 - `lib/`: helpers and API types; `lib/gen/` is generated protobuf-es output (`task proto:gen`).
