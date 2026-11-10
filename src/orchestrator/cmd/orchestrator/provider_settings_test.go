@@ -8,34 +8,18 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-)
 
-func TestEffectiveBaseURLPrecedence(t *testing.T) {
-	cases := []struct {
-		name, saved, env, want string
-	}{
-		{"saved wins over env", "https://saved.example", "https://env.example", "https://saved.example"},
-		{"env when nothing saved", "", "https://env.example", "https://env.example"},
-		{"default when neither", "", "", defaultBinanceBaseURL},
-		{"blank saved falls through to env", "   ", "https://env.example", "https://env.example"},
-		{"blank everywhere is the default", " ", " ", defaultBinanceBaseURL},
-		{"saved value is trimmed", "  https://saved.example/ ", "", "https://saved.example/"},
-	}
-	for _, c := range cases {
-		if got := effectiveBaseURL(c.saved, c.env); got != c.want {
-			t.Errorf("%s: got %q want %q", c.name, got, c.want)
-		}
-	}
-}
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/providers"
+)
 
 // withSecretField declares one secret field for the test and restores the provider afterwards.
 func withSecretField(t *testing.T) {
 	t.Helper()
-	prev := binanceProvider.fields
-	binanceProvider.fields = append(append([]providerField{}, prev...), providerField{
+	prev := extraFields
+	extraFields = append(append([]providers.Field{}, prev...), providers.Field{
 		Key: "apiKey", Label: "API key", Kind: "secret",
 	})
-	t.Cleanup(func() { binanceProvider.fields = prev })
+	t.Cleanup(func() { extraFields = prev })
 }
 
 func (f connectorFixture) patch(t *testing.T, path, body string) (int, string) {

@@ -38,6 +38,11 @@ func Open(ctx context.Context) (*Catalog, error) {
 	return &Catalog{q: experimentdb.New(pool), pool: pool}, nil
 }
 
+// NewCatalog wraps an existing pool (the Experiment API's); the caller owns the pool.
+func NewCatalog(pool *pgxpool.Pool) *Catalog {
+	return &Catalog{q: experimentdb.New(pool), pool: pool}
+}
+
 func (c *Catalog) Close() {
 	if c != nil && c.pool != nil {
 		c.pool.Close()

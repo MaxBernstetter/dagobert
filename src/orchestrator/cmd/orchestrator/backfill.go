@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi"
-	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -194,63 +193,58 @@ func serveBackfill(ctx context.Context) {
 		go runStudyJob(jobCtx, req.ID, req.RetryFailed)
 		writeJSON(w, http.StatusAccepted, experimentJob)
 	})
-	// Connector state uses the same Postgres catalog convention as the experiments.
-	if cat, err := pgcatalog.Open(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
-	} else if cat != nil {
-		connectorStore = cat
-	} else {
-		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; connector routes answer 503")
-	}
+	// The provider settings and the Experiment API share one Postgres pool. Without DATABASE_URL the connector
+	// routes answer 503 and ExperimentService is not mounted.
 	dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
-	if dbURL != "" {
-		pool, err := pgxpool.New(ctx, dbURL)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
-		} else {
-			experimentapi.Mount(mux, experimentapi.NewServer(pool, experimentapi.Hooks{
-				JobStatus: func(experimentID string) experimentapi.JobState {
-					jobMu.Lock()
-					defer jobMu.Unlock()
-					if experimentJob.ID != experimentID {
-						return experimentapi.JobState{}
-					}
-					return experimentapi.JobState{
-						Running:  experimentJob.Running,
-						Error:    experimentJob.Error,
-						Finished: experimentJob.Finished,
-					}
-				},
-				RunExperiment: func(jobCtx context.Context, experimentID string, retryFailed bool) {
-					jobMu.Lock()
-					if backtestJob.Running || experimentJob.Running {
-						jobMu.Unlock()
-						return
-					}
-					runCtx, cancel := context.WithCancel(jobCtx)
-					experimentJobCancel = cancel
-					experimentJob = backtestRunStatus{ID: experimentID, Running: true}
-					jobMu.Unlock()
-					go runStudyJob(runCtx, experimentID, retryFailed)
-				},
-				CancelStudy: func(experimentID string) {
-					stopStudyContainers(experimentID)
-					jobMu.Lock()
-					if experimentJob.Running && experimentJob.ID == experimentID {
-						if experimentJobCancel != nil {
-							experimentJobCancel()
-						}
-						experimentJob.Running = false
-						experimentJob.Finished = time.Now().UTC().Format(time.RFC3339)
-						experimentJob.Error = "cancelled"
-						experimentJobCancel = nil
-					}
-					jobMu.Unlock()
-				},
-			}))
-		}
+	if dbURL == "" {
+		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; connector routes answer 503; ExperimentService not mounted")
+		providerSvc = newProviderService(nil)
+	} else if pool, err := pgxpool.New(ctx, dbURL); err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrator: DATABASE_URL: %v\n", err)
+		providerSvc = newProviderService(nil)
 	} else {
-		fmt.Fprintln(os.Stderr, "orchestrator: DATABASE_URL unset; ExperimentService not mounted")
+		srv := experimentapi.NewServer(pool, experimentapi.Hooks{
+			JobStatus: func(experimentID string) experimentapi.JobState {
+				jobMu.Lock()
+				defer jobMu.Unlock()
+				if experimentJob.ID != experimentID {
+					return experimentapi.JobState{}
+				}
+				return experimentapi.JobState{
+					Running:  experimentJob.Running,
+					Error:    experimentJob.Error,
+					Finished: experimentJob.Finished,
+				}
+			},
+			RunExperiment: func(jobCtx context.Context, experimentID string, retryFailed bool) {
+				jobMu.Lock()
+				if backtestJob.Running || experimentJob.Running {
+					jobMu.Unlock()
+					return
+				}
+				runCtx, cancel := context.WithCancel(jobCtx)
+				experimentJobCancel = cancel
+				experimentJob = backtestRunStatus{ID: experimentID, Running: true}
+				jobMu.Unlock()
+				go runStudyJob(runCtx, experimentID, retryFailed)
+			},
+			CancelStudy: func(experimentID string) {
+				stopStudyContainers(experimentID)
+				jobMu.Lock()
+				if experimentJob.Running && experimentJob.ID == experimentID {
+					if experimentJobCancel != nil {
+						experimentJobCancel()
+					}
+					experimentJob.Running = false
+					experimentJob.Finished = time.Now().UTC().Format(time.RFC3339)
+					experimentJob.Error = "cancelled"
+					experimentJobCancel = nil
+				}
+				jobMu.Unlock()
+			},
+		})
+		providerSvc = srv.Providers()
+		experimentapi.Mount(mux, srv)
 	}
 
 	mux.HandleFunc("POST /experiment/cancel", func(w http.ResponseWriter, r *http.Request) {

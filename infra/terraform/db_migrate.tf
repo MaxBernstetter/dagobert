@@ -89,10 +89,11 @@ resource "aws_ecs_task_definition" "db_migrate" {
   ])
 }
 
-# Interface endpoints for private Fargate image pulls, logs and secrets. Prod only (no NAT, no internet).
+# Interface endpoints for private Fargate image pulls, logs and secrets, and for the API Lambda's provider
+# secrets (secretsmanager). Prod only (no NAT, no internet).
 # One subnet each keeps the idle cost down; the task can run in any private subnet and reach the endpoint ENI.
 locals {
-  db_migrate_interface_endpoints = var.environment == "prod" ? toset(["ecr.api", "ecr.dkr", "logs", "ssm"]) : toset([])
+  db_migrate_interface_endpoints = var.environment == "prod" ? toset(["ecr.api", "ecr.dkr", "logs", "ssm", "secretsmanager"]) : toset([])
 }
 
 resource "aws_security_group" "vpc_endpoints" {
