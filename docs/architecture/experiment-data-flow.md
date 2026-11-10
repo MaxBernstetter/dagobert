@@ -126,6 +126,17 @@ No fallback: an unsupported playbook or a missing binary fails the instance with
 
 `src/backtest/cpp_replay_test.go` runs the sweep and the replay over seeded lakes and checks the persisted shape: one journal and one fill order per fill, the same values in both, and period statistics that add up to the trade outcomes. The configs must fire vol_cut and pyramid (ma-cross) and close trades. Details in [backtesting.md](backtesting.md).
 
+## Run on AWS (Step Functions)
+
+The Experiment API does not start containers on AWS. `RunExperiment` writes the rows `running` and starts the state machine `<prefix>-experiment-run` with input `{experiment_id, retry_failed}` (execution name `<experiment_id>-<start ms>`, see `src/internal/experimentworkflow`). `CancelExperiment` stops the running executions of that experiment; `GetExperimentStatus` describes the latest one.
+
+- `Prepare`: experiment-worker, phase `prepare`, returns `batches` (instance ids chunked by `EXPERIMENT_BATCH_SIZE`).
+- `Simulate`: Map over `batches`, `MaxConcurrency` = `experiment_map_max_concurrency`; each item is one worker call with phase `simulate`.
+- `Finalize`: phase `finalize`.
+- Any Lambda service fault is retried (3 attempts); any other error goes to `MarkFailed` (phase `fail`, sets the experiment failed) and the execution ends `FAILED`.
+
+Terraform: `infra/terraform/experiment_workflow.tf`, `experiment_fanout.tf` (definition). The worker image is `docker/experiment-worker/Dockerfile`.
+
 ## Progress and what the frontend polls
 
 Base URL `VITE_EXPERIMENT_API_URL` (dev proxy in `src/frontend/vite.config.ts`). Service: `ExperimentService`, mounted in `src/experimentapi/api.go`.
@@ -154,7 +165,7 @@ Connect gzips a response when the client asks for it (`Accept-Encoding: gzip`). 
 | `EXPERIMENT_MAX_PARALLELISM` | CPU count of the API process | the largest "Parallel processes" value create accepts; `GetExperimentLimits` returns it |
 | `EXPERIMENT_CPP_SHARD_MAX` | 500 | upper bound of instances per shard (shard = `ceil(n/processes)` capped here) |
 | `CPP_SMA_CROSS_BIN`, `CPP_SIGNAL_CONSENSUS_BIN` | set in the worker image (`/usr/local/bin/...`) | C++ strategy executables |
-| `EXPERIMENT_RUN_BACKEND` | `docker` | `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |
+| `EXPERIMENT_RUN_BACKEND` | `docker` | orchestrator path only: `docker` = one container, all phases; `batched` = prepare, parallel simulate batches, finalize; `sfn` = same with Step Functions Map |
 | `EXPERIMENT_BATCH_SIZE` | 64 | instances per simulate container (batched/sfn) |
 | `EXPERIMENT_MAP_MAX_CONCURRENCY` | 8 | parallel simulate batches in the local pool |
 | `EXPERIMENT_SFN_ARN` | unset | state machine for the Map fan-out; unset uses the local pool |

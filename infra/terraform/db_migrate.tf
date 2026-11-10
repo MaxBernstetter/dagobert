@@ -21,15 +21,7 @@ resource "aws_cloudwatch_log_group" "db_migrate" {
   retention_in_days = 14
 }
 
-data "aws_iam_policy_document" "ecs_tasks_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-  }
-}
+# ecs_tasks_assume (the ECS tasks trust policy) is defined in jobs_ecs.tf.
 
 # Pulls the image, writes the logs and reads the DATABASE_URL secret for the container.
 resource "aws_iam_role" "db_migrate_execution" {

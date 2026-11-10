@@ -35,7 +35,11 @@ output "experiment_sfn_arn" {
 }
 
 output "experiment_worker_arn" {
-  value = var.enable_experiment_lambda ? aws_lambda_function.experiment_worker[0].arn : ""
+  value = aws_lambda_function.experiment_worker.arn
+}
+
+output "experiment_worker_repository_url" {
+  value = aws_ecr_repository.experiment_worker.repository_url
 }
 
 output "frontend_bucket" {

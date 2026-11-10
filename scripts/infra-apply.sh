@@ -41,6 +41,8 @@ esac
 
 API_IMAGE_TAG="${API_IMAGE_TAG:-latest}"
 TF_ARGS+=("-var=api_image_tag=${API_IMAGE_TAG}")
+WORKER_IMAGE_TAG="${WORKER_IMAGE_TAG:-latest}"
+TF_ARGS+=("-var=experiment_worker_image_tag=${WORKER_IMAGE_TAG}")
 
 # tf runs Terraform from the installed binary, else from the hashicorp/terraform image.
 tf() {
@@ -55,7 +57,7 @@ tf() {
 }
 
 tf init -input=false
-tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.experiment_api
+tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.experiment_api -target=aws_ecr_repository.experiment_worker
 
 # Publish the images under the repository URIs the task definition and the Lambda use.
 API_REPO_URL="$(tf output -raw experiment_api_repository_url)"
@@ -79,6 +81,11 @@ if [ "$ENV_NAME" = "prod" ]; then
     aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${repo%%/*}"
     docker push "${repo}:${JOB_IMAGE_TAG}"
   done
+fi
+WORKER_REPO_URL="$(tf output -raw experiment_worker_repository_url)"
+docker build -f docker/experiment-worker/Dockerfile -t "${WORKER_REPO_URL}:${WORKER_IMAGE_TAG}" .
+if [ "$ENV_NAME" = "prod" ]; then
+  docker push "${WORKER_REPO_URL}:${WORKER_IMAGE_TAG}"
 fi
 
 tf apply "${TF_ARGS[@]}"
