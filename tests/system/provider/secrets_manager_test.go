@@ -1,6 +1,7 @@
 package provider_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,7 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1/tradingcopilotv1connect"
 	"github.com/MaxBernstetter/dagobert/src/shared/pgtest"
 	"github.com/MaxBernstetter/dagobert/tests/system/internal/floci"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,8 +29,9 @@ import (
 // /dagobert/<env>/providers/<id> as a JSON object, the Connect view reports only the key name, and a config save
 // is read back.
 func TestProviderSecretsInSecretsManager(t *testing.T) {
-	endpoint, _ := floci.Start(t, "provider-test")
-	const prefix = "/dagobert/test"
+	bucket := floci.BucketName("provider-test")
+	endpoint, _ := floci.Start(t, bucket)
+	prefix := "/dagobert/test-" + uuid.NewString()[:8]
 	t.Setenv("AWS_ENDPOINT_URL", endpoint)
 	t.Setenv("AWS_REGION", "us-east-1")
 	t.Setenv("SECRETS_BACKEND", "secretsmanager")
@@ -51,6 +54,11 @@ func TestProviderSecretsInSecretsManager(t *testing.T) {
 	}
 	sm := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) { o.BaseEndpoint = aws.String(endpoint) })
 	const secret = "s3cr3t-value-456"
+	t.Cleanup(func() {
+		_, _ = sm.DeleteSecret(context.Background(), &secretsmanager.DeleteSecretInput{
+			SecretId: aws.String(prefix + "/providers/binance"), ForceDeleteWithoutRecovery: aws.Bool(true),
+		})
+	})
 	store := providers.NewSecretsManager(sm, prefix)
 	if err := store.Put(t.Context(), "binance", map[string]string{"apiKey": secret}); err != nil {
 		t.Fatalf("put secret: %v", err)

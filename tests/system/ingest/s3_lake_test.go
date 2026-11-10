@@ -19,7 +19,7 @@ import (
 )
 
 func TestCandlesAreStoredInTheS3LakeNotOnDisk(t *testing.T) {
-	const bucket = "lake-test"
+	bucket := floci.BucketName("lake-test")
 	endpoint, client := floci.Start(t, bucket)
 
 	open0 := hourFloor(1_700_000_000_000)

@@ -20,7 +20,7 @@ import (
 // With LAKE_BACKEND=s3 the job reads candles from the bucket and stores its indicator bars there, with
 // nothing left on the local disk.
 func TestIndicatorBarsAreStoredInTheS3Lake(t *testing.T) {
-	const bucket = "lake-test"
+	bucket := floci.BucketName("lake-test")
 	endpoint, client := floci.Start(t, bucket)
 	ctx := context.Background()
 

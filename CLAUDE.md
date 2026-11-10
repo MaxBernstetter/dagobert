@@ -13,7 +13,7 @@ task up                 # starts Floci (compose); Terraform adds Aurora, S3, the
 task dev                # task up, then the web app (task frontend:dev) in the foreground on :3000
 task frontend:dev       # Vite dev server with hot reload on the host (:3000)
 task down               # stop stack; ./data is kept
-task test               # system tests for the job images (builds each image, runs it)
+task test               # all system tests against the running stack (task up first); each test gets its own bucket and scratch database
 ```
 
 Single system test (the job image must already be built):

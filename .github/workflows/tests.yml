@@ -75,8 +75,9 @@ jobs:
 
       - run: go build ./...
       - run: go vet ./...
-      - name: Unit and system tests
-        run: go test ./src/... ./tests/system/... -count=1 -timeout 40m
+      # The system tests (tests/system) run in the e2e job, against the Floci stack.
+      - name: Unit tests
+        run: go test ./src/... -count=1 -timeout 40m
 
   frontend:
     name: frontend typecheck and build
@@ -116,9 +117,83 @@ jobs:
       - run: terraform validate
         working-directory: infra/terraform
 
+  # The whole stack on Floci: Terraform applies the same code as prod, then every system test and the
+  # Playwright test (create an experiment in the UI, run it, check the outcome) run against it.
+  # Binance klines come from the real public host (historical data, immutable).
+  e2e:
+    name: floci stack, system and end-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - uses: go-task/setup-task@v1
+      - uses: ariga/setup-atlas@v0
+      - uses: docker/setup-buildx-action@v3
+
+      # The experiment system tests run the C++ strategy executables on the runner (see the go job).
+      - name: Build C++ strategy executables
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backtest/Dockerfile
+          target: cpp-build
+          outputs: type=local,dest=${{ runner.temp }}/cpp-out
+          cache-from: type=gha,scope=backtest
+          cache-to: type=gha,scope=backtest,mode=max
+      - name: Locate the executables
+        run: |
+          echo "CPP_SMA_CROSS_BIN=$RUNNER_TEMP/cpp-out/out/strategies/sma-cross/strategy-sma-cross" >> "$GITHUB_ENV"
+          echo "CPP_SIGNAL_CONSENSUS_BIN=$RUNNER_TEMP/cpp-out/out/strategies/consensus/strategy-signal-consensus" >> "$GITHUB_ENV"
+
+      # A Binance outage must fail the job visibly, not look like a product bug.
+      - name: Binance public data host is reachable
+        run: curl -fsS --retry 3 --retry-delay 5 https://data-api.binance.vision/api/v3/ping
+
+      - name: Start the stack (Floci, Terraform, images, web app, migrations)
+        run: task up
+      - name: System tests against the stack
+        run: task test:system
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: End-to-end test
+        run: task e2e
+
+      - name: Collect diagnostics
+        if: ${{ always() }}
+        run: |
+          mkdir -p diagnostics
+          docker ps -a > diagnostics/docker-ps.txt 2>&1 || true
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "diagnostics/$c.log" 2>&1 || true
+          done
+      - name: Upload diagnostics and the Playwright report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-diagnostics
+          path: |
+            diagnostics
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
   main-red:
     name: record failure on main
-    needs: [go, frontend, terraform]
+    needs: [go, frontend, terraform, e2e]
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
