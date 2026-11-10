@@ -13,9 +13,11 @@ One root, one code path. `var.environment` is the only switch:
 - `api_lambda.tf`: the Experiment API as a container-image Lambda (ECR `<prefix>-experiment-api`, VPC-attached to the private subnets with the `app` security group, dedicated role, 29 s, 512 MB), behind an API Gateway HTTP API. Route `POST /tradingcopilot.v1.ExperimentService/{method}`, `$default` stage, CORS from `api_cors_allow_origins`. The CloudFront distribution in `frontend.tf` routes `/tradingcopilot.v1.*` here.
 - `database.tf`: Aurora PostgreSQL Serverless v2 cluster and writer (`db.serverless`, 0.5 to 2 ACU by default), `DATABASE_URL` in SSM (SecureString).
 - `frontend.tf`: the web app. A private S3 bucket (`<prefix>-frontend`, public access blocked) and a CloudFront distribution (price class 100, default certificate). One origin per path: the default behavior serves the SPA from S3 (cached; OAC in prod), `/tradingcopilot.v1.*` goes to the API Gateway (no cache, all methods, viewer headers except Host). A viewer-request CloudFront function (default behavior only) rewrites extensionless paths to `/index.html` (BrowserRouter fallback). No error mapping, so API 403/404 stay as Connect returns them. Same origin for the browser, so the API needs no CORS for this site. `scripts/frontend-deploy.sh` builds the SPA and uploads it after each apply; Terraform does not upload files.
-- `main.tf`: S3 lake, SSM parameters, task IAM role. `experiment_fanout.tf`: Step Functions map and optional experiment Lambda.
+- `experiment_workflow.tf`: the experiment-worker as a container-image Lambda (ECR `<prefix>-experiment-worker`, VPC, 900 s, `experiment_worker_memory_mb` and `experiment_worker_ephemeral_mb`), the Step Functions state machine `<prefix>-experiment-run`, and the IAM that lets the Experiment API start, stop and describe its executions.
+- `experiment_fanout.tf`: the workflow definition (Prepare -> Map over the simulate batches, `experiment_map_max_concurrency` -> Finalize; any failure runs MarkFailed) and its tunables (`experiment_batch_size`, `experiment_worker_image_tag`).
+- `main.tf`: S3 lake, SSM parameters, task IAM role.
 
-Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `api_gateway_url`.
+Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `experiment_worker_repository_url`, `api_gateway_url`.
 
 ## Apply
 
@@ -55,8 +57,9 @@ Prod Aurora is private to the VPC. Atlas migrations cannot reach it from outside
 ## Experiment API gateway
 
 - Call: `curl -X POST "$(terraform output -raw api_gateway_url)/tradingcopilot.v1.ExperimentService/<Method>" -H 'content-type: application/json' -d '{}'`. On Floci the output host does not resolve; call `http://127.0.0.1:11566/_aws/execute-api/<api-id>/\$default/tradingcopilot.v1.ExperimentService/<Method>` instead (api id = first label of the output host); the browser reaches it through CloudFront (see Web app).
-- Image: `scripts/infra-apply.sh` builds `docker/experiment-api/Dockerfile` under the ECR URI (`API_IMAGE_TAG`, default `latest`); prod pushes it first, because Lambda needs the image to exist at create time.
-- Known gaps: no auth; API Gateway payload limit (about 6 MB per request and response); no RDS Proxy, so every cold start opens its own pool; Run/Cancel hooks still write the database only; SSM and other AWS APIs are not reachable from the VPC Lambda (no NAT, no interface endpoints), only Aurora and S3.
+- Image: `scripts/infra-apply.sh` builds `docker/experiment-api/Dockerfile` under the ECR URI (`API_IMAGE_TAG`, default `latest`); prod pushes it first, because Lambda needs the image to exist at create time. The worker image (`docker/experiment-worker/Dockerfile`, `WORKER_IMAGE_TAG`) is built and pushed the same way.
+- Run, Cancel and progress start, stop and describe executions of `<prefix>-experiment-run` (`EXPERIMENT_SFN_ARN`).
+- Known gaps: no auth; API Gateway payload limit (about 6 MB per request and response); no RDS Proxy, so every cold start opens its own pool; SSM and other AWS APIs are not reachable from the VPC Lambda (no NAT, no interface endpoints), only Aurora and S3. The worker has the same reach: Prepare ingests missing candle hours from Binance when coverage is incomplete, which the VPC cannot do (no NAT), so a symbol without complete coverage fails its prepare.
 
 ## Next layers
 

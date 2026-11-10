@@ -79,6 +79,8 @@ resource "aws_lambda_function" "experiment_api" {
       DATABASE_URL = local.database_url
       LAKE_BUCKET  = aws_s3_bucket.lake.bucket
       LAKE_BACKEND = "s3"
+      # Run, Cancel and progress go through this state machine (experiment_workflow.tf).
+      EXPERIMENT_SFN_ARN = aws_sfn_state_machine.experiment_run.arn
     }
   }
 

@@ -1,79 +1,60 @@
+// Command experiment-worker runs one phase of an experiment as an AWS Lambda. The Step Functions
+// workflow invokes it: prepare (returns the simulate batches), simulate (one batch), finalize, fail.
+// The phases are the same code as the experiment container (src/backtest).
 package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
+	"log"
 	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/MaxBernstetter/dagobert/src/backtest"
-	v1 "github.com/MaxBernstetter/dagobert/src/gen/tradingcopilot/v1"
+	"github.com/MaxBernstetter/dagobert/src/internal/awsenv"
+	"github.com/MaxBernstetter/dagobert/src/internal/experimentworkflow"
 )
 
-func handle(ctx context.Context, ev *v1.ExperimentWorkerBatch) error {
-	_ = ctx
-	dataDir := ev.GetDataDir()
-	if dataDir == "" {
-		dataDir = os.Getenv("DATA_DIR")
+func main() {
+	lambda.Start(handle)
+}
+
+func handle(_ context.Context, req experimentworkflow.WorkerRequest) (experimentworkflow.WorkerResponse, error) {
+	if err := req.Validate(); err != nil {
+		return experimentworkflow.WorkerResponse{}, err
 	}
+	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
 		dataDir = "/tmp"
 	}
-	_ = os.Setenv("DATA_DIR", dataDir)
-	_ = os.Setenv("VENUE_SIMULATE", "1")
-	if ev.GetExperimentId() == "" {
-		return fmt.Errorf("experimentId required")
+	switch req.Phase {
+	case experimentworkflow.PhasePrepare:
+		return prepare(dataDir, req)
+	case experimentworkflow.PhaseSimulate:
+		return experimentworkflow.WorkerResponse{}, backtest.RunExperimentSimulate(dataDir, req.ExperimentID, req.InstanceIDs)
+	case experimentworkflow.PhaseFinalize:
+		return experimentworkflow.WorkerResponse{}, backtest.RunExperimentFinalize(dataDir, req.ExperimentID)
+	default: // PhaseFail
+		log.Printf("experiment %s: failed in workflow: %s", req.ExperimentID, req.Error)
+		return experimentworkflow.WorkerResponse{}, backtest.MarkExperimentFailed(req.ExperimentID, req.Error)
 	}
-	if len(ev.GetInstanceIds()) == 0 {
-		return fmt.Errorf("instanceIds required")
-	}
-	// Instance status and metrics go through backtest.RunExperimentSimulate, which
-	// uses the Postgres catalog (pgcatalog) when DATABASE_URL is set. This worker
-	// does not write the experiment catalog to DynamoDB.
-	return backtest.RunExperimentSimulate(dataDir, ev.GetExperimentId(), ev.GetInstanceIds())
 }
 
-func decodeWorkerBatch(raw []byte) (*v1.ExperimentWorkerBatch, error) {
-	ev := &v1.ExperimentWorkerBatch{}
-	if len(raw) > 0 && raw[0] != '{' && raw[0] != '[' {
-		if err := proto.Unmarshal(raw, ev); err == nil {
-			return ev, nil
-		}
+// prepare runs the prepare phase and chunks the instance list into simulate batches.
+func prepare(dataDir string, req experimentworkflow.WorkerRequest) (experimentworkflow.WorkerResponse, error) {
+	retry := "0"
+	if req.RetryFailed {
+		retry = "1"
 	}
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(raw, ev)); err != nil {
-		return nil, err
+	if err := os.Setenv("EXPERIMENT_RETRY_FAILED", retry); err != nil {
+		return experimentworkflow.WorkerResponse{}, err
 	}
-	return ev, nil
-}
-
-func main() {
-	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" || os.Getenv("_LAMBDA_SERVER_PORT") != "" {
-		lambda.Start(func(ctx context.Context, raw json.RawMessage) error {
-			ev, err := decodeWorkerBatch(raw)
-			if err != nil {
-				return err
-			}
-			return handle(ctx, ev)
-		})
-		return
+	if err := backtest.RunExperimentPrepare(dataDir, req.ExperimentID); err != nil {
+		return experimentworkflow.WorkerResponse{}, err
 	}
-	raw, err := io.ReadAll(os.Stdin)
+	ids, err := backtest.ReadExperimentInstanceList(dataDir, req.ExperimentID)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return experimentworkflow.WorkerResponse{}, err
 	}
-	ev, err := decodeWorkerBatch(raw)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if err := handle(context.Background(), ev); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	return experimentworkflow.WorkerResponse{Batches: backtest.ChunkStrings(ids, awsenv.StudyBatchSize())}, nil
 }

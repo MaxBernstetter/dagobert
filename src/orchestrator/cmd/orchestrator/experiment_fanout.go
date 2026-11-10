@@ -20,7 +20,11 @@ import (
 
 func runStudyJob(ctx context.Context, id string, retryFailed bool) {
 	switch awsenv.ExperimentRunBackend() {
-	case "batched", "sfn":
+	case "sfn":
+		// The Step Functions workflow is started by the Experiment API (experiment-api-lambda), with its
+		// own state machine input. This backend would send the old payload, so it refuses to run.
+		finishStudyJob(id, 1, fmt.Errorf("EXPERIMENT_RUN_BACKEND=sfn is not supported by the orchestrator; the Experiment API starts the Step Functions workflow (EXPERIMENT_SFN_ARN)"))
+	case "batched":
 		runStudyBatched(ctx, id, retryFailed)
 	default:
 		runStudyJobDockerWhole(ctx, id, retryFailed)
