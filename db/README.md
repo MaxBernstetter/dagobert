@@ -18,6 +18,6 @@ Postgres schema for the control plane: experiments, instances (status and aggreg
 ## Before changing
 Migrations are append-only once merged. A rename is a new migration (see `20261024120000_rename_study_to_experiment.sql`). Keep `sqlc/schema.sql` in step with the HCL.
 
-The Supabase-era migrations `20261024140000_revoke_app_table_api_grants.sql` and `20261025164000_performance_metrics.sql` REVOKE from `anon` and `authenticated` without a guard, so they fail on any database without those roles (Aurora, plain Postgres). They are not edited (append-only, checksums in `atlas.sum`). Instead the migration entrypoint (`docker/db-migrate/entrypoint.sh`) and `task db:up` create both roles (NOLOGIN, no grants) before Atlas runs. Running `atlas migrate apply` directly against a fresh cluster fails with `role "anon" does not exist`.
+Two early migrations `20261024140000_revoke_app_table_api_grants.sql` and `20261025164000_performance_metrics.sql` REVOKE from `anon` and `authenticated` without a guard, so they fail on any database without those roles (Aurora, plain Postgres). They are not edited (append-only, checksums in `atlas.sum`). Instead the migration entrypoint (`docker/db-migrate/entrypoint.sh`) and `task db:up` create both roles (NOLOGIN, no grants) before Atlas runs. Running `atlas migrate apply` directly against a fresh cluster fails with `role "anon" does not exist`.
 
 Consumers: `src/experimentapi` (see its README) and `src/backtest`.

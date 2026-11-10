@@ -54,7 +54,7 @@ Current:
 - [experiment-api-scale.md](grooming/experiment-api-scale.md): scaling the Experiment API.
 - [experiments-ready-strategies.md](grooming/experiments-ready-strategies.md): strategies ready for experiments.
 - [signal-consensus-playbook.md](grooming/signal-consensus-playbook.md): design of the signal-consensus playbook.
-- [atlas-schema.md](grooming/atlas-schema.md): Atlas schema and migrations.
+- [archive/atlas-schema.md](grooming/archive/atlas-schema.md): Atlas schema spike (archived; Atlas is in use, see `db/`).
 - [ti-parquet-cache.md](grooming/ti-parquet-cache.md): technical-indicator Parquet cache.
 - [ingest-provider-facade.md](grooming/ingest-provider-facade.md), [ingest-fetch-facade-refactor.md](grooming/ingest-fetch-facade-refactor.md), [ingest-list-assets.md](grooming/ingest-list-assets.md), [ingestion-providers-ui.md](grooming/ingestion-providers-ui.md): ingest provider design.
 

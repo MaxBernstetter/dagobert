@@ -9,7 +9,7 @@ if [ -z "${DATABASE_URL:-}" ]; then
 fi
 cd /db
 
-# Some migrations REVOKE from the Supabase roles anon and authenticated. Those roles do not exist on Aurora
+# Some migrations REVOKE from the roles anon and authenticated. Those roles do not exist on Aurora
 # or on a plain Postgres, so create them (NOLOGIN, no grants) before Atlas runs. Same as `task db:up` locally.
 # libpq rejects the Atlas-only search_path parameter, so strip it for psql.
 PSQL_URL="$(printf '%s' "$DATABASE_URL" | sed -e 's/[?&]search_path=[^&]*//' -e 's/?&/?/')"

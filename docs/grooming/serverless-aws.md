@@ -4,17 +4,17 @@
 
 ## Goal
 
-Run **experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (Compose locally, **Supabase Free** in prod). Browser talks only to an **Experiment API** — never to the DB or lake directly.
+Run **experiments** without a live candle clock: Floci locally for AWS services (`:4566`), S3 lake, SSM secrets, batched experiment compute, and a **Postgres control plane** (**Aurora PostgreSQL Serverless v2** on Floci locally and in AWS prod). Browser talks only to an **Experiment API** — never to the DB or lake directly.
 
 | Plane | Local | Prod |
 |-------|--------|------|
 | Lake / artifacts | Floci S3 | AWS S3 |
-| Secrets | Floci SSM (+ `.secrets` fallback) | SSM |
-| Control plane (catalog, stats, actions) | Compose **Postgres** | **Supabase Free** (`public`) |
+| Secrets | Floci Secrets Manager and SSM | Secrets Manager (provider secrets), SSM (`DATABASE_URL`) |
+| Control plane (catalog, stats, actions) | Aurora PostgreSQL Serverless v2 on Floci | Aurora PostgreSQL Serverless v2 |
 | Experiment compute | Docker / batched workers; SFN+Lambda scaffolding | Batched Lambda Map |
 | UI | Next BFF (interim) → Vite SPA | Static SPA + Experiment API |
 
-Detail for Atlas smells/spike: [`atlas-schema.md`](atlas-schema.md). Why not host *jobs* on Supabase: see Out of scope below. API list shape: [`experiment-api-scale.md`](experiment-api-scale.md).
+Detail for Atlas smells/spike: [`archive/atlas-schema.md`](archive/atlas-schema.md). Why jobs do not run on the database platform: see Out of scope below. API list shape: [`experiment-api-scale.md`](experiment-api-scale.md).
 
 ### Live candle pipeline — out of scope
 
@@ -55,8 +55,8 @@ The interim Next BFF (`better-sqlite3`) was removed with step 13: the SPA talks 
 SPA → Experiment API → Postgres | S3/Floci | SSM | orchestrator/SFN
 ```
 
-Forbidden: SPA → PostgREST / Supabase JS / direct SQL / long-lived S3 keys.  
-Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/Supabase).
+Forbidden: SPA → PostgREST / direct SQL / long-lived S3 keys.  
+Floci emulates API Gateway, Lambda, S3, SSM, SFN and Aurora (Postgres through a proxy on port 7001).
 
 ---
 
@@ -86,7 +86,7 @@ Floci emulates API Gateway, Lambda, S3, SSM, SFN — **not** Postgres (Compose/S
 | **9** | Hard | sqlc + Go Experiment API (`/v1/experiments*`) | ✅ |
 | **10** | Hard | Jobs write Postgres stats/actions; UI drops `report.json` | ✅ |
 | **11** | Medium | Chart API → parquet (S3/Floci) | implemented |
-| **12** | Medium | ~~Supabase Free~~ superseded: Aurora PostgreSQL Serverless v2 via Terraform, same migrations | Aurora on Floci done; prod migrations need an in-VPC job |
+| **12** | Medium | Aurora PostgreSQL Serverless v2 via Terraform, same migrations | Aurora on Floci done; prod migrations run as an in-VPC ECS task |
 | **13** | Hard | Vite SPA → API only (drop Next BFF) | implemented |
 | **14** | Hard | Fan-out workers write Postgres (finish step 6) | ✅ implemented |
 
@@ -133,7 +133,7 @@ task db:diff name=my_change   # after editing db/schema/**/*.pg.hcl
 ```
 
 **Code / layout:** `db/atlas.hcl`, `db/schema/**/*.pg.hcl`, `db/migrations/`.  
-**Tooling notes:** [`atlas-schema.md`](atlas-schema.md) (OSS ✅; no Pro `docker` block; bare `schema "public" {}`; never transaction pooler).
+**Tooling notes:** [`archive/atlas-schema.md`](archive/atlas-schema.md) (OSS ✅; no Pro `docker` block; bare `schema "public" {}`).
 
 **Exit:** `task db:migrate` creates `public.experiment` / related tables on Compose Postgres; `atlas` schema holds revisions.
 
@@ -185,15 +185,15 @@ task db:migrate
 
 ---
 
-### Step 12 — Supabase Free — repo side implemented
+### Step 12 — Aurora PostgreSQL Serverless v2
 
-**What:** Same `db/migrations` on a Supabase Free project. Connect with direct Postgres (`:5432`) or the session pooler (port `5432`, IPv4). Do not use the transaction pooler (`:6543`). `REVOKE` anon, authenticated, and PUBLIC on app tables; no grant to anon.
+**What:** The same `db/migrations` on Aurora PostgreSQL Serverless v2, created by Terraform (`infra/terraform/database.tf`): Floci locally, AWS in prod. Prod migrations run as a one-off ECS task inside the VPC (`task db:migrate:ecs`, `scripts/db-migrate.sh prod`). The `REVOKE`s against `anon` and `authenticated` run because the migration entrypoint creates those roles (NOLOGIN, no grants).
 
-**Repo:** Implemented. `db/migrations/20261024140000_revoke_app_table_api_grants.sql` revokes those privileges on `experiment`, `experiment_instance`, `experiment_instance_period_stat`, `experiment_instance_action`, and `experiment_instance_fill`. `env "supabase"` in `db/atlas.hcl` reads `SUPABASE_DB_URL`. `task db:migrate:supabase` runs `atlas migrate apply --env supabase` when that variable is set, and exits with an error when it is unset. `env.example` has an empty `SUPABASE_DB_URL=` placeholder.
+**Repo:** Implemented. `db/migrations/20261024140000_revoke_app_table_api_grants.sql` revokes those privileges on the app tables (`experiment`, `experiment_instance`, `experiment_instance_period_stat`, `experiment_instance_action`, `experiment_instance_fill`). See `db/README.md`.
 
-**Apply (when you have a project):** set `SUPABASE_DB_URL` in `.env` to your direct or session-pooler URI (`sslmode=require`, database `postgres`). Do not commit the URL. From the repo root run `task db:migrate:supabase`. That applies every file in `db/migrations` and records revisions in schema `atlas`. A live apply still needs your Supabase URL; this repo does not call a project and does not ship credentials.
+**Apply:** `task db:migrate` (host, Floci) or `task db:migrate:ecs` (in-VPC task). Prod: `scripts/db-migrate.sh prod` in CI (the workflow is not in the repository yet).
 
-**Exit:** Prod catalog on Supabase; PostgREST cannot read app tables as anon. Live apply is still waiting on your Supabase URL.
+**Exit:** Aurora on Floci is the local path (`task up`); the prod path is the in-VPC migration task.
 
 ---
 
@@ -222,8 +222,6 @@ task db:migrate
 
 ## Out of scope
 
-- AWS RDS (use Compose + Supabase Free)
-- Hosting jobs or primary lake on Supabase. Edge Functions are Deno workers (256 MB, 2 s CPU per request, 150 s wall clock on Free, 400 s paid) and cannot run a Docker image. `pg_cron` fires SQL or HTTP only: no state machine, no per-stage retry. Storage speaks a subset of S3 and is not the Floci endpoint the jobs use. Supabase is used for Postgres only; its Pro floor ($25/month) also outweighs the write volume of the live pipeline.
 - OpenNext / Next as long-term server
 - Live candle pipeline migration
 - Lowering 20k cap
@@ -233,6 +231,6 @@ task db:migrate
 
 - `db/` — Atlas schema + migrations (step 7+)  
 - `infra/terraform/` — Floci/AWS data plane + experiment SFN scaffolding  
-- `docs/grooming/atlas-schema.md` — Atlas feasibility / blockers  
+- `docs/grooming/archive/atlas-schema.md` — Atlas feasibility / blockers (archived)  
 - `docs/grooming/experiment-api-scale.md` — HTTP resource shape  
 - `src/frontend/` — Vite SPA (step 13)  
