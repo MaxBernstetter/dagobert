@@ -6,7 +6,7 @@ name: dagobert
 
 services:
   floci:
-    image: floci/floci:latest
+    image: floci/floci:2.4.0
     ports:
       - "127.0.0.1:${FLOCI_PORT:-11566}:4566"
       # Aurora proxy ports (Terraform pins the cluster to 7001).

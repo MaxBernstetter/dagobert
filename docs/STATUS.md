@@ -51,5 +51,5 @@ Follow [AGENTS.md](../AGENTS.md) and [development/01-task-management.md](develop
 1. `git pull` on `main`; `devbox shell` for Go and Task.
 2. `task build` (job images; needed after pulls that touch `src/`).
 3. `task up` (Floci, Terraform, migrations), then `task frontend:dev` and open http://localhost:3000. Run `task up` again after a pull that adds files to `db/migrations/`.
-4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all system tests (about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
+4. Quick checks: `go test ./src/internal/... ./src/shared/...` (seconds). `task test` runs all system tests against the running stack from `task up` (needs it up; about 20 minutes). C++: `task cpp:deps PRESET=debug` once, then `task cpp:test`.
 5. Logs: the Lambda log groups `/aws/lambda/<prefix>-experiment-api` and `/aws/lambda/<prefix>-experiment-worker` on Floci (job output and `DETAIL=<n>` for the ECS tasks). Data: the candle lake and experiment shards in the Floci S3 bucket, `./data` for the SQLite files; Postgres is Aurora on Floci.

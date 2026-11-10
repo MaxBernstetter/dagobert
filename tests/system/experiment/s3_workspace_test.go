@@ -70,7 +70,7 @@ func uploadLake(t *testing.T, client *s3.Client, bucket, dataDir string) {
 // are objects in the bucket, nothing is left on the local disk, the Experiment API serves the
 // instance data from the bucket, and deleting the experiment removes every object.
 func TestExperimentWorkspaceOnS3(t *testing.T) {
-	const bucket = "workspace-test"
+	bucket := floci.BucketName("workspace-test")
 	endpoint, client := floci.Start(t, bucket)
 
 	url := pgScratchDB(t)

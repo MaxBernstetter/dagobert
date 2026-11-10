@@ -119,9 +119,17 @@ tasks:
       - docker compose down
 
   test:
-    desc: System-test the job images
+    desc: Run all system tests against the running stack (task up); see test:system
     cmds:
-      - go test ./tests/system/ingest ./tests/system/calculation-technical-indicator ./tests/system/backtest ./tests/system/experiment -count=1 -timeout 20m
+      - task: test:system
+
+  test:system:
+    desc: System tests (tests/system/...) against the shared Floci and Aurora from task up; each test gets its own bucket and scratch database
+    env:
+      FLOCI_ENDPOINT: '{{.FLOCI_ENDPOINT | default (printf "http://127.0.0.1:%s" (.FLOCI_PORT | default "11566"))}}'
+      POSTGRES_TEST_URL: '{{.POSTGRES_TEST_URL | default (printf "postgres://trading:%s@127.0.0.1:%s/postgres?sslmode=require" (.POSTGRES_PASSWORD | default "trading") (.DATABASE_PORT | default "7001"))}}'
+    cmds:
+      - go test ./tests/system/... -count=1 -timeout 40m
 
   seed-demo-year:
     desc: Wipe data/, backfill 1y BTC and replay ma-cross over it with the simulated venue

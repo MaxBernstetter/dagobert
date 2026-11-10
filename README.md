@@ -116,7 +116,7 @@ Run `task --list` for all of them.
 | `task up` / `task down` | Start the full stack on Floci / stop it (keeps `./data`). |
 | `task dev` | `task up`, then the web app with hot reload on :3000. |
 | `task build` | Build the job images. |
-| `task test` | System tests for the job images. |
+| `task test` | System tests (`tests/system/...`) against the running stack; `task test:system` runs the same with `FLOCI_ENDPOINT` and `POSTGRES_TEST_URL` set. Needs `task up` first. |
 | `task db:diff name=...`, `db:migrate`, `db:sqlc` | Postgres: generate a migration, apply it, regenerate sqlc code. |
 | `task proto:lint`, `proto:gen`, `proto:breaking` | Protobuf checks and code generation. |
 | `task cpp:deps`, `cpp:build`, `cpp:test` | C++ engine: build dependencies once (`PRESET=debug` or `optimized`), build, test. |
@@ -125,7 +125,7 @@ Run `task --list` for all of them.
 ## Tests
 
 ```bash
-task test                                                          # system tests (CI runs everything on each PR, each merge to main and nightly)
+task test                                                          # system tests against the running stack (needs task up)
 go test ./tests/system/ingest -run TestName -count=1 -timeout 20m  # one system test (image built first)
 go test ./src/internal/... ./src/shared/...                        # unit tests
 task cpp:test                                                      # C++ tests
