@@ -18,7 +18,7 @@ The candle lake is in Floci S3 (bucket `dagobert-local-lake`, created by Terrafo
 
 ## What the orchestrator does
 
-1. On startup it checks the data layout and serves the HTTP API on `ORCHESTRATOR_PORT`: backfill, provider connectors and (with `DATABASE_URL`) the Experiment API.
+1. On startup it checks the data layout and serves the HTTP API on `ORCHESTRATOR_PORT`: the legacy `POST /backfill` (deprecated, see BackfillService), provider connectors and (with `DATABASE_URL`) the Experiment API.
 2. A backfill or an experiment tells it which image to run and which arguments to pass. It runs that image, waits until it exits and reads the code. Exit `0` and exit `2` are success; exit `1` fails.
 3. Data jobs run one at a time. Experiment fan-out is described in [experiment-data-flow.md](experiment-data-flow.md).
 
@@ -51,13 +51,14 @@ Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) 
 
 ## Backfill on ECS
 
-Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/jobs_ecs.tf`), driven by the Step Functions state machine `<prefix>-backfill` (`backfill_sfn.tf`). The orchestrator still has its Docker path and the Connectors wiring; nothing calls the state machine yet.
+Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/jobs_ecs.tf`), driven by the Step Functions state machine `<prefix>-backfill` (`backfill_sfn.tf`). Backfills start through `BackfillService` (`proto/tradingcopilot/v1/backfill_service.proto`), served by the Experiment API Lambda (`BACKFILL_SFN_ARN`, `src/experimentapi/backfill*.go`). It validates the request, starts one execution per market and reports status, list and cancel. The orchestrator's `POST /backfill` (Docker path) is deprecated and kept for local use. `scripts/backfill-start.sh` stays as the direct alternative.
 
 - Apply: `task infra:local` creates the repositories, builds and pushes `dagobert-local-ingest` and `dagobert-local-indicator` images under their ECR URIs, then creates the state machine.
-- Start and wait: `scripts/backfill-start.sh local '{"provider":"binance","base":"BTC","quote":"USDT","from":1704067200000,"to":1704153600000}'`. The script finds the state machine by name, starts one execution and prints its output. Exit 0 means SUCCEEDED.
+- Start through the API: `BackfillService/StartBackfill` with `{"provider":"binance","symbols":["BTCUSDT"],"fromMs":"1704067200000","toMs":"1704153600000"}` (Connect unary POST to `/tradingcopilot.v1.BackfillService/StartBackfill`). `GetBackfillStatus` takes the returned `executionArn`. The provider must be activated on the Connectors page first.
+- Direct start and wait: `scripts/backfill-start.sh local '{"provider":"binance","base":"BTC","quote":"USDT","from":1704067200000,"to":1704153600000}'`. The script finds the state machine by name, starts one execution and prints its output. Exit 0 means SUCCEEDED.
 - Exit codes: the ECS job containers set `COMPOSE_OK_ON_ABORT=1`, so exit 2 (already stored, nothing to do) exits 0 and the task succeeds; the state machine (`runTask.sync`) continues on exit 0. Exit 1 fails the Task state and ends the execution FAILED.
 - Verified on Floci: `runTask.sync` runs the tasks, and they write the lake without `AWS_ENDPOINT_URL` set on the task. Real AWS is the target and is not run here.
 
 ## Out of scope
 
-Switching SQLite and local Parquet to Floci DynamoDB and S3. Wiring the Connectors page or the Experiment API to start the state machine, and removing the orchestrator's Docker backfill path (follow-ups of this change).
+Switching SQLite and local Parquet to Floci DynamoDB and S3. A UI for BackfillService (none yet; the Connectors page does not start backfills), and removing the orchestrator's Docker backfill path (follow-ups).

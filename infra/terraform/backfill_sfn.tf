@@ -1,5 +1,7 @@
 # Backfill of one market over a time range: ingest, then the technical-indicator job.
 # Input (one execution per provider/base/quote): {"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}
+# with an optional "binance_base_url": the Backfill API sends the saved provider base URL. Without it, the state
+# machine uses the SSM value (HasBaseUrl), so scripts/backfill-start.sh and executions started before it still work.
 # The orchestrator passed the same values to its containers (backfill.go): to = candle close, from = open of the first bar.
 # Each job runs as ecs:runTask.sync. The containers have COMPOSE_OK_ON_ABORT=1 (jobs_ecs.tf), so exit 2 (already
 # stored) exits 0 and the task succeeds. Only a task that exits 1 (or any other non-zero code) fails the Task state
@@ -82,8 +84,20 @@ locals {
   # the container maps it to 0 (COMPOSE_OK_ON_ABORT=1).
   backfill_sfn_definition = jsonencode({
     Comment = "Backfill one market: ingest klines into the lake, then build the technical indicators"
-    StartAt = "Ingest"
+    StartAt = "HasBaseUrl"
     States = {
+      HasBaseUrl = {
+        Type    = "Choice"
+        Choices = [{ Variable = "$.binance_base_url", IsPresent = true, Next = "Ingest" }]
+        Default = "DefaultBaseUrl"
+      }
+      # The SSM value the ECS jobs read by default (BINANCE_BASE_URL, main.tf).
+      DefaultBaseUrl = {
+        Type       = "Pass"
+        Result     = aws_ssm_parameter.binance_base_url.value
+        ResultPath = "$.binance_base_url"
+        Next       = "Ingest"
+      }
       Ingest = {
         Type     = "Task"
         Resource = "arn:aws:states:::ecs:runTask.sync"
@@ -96,6 +110,9 @@ locals {
             ContainerOverrides = [{
               Name        = "ingest"
               "Command.$" = "States.Array('-from', States.Format('{}', $.from), '-to', States.Format('{}', $.to), '-base', $.base, '-quote', $.quote, '-provider', $.provider)"
+              Environment = [
+                { Name = "BINANCE_BASE_URL", "Value.$" = "$.binance_base_url" },
+              ]
             }]
           }
         }
@@ -121,6 +138,7 @@ locals {
               Environment = [
                 { Name = "SOURCE", Value = "backfill" },
                 { Name = "INGEST_PROVIDER", "Value.$" = "$.provider" },
+                { Name = "BINANCE_BASE_URL", "Value.$" = "$.binance_base_url" },
               ]
             }]
           }
@@ -153,4 +171,28 @@ resource "aws_sfn_state_machine" "backfill" {
   name       = "${local.prefix}-backfill"
   role_arn   = aws_iam_role.backfill_sfn.arn
   definition = local.backfill_sfn_definition
+}
+
+# The Backfill API (experimentapi, BackfillService) starts, describes, lists and stops executions of this state
+# machine only. The Experiment API Lambda runs it (api_lambda.tf).
+resource "aws_iam_role_policy" "experiment_api_backfill" {
+  name = "${local.prefix}-experiment-api-backfill"
+  role = aws_iam_role.experiment_api.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "BackfillWorkflow"
+      Effect = "Allow"
+      Action = [
+        "states:StartExecution",
+        "states:StopExecution",
+        "states:ListExecutions",
+        "states:DescribeExecution",
+      ]
+      Resource = [
+        aws_sfn_state_machine.backfill.arn,
+        "${replace(aws_sfn_state_machine.backfill.arn, ":stateMachine:", ":execution:")}:*",
+      ]
+    }]
+  })
 }

@@ -33,7 +33,9 @@ Both run `scripts/infra-apply.sh`, using `terraform` if installed, else the `has
 
 ## Backfill
 
-`scripts/backfill-start.sh <local|prod> '<json>'` starts one `<prefix>-backfill` execution and waits for it. Input: `{"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}`. It exits 0 when the execution succeeded. Each run covers one market; the orchestrator's multi-symbol loop is not ported. See `docs/architecture/local-stack.md` for local use.
+Backfills are started through `BackfillService` on the Experiment API Lambda (`BACKFILL_SFN_ARN`, `api_lambda.tf`; IAM in `backfill_sfn.tf`). It starts one `<prefix>-backfill` execution per market. The state machine reads the optional `binance_base_url` from its input and passes it to the ingest and indicator containers as `BINANCE_BASE_URL`; without it the SSM value applies. `scripts/backfill-start.sh <local|prod> '<json>'` starts one execution directly and waits for it (input `{"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}`, exit 0 when SUCCEEDED). See `docs/architecture/local-stack.md` for local use.
+
+The API Lambda reaches Step Functions through the `states` interface endpoint, prod only (`db_migrate.tf`). Floci needs none.
 
 To redeploy only the web app (after the bucket exists): `scripts/frontend-deploy.sh local` or `scripts/frontend-deploy.sh prod` (prod needs `CI=true`). The script builds `src/frontend` with `VITE_EXPERIMENT_API_URL` empty, syncs `dist/assets/` with `Cache-Control: public,max-age=31536000,immutable`, the other root files with `no-cache`, and `index.html` last with `no-cache`. Prod then invalidates `/index.html`. Old hashed assets are not deleted.
 

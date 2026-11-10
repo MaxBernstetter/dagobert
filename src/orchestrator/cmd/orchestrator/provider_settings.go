@@ -10,36 +10,24 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/MaxBernstetter/dagobert/src/shared/providerurl"
 )
 
-const defaultBinanceBaseURL = "https://data-api.binance.vision"
-
 var secretsFileMu sync.Mutex
-
-// effectiveBaseURL is the base URL a provider reads from: the saved config baseUrl when set, else the
-// BINANCE_BASE_URL environment value, else the public default.
-func effectiveBaseURL(saved, envValue string) string {
-	if v := strings.TrimSpace(saved); v != "" {
-		return v
-	}
-	if v := strings.TrimSpace(envValue); v != "" {
-		return v
-	}
-	return defaultBinanceBaseURL
-}
 
 // providerBaseURL resolves the effective base URL of a provider from its stored config. Without a store,
 // or when the state cannot be read, it falls back to the environment and the default.
 func providerBaseURL(ctx context.Context, id string) string {
 	envValue := os.Getenv("BINANCE_BASE_URL")
 	if connectorStore == nil {
-		return effectiveBaseURL("", envValue)
+		return providerurl.EffectiveBinance("", envValue)
 	}
 	rec, ok, err := connectorStore.GetProvider(ctx, id)
 	if err != nil || !ok {
-		return effectiveBaseURL("", envValue)
+		return providerurl.EffectiveBinance("", envValue)
 	}
-	return effectiveBaseURL(rec.Config["baseUrl"], envValue)
+	return providerurl.EffectiveBinance(rec.Config["baseUrl"], envValue)
 }
 
 // jobBaseURL is the Binance base URL handed to job containers: the same precedence as providerBaseURL.

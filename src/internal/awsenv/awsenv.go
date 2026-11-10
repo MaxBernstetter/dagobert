@@ -133,6 +133,11 @@ func ExperimentSFNARN() string {
 	return strings.TrimSpace(os.Getenv("EXPERIMENT_SFN_ARN"))
 }
 
+// BackfillSFNARN is the backfill state machine (BACKFILL_SFN_ARN). Empty when the BackfillService is not served.
+func BackfillSFNARN() string {
+	return strings.TrimSpace(os.Getenv("BACKFILL_SFN_ARN"))
+}
+
 func intEnvDefault(key string, def, min int) int {
 	raw := strings.TrimSpace(os.Getenv(key))
 	if raw == "" {

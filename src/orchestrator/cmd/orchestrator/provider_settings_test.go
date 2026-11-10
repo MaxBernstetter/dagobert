@@ -10,24 +10,6 @@ import (
 	"testing"
 )
 
-func TestEffectiveBaseURLPrecedence(t *testing.T) {
-	cases := []struct {
-		name, saved, env, want string
-	}{
-		{"saved wins over env", "https://saved.example", "https://env.example", "https://saved.example"},
-		{"env when nothing saved", "", "https://env.example", "https://env.example"},
-		{"default when neither", "", "", defaultBinanceBaseURL},
-		{"blank saved falls through to env", "   ", "https://env.example", "https://env.example"},
-		{"blank everywhere is the default", " ", " ", defaultBinanceBaseURL},
-		{"saved value is trimmed", "  https://saved.example/ ", "", "https://saved.example/"},
-	}
-	for _, c := range cases {
-		if got := effectiveBaseURL(c.saved, c.env); got != c.want {
-			t.Errorf("%s: got %q want %q", c.name, got, c.want)
-		}
-	}
-}
-
 // withSecretField declares one secret field for the test and restores the provider afterwards.
 func withSecretField(t *testing.T) {
 	t.Helper()

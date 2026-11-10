@@ -81,6 +81,10 @@ resource "aws_lambda_function" "experiment_api" {
       LAKE_BACKEND = "s3"
       # Run, Cancel and progress go through this state machine (experiment_workflow.tf).
       EXPERIMENT_SFN_ARN = aws_sfn_state_machine.experiment_run.arn
+      # BackfillService (backfill_sfn.tf). BINANCE_BASE_URL is the fallback base URL of the provider, the same value the
+      # ECS jobs read from SSM.
+      BACKFILL_SFN_ARN = aws_sfn_state_machine.backfill.arn
+      BINANCE_BASE_URL = aws_ssm_parameter.binance_base_url.value
     }
   }
 

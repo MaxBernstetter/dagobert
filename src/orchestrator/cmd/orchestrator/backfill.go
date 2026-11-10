@@ -96,6 +96,8 @@ func serveBackfill(ctx context.Context) {
 	mux.HandleFunc("GET /backfill", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, readBackfill())
 	})
+	// Deprecated: use BackfillService (StartBackfill, experimentapi/backfill.go), which runs the backfill
+	// as a Step Functions execution per market. This route stays for the local orchestrator Docker path.
 	mux.HandleFunc("POST /backfill", func(w http.ResponseWriter, r *http.Request) {
 		var req backfillRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

@@ -30,6 +30,7 @@ JSON uses camelCase field names, int64 as strings. Errors are Connect errors (`{
 ## Who mounts it
 - The orchestrator mounts it in-process when `DATABASE_URL` is set (`src/orchestrator/cmd/orchestrator/backfill.go`) and supplies `Hooks`: `RunExperiment`, `CancelStudy`, `JobStatus`. A run request marks rows running and then calls the hook.
 - `src/cmd/experiment-api` is a standalone server with empty hooks, so it cannot start runs.
+- `src/cmd/experiment-api-lambda` also serves `BackfillService` (`backfill.go`, validation and execution mapping in `backfill_plan.go`) when `BACKFILL_SFN_ARN` is set. It starts, describes, lists and stops executions of the backfill state machine, and reads provider state from the same Postgres pool.
 
 ## Test and run
 `go test ./src/experimentapi/...` covers pure logic (grid, chart, metrics) and the transport (protobuf, JSON, gzip). Behaviour is proven by `tests/system/experiment`, which needs a Postgres 16 reachable at `POSTGRES_TEST_URL` (default: the compose Postgres on 9432); the tests fail, not skip, without it. Locally: `task up` (compose Postgres, migrations via `task db:migrate`).

@@ -146,9 +146,9 @@ resource "aws_ecs_task_definition" "ingest" {
     image       = "${aws_ecr_repository.ingest.repository_url}:${var.job_image_tag}"
     essential   = true
     environment = local.jobs_env
+    # BINANCE_BASE_URL is not a secret: backfill_sfn.tf passes it per execution (container override).
     secrets = [
       { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn },
-      { name = "BINANCE_BASE_URL", valueFrom = aws_ssm_parameter.binance_base_url.arn },
     ]
     logConfiguration = {
       logDriver = "awslogs"

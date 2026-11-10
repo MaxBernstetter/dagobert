@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi"
+	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
 	"github.com/MaxBernstetter/dagobert/src/internal/awsenv"
 	"github.com/MaxBernstetter/dagobert/src/internal/experimentworkflow"
 	"github.com/aws/aws-lambda-go/events"
@@ -44,21 +45,30 @@ func setup() {
 		return
 	}
 	hooks := experimentapi.Hooks{}
-	if arn := awsenv.ExperimentSFNARN(); arn != "" {
+	expARN, backfillARN := awsenv.ExperimentSFNARN(), awsenv.BackfillSFNARN()
+	var client *sfn.Client
+	if expARN != "" || backfillARN != "" {
 		cfg, err := awsenv.Load(context.Background())
 		if err != nil {
 			initErr = err
 			return
 		}
-		client := sfn.NewFromConfig(cfg, func(o *sfn.Options) {
+		client = sfn.NewFromConfig(cfg, func(o *sfn.Options) {
 			if ep := awsenv.ResolveEndpoint(); ep != nil {
 				o.BaseEndpoint = ep
 			}
 		})
-		hooks = experimentworkflow.NewHooks(client, arn, dbFailer{q: experimentdb.New(pool)})
+	}
+	if expARN != "" {
+		hooks = experimentworkflow.NewHooks(client, expARN, dbFailer{q: experimentdb.New(pool)})
 	}
 	mux = http.NewServeMux()
 	experimentapi.Mount(mux, experimentapi.NewServer(pool, hooks))
+	if backfillARN != "" {
+		// BINANCE_BASE_URL is the environment fallback of the provider base URL (set from the SSM value in Terraform).
+		experimentapi.MountBackfill(mux, experimentapi.NewBackfillServer(client, backfillARN,
+			pgcatalog.NewFromPool(pool), os.Getenv("BINANCE_BASE_URL")))
+	}
 }
 
 // dbFailer marks an experiment failed in Postgres (the workflow hook's failure path).
