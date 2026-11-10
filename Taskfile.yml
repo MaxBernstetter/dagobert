@@ -292,3 +292,8 @@ tasks:
       - |
         echo "Applied. Revisions in schema atlas; app tables in public."
 
+  db:migrate:ecs:
+    desc: "Atlas — apply migrations as a one-off ECS task inside the VPC (Floci; prod runs scripts/db-migrate.sh prod from CI)"
+    deps: [infra:local]
+    cmds:
+      - scripts/db-migrate.sh local

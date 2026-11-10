@@ -27,7 +27,7 @@ provider "aws" {
       ssm            = var.floci_endpoint
       ecr            = var.floci_endpoint
       ecs            = var.floci_endpoint
-      apigateway    = var.floci_endpoint
+      apigateway     = var.floci_endpoint
       apigatewayv2   = var.floci_endpoint
       cloudfront     = var.floci_endpoint
       cloudwatch     = var.floci_endpoint

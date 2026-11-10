@@ -9,7 +9,8 @@ One root, one code path. `var.environment` is the only switch:
 
 ## What it creates
 
-- `network.tf`: VPC, three private subnets (database, Lambda), three public subnets with an internet gateway (ECS data-prep tasks only, public IP, no NAT), security groups (`app` may reach `database` on 5432 and S3 on 443; `jobs` may reach `database` on 5432, egress 443 and 5432 only, no ingress), DB subnet group, private route table with an S3 gateway endpoint. No NAT, no interface endpoints.
+- `network.tf`: VPC, three private subnets (database, Lambda), three public subnets with an internet gateway (ECS data-prep tasks only, public IP, no NAT), security groups (`app` may reach `database` on 5432, S3 on 443 and the `vpc_endpoints` group on 443; `jobs` may reach `database` on 5432, egress 443 and 5432 only, no ingress), DB subnet group, private route table with an S3 gateway endpoint. No NAT, no interface endpoints.
+- `db_migrate.tf`: the one-off migration task. ECR `<prefix>-db-migrate`, ECS cluster `<prefix>-ops`, Fargate task definition (256 CPU, 512 MB, `awsvpc`, private subnets, `app` security group, no public IP), execution role (pulls the image, reads `DATABASE_URL` from SSM via task `secrets`), empty task role, log group `/ecs/<prefix>-db-migrate`. Prod only: interface endpoints `ecr.api`, `ecr.dkr`, `logs`, `ssm` in one private subnet (about 4 x 0.01 USD per hour; the only idle cost in prod). Floci needs none.
 - `api_lambda.tf`: the Experiment API as a container-image Lambda (ECR `<prefix>-experiment-api`, VPC-attached to the private subnets with the `app` security group, dedicated role, 29 s, 512 MB), behind an API Gateway HTTP API. Route `POST /tradingcopilot.v1.ExperimentService/{method}`, `$default` stage, CORS from `api_cors_allow_origins`. The CloudFront distribution in `frontend.tf` routes `/tradingcopilot.v1.*` here.
 - `database.tf`: Aurora PostgreSQL Serverless v2 cluster and writer (`db.serverless`, 0.5 to 2 ACU by default), `DATABASE_URL` in SSM (SecureString).
 - `frontend.tf`: the web app. A private S3 bucket (`<prefix>-frontend`, public access blocked) and a CloudFront distribution (price class 100, default certificate). One origin per path: the default behavior serves the SPA from S3 (cached; OAC in prod), `/tradingcopilot.v1.*` goes to the API Gateway (no cache, all methods, viewer headers except Host). A viewer-request CloudFront function (default behavior only) rewrites extensionless paths to `/index.html` (BrowserRouter fallback). No error mapping, so API 403/404 stay as Connect returns them. Same origin for the browser, so the API needs no CORS for this site. `scripts/frontend-deploy.sh` builds the SPA and uploads it after each apply; Terraform does not upload files.
@@ -17,7 +18,7 @@ One root, one code path. `var.environment` is the only switch:
 - `backfill_sfn.tf`: Step Functions `<prefix>-backfill`. Ingest, then indicator, each `ecs:runTask.sync`. The containers set `COMPOSE_OK_ON_ABORT=1` (`jobs_ecs.tf`), so exit 2 (already stored) exits 0 and the task succeeds; exit 1 or a task that does not start ends the execution FAILED. Input `{provider, base, quote, from, to}`. Output: `backfill_sfn_arn`.
 - `main.tf`: S3 lake, SSM parameters, task IAM role. `experiment_fanout.tf`: Step Functions map and optional experiment Lambda.
 
-Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `api_gateway_url`, `backfill_sfn_arn`, `ingest_repository_url`, `indicator_repository_url`, `jobs_cluster`.
+Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `api_gateway_url`, `backfill_sfn_arn`, `ingest_repository_url`, `indicator_repository_url`, `jobs_cluster`, and for the migration task `db_migrate_repository_url`, `db_migrate_cluster`, `db_migrate_task_family`, `db_migrate_subnet_ids`, `db_migrate_security_group_id`, `db_migrate_log_group`.
 
 ## Apply
 
@@ -48,7 +49,7 @@ Local: Floci starts a real Postgres container for the cluster and proxies it on 
 
 Prod web app: CloudFront default domain only (`frontend_domain` output). Custom domain and ACM certificate are a follow-up.
 
-Prod Aurora is private to the VPC. Atlas migrations cannot reach it from outside; running them from inside the VPC is not built yet.
+Prod Aurora is private to the VPC. Migrations run there as a one-off ECS task: `task db:migrate:ecs` (local, after `task infra:local`) or `scripts/db-migrate.sh prod` (CI, after `scripts/infra-apply.sh prod`). The script builds `docker/db-migrate/Dockerfile`, pushes it in prod, runs the task with `aws ecs run-task`, waits with `aws ecs wait tasks-stopped`, prints the CloudWatch log and fails unless the container exited 0 (a missing exit code also fails). The CI workflow that calls it is not in this repository yet.
 
 ## Web app (CloudFront)
 

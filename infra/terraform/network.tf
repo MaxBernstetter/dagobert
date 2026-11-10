@@ -42,6 +42,14 @@ resource "aws_security_group" "app" {
     protocol        = "tcp"
     prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
   }
+
+  # Interface endpoints for the migration task (db_migrate.tf; prod only).
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.vpc_endpoints.id]
+  }
 }
 
 # Private route table (no routes: no NAT, no internet). Only the S3 gateway endpoint is attached.
