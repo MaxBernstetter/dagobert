@@ -66,6 +66,21 @@ if [ "$ENV_NAME" = "prod" ]; then
   docker push "${API_REPO_URL}:${API_IMAGE_TAG}"
 fi
 
+# Data-prep job images (ECS tasks, jobs_ecs.tf): repositories first, then the same build-and-push as the API.
+JOB_IMAGE_TAG="${JOB_IMAGE_TAG:-latest}"
+TF_ARGS+=("-var=job_image_tag=${JOB_IMAGE_TAG}")
+tf apply "${TF_ARGS[@]}" -target=aws_ecr_repository.ingest -target=aws_ecr_repository.indicator
+INGEST_REPO_URL="$(tf output -raw ingest_repository_url)"
+INDICATOR_REPO_URL="$(tf output -raw indicator_repository_url)"
+docker build -f docker/ingest/Dockerfile -t "${INGEST_REPO_URL}:${JOB_IMAGE_TAG}" .
+docker build -f docker/calculation-technical-indicator/Dockerfile -t "${INDICATOR_REPO_URL}:${JOB_IMAGE_TAG}" .
+if [ "$ENV_NAME" = "prod" ]; then
+  for repo in "$INGEST_REPO_URL" "$INDICATOR_REPO_URL"; do
+    aws ecr get-login-password --region "${AWS_REGION:-eu-central-1}" | docker login --username AWS --password-stdin "${repo%%/*}"
+    docker push "${repo}:${JOB_IMAGE_TAG}"
+  done
+fi
+
 tf apply "${TF_ARGS[@]}"
 
 # Build the SPA and upload it to the bucket behind CloudFront (the bucket exists after the apply).

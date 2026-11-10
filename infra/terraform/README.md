@@ -9,13 +9,15 @@ One root, one code path. `var.environment` is the only switch:
 
 ## What it creates
 
-- `network.tf`: VPC, three private subnets, security groups (`app` may reach `database` on 5432 and S3 on 443), DB subnet group, private route table with an S3 gateway endpoint. No internet gateway, no NAT, no interface endpoints.
+- `network.tf`: VPC, three private subnets (database, Lambda), three public subnets with an internet gateway (ECS data-prep tasks only, public IP, no NAT), security groups (`app` may reach `database` on 5432 and S3 on 443; `jobs` may reach `database` on 5432, egress 443 and 5432 only, no ingress), DB subnet group, private route table with an S3 gateway endpoint. No NAT, no interface endpoints.
 - `api_lambda.tf`: the Experiment API as a container-image Lambda (ECR `<prefix>-experiment-api`, VPC-attached to the private subnets with the `app` security group, dedicated role, 29 s, 512 MB), behind an API Gateway HTTP API. Route `POST /tradingcopilot.v1.ExperimentService/{method}`, `$default` stage, CORS from `api_cors_allow_origins`. The CloudFront distribution in `frontend.tf` routes `/tradingcopilot.v1.*` here.
 - `database.tf`: Aurora PostgreSQL Serverless v2 cluster and writer (`db.serverless`, 0.5 to 2 ACU by default), `DATABASE_URL` in SSM (SecureString).
 - `frontend.tf`: the web app. A private S3 bucket (`<prefix>-frontend`, public access blocked) and a CloudFront distribution (price class 100, default certificate). One origin per path: the default behavior serves the SPA from S3 (cached; OAC in prod), `/tradingcopilot.v1.*` goes to the API Gateway (no cache, all methods, viewer headers except Host). A viewer-request CloudFront function (default behavior only) rewrites extensionless paths to `/index.html` (BrowserRouter fallback). No error mapping, so API 403/404 stay as Connect returns them. Same origin for the browser, so the API needs no CORS for this site. `scripts/frontend-deploy.sh` builds the SPA and uploads it after each apply; Terraform does not upload files.
+- `jobs_ecs.tf`: the data-prep jobs as ECS Fargate tasks. ECR `<prefix>-ingest` and `<prefix>-indicator`, cluster `<prefix>-jobs`, task definitions (ingest 0.5 vCPU / 1 GB, indicator 1 vCPU / 2 GB), log groups `/ecs/<prefix>-<job>` (14 days), execution role (ECR pull, logs, SSM read for secrets). Task role: the shared `aws_iam_role.task` (S3 lake, SSM read). Ingest gets `DATABASE_URL` and `BINANCE_BASE_URL` as task `secrets` from SSM (never plain env). Env: `LAKE_BACKEND=s3`, `LAKE_BUCKET`, `DATA_DIR=/tmp/dagobert-data` (scratch only). Exit codes unchanged (0, 1, 2).
+- `backfill_sfn.tf`: Step Functions `<prefix>-backfill`. Ingest (`ecs:runTask.sync`), then indicator (`ecs:runTask.sync`). Exit 0 continues. A non-zero exit fails the Task state with `States.TaskFailed`; the Catch matches `"ExitCode":2` in the error Cause, so exit 2 continues and any other exit ends the execution FAILED. This Cause matching is unverified on Floci and on AWS. Input `{provider, base, quote, from, to}`. Output: `backfill_sfn_arn`.
 - `main.tf`: S3 lake, SSM parameters, task IAM role. `experiment_fanout.tf`: Step Functions map and optional experiment Lambda.
 
-Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `api_gateway_url`.
+Outputs used by the scripts: `frontend_bucket`, `frontend_distribution_id`, `frontend_domain`, `experiment_api_repository_url`, `api_gateway_url`, `backfill_sfn_arn`, `ingest_repository_url`, `indicator_repository_url`, `jobs_cluster`.
 
 ## Apply
 
@@ -24,7 +26,11 @@ task infra:local          # Floci: starts it, applies, same as `task infra:apply
 task infra:prod           # CI only
 ```
 
-Both run `scripts/infra-apply.sh`, using `terraform` if installed, else the `hashicorp/terraform` image. The script applies Terraform for the API image, builds and publishes it, applies the rest, and then runs `scripts/frontend-deploy.sh <env>`.
+Both run `scripts/infra-apply.sh`, using `terraform` if installed, else the `hashicorp/terraform` image. The script applies Terraform for the API image, builds and publishes it, creates the job repositories, builds and publishes the ingest and indicator images (`JOB_IMAGE_TAG`, default `latest`), applies the rest, and then runs `scripts/frontend-deploy.sh <env>`.
+
+## Backfill
+
+`scripts/backfill-start.sh <local|prod> '<json>'` starts one `<prefix>-backfill` execution and waits for it. Input: `{"provider":"binance","base":"BTC","quote":"USDT","from":<ms>,"to":<ms>}`. It exits 0 when the execution succeeded. Each run covers one market; the orchestrator's multi-symbol loop is not ported. See `docs/architecture/local-stack.md` for local use.
 
 To redeploy only the web app (after the bucket exists): `scripts/frontend-deploy.sh local` or `scripts/frontend-deploy.sh prod` (prod needs `CI=true`). The script builds `src/frontend` with `VITE_EXPERIMENT_API_URL` empty, syncs `dist/assets/` with `Cache-Control: public,max-age=31536000,immutable`, the other root files with `no-cache`, and `index.html` last with `no-cache`. Prod then invalidates `/index.html`. Old hashed assets are not deleted.
 

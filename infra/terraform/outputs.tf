@@ -58,3 +58,20 @@ output "api_gateway_url" {
 output "experiment_api_repository_url" {
   value = aws_ecr_repository.experiment_api.repository_url
 }
+
+output "backfill_sfn_arn" {
+  description = "Step Functions state machine: ingest then indicator for one market. scripts/backfill-start.sh starts it."
+  value       = aws_sfn_state_machine.backfill.arn
+}
+
+output "jobs_cluster" {
+  value = aws_ecs_cluster.jobs.name
+}
+
+output "ingest_repository_url" {
+  value = aws_ecr_repository.ingest.repository_url
+}
+
+output "indicator_repository_url" {
+  value = aws_ecr_repository.indicator.repository_url
+}

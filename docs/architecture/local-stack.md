@@ -48,6 +48,15 @@ Dockerfiles use BuildKit cache mounts (`npm ci`, `go mod download`, `go build`) 
 - `task frontend:dev` is the UI for deep links and hot reload.
 - A started experiment runs one `dagobert-backtest` container and ends with stored KPIs.
 
+## Backfill on ECS (new, not yet verified on Floci)
+
+Ingest and the indicator backfill run as ECS Fargate tasks (`infra/terraform/jobs_ecs.tf`), driven by the Step Functions state machine `<prefix>-backfill` (`backfill_sfn.tf`). The orchestrator still has its Docker path and the Connectors wiring; nothing calls the state machine yet.
+
+- Apply: `task infra:local` creates the repositories, builds and pushes `dagobert-local-ingest` and `dagobert-local-indicator` images under their ECR URIs, then creates the state machine.
+- Start and wait: `scripts/backfill-start.sh local '{"provider":"binance","base":"BTC","quote":"USDT","from":1704067200000,"to":1704153600000}'`. The script finds the state machine by name, starts one execution and prints its output. Exit 0 means SUCCEEDED.
+- Exit codes: 0 continues. Non-zero exit fails the task with `States.TaskFailed`; a Catch matches `"ExitCode":2` in the error Cause and continues on exit 2. Exit 1 or any other failure ends the execution FAILED. This Cause matching is unverified on Floci and on AWS.
+- Not verified on Floci: whether Floci runs `ecs:RunTask` with `.sync` in Step Functions, whether task containers see the Floci endpoint (the tasks do not set `AWS_ENDPOINT_URL`, as the Lambda does not), and whether `ssm:GetParameters` secrets resolve. Check with the script before relying on it. Real AWS is the target.
+
 ## Out of scope
 
-Switching SQLite and local Parquet to Floci DynamoDB and S3. Fargate.
+Switching SQLite and local Parquet to Floci DynamoDB and S3. Wiring the Connectors page or the Experiment API to start the state machine, and removing the orchestrator's Docker backfill path (follow-ups of this change).

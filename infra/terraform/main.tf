@@ -49,7 +49,7 @@ resource "aws_ssm_parameter" "binance_base_url" {
   value = "https://data-api.binance.vision"
 }
 
-# Execution role for future Lambda / Fargate tasks (no resources attached yet).
+# Task role for Lambda and the ECS data-prep tasks (jobs_ecs.tf): S3 lake and SSM read.
 data "aws_iam_policy_document" "task_assume" {
   statement {
     actions = ["sts:AssumeRole"]

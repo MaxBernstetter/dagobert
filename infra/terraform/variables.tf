@@ -102,3 +102,9 @@ variable "api_cors_allow_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "job_image_tag" {
+  description = "Tag of the ingest and indicator images in ECR. scripts/infra-apply.sh builds and pushes them before the task definitions are created."
+  type        = string
+  default     = "latest"
+}
