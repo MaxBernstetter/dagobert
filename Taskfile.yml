@@ -96,7 +96,7 @@ tasks:
     dir: tests/e2e
     cmds:
       - |
-        d=$(scripts/tf-output.sh frontend_domain)
+        d=$("{{.ROOT_DIR}}/scripts/tf-output.sh" frontend_domain)
         if [ -z "$d" ]; then echo "e2e: compiled web app URL unavailable; run task up first" >&2; exit 1; fi
         export E2E_BASE_URL="http://${d%.net}.localhost:${FLOCI_PORT:-11566}/"
         if [ ! -d node_modules ]; then npm ci; fi
