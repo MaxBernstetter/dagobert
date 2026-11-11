@@ -302,7 +302,14 @@ tasks:
         fi
         "$ATLAS" migrate apply --env local
       - |
-        echo "Applied. Revisions in schema atlas; app tables in public."
+        # Grant the application role (dagobert_app) its DML on public, as the ECS entrypoint does. Without this the
+        # app cannot log in: password authentication fails for a role that does not exist.
+        docker run --rm --network host -e PGPASSWORD="${POSTGRES_PASSWORD:-trading}" -e PGSSLMODE=require \
+          -v "$PWD:/db:ro" postgres:16-alpine \
+          psql -h 127.0.0.1 -p {{.DATABASE_PORT | default "7001"}} -U "${POSTGRES_USER:-trading}" -d "${POSTGRES_DB:-trading}" \
+          -v ON_ERROR_STOP=1 -q -v app_password="${POSTGRES_APP_PASSWORD:-dagobert_app}" -f /db/roles.sql
+      - |
+        echo "Applied. Revisions in schema atlas; app tables in public; role dagobert_app granted."
 
   db:migrate:ecs:
     desc: "Atlas — apply migrations as a one-off ECS task inside the VPC (Floci; prod runs scripts/db-migrate.sh prod from CI)"
