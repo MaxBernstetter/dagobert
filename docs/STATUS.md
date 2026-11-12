@@ -1,11 +1,12 @@
 # Status
 
-As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; main at e7b94a3). Update this page whenever an epic closes or the plan changes.
+As of 2026-11-12 (branch `fix/red-flags`; main at 897168b). Update this page whenever an epic closes or the plan changes.
 
 ## What works today
 
 - **Scope.** Dagobert is a backtesting framework. The live and paper-trading pipeline (candle-close state machine, exchange client, execution job, local secrets file) was removed.
 - **Experiments.** Create an experiment (manual list or grid of instances) through the Experiment API, run it, read results in the frontend. Experiments run on the C++ engine only (`ma-cross` and `signal-consensus`); each experiment sets its C++ process count (auto = one per CPU) in the create form; the Go engine and `EXPERIMENT_ENGINE` were removed (#164). The replayed output is checked by `TestSmaCrossCppReplayConsistent` and `TestConsensusCppReplayConsistent`.
+- **Sign-in.** The web app and the API require a Cognito login (`src/internal/auth`, `infra/terraform/cognito.tf`); local seeds `admin` / `password`. Verified on Floci: 401 without or with a bad token, 200 with a valid one, login form in Chromium. Not verified on real AWS.
 - **Decimal candles.** Parquet candles use fixed-scale decimals; the reader also accepts the old string schema (`task data:migrate-candles`).
 - **Position sizing.** Unit risk, heat and max units, ([position-sizing](../src/calculation-signal/playbooks/position-sizing/DESCRIPTION.md)).
 
@@ -23,18 +24,17 @@ As of 2026-11-01 (branch `feat/164-experiment-parquet-storage`, PR #202, draft; 
 ## Next steps, in priority order
 
 1. Measure the browser load of the instance detail page (`/activity`, `/chart-series`) on a 3000-instance experiment ([#164](https://github.com/MaxBernstetter/dagobert/issues/164), PR #202). The run and file numbers are in [05-cpp-benchmark](development/05-cpp-benchmark.md).
-3. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 is superseded: the relational database runs on Aurora instead.
+2. Finish the serverless-aws ladder ([serverless-aws.md](grooming/serverless-aws.md)): steps 11 (chart API from the lake) and 14 (20k-instance run on Floci or AWS) are marked implemented but their exit checks are not recorded as done. Step 12 is superseded: the relational database runs on Aurora instead.
 
 Open research issues [#1](https://github.com/MaxBernstetter/dagobert/issues/1) and [#2](https://github.com/MaxBernstetter/dagobert/issues/2) are background reading, not planned work.
 
 ## Known loose ends
 
-Things that were not verified when this page was written (2026-10-26):
+Things that were not verified when this page was written (2026-10-26; the Terraform fmt/validate item is now covered by the `terraform` CI job):
 
 - The mermaid diagrams (README, `architecture/experiment-data-flow.md`) were checked structurally only. Open them on GitHub once and fix any that do not render.
 - `task seed-demo-year` and running an experiment from the UI were not run end to end after the C++ engine and docs work. Do this first when you resume.
 - The wiki pages were not opened in a browser after the Next.js removal and the move of wiki prose into markdown (the build passes).
-- `terraform fmt` / `validate` were not run on `infra/terraform` after the heavy-path stub removal (no terraform in the dev shell).
 - Experiments completed before #164 have no trade outcome files, so their trades are gone from `/kpis` and `/performance` and their activity and charts are empty. A new run rebuilds them; there is no backfill. See [experiment-data-flow](architecture/experiment-data-flow.md#known-limits).
 - Local-only: `src/frontend/node_modules` may be owned by root if it was created in a container; `npm ci` then fails. Delete it or `chown` it.
 

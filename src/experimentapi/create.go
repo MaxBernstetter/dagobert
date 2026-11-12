@@ -3,6 +3,7 @@ package experimentapi
 import (
 	"context"
 	"fmt"
+	"log"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/persist"
 	"strings"
 
@@ -152,11 +153,13 @@ func (s *Server) createStudy(ctx context.Context, req *v1.CreateExperimentReques
 func (s *Server) materializeAsync(experimentID uuid.UUID, merged *v1.ExperimentSettings, payload materializePayload) {
 	ctx := context.Background()
 	if err := s.materialize(ctx, experimentID, merged, payload); err != nil {
-		_ = s.q.MarkExperimentFailed(ctx, experimentdb.MarkExperimentFailedParams{
+		if ferr := s.q.MarkExperimentFailed(ctx, experimentdb.MarkExperimentFailedParams{
 			ID:           experimentID,
 			Error:        err.Error(),
 			FinishedAtMs: pgtype.Int8{Int64: timeNowMs(), Valid: true},
-		})
+		}); ferr != nil {
+			log.Printf("experiment %s: could not record the failure %q: %v", experimentID, err, ferr)
+		}
 	}
 }
 
@@ -198,14 +201,16 @@ func (s *Server) materialize(ctx context.Context, experimentID uuid.UUID, merged
 			}
 		}
 		done := end
-		_ = s.q.UpdateExperimentProgress(ctx, experimentdb.UpdateExperimentProgressParams{
+		if perr := s.q.UpdateExperimentProgress(ctx, experimentdb.UpdateExperimentProgressParams{
 			ID:                    experimentID,
 			ProgressStage:         0,
 			ProgressStages:        0,
 			ProgressStageLabel:    fmt.Sprintf("Materializing %d/%d", done, total),
 			ProgressInstanceDone:  int32(done),
 			ProgressInstanceTotal: int32(total),
-		})
+		}); perr != nil {
+			log.Printf("experiment %s: materialize progress not saved: %v", experimentID, perr)
+		}
 	}
 
 	return s.q.MarkExperimentDraft(ctx, experimentdb.MarkExperimentDraftParams{

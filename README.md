@@ -25,6 +25,7 @@ flowchart LR
   APIGW --> API[API Lambda<br/>Experiment, Provider,<br/>Backfill services]
   API --> PG[(Aurora PostgreSQL<br/>catalog + ingest ledger)]
   API --> SM[Secrets Manager<br/>connector secrets]
+  API -- login, token check --> COG[Cognito<br/>user pool]
   API -- StartExecution --> SFN[Step Functions<br/>experiment-run]
   SFN -- prepare / simulate x N / finalize --> W[Worker Lambda<br/>C++ sweep + Go replay]
   W --> PG
@@ -37,12 +38,13 @@ flowchart LR
 
 | Concern | Choice | Why |
 | --- | --- | --- |
-| API | One Lambda behind an API Gateway HTTP API serving three Connect-RPC services | Stateless, scales to zero, one deployable. Unary RPC maps cleanly onto Lambda's request/response model. |
+| API | One Lambda behind an API Gateway HTTP API serving three Connect-RPC services and the Cognito sign-in (`/auth/*`) | Stateless, scales to zero, one deployable. Unary RPC maps cleanly onto Lambda's request/response model. |
 | Long-running work | Step Functions orchestrating a worker Lambda (experiments) and ECS Fargate tasks (backfills) | Runs outlive an HTTP request and need retries, cancellation and progress. Short, parallel simulation fits Lambda; the long, I/O-heavy download fits a container with no 15-minute limit. |
 | Fan-out | Prepare, then a Map over instance batches, then finalize | Instance counts reach 20,000. Batching bounds per-invocation time and gives natural retry units. |
 | Bulk data | Parquet on S3 (candles, indicator bars, per-instance result shards) | Append-mostly, columnar, cheap, read whole by one worker. No database holds row-heavy data. |
 | Control plane | Aurora PostgreSQL | Experiments, instances, status and the ingest ledger need transactions and queries. Row-heavy results stay out of it. |
 | Idempotency | Job exit codes `0` ok, `1` failed, `2` already stored; every job no-ops on stored work | Safe retries and re-runs. Cancellation is guarded in SQL (`status <> 'cancelled'`) so a late worker cannot revive a cancelled run. |
+| Authentication | Cognito user pool, admin-created users; the API Lambda signs users in (`/auth/login`) and checks every bearer token with Cognito | One code path on Floci and AWS (Floci's API Gateway does not validate JWTs). No self sign-up. |
 | Secrets | Secrets Manager at `/<project>/<env>/providers/<id>`; database URL in SSM SecureString | Secrets never live in the repo or the database. |
 | Web app | Private S3 bucket behind CloudFront, API on the same origin | No public container and no CORS. CloudFront is the only public entry point. |
 | Local parity | Same Terraform, `environment=local` or `prod` | Differences are limited to endpoints and a few sizing flags. Credentials come from the same `AWS_*` variables on both. |
@@ -60,7 +62,7 @@ task up           # Floci, Terraform apply, image builds, web app upload, DB mig
 
 If your Floci stack predates the S3 state backend (state in an old local file, `terraform.tfstate`), reset it once: `docker compose rm -sf floci && docker compose up -d floci`, then `task up`.
 
-`task up` provisions the whole stack on Floci and ends by printing the URL of the compiled web app, for example `http://<id>.cloudfront.localhost:11566/`. Open it, create an experiment and start it. The first run downloads the candles it needs from Binance. The first `task up` is slow because it builds the images.
+`task up` provisions the whole stack on Floci and ends by printing the URL of the compiled web app, for example `http://<id>.cloudfront.localhost:11566/`. Open it, sign in (locally Terraform seeds the user `admin` with the password `password`), create an experiment and start it. The first run downloads the candles it needs from Binance. The first `task up` is slow because it builds the images.
 
 For UI development use `task dev`: it runs `task up`, then Vite with hot reload at [http://localhost:3000](http://localhost:3000), proxying the API to the local gateway. Ctrl-C stops Vite and leaves Floci running.
 

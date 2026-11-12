@@ -2,6 +2,7 @@ package backtest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -122,25 +123,42 @@ func ingestDetailHint(detail int) string {
 	}
 }
 
-func applyExperimentEnv(dataDir string, s store.ExperimentSettings) {
-	_ = os.Setenv("DATA_DIR", dataDir)
-	_ = os.Unsetenv("AGGREGATION_DURATION_MS")
-	if os.Getenv("BINANCE_BASE_URL") == "" {
-		_ = os.Setenv("BINANCE_BASE_URL", "https://data-api.binance.vision")
+// applyExperimentEnv hands the experiment settings to the sizing, cost-model and ingest code, which read them from
+// the process environment. The environment is process-wide: one experiment runs per process (one per Lambda container,
+// one per backtest container), so concurrent experiments in one process would overwrite each other. A failure to set a
+// variable is returned, never ignored: the run would otherwise use the previous experiment's values.
+func applyExperimentEnv(dataDir string, s store.ExperimentSettings) error {
+	vars := map[string]string{
+		"DATA_DIR":                 dataDir,
+		"ALLOC_TARGET_WEIGHT_PCT":  strconv.FormatFloat(s.TargetWeightPct, 'f', -1, 64),
+		"ALLOC_CASH_RESERVE_QUOTE": strconv.FormatFloat(s.CashReserveQuote, 'f', -1, 64),
+		"ALLOC_MIN_ORDER_QUOTE":    strconv.FormatFloat(s.MinOrderQuote, 'f', -1, 64),
+		"SIM_SPREAD_BPS":           strconv.FormatFloat(s.SpreadBps, 'f', -1, 64),
+		"SIM_SLIPPAGE_BPS":         strconv.FormatFloat(s.SlippageBps, 'f', -1, 64),
+		"SIM_FEE_BPS":              strconv.FormatFloat(s.FeeBps, 'f', -1, 64),
 	}
-	_ = os.Setenv("ALLOC_TARGET_WEIGHT_PCT", strconv.FormatFloat(s.TargetWeightPct, 'f', -1, 64))
-	_ = os.Setenv("ALLOC_CASH_RESERVE_QUOTE", strconv.FormatFloat(s.CashReserveQuote, 'f', -1, 64))
-	_ = os.Setenv("ALLOC_MIN_ORDER_QUOTE", strconv.FormatFloat(s.MinOrderQuote, 'f', -1, 64))
-	_ = os.Setenv("SIM_SPREAD_BPS", strconv.FormatFloat(s.SpreadBps, 'f', -1, 64))
-	_ = os.Setenv("SIM_SLIPPAGE_BPS", strconv.FormatFloat(s.SlippageBps, 'f', -1, 64))
-	_ = os.Setenv("SIM_FEE_BPS", strconv.FormatFloat(s.FeeBps, 'f', -1, 64))
-	if os.Getenv("INGEST_MAX_RETRIES") == "" {
-		_ = os.Setenv("INGEST_MAX_RETRIES", "12")
+	defaults := map[string]string{
+		"BINANCE_BASE_URL":      "https://data-api.binance.vision",
+		"INGEST_MAX_RETRIES":    "12",
+		"INGEST_MAX_RETRY_WAIT": "120s",
 	}
-	if os.Getenv("INGEST_MAX_RETRY_WAIT") == "" {
-		_ = os.Setenv("INGEST_MAX_RETRY_WAIT", "120s")
+	return setProcessEnv(dataDir, vars, defaults)
+}
+
+// setProcessEnv sets vars, sets each default whose variable is empty, clears the aggregation override (default 3h) and
+// prepares the data directory. It returns every failure.
+func setProcessEnv(dataDir string, vars, defaults map[string]string) error {
+	errs := []error{os.Unsetenv("AGGREGATION_DURATION_MS")}
+	for k, v := range vars {
+		errs = append(errs, os.Setenv(k, v))
 	}
-	_ = shared.EnsureDataLayout(dataDir)
+	for k, v := range defaults {
+		if strings.TrimSpace(os.Getenv(k)) == "" {
+			errs = append(errs, os.Setenv(k, v))
+		}
+	}
+	errs = append(errs, shared.EnsureDataLayout(dataDir))
+	return errors.Join(errs...)
 }
 
 // uploadInstanceReport dual-writes the report JSON to S3 when EXPERIMENT_ARTIFACTS=s3, under the

@@ -8,3 +8,4 @@ Playwright (Chromium) drives the compiled web app against the running Floci stac
 - First run in a fresh browser: `npx playwright install --with-deps chromium` (CI) or `npx playwright install chromium`.
 - The tests navigate only by clicking from `/` (Floci has no SPA fallback for deep links). Failures keep trace, video and screenshot under `test-results/`; the HTML report is in `playwright-report/`.
 - `E2E_API_BASE` overrides the origin for the API cross-check (defaults to `E2E_BASE_URL`).
+- Sign-in: the tests log in as the seeded local Cognito user `admin` / `password` (`infra/terraform/cognito.tf`); override with `E2E_USERNAME` and `E2E_PASSWORD`.

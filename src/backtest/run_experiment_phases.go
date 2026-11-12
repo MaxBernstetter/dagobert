@@ -92,7 +92,9 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 	if experimentID == "" {
 		return fmt.Errorf("EXPERIMENT_ID required")
 	}
-	_ = os.Setenv("VENUE_SIMULATE", "1")
+	if err := os.Setenv("VENUE_SIMULATE", "1"); err != nil {
+		return err
+	}
 
 	cat, err := openExperimentRunCatalog()
 	if err != nil {
@@ -107,7 +109,7 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 	}
 	settings := rec.Settings
 	fail := func(e error) error {
-		_ = cat.MarkExperimentFailed(experimentID, e.Error())
+		logIfErr("record the failure of experiment "+experimentID, cat.MarkExperimentFailed(experimentID, e.Error()))
 		return e
 	}
 	if err := markExperimentWorkRunning(cat, experimentID, rec, work, retryFailed); err != nil {
@@ -116,11 +118,15 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 
 	instTotal := len(work)
 	stage := func(n int, label string, instDone, total int) {
-		_ = cat.SetExperimentProgress(experimentID, n, label, instDone, total)
+		if err := cat.SetExperimentProgress(experimentID, n, label, instDone, total); err != nil {
+			log.Printf("experiment %s: progress not saved: %v", experimentID, err)
+		}
 	}
 
 	stage(1, store.ExperimentStageLabelPrepare, 0, instTotal)
-	applyExperimentEnv(dataDir, settings)
+	if err := applyExperimentEnv(dataDir, settings); err != nil {
+		return err
+	}
 	stage(1, store.ExperimentStageLabelPrepare, 0, instTotal)
 
 	nowMS := time.Now().UnixMilli()
@@ -142,7 +148,7 @@ func RunExperimentPrepare(dataDir, experimentID string) error {
 			if store.InstanceSymbol(inst, settings) != sym {
 				continue
 			}
-			_ = cat.MarkExperimentInstanceFailed(experimentID, inst.ID, msg, store.InstanceRunTiming{})
+			logIfErr("record the failure of instance "+inst.ID, cat.MarkExperimentInstanceFailed(experimentID, inst.ID, msg, store.InstanceRunTiming{}))
 		}
 	}
 
@@ -264,7 +270,9 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 	if len(instanceIDs) == 0 {
 		return fmt.Errorf("no instance ids to simulate")
 	}
-	_ = os.Setenv("VENUE_SIMULATE", "1")
+	if err := os.Setenv("VENUE_SIMULATE", "1"); err != nil {
+		return err
+	}
 
 	meta, err := ReadExperimentPrepareMeta(dataDir, experimentID)
 	if err != nil {
@@ -275,7 +283,9 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		return err
 	}
 	settings := meta.Settings
-	applyExperimentEnv(dataDir, settings)
+	if err := applyExperimentEnv(dataDir, settings); err != nil {
+		return err
+	}
 	failedSymbols := meta.FailedSymbols
 	if failedSymbols == nil {
 		failedSymbols = map[string]string{}
@@ -314,7 +324,7 @@ func RunExperimentSimulate(dataDir, experimentID string, instanceIDs []string) e
 		instTotal = len(work)
 	}
 	stage := func(instDone int) {
-		_ = cat.SetExperimentProgress(experimentID, 4, store.ExperimentStageLabelSimulation, instDone, instTotal)
+		logIfErr("save the progress of experiment "+experimentID, cat.SetExperimentProgress(experimentID, 4, store.ExperimentStageLabelSimulation, instDone, instTotal))
 	}
 	stage(0)
 
@@ -376,7 +386,7 @@ func RunExperimentFinalize(dataDir, experimentID string) error {
 	defer cat.Close()
 
 	fail := func(e error) error {
-		_ = cat.MarkExperimentFailed(experimentID, e.Error())
+		logIfErr("record the failure of experiment "+experimentID, cat.MarkExperimentFailed(experimentID, e.Error()))
 		return e
 	}
 

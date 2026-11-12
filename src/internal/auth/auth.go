@@ -1,0 +1,210 @@
+// Package auth puts Amazon Cognito sign-in in front of the Experiment API. It is the same code on Floci and on AWS:
+// the API Lambda serves POST /auth/login and POST /auth/refresh (user name and password in, tokens out) and refuses
+// every other call that does not carry a valid access token. A token is valid when Cognito's GetUser accepts it, so
+// signature, expiry and revocation are Cognito's decision, and the Lambda needs only the Cognito API endpoint (no JWKS).
+package auth
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+)
+
+const (
+	// validFor is how long a token that Cognito accepted is trusted without asking again.
+	validFor = time.Minute
+	// maxBody bounds the sign-in request bodies.
+	maxBody = 4 << 10
+)
+
+// Config is the Cognito app client and the API endpoint of the identity provider.
+type Config struct {
+	// Endpoint is the Cognito API URL: https://cognito-idp.<region>.amazonaws.com/ on AWS, Floci's URL locally.
+	Endpoint string
+	ClientID string
+	// HTTP is the client for Cognito calls (default: 5 s timeout).
+	HTTP *http.Client
+	// Now is the clock (default time.Now); tests set it.
+	Now func() time.Time
+}
+
+// Authenticator signs users in and checks access tokens.
+type Authenticator struct {
+	cfg Config
+
+	mu    sync.Mutex
+	valid map[[32]byte]time.Time // sha256(token) -> trusted until
+}
+
+// New returns an Authenticator, or an error when the configuration is incomplete (the API then must not start).
+func New(cfg Config) (*Authenticator, error) {
+	if cfg.Endpoint == "" || cfg.ClientID == "" {
+		return nil, errors.New("auth: COGNITO_ENDPOINT and COGNITO_CLIENT_ID are required")
+	}
+	if cfg.HTTP == nil {
+		cfg.HTTP = &http.Client{Timeout: 5 * time.Second}
+	}
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
+	return &Authenticator{cfg: cfg, valid: map[[32]byte]time.Time{}}, nil
+}
+
+// Wrap serves the sign-in endpoints itself and passes every other request to next only with a valid bearer token.
+func (a *Authenticator) Wrap(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/auth/login":
+			a.login(w, r)
+		case r.Method == http.MethodPost && r.URL.Path == "/auth/refresh":
+			a.refresh(w, r)
+		default:
+			if !a.authorized(r) {
+				reject(w, http.StatusUnauthorized, "sign in required")
+				return
+			}
+			next.ServeHTTP(w, r)
+		}
+	})
+}
+
+type tokens struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken,omitempty"`
+	ExpiresIn    int    `json:"expiresIn"`
+}
+
+func (a *Authenticator) login(w http.ResponseWriter, r *http.Request) {
+	var in struct{ Username, Password string }
+	if !decode(w, r, &in) || in.Username == "" || in.Password == "" {
+		reject(w, http.StatusBadRequest, "username and password are required")
+		return
+	}
+	a.initiateAuth(w, r.Context(), "USER_PASSWORD_AUTH", map[string]string{"USERNAME": in.Username, "PASSWORD": in.Password})
+}
+
+func (a *Authenticator) refresh(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	if !decode(w, r, &in) || in.RefreshToken == "" {
+		reject(w, http.StatusBadRequest, "refreshToken is required")
+		return
+	}
+	a.initiateAuth(w, r.Context(), "REFRESH_TOKEN_AUTH", map[string]string{"REFRESH_TOKEN": in.RefreshToken})
+}
+
+func (a *Authenticator) initiateAuth(w http.ResponseWriter, ctx context.Context, flow string, params map[string]string) {
+	var out struct {
+		AuthenticationResult *struct {
+			AccessToken  string
+			RefreshToken string
+			ExpiresIn    int
+		}
+		ChallengeName string
+	}
+	status, msg, err := a.call(ctx, "InitiateAuth", map[string]any{
+		"AuthFlow": flow, "ClientId": a.cfg.ClientID, "AuthParameters": params,
+	}, &out)
+	switch {
+	case err != nil:
+		reject(w, http.StatusBadGateway, "identity provider unavailable")
+	case status >= 400 && status < 500:
+		reject(w, http.StatusUnauthorized, msg)
+	case status != http.StatusOK:
+		reject(w, http.StatusBadGateway, "identity provider unavailable")
+	case out.AuthenticationResult == nil:
+		reject(w, http.StatusUnauthorized, "sign-in needs a further step ("+out.ChallengeName+")")
+	default:
+		res := out.AuthenticationResult
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(tokens{AccessToken: res.AccessToken, RefreshToken: res.RefreshToken, ExpiresIn: res.ExpiresIn})
+	}
+}
+
+// authorized reports whether the request carries an access token that Cognito accepts.
+func (a *Authenticator) authorized(r *http.Request) bool {
+	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || token == "" {
+		return false
+	}
+	key := sha256.Sum256([]byte(token))
+	now := a.cfg.Now()
+	a.mu.Lock()
+	until, hit := a.valid[key]
+	a.mu.Unlock()
+	if hit && now.Before(until) {
+		return true
+	}
+	status, _, err := a.call(r.Context(), "GetUser", map[string]string{"AccessToken": token}, nil)
+	if err != nil || status != http.StatusOK {
+		return false
+	}
+	a.mu.Lock()
+	for k, t := range a.valid { // drop expired entries so the map stays small
+		if !now.Before(t) {
+			delete(a.valid, k)
+		}
+	}
+	a.valid[key] = now.Add(validFor)
+	a.mu.Unlock()
+	return true
+}
+
+// call posts one Cognito JSON-protocol request. It returns the HTTP status and, for a 4xx answer, Cognito's message.
+func (a *Authenticator) call(ctx context.Context, target string, body any, out any) (int, string, error) {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return 0, "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.Endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return 0, "", err
+	}
+	req.Header.Set("Content-Type", "application/x-amz-json-1.1")
+	req.Header.Set("X-Amz-Target", "AWSCognitoIdentityProviderService."+target)
+	res, err := a.cfg.HTTP.Do(req)
+	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if err != nil {
+		return 0, "", err
+	}
+	if res.StatusCode != http.StatusOK {
+		var e struct{ Message string }
+		_ = json.Unmarshal(raw, &e)
+		if e.Message == "" {
+			e.Message = "sign-in refused"
+		}
+		return res.StatusCode, e.Message, nil
+	}
+	if out != nil {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return 0, "", fmt.Errorf("auth: decode %s: %w", target, err)
+		}
+	}
+	return res.StatusCode, "", nil
+}
+
+func decode(w http.ResponseWriter, r *http.Request, v any) bool {
+	return json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBody)).Decode(v) == nil
+}
+
+func reject(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	if status == http.StatusUnauthorized {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="dagobert"`)
+	}
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"code": http.StatusText(status), "message": msg})
+}
