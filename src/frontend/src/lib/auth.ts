@@ -120,13 +120,15 @@ async function accessToken(): Promise<string | null> {
 const bearer: Interceptor = (next) => async (req) => {
   const token = await accessToken();
   const started = generation;
-  // After a transient refresh failure the token may have expired; its 401 then says nothing about the session.
-  const live = session !== null && session.expiresAt > Date.now();
   if (token) req.header.set("Authorization", `Bearer ${token}`);
   try {
     return await next(req);
   } catch (err) {
-    if (ConnectError.from(err).code === Code.Unauthenticated && live && started === generation) logout();
+    // A 401 can mean the token expired in transit or the API could not verify it. It does not prove the session is
+    // over: mark the token expired so the next call refreshes, and let the refresh answer decide about signing out.
+    if (ConnectError.from(err).code === Code.Unauthenticated && session && started === generation) {
+      session = { ...session, expiresAt: 0 };
+    }
     throw err;
   }
 };
