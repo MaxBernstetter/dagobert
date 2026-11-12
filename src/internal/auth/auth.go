@@ -115,14 +115,17 @@ func (a *Authenticator) initiateAuth(w http.ResponseWriter, ctx context.Context,
 		}
 		ChallengeName string
 	}
-	status, msg, err := a.call(ctx, "InitiateAuth", map[string]any{
+	status, fault, err := a.call(ctx, "InitiateAuth", map[string]any{
 		"AuthFlow": flow, "ClientId": a.cfg.ClientID, "AuthParameters": params,
 	}, &out)
 	switch {
 	case err != nil:
 		reject(w, http.StatusBadGateway, "identity provider unavailable")
-	case status >= 400 && status < 500:
-		reject(w, http.StatusUnauthorized, msg)
+	case status != http.StatusOK && fault.refused():
+		// Only a refusal of the credentials or the refresh token is a 401: the web app signs the user out on it.
+		reject(w, http.StatusUnauthorized, fault.Message)
+	case status != http.StatusOK && fault.throttled():
+		reject(w, http.StatusTooManyRequests, "too many attempts, try again later")
 	case status != http.StatusOK:
 		reject(w, http.StatusBadGateway, "identity provider unavailable")
 	case out.AuthenticationResult == nil:
@@ -185,41 +188,60 @@ func (a *Authenticator) ours(token string) bool {
 	return c.Iss == a.cfg.Issuer && c.ClientID == a.cfg.ClientID && c.Use == "access"
 }
 
-// call posts one Cognito JSON-protocol request. It returns the HTTP status and, for a 4xx answer, Cognito's message.
-func (a *Authenticator) call(ctx context.Context, target string, body any, out any) (int, string, error) {
+// fault is the error Cognito answered with.
+type fault struct{ Type, Message string }
+
+// refused reports a wrong user name or password, an unknown user, or an invalid or expired refresh token.
+func (f fault) refused() bool {
+	switch f.Type {
+	case "NotAuthorizedException", "UserNotFoundException", "PasswordResetRequiredException", "UserNotConfirmedException":
+		return true
+	}
+	return false
+}
+
+func (f fault) throttled() bool {
+	return f.Type == "TooManyRequestsException" || f.Type == "LimitExceededException"
+}
+
+// call posts one Cognito JSON-protocol request. It returns the HTTP status and, for a non-200 answer, Cognito's error.
+func (a *Authenticator) call(ctx context.Context, target string, body any, out any) (int, fault, error) {
 	payload, err := json.Marshal(body)
 	if err != nil {
-		return 0, "", err
+		return 0, fault{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.Endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return 0, "", err
+		return 0, fault{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-amz-json-1.1")
 	req.Header.Set("X-Amz-Target", "AWSCognitoIdentityProviderService."+target)
 	res, err := a.cfg.HTTP.Do(req)
 	if err != nil {
-		return 0, "", err
+		return 0, fault{}, err
 	}
 	defer res.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if err != nil {
-		return 0, "", err
+		return 0, fault{}, err
 	}
 	if res.StatusCode != http.StatusOK {
-		var e struct{ Message string }
+		var e struct {
+			Type    string `json:"__type"`
+			Message string `json:"message"`
+		}
 		_ = json.Unmarshal(raw, &e)
 		if e.Message == "" {
 			e.Message = "sign-in refused"
 		}
-		return res.StatusCode, e.Message, nil
+		return res.StatusCode, fault{Type: e.Type, Message: e.Message}, nil
 	}
 	if out != nil {
 		if err := json.Unmarshal(raw, out); err != nil {
-			return 0, "", fmt.Errorf("auth: decode %s: %w", target, err)
+			return 0, fault{}, fmt.Errorf("auth: decode %s: %w", target, err)
 		}
 	}
-	return res.StatusCode, "", nil
+	return res.StatusCode, fault{}, nil
 }
 
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {

@@ -85,8 +85,8 @@ export function subscribe(listener: () => void): () => void {
 let refreshing: Promise<void> | null = null;
 
 /**
- * A valid access token, refreshed when it is about to expire. The session is cleared only when the server says the
- * refresh token is no longer valid; a network error or a 5xx keeps it, and the call goes on without a fresh token.
+ * A valid access token, refreshed when it is about to expire. The session is cleared only when the server answers 401
+ * to the refresh (the refresh token is invalid or expired); a network error, throttling or a 5xx keeps it.
  */
 async function accessToken(): Promise<string | null> {
   if (!session) return null;
@@ -99,7 +99,7 @@ async function accessToken(): Promise<string | null> {
       save({ accessToken: r.accessToken, refreshToken, expiresAt: Date.now() + r.expiresIn * 1000 });
     })
     .catch((err: unknown) => {
-      if (started === generation && err instanceof AuthError && err.status >= 400 && err.status < 500) logout();
+      if (started === generation && err instanceof AuthError && err.status === 401) logout();
     })
     .finally(() => {
       refreshing = null;
@@ -111,11 +111,13 @@ async function accessToken(): Promise<string | null> {
 const bearer: Interceptor = (next) => async (req) => {
   const token = await accessToken();
   const started = generation;
+  // After a transient refresh failure the token may have expired; its 401 then says nothing about the session.
+  const live = session !== null && session.expiresAt > Date.now();
   if (token) req.header.set("Authorization", `Bearer ${token}`);
   try {
     return await next(req);
   } catch (err) {
-    if (ConnectError.from(err).code === Code.Unauthenticated && started === generation) logout();
+    if (ConnectError.from(err).code === Code.Unauthenticated && live && started === generation) logout();
     throw err;
   }
 };

@@ -29,6 +29,16 @@ func fakeCognito(t *testing.T, getUserCalls *atomic.Int32) *httptest.Server {
 		switch strings.TrimPrefix(r.Header.Get("X-Amz-Target"), "AWSCognitoIdentityProviderService.") {
 		case "InitiateAuth":
 			p, _ := body["AuthParameters"].(map[string]any)
+			if p["USERNAME"] == "throttled" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"__type":"TooManyRequestsException","message":"Rate exceeded"}`))
+				return
+			}
+			if body["AuthFlow"] == "REFRESH_TOKEN_AUTH" && p["REFRESH_TOKEN"] != "refresh" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"__type":"NotAuthorizedException","message":"Invalid Refresh Token"}`))
+				return
+			}
 			if body["AuthFlow"] == "USER_PASSWORD_AUTH" && (p["USERNAME"] != "admin" || p["PASSWORD"] != "password") {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"__type":"NotAuthorizedException","message":"Incorrect username or password"}`))
@@ -92,6 +102,20 @@ func TestRefreshReturnsAccessToken(t *testing.T) {
 	rec := do(h, "POST", "/auth/refresh", `{"refreshToken":"refresh"}`, "")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"accessToken":"`+goodToken+`"`) {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestRefreshWithAnInvalidTokenIsUnauthorized(t *testing.T) {
+	h, _ := newAPI(t, nil)
+	if rec := do(h, "POST", "/auth/refresh", `{"refreshToken":"stale"}`, ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("got %d, want 401", rec.Code)
+	}
+}
+
+func TestThrottlingIsNotAnAuthenticationFailure(t *testing.T) {
+	h, _ := newAPI(t, nil)
+	if rec := do(h, "POST", "/auth/login", `{"username":"throttled","password":"x"}`, ""); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("got %d, want 429", rec.Code)
 	}
 }
 
