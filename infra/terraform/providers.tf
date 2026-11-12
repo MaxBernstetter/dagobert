@@ -31,6 +31,7 @@ provider "aws" {
       cloudwatchlogs = var.floci_endpoint
       ec2            = var.floci_endpoint
       rds            = var.floci_endpoint
+      cognitoidp     = var.floci_endpoint
     }
   }
 

@@ -1,5 +1,5 @@
 import { createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
+import { transport } from "@/lib/auth";
 
 import type { ProviderPublicView, ProviderStatus } from "@/lib/provider-catalog-types";
 import type { ProviderConfigField } from "@/lib/provider-registry";
@@ -13,13 +13,7 @@ import {
  * unless VITE_EXPERIMENT_API_URL names another host. Secret values are write-only: a view lists only the names of
  * the secrets that are set.
  */
-const client = createClient(
-  ProviderService,
-  createConnectTransport({
-    baseUrl: (import.meta.env.VITE_EXPERIMENT_API_URL ?? "").replace(/\/$/, ""),
-    useBinaryFormat: true,
-  }),
-);
+const client = createClient(ProviderService, transport);
 
 /** The view the Connectors page renders, mapped from the generated message. */
 function toPublicView(v: ProviderView): ProviderPublicView {

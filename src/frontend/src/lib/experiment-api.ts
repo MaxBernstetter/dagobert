@@ -1,6 +1,6 @@
 import { fromJson, toJson, type DescMessage, type JsonObject, type MessageShape } from "@bufbuild/protobuf";
 import { ConnectError, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
+import { transport } from "@/lib/auth";
 import {
   CreateExperimentRequestSchema,
   ExperimentSchema,
@@ -21,13 +21,7 @@ import type { ActivityRow, JournalRow } from "@/types/read";
  * VITE_EXPERIMENT_API_URL names another host. Responses that the views read as plain JSON
  * (protojson shape: camelCase, int64 as strings) go through toJson.
  */
-const client = createClient(
-  ExperimentService,
-  createConnectTransport({
-    baseUrl: (import.meta.env.VITE_EXPERIMENT_API_URL ?? "").replace(/\/$/, ""),
-    useBinaryFormat: true,
-  }),
-);
+const client = createClient(ExperimentService, transport);
 
 /** The server's message of a failed call. */
 export function errorMessage(err: unknown, fallback: string): string {

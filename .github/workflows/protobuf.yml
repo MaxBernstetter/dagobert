@@ -29,7 +29,6 @@ jobs:
           breaking: false
           push: false
       - name: buf breaking
-        continue-on-error: true
         uses: bufbuild/buf-action@v1
         with:
           version: "1.47.2"

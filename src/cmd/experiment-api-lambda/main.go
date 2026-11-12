@@ -14,6 +14,7 @@ import (
 
 	"github.com/MaxBernstetter/dagobert/src/experimentapi"
 	"github.com/MaxBernstetter/dagobert/src/experimentapi/pgcatalog"
+	"github.com/MaxBernstetter/dagobert/src/internal/auth"
 	"github.com/MaxBernstetter/dagobert/src/internal/awsenv"
 	"github.com/MaxBernstetter/dagobert/src/internal/experimentworkflow"
 	"github.com/MaxBernstetter/dagobert/src/internal/pgpool"
@@ -29,11 +30,17 @@ import (
 var (
 	initOnce sync.Once
 	mux      *http.ServeMux
+	api      http.Handler // mux behind sign-in
 	initErr  error
 )
 
 // setup builds the database pool, the workflow hooks (when EXPERIMENT_SFN_ARN is set) and the HTTP mux once per cold start.
 func setup() {
+	authn, err := auth.New(auth.Config{Endpoint: cognitoEndpoint(), ClientID: os.Getenv("COGNITO_CLIENT_ID"), Issuer: os.Getenv("COGNITO_ISSUER")})
+	if err != nil {
+		initErr = err
+		return
+	}
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		initErr = errors.New("DATABASE_URL required")
@@ -63,12 +70,22 @@ func setup() {
 		hooks = experimentworkflow.NewHooks(client, expARN, dbFailer{q: experimentdb.New(pool)})
 	}
 	mux = http.NewServeMux()
+	api = authn.Wrap(mux)
 	experimentapi.Mount(mux, experimentapi.NewServer(pool, hooks))
 	if backfillARN != "" {
 		// BINANCE_BASE_URL is the environment fallback of the provider base URL (set from the SSM value in Terraform).
 		experimentapi.MountBackfill(mux, experimentapi.NewBackfillServer(client, backfillARN,
 			pgcatalog.NewFromPool(pool), os.Getenv("BINANCE_BASE_URL")))
 	}
+}
+
+// cognitoEndpoint is Floci's URL when AWS_ENDPOINT_URL is set, else the regional Cognito API (reached through the
+// cognito-idp VPC endpoint in prod).
+func cognitoEndpoint() string {
+	if ep := awsenv.Endpoint(); ep != "" {
+		return ep + "/"
+	}
+	return "https://cognito-idp." + os.Getenv("AWS_REGION") + ".amazonaws.com/"
 }
 
 // dbFailer marks an experiment failed in Postgres (the workflow hook's failure path).
@@ -98,7 +115,7 @@ func handle(ctx context.Context, ev events.APIGatewayV2HTTPRequest) (events.APIG
 		return jsonError(http.StatusBadRequest, "invalid request body: "+err.Error()), nil
 	}
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, req)
+	api.ServeHTTP(rec, req)
 	return toAPIResponse(rec), nil
 }
 

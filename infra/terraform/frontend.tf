@@ -80,11 +80,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   origin {
-    origin_id = "api"
-    custom_header {
-      name  = "x-origin-verify"
-      value = random_password.origin_verify.result
-    }
+    origin_id   = "api"
     domain_name = local.frontend_api_host
     # The stage is $default (api_lambda.tf). Floci serves API Gateway under its execute-api path.
     origin_path = local.is_local ? "/_aws/execute-api/${aws_apigatewayv2_api.experiment.id}/$default" : null
@@ -122,6 +118,17 @@ resource "aws_cloudfront_distribution" "frontend" {
     cached_methods         = ["GET", "HEAD"]
     # Managed-CachingDisabled and Managed-AllViewerExceptHostHeader: Connect calls are dynamic and
     # the origin must see the viewer's headers, but not the CloudFront host.
+    cache_policy_id          = "4135ea2d-6df8-4a3e-a2b4-cb4efb2cab1d"
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  # Sign-in endpoints of the API Lambda (src/internal/auth), same origin as the app.
+  ordered_cache_behavior {
+    path_pattern             = "/auth/*"
+    target_origin_id         = "api"
+    viewer_protocol_policy   = local.is_local ? "allow-all" : "redirect-to-https"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
     cache_policy_id          = "4135ea2d-6df8-4a3e-a2b4-cb4efb2cab1d"
     origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }

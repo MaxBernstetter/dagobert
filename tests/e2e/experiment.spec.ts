@@ -4,6 +4,30 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 const apiBase = (process.env.E2E_API_BASE ?? process.env.E2E_BASE_URL ?? "").replace(/\/$/, "");
 const SERVICE = "/tradingcopilot.v1.ExperimentService";
 
+// Sign-in: the seeded local user (infra/terraform/cognito.tf), through the API's /auth/login.
+const username = process.env.E2E_USERNAME ?? "admin";
+const password = process.env.E2E_PASSWORD ?? "password";
+
+let accessToken: string | undefined;
+
+/** An access token for direct API calls (cached for the run). */
+async function token(request: APIRequestContext): Promise<string> {
+  if (accessToken) return accessToken;
+  const res = await request.post(`${apiBase}/auth/login`, { data: { username, password } });
+  if (!res.ok()) throw new Error(`sign-in failed with HTTP ${res.status()}: ${await res.text()}`);
+  accessToken = ((await res.json()) as { accessToken: string }).accessToken;
+  return accessToken;
+}
+
+/** Opens the app and signs in through the login form. */
+async function openApp(page: Page) {
+  await page.goto("/");
+  await page.getByPlaceholder("Username").fill(username);
+  await page.getByPlaceholder("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("button", { name: "Tools" })).toBeVisible();
+}
+
 const COMPLETE_TIMEOUT_MS = 10 * 60_000;
 
 type Date3 = { year: number; month: number; day: number };
@@ -45,7 +69,7 @@ type StatusResponse = {
 
 async function rpc<T>(request: APIRequestContext, method: string, body: unknown): Promise<T> {
   const res = await request.post(`${apiBase}${SERVICE}/${method}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token(request)}` },
     data: body,
   });
   if (!res.ok()) {
@@ -84,7 +108,7 @@ async function waitForTerminalStatus(page: Page): Promise<string> {
  * under Connectors (Tools menu) and wait for the asset catalog to load. No-op when it is already ready.
  */
 async function ensureBinanceReady(page: Page) {
-  await page.goto("/");
+  await openApp(page);
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("link", { name: "Connectors" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Connectors" })).toBeVisible();
@@ -186,6 +210,14 @@ async function columnIndex(table: Locator, pattern: RegExp): Promise<number> {
 const NUMERIC_CELL = /^[+-]?\d+(\.\d+)?(%|pp|×)?$/;
 
 test.describe("experiments against Floci", () => {
+  test("the API refuses calls without a token", async ({ request }) => {
+    const res = await request.post(`${apiBase}${SERVICE}/ListExperiments`, {
+      headers: { "Content-Type": "application/json" },
+      data: {},
+    });
+    expect(res.status()).toBe(401);
+  });
+
   test("creates a ma-cross grid, runs it to completion and checks the outcome", async ({ page, request }) => {
     test.setTimeout(COMPLETE_TIMEOUT_MS + 5 * 60_000);
     const name = `e2e ma-cross ${new Date().toISOString().replace(/[:.]/g, "-")}`;

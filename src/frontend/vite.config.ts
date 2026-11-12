@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.VITE_DEV_API_PROXY || env.VITE_EXPERIMENT_API_URL || "http://127.0.0.1:11566";
   const apiPrefix = (env.VITE_DEV_API_PREFIX ?? "").replace(/\/$/, "");
   const proxy = {
+    "/auth/": {
+      target: proxyTarget,
+      changeOrigin: true,
+      ...(apiPrefix ? { rewrite: (p: string) => apiPrefix + p } : {}),
+    },
     "/tradingcopilot.v1.": {
       target: proxyTarget,
       changeOrigin: true,

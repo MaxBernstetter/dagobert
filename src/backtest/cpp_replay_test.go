@@ -44,7 +44,9 @@ func runCppLake(t *testing.T, bin, playbook string, lakeArgs, configs []string) 
 	from := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC).UnixMilli()
 	to := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
 	settings.FromMs, settings.ToMs = from, to
-	applyExperimentEnv(dataDir, settings)
+	if err := applyExperimentEnv(dataDir, settings); err != nil {
+		t.Fatal(err)
+	}
 	aggMS := signalstore.AggregationDurationMS()
 	startCash := settings.InitialUSDC + settings.InitialUSDT
 	nowMS := time.Now().UnixMilli()

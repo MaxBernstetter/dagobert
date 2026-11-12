@@ -3,6 +3,7 @@ package backtest
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +17,6 @@ import (
 	"github.com/MaxBernstetter/dagobert/src/internal/instruments"
 	"github.com/MaxBernstetter/dagobert/src/internal/kpi"
 	"github.com/MaxBernstetter/dagobert/src/internal/signalstore"
-	"github.com/MaxBernstetter/dagobert/src/shared"
 )
 
 // Run executes one catalogued backtest by id (DATA_DIR = repo data root).
@@ -27,7 +27,9 @@ func Run(dataDir, backtestID string) error {
 	if backtestID == "" {
 		return fmt.Errorf("BACKTEST_ID required")
 	}
-	_ = os.Setenv("VENUE_SIMULATE", "1")
+	if err := os.Setenv("VENUE_SIMULATE", "1"); err != nil {
+		return err
+	}
 
 	cat, err := store.Open(dataDir)
 	if err != nil {
@@ -40,7 +42,9 @@ func Run(dataDir, backtestID string) error {
 		return err
 	}
 	fail := func(e error) error {
-		_ = cat.MarkFailed(backtestID, e.Error())
+		if err := cat.MarkFailed(backtestID, e.Error()); err != nil {
+			log.Printf("backtest %s: could not record the failure %q: %v", backtestID, e, err)
+		}
 		return e
 	}
 	settings := rec.Settings
@@ -64,7 +68,9 @@ func Run(dataDir, backtestID string) error {
 		return fail(fmt.Errorf("catalog progress: %w", err))
 	}
 	stage := func(n int, label string, done, total int) {
-		_ = cat.SetRunProgress(backtestID, n, label, done, total)
+		if err := cat.SetRunProgress(backtestID, n, label, done, total); err != nil {
+			log.Printf("backtest %s: progress not saved: %v", backtestID, err)
+		}
 	}
 
 	stage(1, store.StageLabelPrepare, 0, 1)
@@ -75,7 +81,9 @@ func Run(dataDir, backtestID string) error {
 	if err := writePaperWallet(ws, settings); err != nil {
 		return fail(err)
 	}
-	applySettingsEnv(dataDir, settings)
+	if err := applySettingsEnv(dataDir, settings); err != nil {
+		return fail(err)
+	}
 	stage(1, store.StageLabelPrepare, 1, 1)
 
 	nowMS := time.Now().UnixMilli()
@@ -177,7 +185,7 @@ func Run(dataDir, backtestID string) error {
 	playbookEnv := settings.Playbook
 	totalBars := len(closes)
 	onBar := func(done, total int) {
-		_ = cat.SetRunProgress(backtestID, 4, store.StageLabelSimulation, done, total)
+		logIfErr("save the progress of backtest "+backtestID, cat.SetRunProgress(backtestID, 4, store.StageLabelSimulation, done, total))
 	}
 	if _, err := signalrunner.FastSimulatedPipeline(ws, kpiWin, playbookEnv, series, closes, onBar); err != nil {
 		return fail(err)
@@ -200,18 +208,22 @@ func formatUTC(ms int64) string {
 	return time.UnixMilli(ms).UTC().Format("2006-01-02")
 }
 
-func applySettingsEnv(dataDir string, s store.Settings) {
-	_ = os.Setenv("DATA_DIR", dataDir)
-	_ = os.Unsetenv("AGGREGATION_DURATION_MS") // Experiment Suite / all playbooks: default 3h
-	if strings.TrimSpace(os.Getenv("BINANCE_BASE_URL")) == "" {
-		_ = os.Setenv("BINANCE_BASE_URL", "https://data-api.binance.vision")
+func applySettingsEnv(dataDir string, s store.Settings) error {
+	return setProcessEnv(dataDir, map[string]string{
+		"DATA_DIR":                 dataDir,
+		"ALLOC_TARGET_WEIGHT_PCT":  strconv.FormatFloat(s.TargetWeightPct, 'f', -1, 64),
+		"ALLOC_CASH_RESERVE_QUOTE": strconv.FormatFloat(s.CashReserveQuote, 'f', -1, 64),
+		"ALLOC_MIN_ORDER_QUOTE":    strconv.FormatFloat(s.MinOrderQuote, 'f', -1, 64),
+		"SIM_SPREAD_BPS":           strconv.FormatFloat(s.SpreadBps, 'f', -1, 64),
+		"SIM_SLIPPAGE_BPS":         strconv.FormatFloat(s.SlippageBps, 'f', -1, 64),
+		"SIM_FEE_BPS":              strconv.FormatFloat(s.FeeBps, 'f', -1, 64),
+		"PLAYBOOK":                 s.Playbook,
+	}, map[string]string{"BINANCE_BASE_URL": "https://data-api.binance.vision"})
+}
+
+// logIfErr reports a failed best-effort write (a progress or failure record) instead of dropping it silently.
+func logIfErr(what string, err error) {
+	if err != nil {
+		log.Printf("could not %s: %v", what, err)
 	}
-	_ = os.Setenv("ALLOC_TARGET_WEIGHT_PCT", strconv.FormatFloat(s.TargetWeightPct, 'f', -1, 64))
-	_ = os.Setenv("ALLOC_CASH_RESERVE_QUOTE", strconv.FormatFloat(s.CashReserveQuote, 'f', -1, 64))
-	_ = os.Setenv("ALLOC_MIN_ORDER_QUOTE", strconv.FormatFloat(s.MinOrderQuote, 'f', -1, 64))
-	_ = os.Setenv("SIM_SPREAD_BPS", strconv.FormatFloat(s.SpreadBps, 'f', -1, 64))
-	_ = os.Setenv("SIM_SLIPPAGE_BPS", strconv.FormatFloat(s.SlippageBps, 'f', -1, 64))
-	_ = os.Setenv("SIM_FEE_BPS", strconv.FormatFloat(s.FeeBps, 'f', -1, 64))
-	_ = os.Setenv("PLAYBOOK", s.Playbook)
-	_ = shared.EnsureDataLayout(dataDir)
 }
