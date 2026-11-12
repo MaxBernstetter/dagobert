@@ -82,11 +82,13 @@ export function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-let refreshing: Promise<void> | null = null;
+type RefreshOutcome = "ok" | "transient" | "refused";
+let refreshing: Promise<RefreshOutcome> | null = null;
 
 /**
  * A valid access token, refreshed when it is about to expire. The session is cleared only when the server answers 401
- * to the refresh (the refresh token is invalid or expired); a network error, throttling or a 5xx keeps it.
+ * to the refresh (the refresh token is invalid or expired). After a network error, throttling or a 5xx the session is
+ * kept: a token that is still valid goes on being used, an expired one raises a retryable Unavailable error.
  */
 async function accessToken(): Promise<string | null> {
   if (!session) return null;
@@ -94,17 +96,24 @@ async function accessToken(): Promise<string | null> {
   const started = generation;
   const refreshToken = session.refreshToken;
   refreshing ??= post("/auth/refresh", { refreshToken })
-    .then((r) => {
-      if (started !== generation) return;
-      save({ accessToken: r.accessToken, refreshToken, expiresAt: Date.now() + r.expiresIn * 1000 });
+    .then((r): RefreshOutcome => {
+      if (started === generation) {
+        save({ accessToken: r.accessToken, refreshToken, expiresAt: Date.now() + r.expiresIn * 1000 });
+      }
+      return "ok";
     })
-    .catch((err: unknown) => {
-      if (started === generation && err instanceof AuthError && err.status === 401) logout();
+    .catch((err: unknown): RefreshOutcome => {
+      const refused = err instanceof AuthError && err.status === 401;
+      if (refused && started === generation) logout();
+      return refused ? "refused" : "transient";
     })
     .finally(() => {
       refreshing = null;
     });
-  await refreshing;
+  const outcome = await refreshing;
+  if (outcome === "transient" && session && session.expiresAt <= Date.now()) {
+    throw new ConnectError("Cannot refresh the session right now. Try again.", Code.Unavailable);
+  }
   return session?.accessToken ?? null;
 }
 

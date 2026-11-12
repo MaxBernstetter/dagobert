@@ -47,6 +47,16 @@ func fakeCognito(t *testing.T, getUserCalls *atomic.Int32) *httptest.Server {
 			_, _ = w.Write([]byte(`{"AuthenticationResult":{"AccessToken":"` + goodToken + `","RefreshToken":"refresh","ExpiresIn":3600}}`))
 		case "GetUser":
 			getUserCalls.Add(1)
+			if body["AccessToken"] == "outage" {
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"__type":"InternalErrorException","message":"boom"}`))
+				return
+			}
+			if s, _ := body["AccessToken"].(string); s == "bad" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"__type":"NotAuthorizedException","message":"Invalid Access Token"}`))
+				return
+			}
 			if s, _ := body["AccessToken"].(string); s == "" || s == "bad" {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"__type":"NotAuthorizedException","message":"Invalid Access Token"}`))
@@ -109,6 +119,13 @@ func TestRefreshWithAnInvalidTokenIsUnauthorized(t *testing.T) {
 	h, _ := newAPI(t, nil)
 	if rec := do(h, "POST", "/auth/refresh", `{"refreshToken":"stale"}`, ""); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("got %d, want 401", rec.Code)
+	}
+}
+
+func TestIdentityProviderOutageIsNotAnAuthenticationFailure(t *testing.T) {
+	h, _ := newAPI(t, nil)
+	if rec := do(h, "POST", "/x", `{}`, "outage"); rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("got %d, want 503", rec.Code)
 	}
 }
 

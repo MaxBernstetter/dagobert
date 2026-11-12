@@ -71,11 +71,15 @@ func (a *Authenticator) Wrap(next http.Handler) http.Handler {
 		case r.Method == http.MethodPost && r.URL.Path == "/auth/refresh":
 			a.refresh(w, r)
 		default:
-			if !a.authorized(r) {
+			switch a.check(r) {
+			case allowed:
+				next.ServeHTTP(w, r)
+			case unavailable:
+				// Not a 401: the web app signs the user out on a 401, and an outage says nothing about the token.
+				reject(w, http.StatusServiceUnavailable, "identity provider unavailable")
+			default:
 				reject(w, http.StatusUnauthorized, "sign in required")
-				return
 			}
-			next.ServeHTTP(w, r)
 		}
 	})
 }
@@ -137,11 +141,19 @@ func (a *Authenticator) initiateAuth(w http.ResponseWriter, ctx context.Context,
 	}
 }
 
-// authorized reports whether the request carries an access token that Cognito accepts.
-func (a *Authenticator) authorized(r *http.Request) bool {
+type verdict int
+
+const (
+	denied verdict = iota
+	allowed
+	unavailable // Cognito could not answer; the token is neither accepted nor refused
+)
+
+// check decides whether the request carries an access token that Cognito accepts.
+func (a *Authenticator) check(r *http.Request) verdict {
 	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || token == "" {
-		return false
+		return denied
 	}
 	key := sha256.Sum256([]byte(token))
 	now := a.cfg.Now()
@@ -149,11 +161,14 @@ func (a *Authenticator) authorized(r *http.Request) bool {
 	until, hit := a.valid[key]
 	a.mu.Unlock()
 	if hit && now.Before(until) {
-		return true
+		return allowed
 	}
-	status, _, err := a.call(r.Context(), "GetUser", map[string]string{"AccessToken": token}, nil)
-	if err != nil || status != http.StatusOK || !a.ours(token) {
-		return false
+	status, f, err := a.call(r.Context(), "GetUser", map[string]string{"AccessToken": token}, nil)
+	switch {
+	case err != nil || (status != http.StatusOK && !f.refused()):
+		return unavailable
+	case status != http.StatusOK || !a.ours(token):
+		return denied
 	}
 	a.mu.Lock()
 	for k, t := range a.valid { // drop expired entries so the map stays small
@@ -163,7 +178,7 @@ func (a *Authenticator) authorized(r *http.Request) bool {
 	}
 	a.valid[key] = now.Add(validFor)
 	a.mu.Unlock()
-	return true
+	return allowed
 }
 
 // ours reports whether an access token (already accepted by Cognito) was issued by this user pool to this app client.
