@@ -28,14 +28,22 @@ export function LoginGate({ children }: { children: ReactNode }) {
     <div className="flex h-dvh items-center justify-center bg-background text-foreground">
       <form onSubmit={submit} className="flex w-72 flex-col gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
+        <label htmlFor="login-username" className="text-sm text-muted-foreground">
+          Username
+        </label>
         <input
+          id="login-username"
           className="rounded border border-border bg-transparent px-3 py-2 text-sm"
           placeholder="Username"
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
+        <label htmlFor="login-password" className="text-sm text-muted-foreground">
+          Password
+        </label>
         <input
+          id="login-password"
           className="rounded border border-border bg-transparent px-3 py-2 text-sm"
           type="password"
           placeholder="Password"

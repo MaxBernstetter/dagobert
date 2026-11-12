@@ -112,6 +112,7 @@ resource "aws_lambda_function" "experiment_api" {
     variables = {
       DATABASE_URL      = local.app_database_url
       COGNITO_CLIENT_ID = aws_cognito_user_pool_client.web.id
+      COGNITO_ISSUER    = local.cognito_issuer
       LAKE_BUCKET       = aws_s3_bucket.lake.bucket
       LAKE_BACKEND      = "s3"
       # Run, Cancel and progress go through this state machine (experiment_workflow.tf).

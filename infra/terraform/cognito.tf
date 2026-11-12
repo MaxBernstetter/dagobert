@@ -4,7 +4,8 @@
 #   local (Floci): the pool allows 6-character passwords with no other rule, and Terraform seeds the user
 #                  admin / password so the stack is usable after `task up`.
 #   prod:          the default strong policy and no seeded user. Create users with
-#                  `aws cognito-idp admin-create-user` (self sign-up is off).
+#                  `aws cognito-idp admin-create-user` and then `admin-set-user-password --permanent` (a temporary
+#                  password ends in a NEW_PASSWORD_REQUIRED challenge that the API does not answer; self sign-up is off).
 
 variable "cognito_local_username" {
   description = "Local only: the user that Terraform creates in the Floci user pool."
@@ -63,4 +64,9 @@ resource "aws_cognito_user" "local" {
   user_pool_id = aws_cognito_user_pool.main.id
   username     = var.cognito_local_username
   password     = var.cognito_local_password
+}
+
+locals {
+  # The "iss" claim of the tokens. Floci uses its own hostname (FLOCI_HOSTNAME in compose.yaml); AWS the regional endpoint.
+  cognito_issuer = local.is_local ? "http://floci:4566/${aws_cognito_user_pool.main.id}" : "https://${aws_cognito_user_pool.main.endpoint}"
 }

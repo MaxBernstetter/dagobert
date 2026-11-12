@@ -36,7 +36,7 @@ var (
 
 // setup builds the database pool, the workflow hooks (when EXPERIMENT_SFN_ARN is set) and the HTTP mux once per cold start.
 func setup() {
-	authn, err := auth.New(auth.Config{Endpoint: cognitoEndpoint(), ClientID: os.Getenv("COGNITO_CLIENT_ID")})
+	authn, err := auth.New(auth.Config{Endpoint: cognitoEndpoint(), ClientID: os.Getenv("COGNITO_CLIENT_ID"), Issuer: os.Getenv("COGNITO_ISSUER")})
 	if err != nil {
 		initErr = err
 		return

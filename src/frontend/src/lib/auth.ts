@@ -15,6 +15,8 @@ type Session = { accessToken: string; refreshToken: string; expiresAt: number };
 
 const listeners = new Set<() => void>();
 let session: Session | null = load();
+/** Advances on every login and logout, so a late refresh or RPC answer cannot change a newer session. */
+let generation = 0;
 
 function load(): Session | null {
   try {
@@ -34,23 +36,40 @@ function save(next: Session | null): void {
 
 type Tokens = { accessToken: string; refreshToken?: string; expiresIn: number };
 
+/** A failed sign-in call. status is 0 when the server could not be reached. */
+class AuthError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function post(path: string, body: unknown): Promise<Tokens> {
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AuthError("Cannot reach the server.", 0);
+  }
   const json = (await res.json().catch(() => ({}))) as Partial<Tokens> & { message?: string };
-  if (!res.ok) throw new Error(json.message ?? `Sign-in failed (${res.status})`);
+  if (!res.ok) throw new AuthError(json.message ?? `Sign-in failed (${res.status})`, res.status);
   return json as Tokens;
 }
 
 export async function login(username: string, password: string): Promise<void> {
   const r = await post("/auth/login", { username, password });
+  generation++;
   save({ accessToken: r.accessToken, refreshToken: r.refreshToken ?? "", expiresAt: Date.now() + r.expiresIn * 1000 });
 }
 
 export function logout(): void {
+  generation++;
   save(null);
 }
 
@@ -65,13 +84,23 @@ export function subscribe(listener: () => void): () => void {
 
 let refreshing: Promise<void> | null = null;
 
+/**
+ * A valid access token, refreshed when it is about to expire. The session is cleared only when the server says the
+ * refresh token is no longer valid; a network error or a 5xx keeps it, and the call goes on without a fresh token.
+ */
 async function accessToken(): Promise<string | null> {
   if (!session) return null;
   if (session.expiresAt - EXPIRY_SKEW_MS > Date.now()) return session.accessToken;
+  const started = generation;
   const refreshToken = session.refreshToken;
   refreshing ??= post("/auth/refresh", { refreshToken })
-    .then((r) => save({ accessToken: r.accessToken, refreshToken, expiresAt: Date.now() + r.expiresIn * 1000 }))
-    .catch(() => save(null))
+    .then((r) => {
+      if (started !== generation) return;
+      save({ accessToken: r.accessToken, refreshToken, expiresAt: Date.now() + r.expiresIn * 1000 });
+    })
+    .catch((err: unknown) => {
+      if (started === generation && err instanceof AuthError && err.status >= 400 && err.status < 500) logout();
+    })
     .finally(() => {
       refreshing = null;
     });
@@ -81,11 +110,12 @@ async function accessToken(): Promise<string | null> {
 
 const bearer: Interceptor = (next) => async (req) => {
   const token = await accessToken();
+  const started = generation;
   if (token) req.header.set("Authorization", `Bearer ${token}`);
   try {
     return await next(req);
   } catch (err) {
-    if (ConnectError.from(err).code === Code.Unauthenticated) logout();
+    if (ConnectError.from(err).code === Code.Unauthenticated && started === generation) logout();
     throw err;
   }
 };

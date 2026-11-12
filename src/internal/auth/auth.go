@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,9 @@ type Config struct {
 	// Endpoint is the Cognito API URL: https://cognito-idp.<region>.amazonaws.com/ on AWS, Floci's URL locally.
 	Endpoint string
 	ClientID string
+	// Issuer is the user pool's issuer URL (the token claim "iss"). GetUser accepts an access token from any user pool
+	// of the region, so the claims are compared with the configured pool and app client.
+	Issuer string
 	// HTTP is the client for Cognito calls (default: 5 s timeout).
 	HTTP *http.Client
 	// Now is the clock (default time.Now); tests set it.
@@ -46,8 +50,8 @@ type Authenticator struct {
 
 // New returns an Authenticator, or an error when the configuration is incomplete (the API then must not start).
 func New(cfg Config) (*Authenticator, error) {
-	if cfg.Endpoint == "" || cfg.ClientID == "" {
-		return nil, errors.New("auth: COGNITO_ENDPOINT and COGNITO_CLIENT_ID are required")
+	if cfg.Endpoint == "" || cfg.ClientID == "" || cfg.Issuer == "" {
+		return nil, errors.New("auth: the Cognito endpoint, client id and issuer are required")
 	}
 	if cfg.HTTP == nil {
 		cfg.HTTP = &http.Client{Timeout: 5 * time.Second}
@@ -145,7 +149,7 @@ func (a *Authenticator) authorized(r *http.Request) bool {
 		return true
 	}
 	status, _, err := a.call(r.Context(), "GetUser", map[string]string{"AccessToken": token}, nil)
-	if err != nil || status != http.StatusOK {
+	if err != nil || status != http.StatusOK || !a.ours(token) {
 		return false
 	}
 	a.mu.Lock()
@@ -157,6 +161,28 @@ func (a *Authenticator) authorized(r *http.Request) bool {
 	a.valid[key] = now.Add(validFor)
 	a.mu.Unlock()
 	return true
+}
+
+// ours reports whether an access token (already accepted by Cognito) was issued by this user pool to this app client.
+// The claims are read without a signature check because Cognito has just verified the token.
+func (a *Authenticator) ours(token string) bool {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	var c struct {
+		Iss      string `json:"iss"`
+		ClientID string `json:"client_id"`
+		Use      string `json:"token_use"`
+	}
+	if json.Unmarshal(payload, &c) != nil {
+		return false
+	}
+	return c.Iss == a.cfg.Issuer && c.ClientID == a.cfg.ClientID && c.Use == "access"
 }
 
 // call posts one Cognito JSON-protocol request. It returns the HTTP status and, for a 4xx answer, Cognito's message.
